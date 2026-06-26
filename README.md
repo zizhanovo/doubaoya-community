@@ -37,7 +37,7 @@ npx skills add zizhanovo/doubaoya-community
 npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 ```
 
-## 技能清单（共 68 个）
+## 技能清单（共 80 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -86,6 +86,11 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **douyin-rise-ranking** | 抖音涨粉账号榜，挖近期起势黑马 |
 | **douyin-comment** | 按作品 ID 翻页拉一级评论，做舆情洞察 |
 | **douyin-ai-feed** | 抖音 AI 日报内容流，支持翻页与时间区间 |
+| **douyin-hot-trend** | 按日期区间拉抖音实时热榜，看正在起势的话题 |
+| **douyin-content-surge** | 抖音点赞飙升榜，日榜 + 周榜一次拿，抓正在起飞的内容 |
+| **douyin-weekly-surge** | 抖音点赞飙升周榜，看一周持续走高的中线趋势 |
+| **douyin-daily-hot** | 抖音每日点赞 TOP 榜，看当天谁最吸赞 |
+| **douyin-subscribe** | 按抖音号 + 时间窗追更，每天盯对标账号新作品 |
 
 ### 📕 小红书
 
@@ -99,6 +104,12 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **xiaohongshu-similar-account** | 同阶对标 + 高阶标杆账号推荐 |
 | **xiaohongshu-top-account** | 小红书最夯账号榜（日 / 周 / 月） |
 | **xiaohongshu-comment** | 拉笔记一级评论，cursor 游标分页 |
+| **xiaohongshu-dailytop** | 小红书日榜，看当天哪条笔记在霸榜 |
+| **xiaohongshu-lowtop** | 小红书低粉爆款榜，挖纯内容力出圈的素人打法 |
+| **xiaohongshu-weeklytop** | 小红书周榜，看一周持续走高的中线趋势 |
+| **xiaohongshu-cover** | 按关键词拉爆款数据，提炼可复用封面套路 |
+| **xiaohongshu-title** | 按关键词拆爆款标题钩子，产能跑量的标题 |
+| **xiaohongshu-note-analyzer** | 按关键词做对标拆解，产可落地选题清单 |
 | **xiaohongshu-rewrite** 🖥 | 把文案改写成小红书种草笔记风格 |
 
 ### 📺 B站 · TikTok
@@ -107,6 +118,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 |------|------|
 | **bilibili-keyword-search** | 按关键词搜 B 站视频作品，铺表 + 选题洞察 |
 | **bilibili-keyword-accounts** | 按关键词搜 B 站 UP主账号 |
+| **bilibili-portfolio-search** | 按 UP主 UID 拉作品集，游标翻页做对标复盘 |
 | **tiktok-account-search** | 按关键词搜 TikTok 博主，按粉丝量排序 |
 
 ### 🌐 多平台 · 热点
@@ -154,8 +166,6 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **ai-intelligence-investigator** | 情报 / 竞品 / 舆情调查方法论，交叉验证产报告 |
 | **optimize-skill-md** | 把一份 SKILL.md 规范化、优化到标准格式 |
 | **pdf-image-text-extractor** | 本地从 PDF / 图片提取文字 |
-
-> **更多即将上线**：抖音订阅、若干热榜 / 榜单类技能正在打磨，敬请期待 🦆
 
 ## 怎么调（给好奇的人）
 

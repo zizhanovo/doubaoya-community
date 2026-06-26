@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""都爆鸭 · 全网热点聚合（按平台 + 关键词）
+"""都爆鸭 · 小红书笔记选题拆解
 
-零依赖（Python 3 标准库 urllib），按平台编号 + 关键词聚合全网热点榜，
-供主 Agent 看清此刻多个平台在热什么、哪些热点值得追。
+零依赖（Python 3 标准库 urllib），按关键词拉小红书爆款多榜数据
+（低粉爆款 / 点赞 TOP500 / 单日互动 / 七日增长），供主 Agent 做对标拆解与选题复盘。
 
 用法:
-    python3 fetch_trends.py [--platforms 2,5,8] [--keywords AI,大模型] [--start-date "YYYY-MM-DD HH:MM:SS"] [--end-date "YYYY-MM-DD HH:MM:SS"]
+    python3 fetch_note_data.py --keyword 露营 [--start-date YYYY-MM-DD]
 
-    --platforms  逗号分隔的平台编号（整数），默认 2,5,8。
-    --keywords   逗号分隔的关键词，默认 AI。
-    --start-date 区间起始 datetime（默认今天 00:00:00）。
-    --end-date   区间结束 datetime（默认当前时刻）。
+    --keyword    关键词（必填）。
+    --start-date 起始日期 YYYY-MM-DD，默认 30 天前。
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取口令（形如 dyh_…）。
@@ -25,7 +23,7 @@ import sys
 import urllib.error
 import urllib.request
 
-ENDPOINT = "https://doubaoya.com/api/apis/trend/trending-hub-keyword/call"
+ENDPOINT = "https://doubaoya.com/api/apis/xiaohongshu/xiaohongshu-coze/call"
 
 
 def call_api(api_key: str, payload_dict: dict) -> int:
@@ -84,12 +82,10 @@ def call_api(api_key: str, payload_dict: dict) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="都爆鸭 · 全网热点聚合（按平台编号 + 关键词）",
+        description="都爆鸭 · 小红书笔记选题拆解",
     )
-    parser.add_argument("--platforms", default="2,5,8", help="逗号分隔的平台编号（整数，默认 2,5,8）")
-    parser.add_argument("--keywords", default="AI", help="逗号分隔的关键词（默认 AI）")
-    parser.add_argument("--start-date", default=None, help='区间起始 datetime "YYYY-MM-DD HH:MM:SS"（默认今天 00:00:00）')
-    parser.add_argument("--end-date", default=None, help='区间结束 datetime "YYYY-MM-DD HH:MM:SS"（默认当前时刻）')
+    parser.add_argument("--keyword", required=True, help="关键词（必填）")
+    parser.add_argument("--start-date", default=None, help="起始日期 YYYY-MM-DD（默认 30 天前）")
     args = parser.parse_args()
 
     api_key = os.environ.get("DOUBAOYA_API_KEY")
@@ -101,30 +97,17 @@ def main() -> int:
         )
         return 1
 
-    try:
-        platforms = [int(p.strip()) for p in args.platforms.split(",") if p.strip()]
-    except ValueError:
-        sys.stderr.write("[error] VALIDATION_ERROR: --platforms 需为逗号分隔的整数，如 2,5,8\n")
-        return 1
-    if not platforms:
-        sys.stderr.write("[error] VALIDATION_ERROR: --platforms 不能为空\n")
-        return 1
+    if args.start_date:
+        try:
+            datetime.date.fromisoformat(args.start_date)
+        except ValueError:
+            sys.stderr.write("[error] VALIDATION_ERROR: --start-date 需为 YYYY-MM-DD 格式\n")
+            return 1
+        start_date = args.start_date
+    else:
+        start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
 
-    keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
-    if not keywords:
-        sys.stderr.write("[error] VALIDATION_ERROR: --keywords 不能为空\n")
-        return 1
-
-    now = datetime.datetime.now()
-    start_date = args.start_date or now.strftime("%Y-%m-%d 00:00:00")
-    end_date = args.end_date or now.strftime("%Y-%m-%d %H:%M:%S")
-
-    return call_api(api_key, {
-        "platforms": platforms,
-        "keywords": keywords,
-        "startDate": start_date,
-        "endDate": end_date,
-    })
+    return call_api(api_key, {"keyword": args.keyword, "startDate": start_date})
 
 
 if __name__ == "__main__":
