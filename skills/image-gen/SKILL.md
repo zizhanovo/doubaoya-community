@@ -1,0 +1,107 @@
+---
+name: image-gen
+description: GPT-image2 AI 图片生成 · 一句提示词文生图，或传入参考图做图生图 / 编辑。当用户需要生成配图、AI 出图、文生图、按参考图改图、做封面素材时使用。
+---
+
+# GPT-image2 AI 图片生成（都爆鸭）
+
+本鸭帮你用 GPT-image2 一行命令出图——纯文字描述就能**文生图**，再丢一张参考图就能**图生图 / 编辑**。无需自建出图链路，按次消费，拿回图片直链。
+
+> 调用走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+
+> ⏳ **这是异步慢操作**：图片在服务端生成，约 **3 分钟**，单次请求内一气呵成返回——**无需客户端轮询**，发一次 POST 静等结果即可。
+
+---
+
+## 适用场景
+
+| 场景 | 怎么用 | 拿到什么 |
+|------|--------|----------|
+| **文生图** | 只给一句提示词 | 按描述生成的图片直链 |
+| **图生图 / 编辑** | 提示词 + `--image` 参考图 | 基于参考图改写后的图片 |
+| **做封面 / 配图** | 描述风格与主体 | 可直接用的素材图 |
+| **批量出图** | 不同提示词多跑几次 | 多张候选图直链 |
+
+---
+
+## 工作流（3 步）
+
+### 1. 写提示词（可选带参考图）
+把用户需求转成清晰的图片提示词。如果用户给了参考图，记下它的 URL。
+
+### 2. 调用脚本（耐心等几分钟）
+文生图：
+```bash
+python3 "$SKILL_PATH/scripts/generate_image.py" "一只戴墨镜的卡通鸭子，扁平插画风"
+```
+图生图 / 编辑（传参考图 URL）：
+```bash
+python3 "$SKILL_PATH/scripts/generate_image.py" "把背景换成赛博朋克霓虹街道" --image "https://example.com/ref.png"
+```
+脚本会先在 stderr 提示「已提交，服务端生成中」，然后**等待约 3 分钟**直到结果返回，把成功信封里的 `data` 以 JSON 打到 stdout。**每次出图只跑一次脚本**，别中途打断、别重复调用。
+
+### 3. 渲染图片
+从 `data.images`（URL 数组）里取地址，做**防御式读取**——数组可能为空或缺失，缺了就提示未拿到图。把图片直链给用户即可。
+
+---
+
+## 拿钥匙（口令）
+
+1. 打开 **doubaoya.com**
+2. **登录**
+3. 进 **口令中心**
+4. **生成口令**（形如 `dyh_…`）
+
+配置到环境变量（脚本只认这个）：
+```bash
+export DOUBAOYA_API_KEY="dyh_你的口令"
+```
+
+**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**。
+
+---
+
+## 接口与信封
+
+- `POST https://doubaoya.com/api/skills/gpt-image-gen/invoke`
+- 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
+- 请求体：`{ "prompt": "<提示词>", "referenceImage": "<可选参考图URL>" }`
+  - `prompt`：字符串，必填
+  - `referenceImage`：字符串，可选；**仅在用户给了参考图时才带上**（由 `--image` 控制），不传即纯文生图
+- **异步慢操作**：服务端约 3 分钟内完成生成并在本次请求里返回，无需轮询。
+- 返回信封：
+  ```json
+  {
+    "success": true,
+    "requestId": "...",
+    "data": { "images": [ "https://...png" ] },
+    "error": null
+  }
+  ```
+- **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
+
+---
+
+## 错误处理
+
+脚本失败时向 stderr 打印 `[error] CODE: message` 并以退出码 1 结束。常见情况：
+
+| HTTP | code | 含义 | 处理 |
+|------|------|------|------|
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成 |
+| 400 | `VALIDATION_ERROR` | 参数不合法（如 prompt 为空） | 修正提示词重试 |
+| 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
+| 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
+
+> `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。
+
+---
+
+## 目录结构
+
+```
+image-gen/
+├── SKILL.md                # 本文件
+└── scripts/
+    └── generate_image.py   # 零依赖脚本（urllib），调用 doubaoya.com
+```
