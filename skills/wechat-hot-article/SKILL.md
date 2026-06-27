@@ -41,11 +41,11 @@ python3 "$SKILL_PATH/scripts/hot_article.py" "AI 工具" --start 2026-06-01 --en
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次查询只跑一次**，直接读完整 stdout，别预览、别重复调用。
 
 ### 3. 铺成爆文热度榜
-从 `data.items` 取字段铺 Markdown 表，按热度（阅读量）降序排。字段做**防御式读取**——缺失就留空别报错。标题渲染成**可点链接**。常见热度字段：`readCount`（阅读）/ `likeCount`（点赞）/ `lookingCount`（在看），字段名以实际返回为准。
+从 `data.items` 取字段铺 Markdown 表，按热度（阅读量）降序排。字段做**防御式读取**——缺失就留空别报错。热度字段：`clicksCount`（阅读）/ `watchCount`（在看）/ `likeCount`（点赞）。
 
-| 标题 | 作者 | 阅读 | 在看 | 点赞 | 发布时间 |
-|------|------|------|------|------|----------|
-| [示例爆文](https://mp.weixin.qq.com/s/xxx) | 某某公众号 | 10.0w | 1.2k | 3.4k | 2026-06-20 |
+| 标题 | 阅读 | 在看 | 点赞 |
+|------|------|------|------|
+| 示例爆文 | 10.0w | 1.2k | 3.4k |
 
 > 万级以上阅读数可格式化成 `10.0w` 更醒目——展示层加工，不改接口调用。
 
@@ -82,7 +82,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
   {
     "success": true,
     "requestId": "...",
-    "data": { "items": [ { "title": "...", "accountName": "...", "readCount": 0, "publishTime": "..." } ] },
+    "data": { "items": [ { "title": "...", "clicksCount": 0, "watchCount": 0, "likeCount": 0 } ] },
     "error": null
   }
   ```

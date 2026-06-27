@@ -40,10 +40,10 @@ export DOUBAOYA_API_KEY="dyh_xxxxxxxx"
 
 ```bash
 # 默认：平台 2,5,8 + 关键词 AI + 今天 00:00 至当前
-python3 scripts/fetch_trends.py
+python3 "$SKILL_PATH/scripts/fetch_trends.py"
 
 # 指定平台编号 + 关键词 + 时间区间
-python3 scripts/fetch_trends.py --platforms 2,5,8 --keywords AI,大模型 --start-date "2026-06-24 00:00:00" --end-date "2026-06-24 01:00:00"
+python3 "$SKILL_PATH/scripts/fetch_trends.py" --platforms 2,5,8 --keywords AI,大模型 --start-date "2026-06-24 00:00:00" --end-date "2026-06-24 01:00:00"
 ```
 
 CLI 参数：
@@ -65,7 +65,7 @@ CLI 参数：
 
 2. **调脚本拿数据**
    ```bash
-   python3 scripts/fetch_trends.py --platforms 2,5,8 --keywords AI
+   python3 "$SKILL_PATH/scripts/fetch_trends.py" --platforms 2,5,8 --keywords AI
    ```
    脚本成功时把 `data` 以 JSON 打到 stdout，热点在 `data.items` 里。
 

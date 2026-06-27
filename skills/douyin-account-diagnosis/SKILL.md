@@ -69,11 +69,8 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 ## 第二步：调用脚本
 
 ```bash
-# 默认按账号名（中文名）批量诊断
-python3 scripts/diagnose_account.py "本鸭の小厨房" "隔壁老王Vlog"
-
-# 按抖音号诊断
-python3 scripts/diagnose_account.py "douyinhao123" --by-id
+# 批量诊断：账号名（中文名）或抖音号皆可，可混传，一次多个
+python3 scripts/diagnose_account.py "本鸭の小厨房" "隔壁老王Vlog" "douyinhao123"
 
 # 首次诊断、数据稀疏时：先同步作品再诊断
 python3 scripts/diagnose_account.py "本鸭の小厨房" --sync
@@ -81,11 +78,12 @@ python3 scripts/diagnose_account.py "本鸭の小厨房" --sync
 
 脚本会读取 `DOUBAOYA_API_KEY`，向都爆鸭发起诊断，成功时把 `data`（含 `items[]`）以 JSON 打印到标准输出。
 
-### 账号名 vs 抖音号怎么选
+> ⚠️ 这里要传**真实存在**的账号名或抖音号——别凭空捏一个来"试一下"，查不到的账号只会返回空结果。手上没有确切账号时，先向用户要真实账号。
 
-- **默认**：把每个位置参数当作账号名，组装成 `accountNames[]`——中文名是最常见的情形。
-- **`--by-id`**：把位置参数当作抖音号 / accountId，组装成 `accountIds[]`。
-- 接口要求 `accountNames[]` 或 `accountIds[]` **至少有一组**；本脚本据你是否带 `--by-id` 二选一发送。
+### 账号名还是抖音号？
+
+- 接口要求 **`accountNames[]`**（数组，**必填**，至少一个）。
+- 这个字段**同时接受账号名（中文名）和抖音号**，后端自动识别——所以名称、ID 都直接当位置参数传进去即可，可以混着传。
 
 ### 关于 `--sync`（可选，仅首次同步用一次）
 
@@ -103,7 +101,7 @@ python3 scripts/diagnose_account.py "本鸭の小厨房" --sync
 | 配置项 | 值 |
 |--------|-----|
 | 诊断接口 | `POST https://doubaoya.com/api/apis/douyin/douyin-account-diagnosis/call` |
-| 诊断请求体 | `{ "accountNames": ["账号名", ...] }` 或 `{ "accountIds": ["抖音号", ...] }`（至少一组） |
+| 诊断请求体 | `{ "accountNames": ["账号名或抖音号", ...] }`（数组，必填，至少一个；该字段同时接受名称与 ID） |
 | 同步接口（仅 --sync） | `POST https://doubaoya.com/api/apis/douyin/douyin-sync-notes/call` |
 | 同步请求体 | `{ "accountId": "<抖音号>" }` |
 | 认证方式 | 请求头 `Authorization: Bearer $DOUBAOYA_API_KEY` |
@@ -136,7 +134,7 @@ python3 scripts/diagnose_account.py "本鸭の小厨房" --sync
 | HTTP | code | 含义 / 处理 |
 |------|------|------|
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没设 Key 或 Key 无效——检查 `DOUBAOYA_API_KEY` |
-| 400 | `VALIDATION_ERROR` | 入参有误——至少要给 `accountNames[]` 或 `accountIds[]` 一组 |
+| 400 | `VALIDATION_ERROR` | 入参有误——`accountNames[]` 至少要有一个账号 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足——前往 doubaoya.com 充值后重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时失败，**已自动退款，可安全重试** |
 
@@ -201,7 +199,7 @@ douyin-account-diagnosis/
 前往 [doubaoya.com](https://doubaoya.com) 登录 → 口令中心 → 生成口令，得到形如 `dyh_…` 的密钥，设进环境变量 `DOUBAOYA_API_KEY`。本鸭不会回显你的 Key。
 
 **Q2：传账号名还是抖音号？**
-默认传账号名（中文名最常见）。如果你手上是抖音号，加 `--by-id`。一次可以传多个，做批量诊断。
+都行。`accountNames[]` 同时接受账号名（中文名）和抖音号，后端自动识别；一次可以传多个、也可混传，做批量诊断。注意要传真实存在的账号，别编造。
 
 **Q3：诊断结果几乎是空的，怎么办？**
 多半是首次诊断、作品还没入库。先 `--sync` 同步一次（约 30 分钟，不计费），等好了再去掉 `--sync` 重跑诊断。

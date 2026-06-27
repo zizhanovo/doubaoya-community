@@ -36,7 +36,7 @@ python3 "$SKILL_PATH/scripts/download.py" "<分享链接>"
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每条链接只跑一次脚本**，直接读完整 stdout，别用 `head`/`tail` 预览。
 
 ### 3. 渲染结果
-从 `data` 里取字段，做**防御式读取**——`item.title`（作品标题）/ `item.downloadUrl`（无水印直链）可能缺失，缺了就留空，别报错。把直链给用户，标题做说明。
+`data` 是**扁平结构**（不套 `item`），做**防御式读取**——`title`（作品标题）/ `videoUrl`（无水印视频直链）/ `cover`（封面）可能缺失，缺了就留空，别报错。把 `videoUrl` 给用户，`title` 做说明。若是图文作品，视频直链会为空，改读 `imageUrls`（图片直链数组）。
 
 ---
 
@@ -62,15 +62,24 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
 - 请求体：`{ "url": "<分享链接>" }`
   - `url`：字符串，必填，作品分享链接
-- 返回信封：
+- 返回信封（`data` 为扁平结构）：
   ```json
   {
     "success": true,
     "requestId": "...",
-    "data": { "item": { "title": "...", "downloadUrl": "https://..." } },
+    "data": {
+      "platform": "douyin",
+      "title": "...",
+      "videoUrl": "https://...mp4",
+      "cover": "https://...jpg",
+      "imageUrls": []
+    },
     "error": null
   }
   ```
+  - `videoUrl`：无水印视频直链（图文作品时为空）
+  - `imageUrls`：图片直链数组（图文作品时有值，视频作品时为空）
+  - `cover` / `title` / `platform`：封面、标题、来源平台
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
 
 ---

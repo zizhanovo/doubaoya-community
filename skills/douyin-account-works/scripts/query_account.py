@@ -2,7 +2,7 @@
 """都爆鸭 · 抖音账号概况查询
 
 调用 doubaoya.com 的 douyin/query-account 接口，返回账号档案
-（昵称 / 粉丝数 / 关注数 / 作品总数）。
+（昵称 / 粉丝数 / 关注数）。
 
 用法：
     python3 query_account.py "<secUid>"

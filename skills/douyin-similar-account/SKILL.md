@@ -70,11 +70,9 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 ## 第二步：调用脚本
 
 ```bash
-# 默认按账号名找相似
+# 找相似：种子号传账号名（中文名）或抖音号皆可
 python3 scripts/find_similar.py "本鸭の小厨房"
-
-# 按抖音号找相似
-python3 scripts/find_similar.py "douyinhao123" --by-id
+python3 scripts/find_similar.py "douyinhao123"
 
 # 种子号数据稀疏时：先同步它的作品再找相似
 python3 scripts/find_similar.py "本鸭の小厨房" --sync
@@ -82,11 +80,12 @@ python3 scripts/find_similar.py "本鸭の小厨房" --sync
 
 脚本会读取 `DOUBAOYA_API_KEY`，向都爆鸭发起推荐，成功时把 `data`（含 `currentAccount` + `items[]`/`similarAccounts`）以 JSON 打印到标准输出。
 
-### 账号名 vs 抖音号怎么选
+> ⚠️ 种子号要是**真实存在**的账号名或抖音号——别凭空捏一个来"试一下"，查不到的种子号给不出对标列表。手上没有确切账号时，先向用户要真实账号。
 
-- **默认**：把位置参数当作账号名，组装成 `{ "accountName": "..." }`。
-- **`--by-id`**：把位置参数当作抖音号 / accountId，组装成 `{ "accountId": "..." }`。
-- 接口要求 `accountName` 或 `accountId` **至少有一个**；本脚本据你是否带 `--by-id` 二选一发送。
+### 账号名还是抖音号？
+
+- 接口要求 **`accountName`**（**必填**）。
+- 这个字段**同时接受账号名（中文名）和抖音号**，后端自动识别——所以名称、ID 都直接当位置参数传即可。
 
 ### 关于 `--sync`（可选，给种子号补作品用一次）
 
@@ -104,7 +103,7 @@ python3 scripts/find_similar.py "本鸭の小厨房" --sync
 | 配置项 | 值 |
 |--------|-----|
 | 推荐接口 | `POST https://doubaoya.com/api/apis/douyin/douyin-similar-account/call` |
-| 推荐请求体 | `{ "accountName": "<账号名>" }` 或 `{ "accountId": "<抖音号>" }`（至少一个） |
+| 推荐请求体 | `{ "accountName": "<账号名或抖音号>" }`（必填；该字段同时接受名称与抖音号） |
 | 同步接口（仅 --sync） | `POST https://doubaoya.com/api/apis/douyin/douyin-sync-notes/call` |
 | 同步请求体 | `{ "accountId": "<抖音号>" }` |
 | 认证方式 | 请求头 `Authorization: Bearer $DOUBAOYA_API_KEY` |
@@ -134,7 +133,7 @@ python3 scripts/find_similar.py "本鸭の小厨房" --sync
 | HTTP | code | 含义 / 处理 |
 |------|------|------|
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没设 Key 或 Key 无效——检查 `DOUBAOYA_API_KEY` |
-| 400 | `VALIDATION_ERROR` | 入参有误——至少要给 `accountName` 或 `accountId` 之一 |
+| 400 | `VALIDATION_ERROR` | 入参有误——`accountName` 不能为空 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足——前往 doubaoya.com 充值后重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时失败，**已自动退款，可安全重试** |
 
@@ -200,7 +199,7 @@ douyin-similar-account/
 前往 [doubaoya.com](https://doubaoya.com) 登录 → 口令中心 → 生成口令，得到形如 `dyh_…` 的密钥，设进环境变量 `DOUBAOYA_API_KEY`。本鸭不会回显你的 Key。
 
 **Q2：传账号名还是抖音号？**
-默认传账号名。如果你手上是抖音号，加 `--by-id`。
+都行。`accountName` 同时接受账号名（中文名）和抖音号，后端自动识别。记得传真实存在的账号，别编造。
 
 **Q3：相似列表是空的，怎么办？**
 多半是种子号作品还没入库。先 `--sync` 同步一次（约 30 分钟，不计费），等好了再去掉 `--sync` 重跑。

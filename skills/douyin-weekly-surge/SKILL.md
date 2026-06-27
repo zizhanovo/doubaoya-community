@@ -51,8 +51,8 @@ python3 "$SKILL_PATH/scripts/fetch_weekly_surge.py" --type 美食 --start-time 2
 ## 工作流（3 步）
 
 1. **定分类 + 日期**：默认美食、昨天。
-2. **调脚本拿数据**：返回里取 **weeklyRank（周榜）**，每条 `item` 含 `title`、`category`、`share_url`，外层有 `rank`。（同包里也有 dailyRank，本技能聚焦周榜。）
-3. **铺周榜 + 给中线洞察**：按 `rank` 升序铺周榜表，表后用本鸭口吻补一句——这一周哪些选题在持续走高、属于稳定趋势还是短期热点、值不值得押注。
+2. **调脚本拿数据**：榜单在 `data.items` —— 是一个数组，每条形如 `{ "rank": "weeklyRank", "item": { ... } }`，`rank` 是**分组名字符串**。本技能只取 `rank == "weeklyRank"` 的条目（同份返回里还有 `rank == "dailyRank"` 的日榜条目，本技能忽略它们）；周榜每条的 `item` 含 `title`、`category`、`share_url`。
+3. **铺周榜 + 给中线洞察**：从 `items` 里筛出 `rank == "weeklyRank"` 的条目，取各自 `item.title` / `item.category` / `item.share_url` 铺表，表后用本鸭口吻补一句——这一周哪些选题在持续走高、属于稳定趋势还是短期热点、值不值得押注。
 
 | 名次 | 标题 | 分类 | 链接 |
 |------|------|------|------|
@@ -67,11 +67,14 @@ python3 "$SKILL_PATH/scripts/fetch_weekly_surge.py" --type 美食 --start-time 2
 - `POST https://doubaoya.com/api/apis/douyin/douyin-content-surge/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
 - 请求体：`{ "type": "美食", "startTime": "2026-06-23" }`
+  - `startTime` 请传**真实、较近的日期**（当地区域的最近日期），别编造或填未来日期。
 - 返回信封：
   ```json
-  { "success": true, "requestId": "...", "data": { "weeklyRank": { "items": [ { "rank": 1, "item": { "title": "...", "category": "...", "share_url": "..." } } ] }, "dailyRank": { "items": [ ... ] } }, "error": null }
+  { "success": true, "requestId": "...", "data": { "items": [ { "rank": "dailyRank", "item": { "title": "...", "category": "...", "share_url": "..." } }, { "rank": "weeklyRank", "item": { "title": "...", "category": "...", "share_url": "..." } } ] }, "error": null }
   ```
+  - `data.items` 是扁平数组；`rank` 为分组名字符串。**本技能只读 `rank == "weeklyRank"` 的条目**，内容在其 `item` 里（用 `item.share_url`，不是 workUrl）。
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
+- 结果为空通常表示该日期窗口还没有结算数据——把 `--start-time` 往前挪一天再跑即可。
 
 ---
 

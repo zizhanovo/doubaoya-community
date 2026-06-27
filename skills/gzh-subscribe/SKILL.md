@@ -41,11 +41,11 @@ python3 "$SKILL_PATH/scripts/account_works.py" "示例公众号" --page 2 --star
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次只跑一次**，直接读完整 stdout，别预览、别重复调用。
 
 ### 3. 铺成追更表
-从 `data.items` 取字段铺 Markdown 表，按**发布时间降序**排（最新在上）。字段做**防御式读取**——缺失留空别报错。标题渲染成**可点链接**。
+从 `data.items` 取字段铺 Markdown 表，按**发布时间降序**排（最新在上）。每条含 `title`（标题）、`publishTime`（发布时间）、`clicksCount`（阅读量）。字段做**防御式读取**——缺失留空别报错。标题渲染成**可点链接**。
 
-| 发布时间 | 标题 | 阅读 | 点赞 |
-|----------|------|------|------|
-| 2026-06-20 | [示例文章标题](https://mp.weixin.qq.com/s/xxx) | 8.5w | 1.1k |
+| 发布时间（publishTime） | 标题（title） | 阅读量（clicksCount） |
+|----------|------|------|
+| 2026-06-20 | [示例文章标题](https://mp.weixin.qq.com/s/xxx) | 8.5w |
 
 ### 4. 给一句复盘洞察
 表格之后补一句：这账号近期在主攻什么主题、更新勤不勤、哪篇明显跑赢、选题有没有转向。简短、有据，别堆套话。
@@ -81,7 +81,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
   {
     "success": true,
     "requestId": "...",
-    "data": { "items": [ { "title": "...", "publishTime": "...", "readCount": 0, "likeCount": 0 } ] },
+    "data": { "items": [ { "title": "...", "publishTime": "...", "clicksCount": 0 } ] },
     "error": null
   }
   ```

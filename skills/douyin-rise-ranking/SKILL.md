@@ -46,7 +46,7 @@ python3 "$SKILL_PATH/scripts/fetch_rise_rank.py" --period week --date 2026-06-25
 |------|------|----------|
 | 1 | 某某达人 | +xxx |
 
-> 榜单里的指数字段统一叫「热度指数 / 综合指数」，不要用其他叫法。
+> 粉丝增量读 `riseFans` 字段，对外展示叫「粉丝增量」。
 
 ### 4. 给一句风向洞察
 表后用本鸭口吻补一句：这批黑马达人集中在哪些赛道、是借了什么内容形态或热点起来的、哪些涨粉打法能迁移到自己的号或其他平台。简短、有用，别堆套话。
@@ -77,6 +77,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
   - `period`：榜单周期，枚举 `day` / `week` / `month`，默认 `week`
   - `rankDate`：字符串 `YYYY-MM-DD`，默认昨天
   - `category`：行业分类，默认 `全部`（另有 数码科技 / 美食 / 化妆美容 / 三农 / 情感 / 游戏 等多个细分赛道可选）
+  - `rankDate` 请传**真实、较近的日期**（当地区域的最近日期），别编造或填未来日期；空结果通常说明该日期窗口还没数据，往前挪一天再试。
 - 返回信封：
   ```json
   { "success": true, "requestId": "...", "data": { "items": [ { "rank": 1, "accountName": "...", "riseFans": "..." } ] }, "error": null }

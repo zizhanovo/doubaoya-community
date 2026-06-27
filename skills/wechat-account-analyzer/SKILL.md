@@ -9,7 +9,7 @@ description: 公众号账号诊断 · 按名称批量给公众号做体检，输
 
 > 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 >
-> 诊断结论里凡涉及对标的「指数」，统一叫**综合指数 / 热度指数**，按 API 真实返回值如实呈现，缺什么就标"暂无"，不脑补、不打主观分。
+> 诊断画像按 API 真实返回字段如实呈现——主要看 `avgReadCount`（平均阅读）、`healthScore`（健康度）；缺什么就标"暂无"，不脑补、不打主观分。
 
 ---
 
@@ -31,8 +31,8 @@ description: 公众号账号诊断 · 按名称批量给公众号做体检，输
 取出要诊断的一个或多个**公众号名称**。名称越准、命中越稳。多个账号一次报齐即可并诊对照。
 
 ### 2.（可选）先同步、再诊断
-默认直接诊断，读**库里现有数据**。若需要更新更全的底数，加 `--sync`：脚本会**先**对每个账号触发一次**异步同步**（用账号名作为 `accountId`），打印各自的**受理回执**（状态通常为 `syncing`），**再**调诊断接口。
-> 同步是**异步**的（约 30 分钟落库）。带 `--sync` 这一次诊断**仍读库里现有数据**；想吃到刚同步的新数据，等 30 分钟后**不带 `--sync`** 再跑一次。
+默认直接诊断，读**库里现有数据**。若需要更新更全的底数，加 `--sync`：脚本会**先**对每个账号触发一次**异步同步**（用账号名作为 `accountId`），打印各自的**受理回执**（含 `status` / `retryAfterMinutes`），**再**调诊断接口。
+> 同步是**异步**的，落库需要时间（参考回执里的 `retryAfterMinutes`）。带 `--sync` 这一次诊断**仍读库里现有数据**；想吃到刚同步的新数据，等回执建议的分钟数后**不带 `--sync`** 再跑一次。
 
 ### 3. 调用诊断脚本
 ```bash
@@ -45,7 +45,7 @@ python3 "$SKILL_PATH/scripts/analyze_accounts.py" "账号A" "账号B" --sync
 脚本把成功信封里的 `data` 以 JSON 打到 stdout（带 `--sync` 时会先额外打印 `syncReceipts`）。**每次只跑一次**，直接读完整 stdout。
 
 ### 4. 出诊断报告
-基于返回的 `data` 给每个账号出一份简报：账号画像（昵称 / 体量）、发文表现（近期发文量与阅读/互动）、健康度（更新频率、综合指数对标）。多号时并排对照、点出差距与可落地的优化方向。字段做**防御式读取**——API 没返回的字段标"暂无"，**不估算、不补值、不打主观分**。
+基于返回的 `data.items` 给每个账号出一份简报：账号名（`accountName`）、平均阅读（`avgReadCount`）、健康度（`healthScore`）。多号时并排对照、点出差距与可落地的优化方向。字段做**防御式读取**——API 没返回的字段标"暂无"，**不估算、不补值、不打主观分**。
 
 ---
 
@@ -70,11 +70,12 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 诊断（主接口）：
 - `POST https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-account-analyzer/call`
 - 请求体：`{ "accountNames": ["账号A", "账号B"] }`（字符串数组，必填）
+- `data.items` 每条含 `accountName`、`avgReadCount`（平均阅读）、`healthScore`（健康度）。
 
 同步（可选，`--sync` 时每个账号各调一次）：
 - `POST https://doubaoya.com/api/apis/gongzhonghao/gzh-sync-notes/call`
 - 请求体：`{ "accountId": "账号A" }`（用账号名作为 accountId）
-- 返回**受理回执**（状态通常 `syncing`，约 30 分钟落库），异步，不阻塞诊断。
+- 返回**受理回执** `{ status, accepted, retryAfterMinutes }`，异步落库，不阻塞诊断；`retryAfterMinutes` 是建议的重试等待分钟数。
 
 共用：
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
@@ -83,7 +84,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
   {
     "success": true,
     "requestId": "...",
-    "data": { "...": "..." },
+    "data": { "items": [ { "accountName": "...", "avgReadCount": 0, "healthScore": 0 } ] },
     "error": null
   }
   ```

@@ -82,7 +82,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
   {
     "success": true,
     "requestId": "...",
-    "data": { "items": [ { "title": "...", "accountName": "...", "readCount": 0, "publishTime": "..." } ] },
+    "data": { "items": [ { "title": "...", "clicksCount": 0, "watchCount": 0, "likeCount": 0 } ] },
     "error": null
   }
   ```

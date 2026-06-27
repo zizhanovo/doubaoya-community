@@ -52,8 +52,8 @@ python3 "$SKILL_PATH/scripts/fetch_hot_trend.py" --platform 2 --start-date 2026-
 ## 工作流（3 步）
 
 1. **定平台 + 区间**：默认抖音、近 5 天。要看更长的趋势就把 `--start-date` 往前挪。
-2. **调脚本拿数据**：热榜在 `data.items` 里，每条含 `index`（名次）、`title`（标题）、`hotCount`（热度）、`url`（链接）。
-3. **铺榜 + 给风向**：按 `hotCount` 降序铺成 Markdown 表，表后用本鸭口吻补一句——这几天哪类话题在霸榜、哪条正在起势值得抢先做。
+2. **调脚本拿数据**：热榜在 `data.items` 里，每条含 `index`（名次）、`title`（标题）、`hotCount`（热度，**字符串**，形如 `"920万"`）、`url`（链接）。
+3. **铺榜 + 给风向**：返回已按热度排好，**按 `index`（名次）升序**铺成 Markdown 表即可（`hotCount` 是 `"920万"` 这类带单位的字符串，别拿它做数值排序）。表后用本鸭口吻补一句——这几天哪类话题在霸榜、哪条正在起势值得抢先做。
 
 | 名次 | 标题 | 热度 | 链接 |
 |------|------|------|------|
@@ -70,7 +70,7 @@ python3 "$SKILL_PATH/scripts/fetch_hot_trend.py" --platform 2 --start-date 2026-
 - 请求体：`{ "platform": 2, "startDate": "2026-06-20", "endDate": "2026-06-24" }`
 - 返回信封：
   ```json
-  { "success": true, "requestId": "...", "data": { "items": [ { "index": 1, "title": "...", "hotCount": 123, "url": "..." } ] }, "error": null }
+  { "success": true, "requestId": "...", "data": { "items": [ { "index": 1, "title": "...", "hotCount": "920万", "url": "..." } ] }, "error": null }
   ```
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
 
@@ -105,8 +105,8 @@ douyin-hot-trend/
 **Q：提示缺少 `DOUBAOYA_API_KEY`？**
 A：先 `export DOUBAOYA_API_KEY="dyh_…"`（去 doubaoya.com → 登录 → 口令中心 → 生成口令）。
 
-**Q：某天没数据？**
-A：把区间往前挪一天再跑，或确认数据窗口。
+**Q：跑完 `items` 是空的 / 某天没数据？**
+A：这就是说**该日期区间内没有热榜数据**，不是脚本出错——别编数据填表。把 `--start-date` 往前挪一两天、或确认所选窗口确有数据后重跑。
 
 **Q：报 `502 PROVIDER_FAILED`？**
 A：上游临时抖动，系统已自动退款，直接重跑即可。

@@ -1,6 +1,6 @@
 ---
 name: gzh-ai-feed
-description: AI 公众号日报内容源 · 按关键词扫描 AI 方向的公众号爆款，终端表格展示（标题链接/账号/点赞）并聚类成每日选题日报。当用户需要 AI 日报、每日 AI 热点、AI 公众号爆款、AI 内容选题、做 AI 赛道内容发现时使用。
+description: AI 公众号日报内容源 · 按关键词扫描 AI 方向的公众号爆款，终端表格展示（标题链接/点赞）并聚类成每日选题日报。当用户需要 AI 日报、每日 AI 热点、AI 公众号爆款、AI 内容选题、做 AI 赛道内容发现时使用。
 ---
 
 # AI 公众号日报内容源（都爆鸭）
@@ -39,11 +39,11 @@ python3 "$SKILL_PATH/scripts/fetch_ai_feed.py" "大模型" --page 2 --size 30
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次查询只跑一次脚本**，直接读完整 stdout，别用 `head`/`tail` 预览，也别对同一参数重复调用。
 
 ### 3. 渲染爆文表格
-从 `data.items`（文章数组）里取字段，铺成 Markdown 表格。字段做防御式读取——`title` / `accountName`（账号）/ `likeCount`（点赞）可能缺失，缺了就留空，别报错。标题渲染成**可点链接**（指向文章原文 URL）。
+从 `data.items`（文章数组）里取字段，铺成 Markdown 表格。字段做防御式读取——`title`（标题）/ `likeCount`（点赞）可能缺失，缺了就留空，别报错。标题渲染成**可点链接**（指向文章原文 URL）。
 
-| 标题 | 账号 | 点赞 |
-|------|------|------|
-| [示例 AI 爆文](https://mp.weixin.qq.com/s/xxx) | 某某 AI 号 | 1,200 |
+| 标题 | 点赞 |
+|------|------|
+| [示例 AI 爆文](https://mp.weixin.qq.com/s/xxx) | 1,200 |
 
 ### 4. 聚类成日报 + 一句洞察
 把这批文章按话题方向**聚类**（如 Agent / 大模型 / 多模态 / 落地应用），每个方向挑出代表爆款，组成一份简短日报。结尾用本鸭口吻补一句**选题洞察**：今天 AI 圈哪个方向最热、哪个角度还有空位。别堆套话，别反问用户目的。
@@ -79,7 +79,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
   {
     "success": true,
     "requestId": "...",
-    "data": { "items": [ { "title": "...", "accountName": "...", "likeCount": 1200 } ] },
+    "data": { "items": [ { "title": "...", "likeCount": 1200 } ] },
     "error": null
   }
   ```

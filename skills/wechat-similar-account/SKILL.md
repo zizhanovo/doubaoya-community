@@ -45,7 +45,7 @@ python3 "$SKILL_PATH/scripts/fetch_similar.py" "某某公众号" --sync --wechat
 `--sync` 会先发受理请求，回执后立刻继续拉当前可用的相似账号。若刚提交、数据还没回来，过约 30 分钟再跑一次即可。
 
 ### 4. 铺对标矩阵 + 给一句洞察
-从 `data` 里取对标账号字段（账号名、阅读量级、推荐理由等，防御式读取，缺了留空），铺成两层 Markdown 表：**同阶对标**（量级相近、可直接抄玩法）和 **高阶标杆**（量级更大、模式可追赶）。表后用本鸭口吻补一句：这个赛道头部在抢什么、自己的号该贴哪一档去打。
+从 `data.items` 里取对标账号字段——`accountName`（账号名）、`avgReadCount`（平均阅读量）、`similarity`（相似度），防御式读取，缺了留空。按 `avgReadCount` 量级铺成两层 Markdown 表：**同阶对标**（量级相近、可直接抄玩法）和 **高阶标杆**（量级更大、模式可追赶）；`similarity` 越高越贴种子赛道。表后用本鸭口吻补一句：这个赛道头部在抢什么、自己的号该贴哪一档去打。
 
 ---
 
@@ -77,7 +77,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
 - 返回信封：
   ```json
-  { "success": true, "requestId": "...", "data": { "items": [ ... ] }, "error": null }
+  { "success": true, "requestId": "...", "data": { "items": [ { "accountName": "...", "avgReadCount": 50000, "similarity": 0.92 } ] }, "error": null }
   ```
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
 

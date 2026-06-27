@@ -67,6 +67,7 @@ python3 "$SKILL_PATH/scripts/fetch_daily_hot.py" --type 美食 --start-time 2026
 - `POST https://doubaoya.com/api/apis/douyin/douyin-likes-rank/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
 - 请求体：`{ "type": "美食", "startTime": "2026-06-23", "endTime": "2026-06-23" }`
+  - `startTime` / `endTime` 请传**真实、较近的日期**（当地区域的最近日期），别编造或填未来日期；空结果通常说明该日期窗口还没结算数据，往前挪一天再试。
 - 返回信封：
   ```json
   { "success": true, "requestId": "...", "data": { "items": [ { "title": "...", "accountName": "...", "category": "...", "workUrl": "..." } ] }, "error": null }

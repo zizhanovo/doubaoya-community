@@ -2,10 +2,10 @@
 """都爆鸭 · 抖音账号诊断脚本（零依赖，仅用标准库）。
 
 用法:
-    python3 diagnose_account.py "<账号名>" ["<账号名2>" ...] [--by-id] [--sync]
+    python3 diagnose_account.py "<账号名或抖音号>" ["<账号2>" ...] [--sync]
 
-    位置参数：一个或多个账号。默认按「账号名（中文名）」处理，组装成 accountNames[]。
-    --by-id   把传入的账号当作抖音号 / accountId，组装成 accountIds[]。
+    位置参数：一个或多个账号，账号名（中文名）或抖音号皆可，后端自动识别。
+              统一组装成接口要求的 accountNames[]（该字段同时接受名称与 ID）。
     --sync    首次诊断某账号若数据稀疏，先把该账号的作品同步入库（约 30 分钟），
               本脚本只发起同步任务并立刻打印回执，不阻塞、不轮询；随后照常发起诊断。
 
@@ -105,12 +105,7 @@ def main():
     parser.add_argument(
         "accounts",
         nargs="+",
-        help="一个或多个账号；默认按账号名处理，--by-id 时按抖音号处理",
-    )
-    parser.add_argument(
-        "--by-id",
-        action="store_true",
-        help="把账号当作抖音号 / accountId（组装成 accountIds[]）",
+        help="一个或多个账号；账号名或抖音号皆可（后端自动识别）",
     )
     parser.add_argument(
         "--sync",
@@ -135,11 +130,8 @@ def main():
             "同步完成前诊断数据可能稀疏，建议约 30 分钟后再重跑一次（去掉 --sync）。\n"
         )
 
-    # 组装诊断请求体：默认 accountNames[]，--by-id 时 accountIds[]。
-    if args.by_id:
-        body = {"accountIds": accounts}
-    else:
-        body = {"accountNames": accounts}
+    # 诊断请求体：统一用接口要求的 accountNames[]（该字段同时接受名称与抖音号）。
+    body = {"accountNames": accounts}
 
     data = call_api(api_key, DIAGNOSE_URL, body)
     print(json.dumps(data, ensure_ascii=False, indent=2))

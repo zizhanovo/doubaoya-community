@@ -2,10 +2,10 @@
 """都爆鸭 · 抖音相似账号推荐脚本（零依赖，仅用标准库）。
 
 用法:
-    python3 find_similar.py "<账号名>" [--by-id] [--sync]
+    python3 find_similar.py "<账号名或抖音号>" [--sync]
 
-    位置参数：一个账号。默认按「账号名」处理，组装成 {"accountName": "..."}。
-    --by-id   把传入的账号当作抖音号 / accountId，组装成 {"accountId": "..."}。
+    位置参数：一个账号，账号名或抖音号皆可，后端自动识别。
+              统一组装成接口要求的 {"accountName": "..."}（该字段同时接受名称与 ID）。
     --sync    先把源账号的作品同步入库（约 30 分钟），让相似推荐更准。
               本脚本只发起同步任务并立刻打印回执，不阻塞、不轮询；随后照常发起推荐。
 
@@ -103,12 +103,7 @@ def main():
     )
     parser.add_argument(
         "account",
-        help="源账号；默认按账号名处理，--by-id 时按抖音号处理",
-    )
-    parser.add_argument(
-        "--by-id",
-        action="store_true",
-        help="把账号当作抖音号 / accountId（组装成 accountId）",
+        help="源账号；账号名或抖音号皆可（后端自动识别）",
     )
     parser.add_argument(
         "--sync",
@@ -132,11 +127,8 @@ def main():
             "同步完成前相似推荐可能稀疏，建议约 30 分钟后再重跑一次（去掉 --sync）。\n"
         )
 
-    # 组装请求体：默认 accountName，--by-id 时 accountId。
-    if args.by_id:
-        body = {"accountId": account}
-    else:
-        body = {"accountName": account}
+    # 请求体：统一用接口要求的 accountName（该字段同时接受名称与抖音号）。
+    body = {"accountName": account}
 
     data = call_api(api_key, SIMILAR_URL, body)
     print(json.dumps(data, ensure_ascii=False, indent=2))

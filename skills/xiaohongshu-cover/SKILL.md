@@ -51,7 +51,7 @@ python3 "$SKILL_PATH/scripts/fetch_cover_data.py" --keyword 露营 --start-date 
 ## 工作流（3 步）
 
 1. **定关键词 + 起始日期**：围绕你要做的赛道给一个核心词。
-2. **调脚本拿数据**：多榜数据在 `data` 下，榜单条目在各榜的 `items`，每条 `item` 含 `title`、`likedCount` 等，外层有 `rank`。
+2. **调脚本拿数据**：数据在 `data.items`，是一组 `{ rank, item }`。`rank` 是榜名（如 `likeTheTop500`、低粉爆款、单日互动、七日增长），真正的笔记在 `item` 里（`item.title`、`item.likedCount` 等）。
 3. **提炼封面套路 + 给方向**：从高赞笔记里归纳封面规律（主体大图 / 文字钩子 / 对比 / 清单感等），用本鸭口吻给 3 条可直接套用的封面方向。
 
 字段防御式读取（缺了留空）。
@@ -65,7 +65,7 @@ python3 "$SKILL_PATH/scripts/fetch_cover_data.py" --keyword 露营 --start-date 
 - 请求体：`{ "keyword": "露营", "startDate": "2026-06-01" }`
 - 返回信封：
   ```json
-  { "success": true, "requestId": "...", "data": { "items": [ { "rank": 1, "item": { "title": "...", "likedCount": 123 } } ] }, "error": null }
+  { "success": true, "requestId": "...", "data": { "items": [ { "rank": "likeTheTop500", "item": { "title": "...", "likedCount": 12000 } } ] }, "error": null }
   ```
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
 

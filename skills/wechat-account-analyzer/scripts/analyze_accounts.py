@@ -13,7 +13,7 @@
 
 可选预同步（--sync）:
     先对每个账号触发一次异步同步（用账号名作为 accountId），打印各自的受理回执
-    （状态通常为 syncing，约 30 分钟落库），再调用诊断接口。
+    （状态通常为 syncing，落库需要时间，详见回执 retryAfterMinutes），再调用诊断接口。
     同步是异步的：本次诊断仍读库里现有数据；想要最新数据，等同步完成后再跑一次（不带 --sync）。
     POST .../gzh-sync-notes/call   body {"accountId": "<账号名>"}
 
@@ -89,7 +89,7 @@ def main() -> int:
     parser.add_argument(
         "--sync",
         action="store_true",
-        help="诊断前先对每个账号触发异步同步（约 30 分钟落库），并打印受理回执",
+        help="诊断前先对每个账号触发异步同步（落库需要时间，详见回执 retryAfterMinutes），并打印受理回执",
     )
     args = parser.parse_args()
 
@@ -111,7 +111,7 @@ def main() -> int:
                 return 1
             receipts.append({"accountName": name, "receipt": data})
         sys.stderr.write(
-            "[info] 已触发同步（异步，约 30 分钟落库）。本次诊断仍读库里现有数据；"
+            "[info] 已触发同步（异步，落库需要时间，详见回执 retryAfterMinutes）。本次诊断仍读库里现有数据；"
             "想要最新数据，待同步完成后再不带 --sync 跑一次。\n"
         )
         print(json.dumps({"syncReceipts": receipts}, ensure_ascii=False, indent=2))
