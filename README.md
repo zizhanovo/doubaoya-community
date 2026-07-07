@@ -37,7 +37,7 @@ npx skills add zizhanovo/doubaoya-community
 npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 ```
 
-## 技能清单（共 80 个）
+## 技能清单（共 81 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -70,6 +70,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **wechat-channels-ai-feed** | AI 视频号爆款信息源，聚类成每日选题日报 |
 | **wechat-banned-words** | 公众号违禁词检测 + 合规改写 |
 | **wechat-rewrite** 🖥 | 把文案改写成公众号爆款风格 |
+| **wechat-draft-publish** | 把写好的图文存进你自己公众号草稿箱（只存草稿、不群发，需先绑定公众号） |
 
 ### 🎵 抖音
 
