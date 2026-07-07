@@ -24,7 +24,8 @@ description: 公众号草稿发布 · 把一篇写好的图文存进你自己公
 ### 几条要诚实告诉用户的约束
 
 - `contentHtml` 是**公众号风格的 HTML** 正文（**不是 markdown**）。若用户给的是 markdown，先转成公众号 HTML 再发。
-- 正文里的外链图片会被自动搬运成公众号图床地址；个别搬运失败会被跳过、不影响整篇。
+- 正文里的**外链**图片（`http(s)://` / `mmbiz`）会被服务端自动搬运成公众号图床地址；个别搬运失败会被跳过、不影响整篇。
+- **本地图片**（`<img src="/Users/.../x.png">`、`./a.jpg`、`file://…`）和**本地封面**服务端读不到，直接发会被静默丢弃——必须先在客户端**预上传**再发（见下文「本地图片必须先客户端预上传」；有本地图/封面时用 `scripts/preprocess-and-publish.mjs`）。
 - **只存草稿，绝不群发。**
 - 需要**先在 doubaoya.com → 公众号 页面把公众号授权绑定**，否则没有可发布的公众号（这一步是个 OAuth 授权，本技能做不了）。
 
@@ -104,6 +105,78 @@ Content-Type: application/json
 > 「已存入公众号草稿箱，去公众号后台确认后**手动群发**」，并把 `mediaId` 报给他。
 
 别自作主张说「已发布 / 已推送」——它只是草稿。
+
+---
+
+## ⚠️ 本地图片必须先「客户端预上传」再发
+
+服务端的 `POST /api/wechat/publish` 会自动把正文里的**外链图片**（`http(s)://` 与 `mmbiz` 图床）搬运到公众号图床——但它跑在服务器上，**读不到你本机的文件**。所以如果正文 HTML 里含有**本地图片**（例如 `<img src="/Users/.../x.png">`、`./imgs/a.jpg`、`file://...`），或你有一张**本地封面图**，直接发布会让这些图**被静默丢弃**。
+
+正确做法：由**能读到本机文件的客户端**先把本地图片上传到公众号图床，改写 HTML 后再发布。
+
+### 判定哪些是「本地图片」
+
+扫描 `contentHtml` 里所有 `<img ... src="X">`，对每个**唯一** src：
+
+- **本地（需预上传）**：绝对路径 `/Users/...`、相对路径 `./a.jpg` / `../a.jpg`、裸相对路径、`file://...`、Windows 盘符路径。
+- **外链（原样保留）**：`http://` / `https://` 开头、`data:` 开头、或已是公众号图床 `mmbiz.qpic.cn` / `mmbiz.qlogo.cn`。这些交给服务端处理，**不要动**。
+
+### 上传接口 `POST /api/wechat/media/upload`
+
+```
+POST {baseUrl}/api/wechat/media/upload
+Authorization: Bearer $DOUBAOYA_API_KEY
+Content-Type: application/json
+
+{
+  "authorizerAppid": "wx1234567890abcdef",  // 必填
+  "dataBase64": "<图片字节的 base64>",        // 必填
+  "filename": "x.jpg",                       // 可选
+  "purpose": "image"                          // "image"（正文图）| "thumb"（封面）
+}
+```
+
+- `purpose: "image"` → 返回 `{ "url": "https://mmbiz.qpic.cn/..." }`，把这个 `url` 替换正文里该本地 src 的**所有**出现。
+- `purpose: "thumb"` → 返回 `{ "mediaId": "...", "url": "..." }`，把 `mediaId` 作为发布时的 `thumbMediaId`。
+
+> **微信限制：正文图片 ≤ 1MB。** 超过 1MB 的本机图片要**先压缩/缩放**再上传，否则接口会拒绝（信封 `error.message` 会是 1MB 相关中文提示）。压缩可用 `sharp`（若已装），或 macOS 自带的 `sips`：
+> ```bash
+> sips -Z 1600 --setProperty formatOptions 70 in.png --out out.jpg
+> ```
+
+### 完整流程
+
+1. 扫 `contentHtml`，挑出本地图片 src。
+2. 逐张：读文件字节 → base64 → `POST /api/wechat/media/upload`（`purpose:"image"`）→ 用返回 `url` 替换该 src 的所有出现。
+3. 有本地封面：`POST .../media/upload`（`purpose:"thumb"`）→ 拿 `mediaId` 当 `thumbMediaId`。
+4. `POST /api/wechat/publish`，正文用**改写后**的 HTML（此时图片都是 mmbiz 外链，服务端搬运逻辑原样放过）。
+
+### 一键脚本 `scripts/preprocess-and-publish.mjs`（Node，零依赖）
+
+替代 `publish_draft.py` 用于**正文含本地图 / 有本地封面**的场景。只用 Node 内置模块 + 全局 `fetch`（需 Node ≥ 18），`sharp` 为可选依赖（缺失时自动回退 `sips`）。它一条命令走完「解析公众号 → 预上传本地图 → 改写 HTML → 发布草稿」。
+
+```bash
+# 正文含本地图片
+node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" \
+  --html article.html --title "标题"
+
+# 带本地封面
+node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" \
+  --html article.html --title "标题" --cover cover.png --digest "一句话摘要"
+
+# 绑定了多个公众号时指定 appid
+node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" \
+  --html a.html --title "标题" --appid wx1234567890abcdef
+
+# 只扫描本地图、不上传不发布（自检用，不需要口令）
+node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" --html a.html --dry-run
+```
+
+- 相对路径的图片相对**正文 HTML 文件所在目录**解析。
+- 读 `DOUBAOYA_API_KEY` 与 `DOUBAOYA_BASE_URL`（默认 `https://doubaoya.com`）自环境变量。
+- 出错按信封 `error.code` / `error.message` 打印中文原因，退出码非 0。
+
+> 正文**没有**本地图片、也没有本地封面时，用更轻的 `publish_draft.py` 即可（见上文）；两者可任选。
 
 ---
 
@@ -193,7 +266,8 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 ```
 wechat-draft-publish/
-├── SKILL.md                  # 本文件
+├── SKILL.md                      # 本文件
 └── scripts/
-    └── publish_draft.py      # 零依赖脚本（urllib）：查绑定 → 存草稿，调用 doubaoya.com
+    ├── publish_draft.py          # 零依赖脚本（urllib）：查绑定 → 存草稿（无本地图片时用）
+    └── preprocess-and-publish.mjs # Node 脚本：预上传本地正文图/封面 → 改写 HTML → 存草稿
 ```
