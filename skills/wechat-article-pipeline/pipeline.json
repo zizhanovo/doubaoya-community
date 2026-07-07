@@ -1,0 +1,84 @@
+{
+  "metadata": {
+    "name": "wechat-article-pipeline",
+    "version": "1.0.0",
+    "description": "都爆鸭 · 公众号图文流水线：把一篇写好的 Markdown/HTML 走确定性的机械步骤——加载身份上下文 → 校验目标账号 → 前置检查 → 渲染 → 本地图片预上传 → 封面 → 存入公众号草稿箱。只存草稿，绝不群发。"
+  },
+  "hardRules": [
+    "只存草稿绝不群发",
+    "发布前必须 whoami 校验目标账号",
+    "先加载身份上下文再做内容判断",
+    "发现走 /api/skills，执行走 /api/wechat/status + /api/wechat/publish，不走 /invoke",
+    "本地图片必须客户端预上传（服务端读不到本机文件）"
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "title": "识别任务类型",
+      "type": "classify",
+      "rule": "确认这是「把已写好的文章推进公众号草稿箱」任务。文章由 agent 依 SKILL.md 撰写；本流水线只做后续确定性的机械发布步骤，不代写正文。",
+      "mustPass": false
+    },
+    {
+      "id": 2,
+      "title": "读取身份上下文",
+      "type": "identity",
+      "rule": "加载并回显 IP/身份 profile（displayName / aliases / isNot / tone）。isNot 用于消歧，防止把账号名/IP 名误读成同名的通用名词或产品品类。先加载身份上下文，后做任何内容判断。",
+      "mustPass": true
+    },
+    {
+      "id": 3,
+      "title": "whoami 校验账号",
+      "type": "account-verify",
+      "endpoint": "GET /api/agent/whoami",
+      "rule": "用 account-verify 把本地多来源的 DOUBAOYA_API_KEY 解析成目标账号对应的那一条 key（key 只在内存中，绝不打印）。目标账号不匹配则报出各 key 对应账号并停止。此步必须先于保存草稿成功。",
+      "mustPass": true
+    },
+    {
+      "id": 4,
+      "title": "草稿前置检查（skills + status）",
+      "type": "preflight",
+      "endpoint": "GET /api/skills ; GET /api/wechat/status",
+      "rule": "断言 /api/skills 存在 slug=wechat-draft-publish（缺失则告警）。用解析出的 key 请求 /api/wechat/status 确认目标账号拥有公众号；给了 appid/publicAccountName 则匹配并回显昵称；绑定多个且未指定则列出并停止请用 --appid。",
+      "mustPass": true
+    },
+    {
+      "id": 5,
+      "title": "md→HTML",
+      "type": "render",
+      "rule": "仅当输入是 --md 时，用 render-wechat-html 渲染成公众号内联样式 HTML（原样保留每个 <img src>，不改写图片）。输入是 --html 则直接使用，跳过本步。",
+      "mustPass": false
+    },
+    {
+      "id": 6,
+      "title": "图片预处理",
+      "type": "image-preprocess",
+      "endpoint": "POST /api/wechat/media/upload",
+      "rule": "扫描正文 <img>，本地图片由客户端预上传到公众号图床（>1MB 先压缩），拿回 mmbiz 地址改写 HTML；外链图片原样保留（服务端会自动搬运）。由 vendored preprocess-and-publish.mjs 完成。",
+      "mustPass": true
+    },
+    {
+      "id": 7,
+      "title": "封面",
+      "type": "cover",
+      "endpoint": "POST /api/wechat/media/upload (purpose=thumb)",
+      "rule": "若 --cover/config.coverDir 指向本地文件，作为封面（thumb）预上传。若无封面，走都爆鸭兜底封面（config.coverFallback），并在回报中注明。",
+      "mustPass": false
+    },
+    {
+      "id": 8,
+      "title": "保存草稿",
+      "type": "publish-draft",
+      "endpoint": "POST /api/wechat/publish",
+      "rule": "以改写后的 HTML 存入公众号草稿箱（draft/add）。绝不群发/推送——没有群发路径，也绝不接受任何群发参数。",
+      "mustPass": true
+    },
+    {
+      "id": 9,
+      "title": "验证回报",
+      "type": "report",
+      "rule": "输出结构化回报：标题 / 公众号(昵称) / 正文图上传数 / 封面(已上传本地封面 | 走都爆鸭兜底) / mediaId 摘要 / 群发：否（本流水线只存草稿）。",
+      "mustPass": false
+    }
+  ]
+}

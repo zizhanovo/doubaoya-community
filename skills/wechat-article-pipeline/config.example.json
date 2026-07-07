@@ -1,0 +1,12 @@
+{
+  "targetAccount": null,
+  "publicAccountName": null,
+  "appid": null,
+  "author": "",
+  "digestTemplate": "",
+  "coverDir": "",
+  "coverFallback": "doubaoya",
+  "ipProfile": "profiles/example-ip.json",
+  "mdTheme": "default",
+  "draftsDir": ""
+}
