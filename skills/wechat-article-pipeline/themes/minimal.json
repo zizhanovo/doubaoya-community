@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "name": "极简",
+    "source": "handcrafted",
+    "notes": "Quiet minimalist / 性冷淡 look: near-black text on white, generous whitespace, hairline dividers, a small muted uppercase-tracked eyebrow for h3, clean shadowless images with a tiny centered caption, and one barely-there slate accent. Monochrome, brand-neutral."
+  },
+  "palette": {
+    "text": "#1c1c1c",
+    "heading": "#050505",
+    "accent": "#767b86",
+    "accent2": "#767b86",
+    "muted": "#9a9a9a",
+    "bgSoft": "#fafafa",
+    "border": "#ececec",
+    "link": "#1c1c1c"
+  },
+  "page": {
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+    "fontSize": "16px",
+    "lineHeight": "1.8",
+    "letterSpacing": "0.01em",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "font-size:25px;font-weight:600;color:{{heading}};line-height:1.45;letter-spacing:0.01em;margin:10px 0 26px;"
+    },
+    "h2": {
+      "style": "font-size:20px;font-weight:600;color:{{heading}};line-height:1.5;letter-spacing:0.01em;margin:44px 0 16px;",
+      "wrapBefore": "<section style='width:24px;height:1px;background:{{accent}};margin:0 0 16px;'></section>"
+    },
+    "h3": {
+      "style": "font-size:13px;font-weight:600;color:{{muted}};line-height:1.6;letter-spacing:0.2em;text-transform:uppercase;margin:32px 0 12px;"
+    },
+    "h4": {
+      "style": "font-size:16px;font-weight:600;color:{{heading}};line-height:1.6;margin:24px 0 10px;"
+    },
+    "p": {
+      "style": "margin:0 0 20px;font-size:16px;line-height:1.8;color:{{text}};"
+    },
+    "ul": {
+      "style": "margin:0 0 20px;padding-left:20px;"
+    },
+    "ol": {
+      "style": "margin:0 0 20px;padding-left:20px;"
+    },
+    "li": {
+      "style": "margin:0 0 10px;line-height:1.8;color:{{text}};",
+      "marker": ""
+    },
+    "blockquote": {
+      "style": "margin:8px 0 24px;padding:2px 0 2px 20px;border-left:1px solid {{border}};color:{{muted}};font-style:italic;font-size:16px;line-height:1.8;"
+    },
+    "img": {
+      "style": "max-width:100%;display:block;margin:0 auto;border-radius:2px;",
+      "figureStyle": "margin:28px 0;text-align:center;",
+      "captionStyle": "font-size:12px;color:{{muted}};margin-top:10px;line-height:1.6;letter-spacing:0.06em;"
+    },
+    "hr": {
+      "html": "<section style='text-align:center;margin:40px 0;'><span style='display:inline-block;width:36px;height:1px;background:{{border}};'></span></section>"
+    },
+    "strong": {
+      "style": "font-weight:600;color:{{heading}};"
+    },
+    "em": {
+      "style": "font-style:italic;color:{{text}};"
+    },
+    "del": {
+      "style": "text-decoration:line-through;color:{{muted}};"
+    },
+    "a": {
+      "style": "color:{{link}};text-decoration:none;border-bottom:1px solid {{accent}};padding-bottom:1px;word-break:break-all;"
+    },
+    "code": {
+      "style": "padding:1px 5px;background:{{bgSoft}};border:1px solid {{border}};border-radius:3px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:13.5px;color:{{heading}};"
+    },
+    "pre": {
+      "style": "margin:0 0 20px;padding:16px 18px;background:{{bgSoft}};border:1px solid {{border}};border-radius:4px;overflow-x:auto;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:13.5px;line-height:1.7;color:{{text}};white-space:pre-wrap;word-break:break-all;"
+    }
+  },
+  "decorations": {
+    "articleWrap": {
+      "before": "<section style='background:#ffffff;padding:20px 20px 12px;'>",
+      "after": "</section>"
+    },
+    "sectionDivider": "<section style='text-align:center;margin:40px 0;'><span style='display:inline-block;width:36px;height:1px;background:{{border}};'></span></section>"
+  }
+}

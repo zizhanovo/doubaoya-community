@@ -112,6 +112,63 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run
 
 ---
 
+## 复刻参考排版风格 → 可复用主题
+
+想让排版长得像某个你欣赏的公众号，或某种描述得出的风格？把它一次性**萃取成一个 `theme.json`**，
+之后**永久复用**（每次渲染只需 `--theme my-theme.json`，见下方 CLI）。主题契约的**权威**是
+[`themes/THEME-SCHEMA.md`](./themes/THEME-SCHEMA.md)（top-level 只有 `meta/palette/page/elements/decorations`）。
+校验器是 `scripts/validate-theme.mjs`，套用器是 `scripts/render-wechat-html.mjs --theme`（或 `pipeline.mjs --theme`）。
+
+> **写主题是一次性的活**；产出的 `theme.json` 之后一直用。不想从零写？先从三个内置主题
+> `themes/magazine.json` / `themes/minimal.json` / `themes/knowledge.json` 里挑一个最接近的**复制再改**。
+
+### 路径 A：复刻一篇公众号文章的排版（给 URL）
+
+1. **抓取参考正文**（一次性风格学习，抓的是一篇**公开**文章、不登录、不批量）：
+   ```bash
+   node scripts/fetch-article.mjs --url "https://mp.weixin.qq.com/s/..." --out ref.html
+   ```
+   它提取正文 `#js_content`，**保留所有 inline `style="…"`**（这些内联样式就是我们要分析的数据），
+   去掉 `<script>/<style>/注释`，并打印**风格指纹**：各标签数量、出现最多的**颜色**、用到的**字号**。
+   > 若该链接被反爬/已过期而抓不到，脚本会明确提示你：在浏览器里打开文章、查看源码，把正文 HTML
+   > 贴进本地文件来分析（授权步骤对任何公众号正文 HTML 都适用，不只限本抓取器）。
+
+2. **你（agent）读 `ref.html`，按下面的 CHECKLIST 把*反复出现*的样式抄成 `theme.json`**
+   （照 `themes/THEME-SCHEMA.md`；`{{token}}` 从 `palette` 取色）：
+
+   **萃取 CHECKLIST（对着参考逐项读）**
+   - **标题 h1–h3**：色条 / 背景块 / 是否居中 / 字号 / 字重 / 字色（→ `elements.h1..h3.style`，装饰条用 `wrapBefore`）。
+   - **正文 `p`**：`font-size` / `line-height` / `color` / `letter-spacing` / 段间距 `margin`（→ `elements.p.style` 与 `page`）。
+   - **引用 `blockquote`**：左边框 / 背景 / 字色（→ `elements.blockquote.style`）。
+   - **列表 marker**：项目符号样式（→ `elements.li.marker` + `ul/ol/li.style`）。
+   - **图片**：圆角 / 阴影 / 居中 / 图注（→ `elements.img.style` + `figureStyle` / `captionStyle`）。
+   - **强调 / 链接色**：`strong` / `em` / `a` 的处理与主色（→ `elements.strong/em/a` + `palette.accent`/`link`）。
+   - **调色板**：数出现最多的 **3–5 个颜色** → 归进 `palette`（`text/heading/accent/accent2/muted/bgSoft/border/link`）。
+     抓取器指纹里"出现最多的颜色"就是候选。
+   - **分隔装饰**：文中的花式分割线 → `elements.hr.html`；整篇卡片/边框背景 → `decorations.articleWrap`；
+     命名分隔片段 → `decorations.sectionDivider`。
+
+3. **校验 → 修错 → 渲染**：
+   ```bash
+   node scripts/validate-theme.mjs my-theme.json          # 有硬错误就按提示改
+   node scripts/render-wechat-html.mjs --md a.md --title "标题" --theme my-theme.json
+   # 或直接进流水线： node scripts/pipeline.mjs --md a.md --title "标题" --theme my-theme.json
+   ```
+
+> **诚实预期**：公众号编辑器（秀米 / 135 等）导出的 HTML **很吵**——满是一次性的内联样式。
+> 只抄**反复出现的那套规律**，别把每一处 one-off 样式都搬进主题；抄完再**手调**几轮。
+
+### 路径 B：从一段文字风格描述直接写主题
+
+不需要参考文章：**你（agent）按描述的调性直接照 schema 填 `theme.json`**，再校验、渲染。
+例：「性冷淡杂志风」→ 低饱和 `palette`、细 `border`/hairline `hr`、充裕留白（大 `margin`/`line-height`）、
+克制近 small-caps 的标题（大字距、非高饱和色）。同样先 `validate-theme.mjs` 再 `render --theme`。
+起步同样建议**复制** `themes/magazine.json`（杂志风）/ `minimal.json`（极简）/ `knowledge.json`（知识卡片）之一再改。
+
+一切以 [`themes/THEME-SCHEMA.md`](./themes/THEME-SCHEMA.md) 为准；主题索引见 [`themes/README.md`](./themes/README.md)。
+
+---
+
 ## 前置条件
 
 - Node **≥ 18**（内置 `fetch`），零外部依赖。

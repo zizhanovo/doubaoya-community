@@ -32,6 +32,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { resolveAccountKey } from "./account-verify.mjs";
 import { renderWechatHtml } from "./render-wechat-html.mjs";
+import { validateTheme } from "./validate-theme.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,6 +66,7 @@ const VALUE_FLAGS = new Set([
   "digest",
   "config",
   "profile",
+  "theme",
   "output-processed-html",
   "base-url",
 ]);
@@ -118,7 +120,7 @@ function parseArgs(argv) {
     }
     throw new ArgError(
       `未知参数 --${key}。可用参数：` +
-        `--md --html --title --account --appid --cover --digest --config --profile ` +
+        `--md --html --title --account --appid --cover --digest --config --profile --theme ` +
         `--output-processed-html --base-url --dry-run --help。` +
         `（注意：本流水线只存草稿，不存在任何群发参数。）`
     );
@@ -149,6 +151,7 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --digest <str>              摘要
   --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
   --profile <path>            IP/身份 profile（默认取 config.ipProfile）
+  --theme <path>              主题 theme.json（仅 --md 时生效；见 ../themes/THEME-SCHEMA.md）
   --output-processed-html <p> 渲染出的 HTML 落地路径（默认写临时文件）
   --base-url <url>            API 基址（默认 $DOUBAOYA_BASE_URL 或 https://doubaoya.com）
   --dry-run                   只渲染+校验+扫描本地图，**不发布**
@@ -270,6 +273,9 @@ async function main() {
   const htmlPath = args.html;
   if (!mdPath && !htmlPath) fail("必须指定 --md <文件> 或 --html <文件> 其一。");
   if (mdPath && htmlPath) fail("--md 与 --html 只能二选一。");
+  if (htmlPath && args.theme) {
+    warn("--html 已是排好版的 HTML，--theme 被忽略（主题只在 --md 渲染时生效）。");
+  }
   const title = args.title;
   if (!title) fail("缺少 --title <标题>。");
 
@@ -400,7 +406,21 @@ async function main() {
     } catch (e) {
       fail(`读不到 Markdown 文件 ${resolvedMd}（${e.message}）`);
     }
-    const html = renderWechatHtml(mdContent, { title });
+    // 可选主题：--theme。加载 → 校验（硬错误即停）→ 传给渲染器。
+    let theme;
+    if (args.theme) {
+      const themePath = path.resolve(args.theme);
+      const themeObj = await readJsonMaybe(themePath);
+      if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
+      const { errors, warnings } = validateTheme(themeObj);
+      for (const w of warnings) warn(`主题告警: ${w}`);
+      if (errors.length) {
+        fail(`主题校验失败（${errors.length} 个错误）:\n` + errors.map((e) => `   ❌ ${e}`).join("\n"));
+      }
+      theme = themeObj;
+      info(`已加载主题: ${themePath}（${themeObj.meta && themeObj.meta.name ? themeObj.meta.name : "未命名"}）`);
+    }
+    const html = renderWechatHtml(mdContent, { title, theme });
     processedHtmlPath = args.outputProcessedHtml
       ? path.resolve(args.outputProcessedHtml)
       : path.join(os.tmpdir(), `${path.basename(resolvedMd, path.extname(resolvedMd))}.wechat.html`);

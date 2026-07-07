@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "name": "杂志风",
+    "source": "handcrafted",
+    "notes": "Editorial / magazine look: serif-flavored centered headings, a thin accent rule under h2, warm off-white frame, generous 1.9 line-height, an elegant blockquote with a large opening-quote motif, rounded images with a muted italic caption, and a diamond section divider. One restrained terracotta accent. Brand-neutral."
+  },
+  "palette": {
+    "text": "#3b3630",
+    "heading": "#211d19",
+    "accent": "#a8432f",
+    "accent2": "#b0873f",
+    "muted": "#9c9286",
+    "bgSoft": "#f8f3ea",
+    "border": "#e4ddce",
+    "link": "#a8432f"
+  },
+  "page": {
+    "fontFamily": "Georgia, 'Songti SC', 'Noto Serif SC', 'STSong', 'Times New Roman', serif",
+    "fontSize": "16px",
+    "lineHeight": "1.9",
+    "letterSpacing": "0.02em",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "font-size:27px;font-weight:700;color:{{heading}};line-height:1.35;letter-spacing:0.02em;text-align:center;margin:8px 0 22px;"
+    },
+    "h2": {
+      "style": "font-size:22px;font-weight:700;color:{{heading}};line-height:1.4;letter-spacing:0.02em;text-align:center;margin:38px 0 6px;",
+      "wrapAfter": "<section style='text-align:center;margin:0 0 20px;'><span style='display:inline-block;width:44px;height:2px;background:{{accent}};vertical-align:middle;'></span></section>"
+    },
+    "h3": {
+      "style": "font-size:18px;font-weight:700;font-style:italic;color:{{accent}};line-height:1.5;text-align:center;margin:28px 0 14px;"
+    },
+    "h4": {
+      "style": "font-size:16px;font-weight:700;color:{{heading}};line-height:1.6;margin:22px 0 10px;"
+    },
+    "p": {
+      "style": "margin:0 0 18px;font-size:16px;line-height:1.9;color:{{text}};text-align:justify;"
+    },
+    "ul": {
+      "style": "margin:0 0 18px;padding-left:22px;"
+    },
+    "ol": {
+      "style": "margin:0 0 18px;padding-left:22px;"
+    },
+    "li": {
+      "style": "margin:0 0 10px;line-height:1.85;color:{{text}};",
+      "marker": ""
+    },
+    "blockquote": {
+      "style": "margin:6px 0 22px;padding:6px 8px 6px 26px;border-left:2px solid {{accent}};color:{{heading}};font-style:italic;font-size:17px;line-height:1.85;",
+      "wrapBefore": "<section style='text-align:center;margin:26px 0 -14px;'><span style='font-family:Georgia,serif;font-size:52px;line-height:1;color:{{accent2}};'>&#8220;</span></section>"
+    },
+    "img": {
+      "style": "max-width:100%;display:block;margin:0 auto;border-radius:6px;",
+      "figureStyle": "margin:24px 0;text-align:center;",
+      "captionStyle": "font-size:13px;font-style:italic;color:{{muted}};margin-top:10px;line-height:1.6;letter-spacing:0.04em;"
+    },
+    "hr": {
+      "html": "<section style='text-align:center;margin:36px 0;'><span style='display:inline-block;width:46px;height:1px;background:{{border}};vertical-align:middle;'></span><span style='display:inline-block;margin:0 14px;color:{{accent}};font-size:11px;vertical-align:middle;letter-spacing:0.1em;'>&#9670;</span><span style='display:inline-block;width:46px;height:1px;background:{{border}};vertical-align:middle;'></span></section>"
+    },
+    "strong": {
+      "style": "font-weight:700;color:{{heading}};"
+    },
+    "em": {
+      "style": "font-style:italic;color:{{accent}};"
+    },
+    "del": {
+      "style": "text-decoration:line-through;color:{{muted}};"
+    },
+    "a": {
+      "style": "color:{{link}};text-decoration:underline;text-underline-offset:2px;word-break:break-all;"
+    },
+    "code": {
+      "style": "padding:2px 6px;background:#efe8db;border-radius:4px;font-family:Menlo,Consolas,Monaco,monospace;font-size:14px;color:{{accent}};"
+    },
+    "pre": {
+      "style": "margin:0 0 20px;padding:16px 18px;background:#2f2a24;border-radius:8px;overflow-x:auto;font-family:Menlo,Consolas,Monaco,monospace;font-size:13.5px;line-height:1.7;color:#f3ece0;white-space:pre-wrap;word-break:break-all;"
+    }
+  },
+  "decorations": {
+    "articleWrap": {
+      "before": "<section style='background:{{bgSoft}};padding:30px 22px 24px;'>",
+      "after": "</section>"
+    },
+    "sectionDivider": "<section style='text-align:center;margin:36px 0;'><span style='display:inline-block;width:46px;height:1px;background:{{border}};vertical-align:middle;'></span><span style='display:inline-block;margin:0 14px;color:{{accent}};font-size:11px;vertical-align:middle;letter-spacing:0.1em;'>&#9670;</span><span style='display:inline-block;width:46px;height:1px;background:{{border}};vertical-align:middle;'></span></section>"
+  }
+}
