@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""都爆鸭 · 全网热点聚合（按平台 + 关键词）
+"""都爆鸭 · 直取综合热点（无关键词的全网热榜）
 
-零依赖（Python 3 标准库 urllib），按平台编号 + 关键词聚合全网热点榜，
-供主 Agent 看清此刻多个平台在热什么、哪些热点值得追。
+零依赖（Python 3 标准库 urllib）。默认**不带关键词**，直接把当下全网最热的一批
+（微博/抖音/B站…）拉下来，供主 Agent 结合用户 IP 定位做智能匹配、产选题。
+
+⚠️ 默认就是无关键词的「综合热点直取」——这才是选题的正确起手。
+`--keywords` 仅供极少数「就想看某垂类词的热榜」场景，**绝不要把用户的账号名/IP名
+（如「菜籽油」这类公众号名）丢进来当关键词**——那只会搜到字面同名内容。IP 名字只用于
+后续匹配筛选，不进搜索接口。
 
 用法:
-    python3 fetch_trends.py [--platforms 2,5,8] [--keywords AI,大模型] [--start-date "YYYY-MM-DD HH:MM:SS"] [--end-date "YYYY-MM-DD HH:MM:SS"]
+    python3 fetch_trends.py [--platforms 2,5,8] [--keywords 词1,词2] [--start-date "YYYY-MM-DD HH:MM:SS"] [--end-date "YYYY-MM-DD HH:MM:SS"]
 
     --platforms  逗号分隔的平台编号（整数），默认 2,5,8。
-    --keywords   逗号分隔的关键词，默认 AI。
+    --keywords   逗号分隔的关键词，**默认不带**（综合热点直取）。仅垂类场景才用。
     --start-date 区间起始 datetime（默认今天 00:00:00）。
     --end-date   区间结束 datetime（默认当前时刻）。
 
@@ -87,7 +92,7 @@ def main() -> int:
         description="都爆鸭 · 全网热点聚合（按平台编号 + 关键词）",
     )
     parser.add_argument("--platforms", default="2,5,8", help="逗号分隔的平台编号（整数，默认 2,5,8）")
-    parser.add_argument("--keywords", default="AI", help="逗号分隔的关键词（默认 AI）")
+    parser.add_argument("--keywords", default=None, help="逗号分隔的关键词（默认不带 = 综合热点直取；仅垂类场景才用，绝不用账号名/IP名）")
     parser.add_argument("--start-date", default=None, help='区间起始 datetime "YYYY-MM-DD HH:MM:SS"（默认今天 00:00:00）')
     parser.add_argument("--end-date", default=None, help='区间结束 datetime "YYYY-MM-DD HH:MM:SS"（默认当前时刻）')
     args = parser.parse_args()
@@ -110,21 +115,24 @@ def main() -> int:
         sys.stderr.write("[error] VALIDATION_ERROR: --platforms 不能为空\n")
         return 1
 
-    keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
-    if not keywords:
-        sys.stderr.write("[error] VALIDATION_ERROR: --keywords 不能为空\n")
-        return 1
+    # 默认不带关键词 = 综合热点直取。只有显式给 --keywords 时才带上。
+    keywords = []
+    if args.keywords:
+        keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
 
     now = datetime.datetime.now()
     start_date = args.start_date or now.strftime("%Y-%m-%d 00:00:00")
     end_date = args.end_date or now.strftime("%Y-%m-%d %H:%M:%S")
 
-    return call_api(api_key, {
+    payload = {
         "platforms": platforms,
-        "keywords": keywords,
         "startDate": start_date,
         "endDate": end_date,
-    })
+    }
+    if keywords:
+        payload["keywords"] = keywords
+
+    return call_api(api_key, payload)
 
 
 if __name__ == "__main__":
