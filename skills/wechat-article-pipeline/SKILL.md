@@ -124,6 +124,13 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run
 
 ### 路径 A：复刻一篇公众号文章的排版（给 URL）
 
+流程 = **抓取 →（零 token 启发式）萃取草稿 → LLM 精修 → 校验 → 渲染**。
+其中「萃取草稿」是一次**快速的零 token 首过**（用启发式把配色/排版扒出来），
+真正把它做到「精修」的是**你（LLM）对草稿的refine**——这正是我们相对纯启发式工具的优势所在。
+
+> **启发式萃取算法来自 [oaker-io/wewrite](https://github.com/oaker-io/wewrite)（MIT © 2026 OpenClaw）**
+> 的 `analyze_styles()`，零依赖 Node 重写移植进 `scripts/extract-theme.mjs`（署名见文件头 + `meta.notes`）。
+
 1. **抓取参考正文**（一次性风格学习，抓的是一篇**公开**文章、不登录、不批量）：
    ```bash
    node scripts/fetch-article.mjs --url "https://mp.weixin.qq.com/s/..." --out ref.html
@@ -133,22 +140,32 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run
    > 若该链接被反爬/已过期而抓不到，脚本会明确提示你：在浏览器里打开文章、查看源码，把正文 HTML
    > 贴进本地文件来分析（授权步骤对任何公众号正文 HTML 都适用，不只限本抓取器）。
 
-2. **你（agent）读 `ref.html`，按下面的 CHECKLIST 把*反复出现*的样式抄成 `theme.json`**
-   （照 `themes/THEME-SCHEMA.md`；`{{token}}` 从 `palette` 取色）：
+2. **萃取候选主题草稿**（`extract-theme.mjs`，**零 token 快速首过**）：
+   ```bash
+   node scripts/extract-theme.mjs --html ref.html --name "参考风格" --out my-theme.json
+   #   或一步到位（内部复用 fetch-article 抓正文）：
+   node scripts/extract-theme.mjs --url "https://mp.weixin.qq.com/s/..." --name "参考风格" --out my-theme.json
+   ```
+   它按标签分组内联样式，扒出 `text` / `text_light` / **主色 accent**（strong/section/h1-3/span 的非灰色加权计数，
+   `font-size≥20px` 权重 ×5）/ 背景 / 排版（字号·行高·字距）/ 引用边框与底色 / 代码色 / 圆角，
+   **盖进一套中性基底模板**（用 `{{token}}` 注色），产出一份**通过 `validate-theme.mjs`** 的 `theme.json` 草稿。
+   > 信号弱时（135/秀米 导出把色写在 `span` 而非 `p` 上等）它会**回落到中性默认并告警「低置信度」**——正常，交给下一步精修。
 
-   **萃取 CHECKLIST（对着参考逐项读）**
+3. **你（LLM）对着参考精修草稿**（我们的核心价值——启发式看不到的东西由你补齐）：
+   按下面的 CHECKLIST 逐项核对 `my-theme.json`，**修正主色、规整脏值（`2em`→具体行高、把色从 span 归到 `text` 等）、
+   补上装饰分割线 / 标题处理**：
    - **标题 h1–h3**：色条 / 背景块 / 是否居中 / 字号 / 字重 / 字色（→ `elements.h1..h3.style`，装饰条用 `wrapBefore`）。
    - **正文 `p`**：`font-size` / `line-height` / `color` / `letter-spacing` / 段间距 `margin`（→ `elements.p.style` 与 `page`）。
    - **引用 `blockquote`**：左边框 / 背景 / 字色（→ `elements.blockquote.style`）。
    - **列表 marker**：项目符号样式（→ `elements.li.marker` + `ul/ol/li.style`）。
    - **图片**：圆角 / 阴影 / 居中 / 图注（→ `elements.img.style` + `figureStyle` / `captionStyle`）。
    - **强调 / 链接色**：`strong` / `em` / `a` 的处理与主色（→ `elements.strong/em/a` + `palette.accent`/`link`）。
-   - **调色板**：数出现最多的 **3–5 个颜色** → 归进 `palette`（`text/heading/accent/accent2/muted/bgSoft/border/link`）。
-     抓取器指纹里"出现最多的颜色"就是候选。
+   - **调色板**：核对萃取出的 **3–5 个颜色**是否合理（`text/heading/accent/accent2/muted/bgSoft/border/link`）；
+     启发式常把某个高频装饰色误当主色——对照抓取器指纹「出现最多的颜色」改回真正的主色。
    - **分隔装饰**：文中的花式分割线 → `elements.hr.html`；整篇卡片/边框背景 → `decorations.articleWrap`；
-     命名分隔片段 → `decorations.sectionDivider`。
+     命名分隔片段 → `decorations.sectionDivider`（这些启发式扒不出来，靠你补）。
 
-3. **校验 → 修错 → 渲染**：
+4. **校验 → 渲染**：
    ```bash
    node scripts/validate-theme.mjs my-theme.json          # 有硬错误就按提示改
    node scripts/render-wechat-html.mjs --md a.md --title "标题" --theme my-theme.json
@@ -156,7 +173,8 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run
    ```
 
 > **诚实预期**：公众号编辑器（秀米 / 135 等）导出的 HTML **很吵**——满是一次性的内联样式。
-> 只抄**反复出现的那套规律**，别把每一处 one-off 样式都搬进主题；抄完再**手调**几轮。
+> `extract-theme.mjs` 是**快速首过**，只保证扒出大致配色骨架；把它调到「像」靠的是第 3 步你的**精修**。
+> 只保留**反复出现的那套规律**，别把每一处 one-off 样式都当成主题。
 
 ### 路径 B：从一段文字风格描述直接写主题
 

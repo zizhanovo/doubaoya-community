@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "name": "GitHub",
+    "source": "https://github.com/oaker-io/wewrite (MIT) — theme \"github\"",
+    "notes": "GitHub风格：白底蓝色链接，等宽代码块，简洁清晰，适合技术文档和开发者内容 Ported from oaker-io/wewrite by import-theme.mjs (wewrite-yaml). MIT License, Copyright (c) 2026 OpenClaw. See themes/LICENSE-wewrite and themes/CREDITS.md."
+  },
+  "palette": {
+    "text": "#1f2328",
+    "heading": "#1f2328",
+    "accent": "#0969da",
+    "accent2": "#0550ae",
+    "muted": "#656d76",
+    "bgSoft": "#f6f8fa",
+    "border": "#d0d7de",
+    "link": "#0969da",
+    "codeBg": "#f6f8fa",
+    "codeColor": "#0550ae"
+  },
+  "page": {
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
+    "fontSize": "16px",
+    "lineHeight": "1.75",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "font-size:26px;font-weight:600;color:{{text}};margin:32px 0 16px 0;padding-bottom:10px;border-bottom:1px solid #d1d9e0;line-height:1.4;"
+    },
+    "h2": {
+      "style": "font-size:22px;font-weight:600;color:{{text}};margin:28px 0 14px 0;padding-bottom:8px;border-bottom:1px solid #d1d9e0;line-height:1.4;"
+    },
+    "h3": {
+      "style": "font-size:18px;font-weight:600;color:{{text}};margin:24px 0 12px 0;line-height:1.4;"
+    },
+    "h4": {
+      "style": "font-size:16px;font-weight:600;color:{{text}};margin:20px 0 10px 0;line-height:1.4;"
+    },
+    "p": {
+      "style": "font-size:16px;line-height:1.75;color:{{text}};margin:12px 0;"
+    },
+    "strong": {
+      "style": "font-weight:600;color:{{text}};"
+    },
+    "em": {
+      "style": "font-style:italic;color:{{text}};"
+    },
+    "code": {
+      "style": "font-family:ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;font-size:13.6px;background:rgba(175,184,193,0.2);color:{{text}};padding:3px 6px;border-radius:6px;"
+    },
+    "blockquote": {
+      "style": "border-left:4px solid {{border}};background:transparent;margin:16px 0;padding:4px 16px;border-radius:0;color:{{muted}};"
+    },
+    "ul": {
+      "style": "padding-left:28px;margin:12px 0;"
+    },
+    "ol": {
+      "style": "padding-left:28px;margin:12px 0;"
+    },
+    "li": {
+      "style": "font-size:16px;line-height:1.75;color:{{text}};margin:4px 0;"
+    },
+    "img": {
+      "style": "max-width:100%;height:auto;display:block;margin:24px auto;border-radius:6px;"
+    },
+    "pre": {
+      "style": "background:{{bgSoft}};color:{{text}};padding:16px;border-radius:6px;overflow-x:auto;margin:16px 0;line-height:1.5;border:1px solid #d1d9e0;font-family:ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;white-space:pre-wrap;word-break:break-all;"
+    },
+    "a": {
+      "style": "color:{{accent}};text-decoration:none;font-weight:400;"
+    },
+    "hr": {
+      "html": "<section style=\"height:2px;border:none;background:#d1d9e0;margin:24px 0;\"></section>"
+    }
+  }
+}

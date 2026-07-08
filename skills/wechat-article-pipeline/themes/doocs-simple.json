@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "name": "简洁",
+    "source": "https://github.com/doocs/md (WTFPL) — theme \"simple\"",
+    "notes": "Layout/typography ported from doocs/md by import-theme.mjs (doocs-css). doocs is color-agnostic; accent \"#2f9e8f\" chosen for this port. WTFPL, Copyright (C) 2025 Doocs <admin@doocs.org>. See themes/CREDITS.md."
+  },
+  "palette": {
+    "text": "#3f3f3f",
+    "heading": "#1a1a1a",
+    "accent": "#2f9e8f",
+    "accent2": "#43c7b5",
+    "muted": "#8a8a8a",
+    "bgSoft": "#f7f4ef",
+    "border": "#e6e2da",
+    "link": "#576b95"
+  },
+  "page": {
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+    "fontSize": "16px",
+    "lineHeight": "1.75",
+    "letterSpacing": "0.1em",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "padding:0.5em 1em;border-bottom:2px solid {{accent}};margin:2em auto 1em;color:{{heading}};font-size:22px;font-weight:bold;text-align:center;text-shadow:1px 1px 3px rgba(0, 0, 0, 0.05);"
+    },
+    "h2": {
+      "style": "padding:0.3em 1.2em;margin:4em auto 2em;color:#fff;background:{{accent}};font-size:21px;font-weight:bold;text-align:center;border-radius:8px 24px 8px 24px;box-shadow:0 2px 6px rgba(0, 0, 0, 0.06);"
+    },
+    "h3": {
+      "style": "padding-left:12px;border-left:4px solid {{accent}};margin:2em 8px 0.75em 0;color:{{heading}};font-size:19px;font-weight:bold;line-height:2.4em;border-radius:6px;border-right:1px solid rgba(47, 158, 143, 0.1);border-bottom:1px solid rgba(47, 158, 143, 0.1);border-top:1px solid rgba(47, 158, 143, 0.1);background:rgba(47, 158, 143, 0.08);"
+    },
+    "h4": {
+      "style": "margin:2em 8px 0.5em;color:{{accent}};font-size:18px;font-weight:bold;border-radius:6px;"
+    },
+    "p": {
+      "style": "margin:1.5em 8px;color:{{text}};"
+    },
+    "blockquote": {
+      "style": "font-style:italic;padding:1em 1em 1em 2em;border-left:4px solid {{accent}};border-radius:6px;color:rgba(0, 0, 0, 0.6);background:{{bgSoft}};margin-bottom:1em;border-bottom:0.2px solid rgba(0, 0, 0, 0.04);border-top:0.2px solid rgba(0, 0, 0, 0.04);border-right:0.2px solid rgba(0, 0, 0, 0.04);"
+    },
+    "ul": {
+      "style": "list-style:none;padding-left:1.5em;margin-left:0;color:{{text}};"
+    },
+    "ol": {
+      "style": "padding-left:1.5em;margin-left:0;color:{{text}};"
+    },
+    "li": {
+      "style": "margin:0.5em 8px;color:{{text}};"
+    },
+    "strong": {
+      "style": "color:{{accent}};font-weight:bold;font-size:inherit;"
+    },
+    "em": {
+      "style": "font-style:italic;font-size:inherit;"
+    },
+    "code": {
+      "style": "font-size:90%;color:{{accent}};background:rgba(47, 158, 143, 0.08);padding:3px 5px;border-radius:6px;border:1px solid rgba(47, 158, 143, 0.15);font-family:'Fira Code', Menlo, Operator Mono, Consolas, Monaco, monospace;"
+    },
+    "pre": {
+      "style": "font-size:90%;overflow-x:auto;border-radius:8px;line-height:1.5;margin:10px 8px;border:1px solid rgba(0, 0, 0, 0.04);background:#f6f6f6;color:{{text}};font-family:'Fira Code', Menlo, Consolas, Monaco, 'Courier New', monospace;white-space:pre-wrap;word-break:break-all;padding:14px 16px;"
+    },
+    "a": {
+      "style": "color:{{link}};text-decoration:none;"
+    },
+    "img": {
+      "style": "display:block;max-width:100%;margin:0.1em auto 0.5em;border-radius:8px;border:1px solid rgba(0, 0, 0, 0.04);",
+      "figureStyle": "text-align:center;margin:1.5em 0;",
+      "captionStyle": "text-align:center;color:#888;font-size:0.8em;"
+    },
+    "hr": {
+      "html": "<section style=\"height:1px;border:none;background:linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0));margin:2em 0;\"></section>"
+    }
+  }
+}

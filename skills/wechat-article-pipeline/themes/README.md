@@ -8,7 +8,12 @@
 契约的**权威**是 [`THEME-SCHEMA.md`](./THEME-SCHEMA.md)——top-level 只允许
 `meta` / `palette` / `page` / `elements` / `decorations`，其余从**默认主题**深合并兜底（可以只写一部分）。
 
-## 三个内置主题（拿来即用，或复制再改）
+## 主题清单（13 个，按来源分组）
+
+拿来即用，或复制一个再改。三类来源；后两类由 `scripts/import-theme.mjs` 从开源社区主题
+转换而来（署名/许可见 [`CREDITS.md`](./CREDITS.md)）。
+
+### 手作（3，本仓库原创，品牌中性）
 
 | 主题 | 一句话风格 |
 |------|-----------|
@@ -16,8 +21,45 @@
 | [`minimal.json`](./minimal.json) | **极简风**——低饱和、细 hairline、大留白，适合克制的品牌调性。 |
 | [`knowledge.json`](./knowledge.json) | **知识卡片风**——清晰层级、引用块/列表突出，适合教程/干货/清单。 |
 
-**怎么挑**：观点长文 → magazine；性冷淡/品牌感 → minimal；教程干货 → knowledge。
+### doocs/md 移植（3，WTFPL — 见 CREDITS）
+
+| 主题 | 一句话风格 |
+|------|-----------|
+| [`doocs-classic.json`](./doocs-classic.json) | **经典**——居中主色下划线 h1、整块实底主色 h2、主色左条 h3，mdnice/doocs 经典观感。 |
+| [`doocs-grace.json`](./doocs-grace.json) | **优雅**——default 之上加柔和阴影、圆角 h2、虚线 h3、渐变分割线。 |
+| [`doocs-simple.json`](./doocs-simple.json) | **简洁**——非对称圆角 h2（`8px 24px`）、淡色描边 h3、细线。 |
+
+### wewrite 移植（7，MIT © OpenClaw — 见 CREDITS + LICENSE-wewrite）
+
+| 主题 | 一句话风格 |
+|------|-----------|
+| [`wewrite-sspai.json`](./wewrite-sspai.json) | **少数派**——暖白底、红色点缀，文艺清爽，数码/效率类。 |
+| [`wewrite-github.json`](./wewrite-github.json) | **GitHub**——白底蓝链、等宽代码，技术文档/开发者内容。 |
+| [`wewrite-minimal-gold.json`](./wewrite-minimal-gold.json) | **极简金**——白底金色细线，奢华克制，高端品牌/精品。 |
+| [`wewrite-newspaper.json`](./wewrite-newspaper.json) | **报刊**——米黄底深棕衬线，深度报道/评论。 |
+| [`wewrite-ink.json`](./wewrite-ink.json) | **水墨**——宣纸底墨色衬线、留白疏朗，文化/人文。 |
+| [`wewrite-warm-editorial.json`](./wewrite-warm-editorial.json) | **暖编辑**——白底琥珀色，生活方式/文化。 |
+| [`wewrite-professional-clean.json`](./wewrite-professional-clean.json) | **专业净**——蓝色、中性，适合大多数商业内容的安全默认。 |
+
+**怎么挑**：观点长文 → magazine / newspaper；性冷淡/品牌感 → minimal / minimal-gold；
+教程干货 → knowledge；技术 → github；商业通用 → professional-clean；文化人文 → ink。
 不完全合适就**复制一个再改**，比从零写省事。
+
+## 带自己的主题进来（`import-theme.mjs`）
+
+`scripts/import-theme.mjs` 是零依赖转换器，把两种常见开源主题格式转成本仓库的 `theme.json`：
+
+```bash
+# wewrite 的 toolkit/themes/*.yaml（MIT）
+node ../scripts/import-theme.mjs --from my.yaml --out my-theme.json --name "我的主题"
+
+# doocs/md 的 theme-css/*.css（WTFPL；grace/simple 是 default 的 diff，需带 --base 和 --accent）
+node ../scripts/import-theme.mjs --from theme.css --base default.css --accent '#2d6da3' --out my-theme.json
+```
+
+输出恒定符合 [`THEME-SCHEMA.md`](./THEME-SCHEMA.md) 并通过 `validate-theme.mjs`（仅内联样式、
+无 class/script/style/事件、从不注入图片 src）。`--format` 默认按扩展名自动识别
+（`.yaml`→wewrite-yaml，`.css`→doocs-css）。
 
 ## 自己写一个（一次性，之后永久复用）
 

@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "name": "经典",
+    "source": "https://github.com/doocs/md (WTFPL) — theme \"default\"",
+    "notes": "Layout/typography ported from doocs/md by import-theme.mjs (doocs-css). doocs is color-agnostic; accent \"#2d6da3\" chosen for this port. WTFPL, Copyright (C) 2025 Doocs <admin@doocs.org>. See themes/CREDITS.md."
+  },
+  "palette": {
+    "text": "#3f3f3f",
+    "heading": "#1a1a1a",
+    "accent": "#2d6da3",
+    "accent2": "#428ccb",
+    "muted": "#8a8a8a",
+    "bgSoft": "#f7f4ef",
+    "border": "#e6e2da",
+    "link": "#576b95"
+  },
+  "page": {
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+    "fontSize": "16px",
+    "lineHeight": "1.75",
+    "letterSpacing": "0.1em",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "padding:0 1em;border-bottom:2px solid {{accent}};margin:2em auto 1em;color:{{heading}};font-size:19px;font-weight:bold;text-align:center;"
+    },
+    "h2": {
+      "style": "margin:4em auto 2em;color:#fff;background:{{accent}};font-size:19px;font-weight:bold;text-align:center;border-radius:4px;padding:6px 14px;"
+    },
+    "h3": {
+      "style": "padding-left:8px;border-left:3px solid {{accent}};margin:2em 8px 0.75em 0;color:{{heading}};font-size:18px;font-weight:bold;line-height:1.2;"
+    },
+    "h4": {
+      "style": "margin:2em 8px 0.5em;color:{{accent}};font-size:16px;font-weight:bold;"
+    },
+    "p": {
+      "style": "margin:1.5em 8px;color:{{text}};"
+    },
+    "blockquote": {
+      "style": "font-style:normal;padding:1em;border-left:4px solid {{accent}};border-radius:6px;color:{{text}};background:{{bgSoft}};margin-bottom:1em;"
+    },
+    "ul": {
+      "style": "list-style:circle;padding-left:1em;margin-left:0;color:{{text}};"
+    },
+    "ol": {
+      "style": "padding-left:1em;margin-left:0;color:{{text}};"
+    },
+    "li": {
+      "style": "margin:0.2em 8px;color:{{text}};"
+    },
+    "strong": {
+      "style": "color:{{accent}};font-weight:bold;font-size:inherit;"
+    },
+    "em": {
+      "style": "font-style:italic;font-size:inherit;"
+    },
+    "code": {
+      "style": "font-size:90%;color:{{accent}};background:rgba(45, 109, 163, 0.08);padding:3px 5px;border-radius:4px;border:1px solid rgba(45, 109, 163, 0.2);font-family:'Fira Code', Menlo, Consolas, Monaco, 'Courier New', monospace;"
+    },
+    "pre": {
+      "style": "font-size:90%;overflow-x:auto;border-radius:8px;line-height:1.5;margin:10px 8px;background:#f6f6f6;color:{{text}};font-family:'Fira Code', Menlo, Consolas, Monaco, 'Courier New', monospace;white-space:pre-wrap;word-break:break-all;padding:14px 16px;"
+    },
+    "a": {
+      "style": "color:{{link}};text-decoration:none;"
+    },
+    "img": {
+      "style": "display:block;max-width:100%;margin:0.1em auto 0.5em;border-radius:4px;",
+      "figureStyle": "text-align:center;margin:1.5em 0;",
+      "captionStyle": "text-align:center;color:rgba(63, 63, 63, 0.5);font-size:0.8em;"
+    },
+    "hr": {
+      "html": "<section style=\"border:none;border-top:1px solid {{border}};margin:1.5em 0;\"></section>"
+    }
+  }
+}
