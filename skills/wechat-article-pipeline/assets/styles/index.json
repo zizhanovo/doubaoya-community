@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "name": "公众号封面/配图风格预设库",
+    "version": "1.0.0",
+    "description": "6 个命名风格预设，单一事实源。每个含 name/id/promptFragment/sample。生图脚本 scripts/gen-image.mjs 用 --style <id> 追加对应 promptFragment；样图 assets/styles/<id>.jpg 是给用户眼睛看的参考类型图（同一中性场景 + 各自风格生成）。",
+    "sampleScene": "A young content creator sitting at a tidy desk with an open laptop and a cup of coffee, a city skyline visible through the window behind."
+  },
+  "styles": [
+    {
+      "id": "magazine-editorial",
+      "name": "杂志编辑风",
+      "sample": "magazine-editorial.jpg",
+      "promptFragment": "high-end editorial magazine cover aesthetic, refined typography-forward composition, sophisticated muted color palette, generous negative space, elegant soft studio lighting, print-quality, understated and premium, art-directed layout"
+    },
+    {
+      "id": "minimal-bigtype",
+      "name": "极简大字",
+      "sample": "minimal-bigtype.jpg",
+      "promptFragment": "ultra-minimalist poster design, one bold oversized focal element on a flat solid-color background, high contrast, a single accent color, vast empty space, clean geometric balance, calm and confident, graphic-design driven"
+    },
+    {
+      "id": "photo-real",
+      "name": "真实摄影感",
+      "sample": "photo-real.jpg",
+      "promptFragment": "photorealistic editorial photography, natural soft window light, shallow depth of field with pleasing bokeh, realistic skin and material textures, candid documentary mood, shot on a 35mm prime lens, true-to-life colors, no illustration"
+    },
+    {
+      "id": "flat-illustration",
+      "name": "扁平插画",
+      "sample": "flat-illustration.jpg",
+      "promptFragment": "modern flat vector illustration, clean geometric shapes, bright friendly palette, simple two-tone shading, crisp outlines, tech-editorial explainer illustration style, cheerful and approachable, no photorealism"
+    },
+    {
+      "id": "guochao-chinese",
+      "name": "国潮中式",
+      "sample": "guochao-chinese.jpg",
+      "promptFragment": "国潮 new-Chinese-style graphic, ink-wash brush textures fused with contemporary flat design, traditional Chinese auspicious motifs and cloud/mountain patterns, palette of vermilion red, gold and indigo, bold oriental poster composition, modern yet culturally rooted"
+    },
+    {
+      "id": "biz-infographic",
+      "name": "商务信息图",
+      "sample": "biz-infographic.jpg",
+      "promptFragment": "clean business infographic style, structured grid layout, tidy iconography and simple charts/diagram motifs, corporate blue and neutral-gray palette, data-driven and professional, flat vector, clear visual hierarchy, trustworthy and precise"
+    }
+  ]
+}

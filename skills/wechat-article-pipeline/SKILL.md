@@ -25,19 +25,23 @@ description: >-
 
 ## 单一事实源：`pipeline.json`
 
-9 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`）。
+10 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`）。
 本 SKILL.md 与编排脚本 `scripts/pipeline.mjs` **都以它为准**——改流程先改 `pipeline.json`，别在各处硬编码。
 
-### 9 步 SOP
+> 其中**第 6 步「引导式设计」由 agent 执行**（选风格 / 生封面 / 生配图 / 排版确认，见下方[引导式设计](#引导式设计封面--配图--排版)），
+> 它把产出（`--cover` 本地封面 + Markdown 里的本地 `<img>`）喂给后面的机械步骤；`pipeline.mjs` 本身仍是渲染→传图→存草稿的确定性执行器。
+
+### 10 步 SOP
 1. **识别任务类型** — 确认是「把已写好的文章推进公众号草稿箱」。
 2. **读取身份上下文** — 加载并**回显** IP/身份 profile（名称 / 别名 / `isNot` 消歧 / 语气）。
 3. **whoami 校验账号** — `GET /api/agent/whoami`，把本地 key 解析成目标账号那一条（key 只在内存）。
 4. **草稿前置检查** — `GET /api/skills`（断言 `wechat-draft-publish` 存在）+ `GET /api/wechat/status`（确认公众号、解析 appid/昵称）。
 5. **md→HTML** — `--md` 时渲染成公众号内联样式 HTML（原样保留 `<img src>`）；`--html` 时直接用。
-6. **图片预处理** — 扫描 `<img>`，**本地图片客户端预上传**到图床（>1MB 先压缩）并改写 HTML；外链原样保留。
-7. **封面** — 本地封面作为 thumb 预上传；没有则走都爆鸭兜底封面。
-8. **保存草稿** — `POST /api/wechat/publish`（draft/add）。
-9. **验证回报** — 标题 / 公众号 / 正文图上传数 / 封面 / mediaId / **群发：否**。
+6. **引导式设计** — 选风格 → AI 生封面（`--cover-guard`，1536x1024）→ 生配图（1024x1024，落进 Markdown 源后回到第 5 步重渲染）→ 排版确认。引导默认，「你全权定」是逃生舱。见下方[引导式设计](#引导式设计封面--配图--排版)。
+7. **图片预处理** — 扫描 `<img>`，**本地图片客户端预上传**到图床（>1MB 先压缩）并改写 HTML；外链原样保留。
+8. **封面** — 本地封面作为 thumb 预上传；没有则走都爆鸭兜底封面。
+9. **保存草稿** — `POST /api/wechat/publish`（draft/add）。
+10. **验证回报** — 标题 / 公众号 / 正文图上传数 / 封面 / 使用风格 / mediaId / **群发：否**。
 
 ### 硬规则（`hardRules`，代码里强制）
 - **只存草稿绝不群发** — 没有任何群发路径；流水线**拒绝**任何 `--mass-send`/`--broadcast`/群发 参数。
@@ -56,9 +60,43 @@ description: >-
 |------|------|------|
 | 账号解析 | `scripts/account-verify.mjs` | `resolveAccountKey({account, baseUrl})`：多来源（env / `~/.doubaoya` / Keychain）候选 → 逐个 whoami → 按目标账号挑对 key，key 只在内存。多 key 指向不同账号且未指定 `--account` 时，报出各 key 对应账号并停。 |
 | md→公众号 HTML | `scripts/render-wechat-html.mjs` | `renderWechatHtml(md,{title})`：零依赖内联样式渲染，**原样保留图片 src**。 |
+| 封面/配图生图 | `scripts/gen-image.mjs` | `generateImage({prompt,size,out,styleId,coverGuard})`：零依赖，走口令 POST doubaoya `/api/skills/gpt-image-gen/invoke`（同步返回，扣点数）。风格库 `assets/styles/index.json`，用 env `DOUBAOYA_API_KEY`（无需额外密钥）。产出本地 jpeg → 喂 `--cover` 或以 `<img src>` 落进正文，**不碰发布契约**。由 agent 在引导式设计里调用（不由 pipeline.mjs 机械触发）。 |
 | 传图 + 存草稿 | `scripts/preprocess-and-publish.mjs` | **vendored** 自 `wechat-draft-publish` skill（两份需保持同步）。本地图预上传 + >1MB 压缩 + 存草稿（draft/add，无群发）。 |
 
 编排者把这三步串起来，并加上身份上下文加载、前置检查、硬门与结构化回报。
+
+---
+
+## 引导式设计（封面 / 配图 / 排版）
+
+第 6 步——渲染前后完成视觉设计。**引导是默认**：在下面 4 处停下来问用户；**逃生舱**：用户若说
+「封面配图你全权定 / 我赶时间」，就跳过所有停顿，用 `config.defaultStyleId` 自动出一版。
+生图脚本 `scripts/gen-image.mjs` 零依赖，走口令调 doubaoya.com 生图接口、扣点数、**无需额外密钥**
+（用发布本就在用的口令 `DOUBAOYA_API_KEY`，缺失时脚本报清晰错误、不崩）。约 ¥0.30/张。
+
+1. **选风格** — 把 `assets/styles/index.json` 的 6 个风格（`name` + `id`）和各自样图 `assets/styles/<id>.jpg`
+   列给用户挑（或用户说「你定」）。6 个起手风格：`杂志编辑风(magazine-editorial)`、`极简大字(minimal-bigtype)`、
+   `真实摄影感(photo-real)`、`扁平插画(flat-illustration)`、`国潮中式(guochao-chinese)`、`商务信息图(biz-infographic)`。
+2. **封面** — AI 读文章提炼一个封面概念（主体 + 氛围），用选定风格生 1 张 `1536x1024`，展示给用户 →
+   选 / 重生 / 自己传 / 用兜底。定了就设进 `--cover <本地jpeg>`。**封面必须加 `--cover-guard`**
+   （把主体压在水平中带、上下留氛围背景，防公众号 2.35:1 居中裁切切掉关键内容）：
+   ```bash
+   node scripts/gen-image.mjs --prompt "<封面概念>" --style <风格id> --cover-guard \
+     --size 1536x1024 --out <暂存目录>/cover.jpg
+   ```
+3. **配图** — 扫文章结构（一般每个 `##` 小标题下 1 张），提议张数与各自画面，逐张生成 `1024x1024`
+   并以 `<img src=本地路径>` 落进 **Markdown 源**（不是渲染后的 HTML——放进源里才会被主题套上图注/圆角/间距）。
+   ```bash
+   node scripts/gen-image.mjs --prompt "<该段画面>" --style <风格id> \
+     --size 1024x1024 --out <暂存目录>/fig1.jpg
+   ```
+   配图落进 Markdown 后**回到第 5 步重渲染**。这些本地图会被现有 `preprocess-and-publish.mjs` 走 `image` 上传，
+   **无需改动任何发布链路**。
+4. **排版** — 确认用哪套主题（默认 `config.mdTheme`，或用 `--theme` 换一套；写主题见下方「复刻参考排版风格」），
+   并**确认渲染器真被调用**。
+
+> `gen-image.mjs` 生成的本地 jpeg 路径，封面喂 `pipeline.mjs --cover`、配图以 `<img src>` 落进正文——
+> 两者都不触碰微信侧发布契约。上游生图密钥只在 doubaoya 服务端，skill 端只用口令。
 
 ---
 

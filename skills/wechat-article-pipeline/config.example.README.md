@@ -21,5 +21,11 @@ cp config.example.json config.json
 | `ipProfile` | IP/身份 profile 的路径（相对本 skill 目录）。流水线会加载并回显它的 `displayName / aliases / isNot`，防止把账号名误读成通用名词。见 `profiles/README.md`。 | `"profiles/my-ip.json"` |
 | `mdTheme` | Markdown→HTML 渲染主题标记（当前内置渲染器为中性主题，仅作占位；想要更花的排版可自行预渲染后用 `--html` 喂进来）。 | `"default"` |
 | `draftsDir` | 本地草稿/产物目录（可选，供你归档渲染出的 HTML）。`""` = 用临时目录。 | `"./drafts"` |
+| `defaultStyleId` | 逃生舱默认风格 id（用户说「你全权定/我赶时间」时用它自动出图）。取值见 `assets/styles/index.json` 的 6 个 `id`。 | `"magazine-editorial"` |
+| `coverAutogen` | 是否在引导式设计里默认 AI 生成封面。`false` = 不生封面，走 `--cover` 或都爆鸭兜底。 | `true` |
+| `figureAutogen` | 是否在引导式设计里默认 AI 生成正文配图。`false` = 不自动配图。 | `true` |
+| `generatedDir` | 生成图的本地暂存目录（相对本 skill 目录）。封面/配图 jpeg 落在这里，再喂 `--cover` 或以 `<img src>` 放进正文。 | `"assets/generated"` |
+
+> **生封面/配图无需额外密钥**：`scripts/gen-image.mjs` 直接用你发布本就在用的口令 `DOUBAOYA_API_KEY`（Bearer）调 doubaoya.com 的生图接口、扣点数，上游生图密钥只在 doubaoya 服务端、skill 端不接触。口令只放环境变量（`export DOUBAOYA_API_KEY=…`），绝不落配置/文件。
 
 > 提醒：`config.json` 属于你个人，**不要**提交到公共仓库。仓库里只保留 `config.example.json`（全空/占位）。

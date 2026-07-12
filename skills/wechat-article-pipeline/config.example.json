@@ -8,5 +8,9 @@
   "coverFallback": "doubaoya",
   "ipProfile": "profiles/example-ip.json",
   "mdTheme": "default",
-  "draftsDir": ""
+  "draftsDir": "",
+  "defaultStyleId": "magazine-editorial",
+  "coverAutogen": true,
+  "figureAutogen": true,
+  "generatedDir": "assets/generated"
 }
