@@ -54,7 +54,7 @@
       "title": "引导式设计（封面 / 配图 / 排版）",
       "type": "design",
       "endpoint": "POST https://doubaoya.com/api/skills/gpt-image-gen/invoke（经 scripts/gen-image.mjs）",
-      "rule": "由 agent 引导完成视觉设计，产出喂给后续机械步骤（不改发布链路契约）：① 选风格——把 assets/styles/index.json 的 6 个风格 + 样图列给用户挑（或用户说'你定'）。② 封面——AI 读文章提炼封面概念，用选定风格 promptFragment + COVER_GUARD 调 gen-image.mjs 生 1536x1024，产出本地 jpeg 作为 --cover。③ 配图——扫文章结构标建议配图位，逐张生 1024x1024 并以 <img src=本地路径> 落进 Markdown 源；配图入源后需回到渲染步重跑，使其获得主题图样式（图注/圆角/间距）。④ 排版——确认所选主题（config.mdTheme，或用 --theme 换一套）并确认渲染器真被调用。引导是默认；用户若说'你全权定/我赶时间'则跳过所有停顿，用 config.defaultStyleId 自动出一版（逃生舱）。生图走口令调 doubaoya 生图接口、扣点数、无需额外密钥（用 env DOUBAOYA_API_KEY），缺失时报清晰错误。此步由 agent 执行，非 pipeline.mjs 机械步骤。",
+      "rule": "由 agent 引导完成视觉设计，产出喂给后续机械步骤（不改发布链路契约）：① 选风格——把 assets/styles/index.json 的 6 个风格 + 样图列给用户挑（或用户说'你定'）。② 封面——AI 读文章提炼封面概念，用选定风格 promptFragment + COVER_GUARD 调 gen-image.mjs 生 1536x1024，产出本地 jpeg 作为 --cover。③ 配图——扫文章结构标建议配图位，逐张生 1024x1024 并以 <img src=本地路径> 落进 Markdown 源；配图入源后需回到渲染步重跑，使其获得主题图样式（图注/圆角/间距）。④ 排版——确认所选主题（config.mdTheme，或用 --theme 换一套）并确认渲染器真被调用。引导是默认；用户若说'你全权定/我赶时间'则跳过所有停顿，用 config.defaultStyleId 自动出一版（逃生舱）。生图走口令调 doubaoya 生图接口、扣点数、无需额外密钥（用 env DOUBAOYA_API_KEY），缺失时报清晰错误。此步由 agent 执行，非 pipeline.mjs 机械步骤。可视化替代：起 scripts/design-studio.mjs 本地网页工作台（127.0.0.1，零依赖）一次点完主题/封面/配图。注册卡通 IP（config.ipImage 或页面上传存 assets/ip/）后，封面与配图默认走参考图条件化（gen-image.mjs 的 referenceImage + operation:edit）保留统一形象；配图不再手选锚点，点「自动配图」由 scripts/plan-figures.mjs 确定性规则自动决定位置并逐张生成摆好。产出 design-config.json（含 ip 与自动 images[]，过 schemas/design-config.schema.json 校验），再 pipeline.mjs --design <json> 消费（套主题 + 设封面 + 按 h2 锚点注入配图；显式 --theme/--cover 冲突时命令行优先并告警）。",
       "mustPass": false
     },
     {

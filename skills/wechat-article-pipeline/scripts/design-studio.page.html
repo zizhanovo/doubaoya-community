@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>都爆鸭 · 公众号图文设计工作台</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --ink: #1f2328;
+    --muted: #6a727c;
+    --line: #e4e7eb;
+    --brand: #f6b73c;
+    --brand-ink: #7a5200;
+    --accent: #2f6df6;
+    --ok: #1f9d55;
+    --danger: #d64545;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 20px rgba(0,0,0,.05);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.6;
+  }
+  header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 18px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header .brand { font-weight: 700; font-size: 15px; }
+  header .brand span { color: var(--brand-ink); background: var(--brand); padding: 1px 7px; border-radius: 6px; margin-right: 6px; }
+  header .title { color: var(--muted); font-size: 13px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header .spacer { flex: 1; }
+  header .status { font-size: 12px; color: var(--muted); min-width: 90px; text-align: right; }
+  button {
+    font: inherit; cursor: pointer; border: 1px solid var(--line); background: #fff;
+    color: var(--ink); border-radius: 8px; padding: 6px 12px; transition: .12s;
+  }
+  button:hover { border-color: #c9ced4; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); font-weight: 700; }
+  button.primary:hover { filter: brightness(.97); }
+  button.ghost { background: transparent; }
+  .layout { display: flex; align-items: flex-start; gap: 18px; padding: 18px; max-width: 1400px; margin: 0 auto; }
+  /* ---- Left: phone preview ---- */
+  .preview-col { position: sticky; top: 62px; flex: 0 0 auto; }
+  .phone {
+    width: 375px; height: 720px; background: #fff; border-radius: 34px;
+    border: 10px solid #111418; box-shadow: var(--shadow); overflow: hidden; position: relative;
+  }
+  .phone .topbar {
+    height: 42px; display: flex; align-items: center; padding: 0 14px; gap: 8px;
+    border-bottom: 1px solid var(--line); background: #fafafa; font-size: 12px; color: var(--muted);
+  }
+  .phone .topbar b { color: var(--ink); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .phone iframe { width: 100%; height: calc(720px - 42px); border: 0; background: #fff; }
+  .preview-meta { margin-top: 8px; font-size: 12px; color: var(--muted); text-align: center; width: 375px; }
+  /* ---- Right: controls ---- */
+  .controls { flex: 1 1 auto; min-width: 320px; display: flex; flex-direction: column; gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card > h2 { margin: 0; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+  .card > h2 .n { background: var(--ink); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .card > h2 .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .card .body { padding: 14px 16px; }
+  /* theme grid */
+  .theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .theme-card { text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  .theme-card.active { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(246,183,60,.35); }
+  .theme-card .tname { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .theme-card .tnotes { color: var(--muted); font-size: 12px; margin-top: 3px; line-height: 1.4; }
+  .theme-card .badge { font-size: 10px; color: var(--brand-ink); background: var(--brand); border-radius: 4px; padding: 0 5px; }
+  /* style picker */
+  .style-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .style-chip { flex: 0 0 auto; width: 92px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; padding: 0; text-align: center; }
+  .style-chip.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(47,109,246,.3); }
+  .style-chip img { width: 100%; height: 60px; object-fit: cover; display: block; background: #eee; }
+  .style-chip .sname { font-size: 11px; padding: 4px 2px; color: var(--ink); }
+  .prompt-box { width: 100%; min-height: 54px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; margin-top: 8px; }
+  .gen-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .cand-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; }
+  .cand { position: relative; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; cursor: pointer; background: #f0f0f0; aspect-ratio: 3/2; }
+  .cand.figure { aspect-ratio: 1/1; }
+  .cand.active { border-color: var(--ok); }
+  .cand img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cand .pick { position: absolute; top: 6px; right: 6px; background: var(--ok); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: none; align-items: center; justify-content: center; font-size: 13px; }
+  .cand.active .pick { display: flex; }
+  .cand .tag { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,.55); color: #fff; font-size: 10px; padding: 2px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .anchor-item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .anchor-item .ahead { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .anchor-item .ahead .ico { color: var(--muted); }
+  .anchor-state { font-size: 12px; color: var(--muted); margin-left: auto; }
+  .anchor-state.done { color: var(--ok); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .err { color: var(--danger); font-size: 12px; margin-top: 6px; }
+  .muted { color: var(--muted); }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 10px; box-shadow: var(--shadow); opacity: 0; transition: .2s; z-index: 50; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.err { background: var(--danger); }
+  .collapsible { max-height: 0; overflow: hidden; transition: max-height .2s; }
+  .collapsible.open { max-height: 2000px; }
+  /* IP indicator in header */
+  .ip-chip { display: flex; align-items: center; gap: 8px; padding: 3px 8px 3px 3px; border: 1px solid var(--line); border-radius: 20px; background: #fff; }
+  .ip-chip img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #eee; display: block; }
+  .ip-chip .ip-none { width: 30px; height: 30px; border-radius: 50%; background: #f0f0f0; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; color: var(--muted); }
+  .ip-chip .ip-label { font-size: 12px; color: var(--muted); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ip-chip .ip-up { font-size: 12px; color: var(--accent); cursor: pointer; }
+  /* auto figures */
+  .fig-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .fig-meta { font-size: 12px; color: var(--muted); margin: 4px 0 10px; line-height: 1.5; }
+  .fig-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .fig { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+  .fig .thumb { aspect-ratio: 1/1; background: #f0f0f0; position: relative; display: flex; align-items: center; justify-content: center; }
+  .fig .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fig .thumb .ph { color: var(--muted); font-size: 12px; text-align: center; padding: 8px; }
+  .fig .fmeta { padding: 8px 10px; font-size: 12px; }
+  .fig .fmeta .fanchor { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fig .fmeta .fprompt { color: var(--muted); margin-top: 2px; line-height: 1.4; max-height: 2.8em; overflow: hidden; }
+  .fig .factions { display: flex; gap: 6px; padding: 0 10px 10px; }
+  .fig .factions button { font-size: 12px; padding: 4px 10px; }
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; align-items: center; }
+    .preview-col { position: static; }
+    .controls { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span>🦆</span>设计工作台</div>
+  <div class="title" id="hTitle">—</div>
+  <div class="spacer"></div>
+  <div class="ip-chip" title="当前 IP 参考图：封面/配图会条件化生成以保留此形象">
+    <span id="ipThumbWrap"><span class="ip-none" id="ipNone">🐤</span></span>
+    <span class="ip-label" id="ipLabel">未注册 IP</span>
+    <label class="ip-up">上传 IP<input type="file" id="ipUpload" accept="image/*" style="display:none" /></label>
+  </div>
+  <div class="status" id="hStatus"></div>
+  <button class="primary" id="saveBtn">保存配置</button>
+</header>
+
+<div class="layout">
+  <!-- Left preview -->
+  <div class="preview-col">
+    <div class="phone">
+      <div class="topbar"><b id="pvTitle">加载中…</b><span class="spacer"></span><span id="pvTheme"></span></div>
+      <iframe id="pv" title="公众号预览"></iframe>
+    </div>
+    <div class="preview-meta" id="pvMeta">左侧为公众号手机预览（375px）。切换排版主题即时刷新。</div>
+  </div>
+
+  <!-- Right controls -->
+  <div class="controls">
+    <!-- 1 排版 -->
+    <div class="card">
+      <h2><span class="n">1</span>排版主题 <span class="hint" id="themeHint"></span></h2>
+      <div class="body">
+        <div class="theme-grid" id="themeGrid"></div>
+      </div>
+    </div>
+
+    <!-- 2 封面 -->
+    <div class="card">
+      <h2><span class="n">2</span>封面 <span class="hint">选风格 → 生成候选（默认套用 IP 参考图）→ 挑一张（或上传自己的）</span></h2>
+      <div class="body">
+        <div class="style-row" id="coverStyles"></div>
+        <textarea class="prompt-box" id="coverPrompt" placeholder="封面画面描述（会自动追加所选风格与封面护栏）"></textarea>
+        <div class="gen-actions">
+          <button class="primary" id="coverGenBtn">生成候选（2 张）</button>
+          <button class="ghost" id="coverMoreBtn" style="display:none">再生一批</button>
+          <label class="ghost" style="border:1px solid var(--line); border-radius:8px; padding:6px 12px;">
+            上传封面<input type="file" id="coverUpload" accept="image/*" style="display:none" />
+          </label>
+          <span id="coverBusy"></span>
+        </div>
+        <div class="err" id="coverErr"></div>
+        <div class="cand-grid" id="coverCands"></div>
+      </div>
+    </div>
+
+    <!-- 3 配图（自动布局） -->
+    <div class="card">
+      <h2><span class="n">3</span>配图 <span class="hint">自动决定位置 + 用 IP 参考图生成，无需手选</span></h2>
+      <div class="body">
+        <div class="fig-toolbar">
+          <button class="primary" id="autoFigBtn">自动配图</button>
+          <button class="ghost" id="regenAllBtn" style="display:none">整体重生</button>
+          <span id="figBusy"></span>
+        </div>
+        <div class="fig-meta" id="figMeta">点「自动配图」：按确定性规则挑好位置（信息量大的 h2 小节末尾）、逐张用 IP 参考图生成并自动摆好。你只需换一张 / 删除 / 整体重生。</div>
+        <div class="err" id="figErr"></div>
+        <div class="fig-grid" id="figGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = (s, r=document) => r.querySelector(s);
+const el = (tag, props={}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") n.className = v;
+    else if (k === "html") n.innerHTML = v;
+    else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
+    else if (v != null) n.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid != null) n.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return n;
+};
+
+// ---- client state / design-config model ----
+const S = {
+  title: "", sourceMarkdown: "", markdown: "",
+  themes: [], styles: [], anchors: [],
+  themeId: "default",
+  ip: null,              // { path, dataUrl } | null —— 当前 IP 参考图
+  cover: { selectedAssetId: null, candidates: [] },
+  images: [],            // [{ anchor, prompt, selectedAssetId, candidates:[] }] —— 自动布局产出
+  figMeta: null,         // plan-figures 的 meta（张数/字数统计）
+  assets: {},            // assetId -> { path, prompt, styleId }
+  coverStyleId: null,
+  figBusy: false,
+  renderCache: new Map(),
+  dataUrls: new Map(),   // assetId -> dataUrl (for freshly generated)
+};
+
+function assetSrc(assetId) {
+  if (S.dataUrls.has(assetId)) return S.dataUrls.get(assetId);
+  return `/api/asset?id=${encodeURIComponent(assetId)}`;
+}
+
+let toastTimer;
+function toast(msg, isErr=false) {
+  const t = $("#toast");
+  t.textContent = msg; t.className = "toast show" + (isErr ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = "toast"; }, 2600);
+}
+
+async function jget(url) {
+  const r = await fetch(url);
+  const j = await r.json().catch(() => ({ error: "BAD_JSON" }));
+  if (!r.ok) throw new Error(j.message || j.error || `HTTP ${r.status}`);
+  return j;
+}
+async function jpost(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({ error: "BAD_JSON" }));
+  if (!r.ok) throw new Error(j.message || (j.errors && j.errors.join("；")) || j.error || `HTTP ${r.status}`);
+  return j;
+}
+
+// ---- preview ----
+async function renderPreview(themeId) {
+  const iframe = $("#pv");
+  $("#pvTheme").textContent = themeLabel(themeId);
+  try {
+    let html;
+    if (S.renderCache.has(themeId)) html = S.renderCache.get(themeId);
+    else {
+      const j = await jget(`/api/render?themeId=${encodeURIComponent(themeId)}`);
+      html = j.html; S.renderCache.set(themeId, html);
+    }
+    iframe.srcdoc = `<!doctype html><meta charset="utf-8"><style>body{margin:0;padding:14px 16px;}</style>${html}`;
+  } catch (e) {
+    iframe.srcdoc = `<pre style="color:#d64545;padding:16px;white-space:pre-wrap">预览失败：${escapeHtml(e.message)}</pre>`;
+  }
+}
+function themeLabel(id) {
+  if (id === "neutral") return "无主题";
+  const t = S.themes.find(t => t.id === id);
+  return t ? t.name : id;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+
+function prefetchThemes() {
+  // 后台预取全部主题，切换即时。neutral + default + 14 主题
+  const ids = ["default", "neutral", ...S.themes.map(t => t.id)];
+  (async () => {
+    for (const id of ids) {
+      if (S.renderCache.has(id)) continue;
+      try { const j = await jget(`/api/render?themeId=${encodeURIComponent(id)}`); S.renderCache.set(id, j.html); } catch {}
+    }
+  })();
+}
+
+// ---- theme grid ----
+function renderThemeGrid() {
+  const grid = $("#themeGrid");
+  grid.textContent = "";
+  const cards = [
+    { id: "default", name: "项目默认", notes: "magazine 项目默认排版", def: true },
+    ...S.themes.map(t => ({ ...t })),
+    { id: "neutral", name: "无主题（中性）", notes: "不套任何主题，中性渲染器输出" },
+  ];
+  for (const t of cards) {
+    const active = S.themeId === t.id;
+    const card = el("button", { class: "theme-card" + (active ? " active" : ""), onclick: () => selectTheme(t.id) },
+      el("div", { class: "tname" }, t.name, t.def ? el("span", { class: "badge" }, "默认") : null),
+      el("div", { class: "tnotes" }, t.notes || "")
+    );
+    grid.append(card);
+  }
+  $("#themeHint").textContent = `已选：${themeLabel(S.themeId)}`;
+}
+function selectTheme(id) {
+  S.themeId = id;
+  renderThemeGrid();
+  renderPreview(id);
+}
+
+// ---- style picker (shared shape) ----
+function buildStyleRow(container, getSel, setSel) {
+  container.textContent = "";
+  for (const s of S.styles) {
+    const chip = el("button", { class: "style-chip" + (getSel() === s.id ? " active" : ""), onclick: () => { setSel(s.id); [...container.children].forEach(c => c.classList.remove("active")); chip.classList.add("active"); } },
+      el("img", { src: s.sample, alt: s.name, loading: "lazy" }),
+      el("div", { class: "sname" }, s.name)
+    );
+    container.append(chip);
+  }
+}
+
+// ---- cover ----
+function renderCoverStyles() {
+  buildStyleRow($("#coverStyles"), () => S.coverStyleId, id => { S.coverStyleId = id; });
+}
+function renderCoverCands() {
+  const grid = $("#coverCands");
+  grid.textContent = "";
+  for (const c of S.cover.candidates) {
+    const active = S.cover.selectedAssetId === c.assetId;
+    const cell = el("div", { class: "cand" + (active ? " active" : ""), title: c.prompt || "", onclick: () => { S.cover.selectedAssetId = active ? null : c.assetId; renderCoverCands(); updateStatus(); } },
+      el("img", { src: assetSrc(c.assetId), alt: "封面候选" }),
+      el("div", { class: "pick" }, "✓"),
+      el("div", { class: "tag" }, styleName(c.styleId))
+    );
+    grid.append(cell);
+  }
+  $("#coverMoreBtn").style.display = S.cover.candidates.length ? "" : "none";
+}
+function styleName(id) {
+  if (id === "uploaded") return "自传";
+  const s = S.styles.find(s => s.id === id);
+  return s ? s.name : (id || "");
+}
+async function generateCover() {
+  const prompt = $("#coverPrompt").value.trim();
+  const styleId = S.coverStyleId;
+  $("#coverErr").textContent = "";
+  if (!prompt) { $("#coverErr").textContent = "请先填写封面画面描述。"; return; }
+  const busy = $("#coverBusy");
+  const btns = [$("#coverGenBtn"), $("#coverMoreBtn")];
+  btns.forEach(b => b.disabled = true);
+  busy.innerHTML = '<span class="spinner"></span> 生成中（约 10–60 秒）…';
+  try {
+    // 一批 2 张（默认套用 IP 参考图条件化）
+    for (let i = 0; i < 2; i++) {
+      const j = await jpost("/api/generate", { slot: "cover", styleId: styleId || undefined, prompt, useIp: true });
+      S.dataUrls.set(j.assetId, j.dataUrl);
+      S.assets[j.assetId] = { path: j.path, prompt: j.prompt, styleId: j.styleId || styleId || "" };
+      S.cover.candidates.push({ assetId: j.assetId, prompt: j.prompt, styleId: j.styleId || styleId || "" });
+      if (!S.cover.selectedAssetId) S.cover.selectedAssetId = j.assetId;
+      renderCoverCands();
+    }
+    toast("封面候选已生成");
+  } catch (e) {
+    $("#coverErr").textContent = "生成失败：" + e.message;
+  } finally {
+    btns.forEach(b => b.disabled = false);
+    busy.textContent = "";
+    updateStatus();
+  }
+}
+async function uploadCover(file) {
+  $("#coverErr").textContent = "";
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const j = await jpost("/api/upload-cover", { dataUrl: reader.result });
+      S.dataUrls.set(j.assetId, j.dataUrl);
+      S.assets[j.assetId] = { path: j.path, prompt: "(用户上传)", styleId: "uploaded" };
+      S.cover.candidates.push({ assetId: j.assetId, prompt: "(用户上传)", styleId: "uploaded" });
+      S.cover.selectedAssetId = j.assetId;
+      renderCoverCands(); updateStatus();
+      toast("封面已上传");
+    } catch (e) { $("#coverErr").textContent = "上传失败：" + e.message; }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---- figures (auto layout) ----
+// 配图不再手选锚点：点「自动配图」→ 后端 plan-figures 出方案（确定性规则）→ 逐张用 IP
+// 参考图生成、自动摆好。用户只能「换一张 / 删除 / 整体重生」。
+function renderFigMeta() {
+  const m = S.figMeta;
+  const box = $("#figMeta");
+  if (!m) {
+    box.textContent = "点「自动配图」：按确定性规则挑好位置（信息量大的 h2 小节末尾）、逐张用 IP 参考图生成并自动摆好。你只需换一张 / 删除 / 整体重生。";
+    return;
+  }
+  box.textContent = `已规划 ${S.images.length} 张：正文 ${m.totalBodyChars} 字 · ${m.sectionCount} 个小节 · 有资格 ${m.eligibleCount} · 上限 ${m.maxFigures} · 阈值 ${m.minChars} 字。你可换一张 / 删除 / 整体重生。`;
+}
+function renderFigures() {
+  const grid = $("#figGrid");
+  grid.textContent = "";
+  $("#regenAllBtn").style.display = S.images.length ? "" : "none";
+  S.images.forEach((im, idx) => grid.append(figCell(im, idx)));
+}
+function figCell(im, idx) {
+  const cur = im.selectedAssetId;
+  const thumb = el("div", { class: "thumb" });
+  if (im._busy) thumb.append(el("div", { class: "ph" }, el("span", { class: "spinner" }), " 生成中…"));
+  else if (cur) thumb.append(el("img", { src: assetSrc(cur), alt: "配图" }));
+  else if (im._err) thumb.append(el("div", { class: "ph" }, "失败：" + im._err));
+  else thumb.append(el("div", { class: "ph" }, "待生成"));
+  const meta = el("div", { class: "fmeta" },
+    el("div", { class: "fanchor", title: im.anchor.value }, "放在《" + im.anchor.value + "》后"),
+    el("div", { class: "fprompt", title: im.prompt || "" }, im.prompt || "")
+  );
+  const swap = el("button", { class: "ghost", disabled: im._busy || S.figBusy, onclick: () => regenOne(idx) }, "换一张");
+  const del = el("button", { class: "ghost", disabled: im._busy || S.figBusy, onclick: () => removeFig(idx) }, "删除");
+  return el("div", { class: "fig" }, thumb, meta, el("div", { class: "factions" }, swap, del));
+}
+async function genFigureFor(im) {
+  im._busy = true; im._err = ""; renderFigures();
+  try {
+    const j = await jpost("/api/generate", { slot: "figure", prompt: im.prompt, anchor: im.anchor, useIp: true });
+    S.dataUrls.set(j.assetId, j.dataUrl);
+    S.assets[j.assetId] = { path: j.path, prompt: j.prompt, styleId: j.styleId || "" };
+    im.candidates.push({ assetId: j.assetId, prompt: j.prompt, styleId: j.styleId || "" });
+    im.selectedAssetId = j.assetId;
+  } catch (e) {
+    im._err = e.message;
+  } finally {
+    im._busy = false; renderFigures(); updateStatus();
+  }
+}
+async function regenOne(idx) {
+  const im = S.images[idx];
+  if (!im || S.figBusy) return;
+  await genFigureFor(im);
+}
+function removeFig(idx) {
+  S.images.splice(idx, 1);
+  renderFigures(); updateStatus();
+}
+async function autoLayoutFigures() {
+  if (S.figBusy) return;
+  $("#figErr").textContent = "";
+  const busy = $("#figBusy");
+  S.figBusy = true;
+  $("#autoFigBtn").disabled = true; $("#regenAllBtn").disabled = true;
+  busy.innerHTML = '<span class="spinner"></span> 规划配图位置…';
+  try {
+    const plan = await jpost("/api/plan-figures", {});
+    S.figMeta = plan.meta || null;
+    S.images = (plan.figures || []).map(f => ({ anchor: f.anchor, prompt: f.prompt, chars: f.chars, selectedAssetId: null, candidates: [] }));
+    renderFigMeta(); renderFigures(); updateStatus();
+    if (!S.images.length) { toast("本文没有达到阈值的小节，未自动配图"); return; }
+    for (let i = 0; i < S.images.length; i++) {
+      busy.innerHTML = `<span class="spinner"></span> 生成配图 ${i + 1}/${S.images.length}…（约 10–60 秒/张）`;
+      await genFigureFor(S.images[i]);
+    }
+    toast("配图已自动生成并摆好");
+  } catch (e) {
+    $("#figErr").textContent = "自动配图失败：" + e.message;
+  } finally {
+    S.figBusy = false;
+    $("#autoFigBtn").disabled = false; $("#regenAllBtn").disabled = false;
+    busy.textContent = "";
+    renderFigures(); updateStatus();
+  }
+}
+
+// ---- IP indicator ----
+function renderIp() {
+  const wrap = $("#ipThumbWrap");
+  const label = $("#ipLabel");
+  wrap.textContent = "";
+  if (S.ip && S.ip.dataUrl) {
+    wrap.append(el("img", { src: S.ip.dataUrl, alt: "当前 IP" }));
+    label.textContent = "IP：" + (S.ip.path ? S.ip.path.split("/").pop() : "已注册");
+    label.title = S.ip.path || "";
+  } else {
+    wrap.append(el("span", { class: "ip-none" }, "🐤"));
+    label.textContent = "未注册 IP";
+    label.title = "";
+  }
+}
+async function uploadIp(file) {
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const j = await jpost("/api/upload-ip", { dataUrl: reader.result });
+      S.ip = { path: j.path, dataUrl: j.dataUrl || reader.result };
+      renderIp();
+      toast("IP 已注册：" + (S.ip.path || ""));
+    } catch (e) { toast("IP 上传失败：" + e.message, true); }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---- status / save ----
+function updateStatus() {
+  const nCov = S.cover.selectedAssetId ? "已选封面" : "无封面";
+  const nFig = S.images.filter(i => i.selectedAssetId).length;
+  $("#hStatus").textContent = `${themeLabel(S.themeId)} · ${nCov} · 配图 ${nFig}/${S.images.length}`;
+}
+function buildConfig() {
+  return {
+    $schema: "./schemas/design-config.schema.json",
+    version: 1,
+    article: { sourceMarkdown: S.sourceMarkdown, title: S.title },
+    theme: { id: S.themeId, overrides: {} },
+    ip: S.ip && S.ip.path ? { path: S.ip.path } : null,
+    cover: { selectedAssetId: S.cover.selectedAssetId, candidates: S.cover.candidates },
+    images: S.images.map(im => ({ anchor: im.anchor, selectedAssetId: im.selectedAssetId, candidates: im.candidates })),
+    assets: S.assets,
+  };
+}
+async function save() {
+  const btn = $("#saveBtn");
+  btn.disabled = true; const old = btn.textContent; btn.textContent = "保存中…";
+  try {
+    const j = await jpost("/api/save", buildConfig());
+    toast("已保存：" + j.path);
+  } catch (e) {
+    toast("保存失败：" + e.message, true);
+  } finally { btn.disabled = false; btn.textContent = old; }
+}
+
+// ---- restore existing ----
+function restore(existing) {
+  if (!existing || typeof existing !== "object") return;
+  if (existing.theme && existing.theme.id) S.themeId = existing.theme.id;
+  if (existing.assets && typeof existing.assets === "object") S.assets = { ...existing.assets };
+  if (existing.ip && typeof existing.ip === "object" && existing.ip.path) {
+    // 记录里的 IP path（相对 skill）无法直接取缩略图；bootstrap.ip 才带 dataUrl。
+    if (!S.ip) S.ip = { path: existing.ip.path, dataUrl: null };
+  }
+  if (existing.cover && typeof existing.cover === "object") {
+    S.cover.selectedAssetId = existing.cover.selectedAssetId ?? null;
+    S.cover.candidates = Array.isArray(existing.cover.candidates) ? existing.cover.candidates.slice() : [];
+  }
+  // 配图：自动布局产物，直接还原既有 images[]（含 anchor/prompt/选中/候选）
+  if (Array.isArray(existing.images) && existing.images.length) {
+    S.images = existing.images.map(saved => {
+      const asset = (saved.selectedAssetId && S.assets[saved.selectedAssetId]) || null;
+      return {
+        anchor: saved.anchor,
+        prompt: (asset && asset.prompt) || (Array.isArray(saved.candidates) && saved.candidates[0] && saved.candidates[0].prompt) || `示意配图：${saved.anchor && saved.anchor.value || ""}`,
+        selectedAssetId: saved.selectedAssetId ?? null,
+        candidates: Array.isArray(saved.candidates) ? saved.candidates.slice() : [],
+      };
+    });
+  }
+}
+
+// ---- boot ----
+(async function boot() {
+  try {
+    const b = await jget("/api/bootstrap");
+    S.title = b.title || "";
+    S.sourceMarkdown = b.sourceMarkdown || "";
+    S.markdown = b.markdown || "";
+    S.themes = Array.isArray(b.themes) ? b.themes : [];
+    S.styles = Array.isArray(b.styles) ? b.styles : [];
+    S.anchors = Array.isArray(b.suggestedAnchors) ? b.suggestedAnchors : [];
+    S.ip = b.ip && b.ip.dataUrl ? { path: b.ip.path, dataUrl: b.ip.dataUrl } : (b.ip && b.ip.path ? { path: b.ip.path, dataUrl: null } : null);
+    S.images = []; // 配图自动布局：初始为空，点「自动配图」后填充
+    S.coverStyleId = S.styles[0] ? S.styles[0].id : null;
+
+    restore(b.existing);
+
+    $("#hTitle").textContent = S.title;
+    $("#pvTitle").textContent = S.title;
+    $("#coverPrompt").value = `公众号封面：${S.title}`;
+
+    renderIp();
+    renderThemeGrid();
+    renderCoverStyles();
+    renderCoverCands();
+    renderFigMeta();
+    renderFigures();
+    updateStatus();
+    await renderPreview(S.themeId);
+    prefetchThemes();
+  } catch (e) {
+    document.body.innerHTML = `<pre style="color:#d64545;padding:24px;white-space:pre-wrap">工作台初始化失败：${escapeHtml(e.message)}</pre>`;
+    return;
+  }
+  $("#saveBtn").addEventListener("click", save);
+  $("#coverGenBtn").addEventListener("click", generateCover);
+  $("#coverMoreBtn").addEventListener("click", generateCover);
+  $("#coverUpload").addEventListener("change", e => { const f = e.target.files[0]; if (f) uploadCover(f); e.target.value = ""; });
+  $("#ipUpload").addEventListener("change", e => { const f = e.target.files[0]; if (f) uploadIp(f); e.target.value = ""; });
+  $("#autoFigBtn").addEventListener("click", autoLayoutFigures);
+  $("#regenAllBtn").addEventListener("click", autoLayoutFigures);
+})();
+</script>
+</body>
+</html>

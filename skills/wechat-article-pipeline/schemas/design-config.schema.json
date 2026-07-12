@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "design-config.schema.json",
+  "title": "都爆鸭 · 公众号图文设计工作台配置（design-config）",
+  "description": "由 scripts/design-studio.mjs 保存、由 scripts/pipeline.mjs --design 消费。声明本篇文章用的排版主题、封面、按锚点注入的配图，以及生成资产的本地路径。v1 只选主题 id，theme.overrides 留空占位未来细调。",
+  "type": "object",
+  "required": ["version", "article", "theme"],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "article": {
+      "type": "object",
+      "required": ["title"],
+      "additionalProperties": true,
+      "properties": {
+        "sourceMarkdown": {
+          "type": "string",
+          "description": "相对 design-config 文件所在目录的 Markdown 源路径。"
+        },
+        "title": { "type": "string" }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "themes/ 里的主题 id（如 magazine），或 'neutral'（不套主题）/'default'（项目默认主题）。"
+        },
+        "overrides": {
+          "type": "object",
+          "description": "v1 留空，占位未来细调色/字号。"
+        }
+      }
+    },
+    "ip": {
+      "type": ["object", "null"],
+      "description": "本篇采用的卡通 IP 参考图（用于封面/配图条件化生成，保留统一形象）。可空。path 通常相对本 skill 目录（如 assets/ip/benya.png），仅作记录，pipeline 不消费它。",
+      "additionalProperties": true,
+      "properties": {
+        "path": { "type": ["string", "null"] }
+      }
+    },
+    "cover": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "selectedAssetId": { "type": ["string", "null"] },
+        "candidates": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/candidate" }
+        }
+      }
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["anchor"],
+        "additionalProperties": true,
+        "properties": {
+          "anchor": { "$ref": "#/definitions/anchor" },
+          "selectedAssetId": { "type": ["string", "null"] },
+          "candidates": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/candidate" }
+          }
+        }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "description": "assetId → 资产元信息映射；path 相对 design-config 文件所在目录。",
+      "additionalProperties": { "$ref": "#/definitions/asset" }
+    }
+  },
+  "definitions": {
+    "candidate": {
+      "type": "object",
+      "required": ["assetId"],
+      "additionalProperties": true,
+      "properties": {
+        "assetId": { "type": "string" },
+        "prompt": { "type": "string" },
+        "styleId": { "type": "string" }
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "required": ["type", "value"],
+      "additionalProperties": true,
+      "properties": {
+        "type": { "const": "afterHeading" },
+        "value": {
+          "type": "string",
+          "description": "目标 h2 小标题文本（trim 后精确匹配）。"
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": true,
+      "properties": {
+        "path": { "type": "string" },
+        "prompt": { "type": "string" },
+        "styleId": { "type": "string" }
+      }
+    }
+  }
+}

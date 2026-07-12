@@ -55,6 +55,51 @@ export const COVER_GUARD =
 export const SIZE_COVER = "1536x1024";
 export const SIZE_FIGURE = "1024x1024";
 
+// 从图片首字节嗅探 MIME（够用即可：png/jpeg/gif/webp，兜底 png）。
+function sniffImageMime(buf) {
+  if (!buf || buf.length < 4) return "image/png";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return "image/gif";
+  if (
+    buf.length >= 12 &&
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  )
+    return "image/webp";
+  return "image/png";
+}
+
+/**
+ * 把「参考图入参」归一成生图接口 referenceImage 能吃的字符串：
+ *   - data: URL          → 原样返回
+ *   - http(s):// URL     → 原样返回（服务端自行拉取）
+ *   - 本地文件路径        → 读盘 → 嗅探 MIME → 返回 data:<mime>;base64,<...>
+ *   - 裸 base64（较长）   → 去空白后原样返回
+ * 空/未提供 → 返回 null（调用方据此决定是否走 edit）。
+ * 这是「本地图路径 → data:/base64」的小工具，供工作台与 CLI 共用。
+ * @param {string|null|undefined} ref
+ * @returns {Promise<string|null>}
+ */
+export async function resolveReferenceImage(ref) {
+  if (ref == null) return null;
+  const s = String(ref).trim();
+  if (!s) return null;
+  if (/^data:image\//i.test(s)) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  const abs = path.resolve(s);
+  if (existsSync(abs)) {
+    const buf = await readFile(abs);
+    if (!buf.length) throw new Error(`参考图为空文件：${abs}`);
+    return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
+  }
+  // 裸 base64（无 data: 前缀、看起来不像路径）：只接受较长的纯 base64 串
+  if (/^[A-Za-z0-9+/=\s]+$/.test(s) && s.replace(/\s+/g, "").length > 100) {
+    return s.replace(/\s+/g, "");
+  }
+  throw new Error(`参考图无法解析（既不是 data:/URL，也找不到本地文件）：${s}`);
+}
+
 // 读风格预设库（单一事实源）。找不到/坏了返回空表，不影响裸 prompt 生图。
 async function loadStyles() {
   try {
@@ -95,6 +140,8 @@ export function buildPrompt({ prompt, styleFragment = "", coverGuard = false }) 
  * @param {string} [o.styleId]   风格库里的 id，追加其 promptFragment
  * @param {string} [o.styleFragment] 直接给风格片段（优先于 styleId）
  * @param {boolean}[o.coverGuard] 追加封面护栏（封面时置 true）
+ * @param {string} [o.referenceImage] 参考图（本地路径 / URL / data: / 裸 base64）。
+ *                 提供时走 operation:"edit" 条件化生成，保留参考图里的 IP 形象；不传时文生图，行为不变。
  */
 export async function generateImage(o) {
   const { prompt, out } = o;
@@ -118,6 +165,16 @@ export async function generateImage(o) {
     o.styleFragment != null ? o.styleFragment : await resolveStyleFragment(o.styleId);
   const finalPrompt = buildPrompt({ prompt, styleFragment, coverGuard: o.coverGuard });
 
+  // 参考图条件化：提供 referenceImage 时走 edit（保留 IP 形象），否则文生图（行为不变）。
+  const reqBody = { prompt: finalPrompt, size };
+  if (o.referenceImage != null && String(o.referenceImage).trim() !== "") {
+    const ref = await resolveReferenceImage(o.referenceImage);
+    if (ref) {
+      reqBody.operation = "edit";
+      reqBody.referenceImage = ref;
+    }
+  }
+
   let res;
   try {
     res = await fetch(`${base}${IMAGE_GEN_INVOKE_PATH}`, {
@@ -126,7 +183,7 @@ export async function generateImage(o) {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt: finalPrompt, size }),
+      body: JSON.stringify(reqBody),
     });
   } catch (e) {
     throw new Error(`生图请求发送失败（无法连接 ${base}）：${e.message}`);
@@ -207,6 +264,7 @@ const HELP = `gen-image.mjs — 都爆鸭 · 公众号封面/配图生图
 选项:
   --size <WxH>       默认 1024x1024；封面用 1536x1024
   --style <id>       风格库 assets/styles/index.json 里的 id，追加其 promptFragment
+  --reference-image <path|url|data:>  IP 参考图；提供时走 edit 条件化生成，保留参考图里的 IP 形象
   --cover-guard      追加封面护栏（把主体压水平中带、上下留白，防 2.35:1 裁切；封面时加）
   --quality <lvl>    low|medium|high，默认 medium
   -h, --help         显示帮助
@@ -247,6 +305,7 @@ async function main() {
       size: args.size,
       quality: args.quality,
       styleId: args.style,
+      referenceImage: args.referenceImage,
       coverGuard: Boolean(args.coverGuard),
     });
     const kb = (bytes / 1024).toFixed(0);

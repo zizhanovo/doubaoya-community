@@ -39,8 +39,9 @@ const __dirname = path.dirname(__filename);
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const VENDORED_PUBLISH = path.join(__dirname, "preprocess-and-publish.mjs");
 const DEFAULT_BASE_URL = "https://doubaoya.com";
+export const DEFAULT_MARKDOWN_THEME = "themes/magazine.json";
 
-const BUILTIN_CONFIG = {
+export const BUILTIN_CONFIG = {
   targetAccount: null,
   publicAccountName: null,
   appid: null,
@@ -49,7 +50,7 @@ const BUILTIN_CONFIG = {
   coverDir: "",
   coverFallback: "doubaoya",
   ipProfile: "profiles/example-ip.json",
-  mdTheme: "default",
+  mdTheme: DEFAULT_MARKDOWN_THEME,
   draftsDir: "",
 };
 
@@ -67,6 +68,7 @@ const VALUE_FLAGS = new Set([
   "config",
   "profile",
   "theme",
+  "design",
   "output-processed-html",
   "base-url",
 ]);
@@ -120,7 +122,7 @@ function parseArgs(argv) {
     }
     throw new ArgError(
       `未知参数 --${key}。可用参数：` +
-        `--md --html --title --account --appid --cover --digest --config --profile --theme ` +
+        `--md --html --title --account --appid --cover --digest --config --profile --theme --design ` +
         `--output-processed-html --base-url --dry-run --help。` +
         `（注意：本流水线只存草稿，不存在任何群发参数。）`
     );
@@ -151,7 +153,11 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --digest <str>              摘要
   --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
   --profile <path>            IP/身份 profile（默认取 config.ipProfile）
-  --theme <path>              主题 theme.json（仅 --md 时生效；见 ../themes/THEME-SCHEMA.md）
+  --theme <path>              显式覆盖 Markdown 主题（默认 themes/magazine.json）
+  --theme neutral             显式使用中性渲染器，不套项目主题
+  --design <json>             设计工作台产出的 design-config.json：套主题 + 设封面 + 按 h2
+                              锚点注入配图。由 scripts/design-studio.mjs 生成。显式 --theme/
+                              --cover 与 --design 冲突时命令行优先并告警。
   --output-processed-html <p> 渲染出的 HTML 落地路径（默认写临时文件）
   --base-url <url>            API 基址（默认 $DOUBAOYA_BASE_URL 或 https://doubaoya.com）
   --dry-run                   只渲染+校验+扫描本地图，**不发布**
@@ -189,6 +195,86 @@ async function readJsonMaybe(p) {
   } catch {
     return null;
   }
+}
+
+// 解析 Markdown 主题路径：显式 --theme 优先，其次 config.mdTheme，最后项目默认主题。
+// 返回绝对路径；"neutral" → null（显式退回中性渲染器）；"default" → 项目默认主题。
+export function resolveMarkdownThemePath({
+  cliTheme,
+  configuredTheme,
+  configHasTheme = false,
+  cwd = process.cwd(),
+  configDir = cwd,
+  skillRoot = SKILL_ROOT,
+} = {}) {
+  const fromCli = typeof cliTheme === "string" && cliTheme.length > 0;
+  const fromConfig = configHasTheme && typeof configuredTheme === "string" && configuredTheme.length > 0;
+  let ref = fromCli ? cliTheme : fromConfig ? configuredTheme : DEFAULT_MARKDOWN_THEME;
+  // 早期示例配置曾把 "default" 当占位符；现在它表示项目默认主题。
+  if (ref === "default") return path.resolve(skillRoot, DEFAULT_MARKDOWN_THEME);
+  if (ref === "neutral") return null;
+  if (path.isAbsolute(ref)) return ref;
+  return path.resolve(fromCli ? cwd : fromConfig ? configDir : skillRoot, ref);
+}
+
+// design-config 的 images[]：把选定的本地配图按 h2 锚点注入 Markdown 源。
+// 每个 inject = { anchor:"<h2 文本>", src:"<本地路径>", alt?:"<图注>" }。
+// afterHeading 语义：插在该 h2 小节**末尾**（下一个同级/更高级标题之前）。找不到锚点 →
+// 追加文末并通过 onWarn 告警。返回注入后的 markdown（不改原串）。
+export function injectImagesAfterHeadings(markdown, injects, onWarn = () => {}) {
+  if (!Array.isArray(injects) || injects.length === 0) return String(markdown);
+  const lines = String(markdown).replace(/\r\n?/g, "\n").split("\n");
+  const isH1or2 = (s) => /^ {0,3}#{1,2}(?!#)\s+/.test(s);
+  const h2Text = (s) => {
+    const m = s.match(/^ {0,3}##(?!#)\s+(.+?)\s*#*\s*$/);
+    return m ? m[1].trim() : null;
+  };
+  const appended = [];
+  for (const inj of injects) {
+    if (!inj || !inj.src) continue;
+    const imgLine = `<img src="${inj.src}"${inj.alt ? ` alt="${String(inj.alt).replace(/"/g, "&quot;")}"` : ""} />`;
+    let hi = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (h2Text(lines[i]) === String(inj.anchor).trim()) { hi = i; break; }
+    }
+    if (hi === -1) {
+      onWarn(`配图锚点未找到 h2「${inj.anchor}」，已把配图追加到文末。`);
+      appended.push("", imgLine);
+      continue;
+    }
+    let end = lines.length;
+    for (let j = hi + 1; j < lines.length; j++) {
+      if (isH1or2(lines[j])) { end = j; break; }
+    }
+    lines.splice(end, 0, "", imgLine, "");
+  }
+  if (appended.length) lines.push(...appended);
+  return lines.join("\n");
+}
+
+// 草稿源文件可以保留 frontmatter 和文件标题；发布正文不携带这两层元数据。
+export function normalizeDraftMarkdown(markdown) {
+  const lines = String(markdown).replace(/^﻿/, "").replace(/\r\n?/g, "\n").split("\n");
+
+  if (lines[0]?.trim() === "---") {
+    const closing = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
+    if (closing !== -1) lines.splice(0, closing + 1);
+  }
+
+  while (lines[0]?.trim() === "") lines.shift();
+  if (/^ {0,3}#(?!#)\s+/.test(lines[0] || "")) {
+    lines.shift();
+  } else if (lines.length > 1 && /^ {0,3}=+\s*$/.test(lines[1])) {
+    lines.splice(0, 2);
+  }
+  while (lines[0]?.trim() === "") lines.shift();
+
+  return lines.join("\n");
+}
+
+// 公众号后台已经单独承载文章标题，正文渲染不注入或保留重复 H1。
+export function renderMarkdownForDraft(markdown, theme) {
+  return renderWechatHtml(normalizeDraftMarkdown(markdown), { theme });
 }
 
 // GET 一个 doubaoya API（带 key），返回 { ok, data, code, message }。key 绝不打印。
@@ -291,11 +377,61 @@ async function main() {
     : path.join(process.cwd(), "config.json");
   let config = { ...BUILTIN_CONFIG };
   const loaded = await readJsonMaybe(configPath);
+  const configHasTheme = Boolean(
+    loaded && Object.prototype.hasOwnProperty.call(loaded, "mdTheme")
+  );
   if (loaded) {
     config = { ...BUILTIN_CONFIG, ...loaded };
     info(`配置: ${configPath}`);
   } else {
     info(`配置: 未找到 ${configPath}，使用内置默认值。`);
+  }
+
+  // design-config（设计工作台产出）：套主题 + 设封面 + 按 h2 锚点注入配图。
+  // 相对路径（sourceMarkdown/assets.path）都相对 design-config 文件所在目录解析。
+  let design = null;
+  let designDir = null;
+  let designThemeCli = null; // 折算成 resolveMarkdownThemePath 的 cliTheme 入口（绝对路径/neutral/default）
+  let designCoverPath = null; // 折算成 --cover 的本地路径（绝对）
+  let designInjects = []; // [{ anchor, src, alt }]
+  if (args.design) {
+    const designPath = path.resolve(args.design);
+    design = await readJsonMaybe(designPath);
+    if (!design) fail(`读不到/解析不了 design-config：${designPath}（需为合法 JSON）。`);
+    designDir = path.dirname(designPath);
+    info(`设计配置: ${designPath}`);
+    // 主题
+    const tid = design.theme && typeof design.theme.id === "string" ? design.theme.id.trim() : "";
+    if (tid) {
+      if (tid === "neutral" || tid === "default") designThemeCli = tid;
+      else if (/^[a-z0-9][a-z0-9._-]*$/i.test(tid)) designThemeCli = path.resolve(SKILL_ROOT, "themes", `${tid}.json`);
+      else warn(`design.theme.id「${tid}」格式非法，已忽略。`);
+      if (designThemeCli) info(`设计 · 主题: ${tid}`);
+    }
+    // 封面
+    const covId = design.cover && design.cover.selectedAssetId;
+    if (covId) {
+      const asset = design.assets && design.assets[covId];
+      if (asset && asset.path) {
+        designCoverPath = path.resolve(designDir, asset.path);
+        info(`设计 · 封面: ${covId} → ${asset.path}`);
+      } else {
+        warn(`design.cover.selectedAssetId=${covId} 在 assets 里没有 path，封面将走兜底。`);
+      }
+    }
+    // 配图（按 anchor 注入）
+    for (const im of Array.isArray(design.images) ? design.images : []) {
+      const sel = im && im.selectedAssetId;
+      if (!sel) continue;
+      const asset = design.assets && design.assets[sel];
+      const anchorVal = im.anchor && im.anchor.value;
+      if (!asset || !asset.path || !anchorVal) {
+        warn(`设计 · 配图 ${sel || "(空)"} 缺 path 或锚点，已跳过。`);
+        continue;
+      }
+      designInjects.push({ anchor: anchorVal, src: path.resolve(designDir, asset.path), alt: asset.prompt || "" });
+    }
+    if (designInjects.length) info(`设计 · 配图: ${designInjects.length} 张待按 h2 锚点注入`);
   }
 
   // profile 路径：--profile 优先，否则 config.ipProfile（相对 skill 目录解析）
@@ -406,10 +542,22 @@ async function main() {
     } catch (e) {
       fail(`读不到 Markdown 文件 ${resolvedMd}（${e.message}）`);
     }
-    // 可选主题：--theme。加载 → 校验（硬错误即停）→ 传给渲染器。
+    // 项目默认主题：显式 --theme 优先，其次 config.mdTheme，最后项目默认主题。
+    // "neutral" 是唯一显式退回中性渲染器的标记。
+    // --design 的主题作为 cliTheme 入口生效；显式 --theme 冲突时命令行优先并告警。
+    let effectiveCliTheme = args.theme;
+    if (designThemeCli) {
+      if (args.theme) warn("--theme 与 --design 的主题冲突：命令行 --theme 优先，忽略设计主题。");
+      else effectiveCliTheme = designThemeCli;
+    }
     let theme;
-    if (args.theme) {
-      const themePath = path.resolve(args.theme);
+    const themePath = resolveMarkdownThemePath({
+      cliTheme: effectiveCliTheme,
+      configuredTheme: config.mdTheme,
+      configHasTheme,
+      configDir: path.dirname(configPath),
+    });
+    if (themePath) {
       const themeObj = await readJsonMaybe(themePath);
       if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
       const { errors, warnings } = validateTheme(themeObj);
@@ -419,8 +567,15 @@ async function main() {
       }
       theme = themeObj;
       info(`已加载主题: ${themePath}（${themeObj.meta && themeObj.meta.name ? themeObj.meta.name : "未命名"}）`);
+    } else {
+      info("已显式使用中性渲染器（未套项目主题）。");
     }
-    const html = renderWechatHtml(mdContent, { title, theme });
+    // 设计配置的配图：渲染前按 h2 锚点注入到 Markdown 源。
+    if (designInjects.length) {
+      mdContent = injectImagesAfterHeadings(mdContent, designInjects, (m) => warn(m));
+      info(`已按设计配置注入 ${designInjects.length} 张配图到 Markdown 源（h2 锚点）。`);
+    }
+    const html = renderMarkdownForDraft(mdContent, theme);
     processedHtmlPath = args.outputProcessedHtml
       ? path.resolve(args.outputProcessedHtml)
       : path.join(os.tmpdir(), `${path.basename(resolvedMd, path.extname(resolvedMd))}.wechat.html`);
@@ -432,8 +587,12 @@ async function main() {
     info(`直接使用已排版 HTML: ${processedHtmlPath}`);
   }
 
-  // 封面解析（本地文件才作为 thumb 上传）
+  // 封面解析（本地文件才作为 thumb 上传）。--design 提供封面时作为默认；显式 --cover 冲突时命令行优先并告警。
   let coverPath = args.cover || null;
+  if (designCoverPath) {
+    if (args.cover) warn("--cover 与 --design 的封面冲突：命令行 --cover 优先，忽略设计封面。");
+    else coverPath = designCoverPath;
+  }
   if (!coverPath && config.coverDir) {
     // config.coverDir 只是目录约定；未显式给封面时不擅自挑图，交由兜底。
     coverPath = null;
