@@ -473,6 +473,15 @@ export function renderWechatHtml(markdown, opts = {}) {
         if (i < lines.length && /^:::\s*$/.test(lines[i])) i++; // tolerate a stray closer
         continue;
       }
+      // Inline single-line title `:::标题 文字` is self-closing — it must NOT collect
+      // following lines as its body (that would swallow the next component, or the rest
+      // of the doc, when the author writes no closer, per the documented syntax). An
+      // optional lone ":::" closer right after is tolerated and consumed.
+      if (comp === 'title' && inlineRest) {
+        out.push(renderComponent(t, 'fancyTitle', { content: renderInline(inlineRest, t) }));
+        if (i < lines.length && /^:::\s*$/.test(lines[i])) i++; // tolerate a stray closer
+        continue;
+      }
       // Container components: collect body lines until a lone closing ":::".
       const bodyLines = [];
       while (i < lines.length && !/^:::\s*$/.test(lines[i])) {
@@ -482,8 +491,7 @@ export function renderWechatHtml(markdown, opts = {}) {
       if (i < lines.length) i++; // consume closing :::
       const bodyRaw = bodyLines.join('\n').trim();
       if (comp === 'title') {
-        const titleText = inlineRest || bodyRaw;
-        out.push(renderComponent(t, 'fancyTitle', { content: renderInline(titleText, t) }));
+        out.push(renderComponent(t, 'fancyTitle', { content: renderInline(bodyRaw, t) }));
       } else if (comp === 'follow') {
         const copy = bodyRaw || inlineRest || DEFAULT_FOLLOW_COPY;
         out.push(renderComponent(t, 'followCard', { content: renderInline(copy, t).replace(/\n/g, '<br />') }));
