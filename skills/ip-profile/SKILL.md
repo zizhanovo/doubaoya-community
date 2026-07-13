@@ -314,6 +314,7 @@ curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
 
 - 六层维度理念借 writing-dna-skill（MIT）——仅借维度理念，prompt 文案自研。
 - 去 AI 味禁忌层/负向约束理念借 khazix-skills（MIT）——仅借洞察，prompt 文案自研。
+- `voiceSystemPrompt`（把文风浓缩成一段可直接前置到写作请求的系统提示词）这一形态借 nuwa-skill（`alchaincyf/nuwa-skill`，MIT）——仅借形态，prompt 文案自研。
 
 ---
 
