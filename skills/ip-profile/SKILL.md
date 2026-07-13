@@ -28,7 +28,7 @@ description: >-
 | **第一次建档** | 问人设/赛道/产品 + 收集范文 → 蒸馏 → 存档 | 一份可复用的 IP 档案 |
 | **改人设/赛道/产品** | 直接 `PUT` 改对应字段 | 档案实时更新 |
 | **重新蒸馏文风** | 喂新范文 → 重跑蒸馏 → `PUT` 覆盖 `writingDnaJson` | 更准的文风 DNA（样本越多越准） |
-| **设 IP 人物头像** | 传公网图 URL，或本地图转 base64 存 `avatarUrl` | 头像可复用、还能当生图参考图 |
+| **设 IP 人物头像** | 本地图转 base64 传 `POST /api/upload` 拿 URL 存 `avatarUrl`，或直接填公网图 URL | 头像可复用、还能当生图参考图 |
 | **查/切换档案** | `GET /api/ip-profiles` 列全部、挑一个当默认 | 支持一人多号多档案 |
 
 ---
@@ -219,25 +219,41 @@ curl -s -X DELETE https://doubaoya.com/api/ip-profile/<id> \
 
 ---
 
-## 五、IP 人物头像（临时方案）
+## 五、IP 人物头像
 
-`avatarUrl` 字段目前支持两种写法：
-- **(a) 一个公网图片 URL**——直接把已有图床链接填进去；或
-- **(b) 本地图的 base64 data URI**——形如 `data:image/png;base64,<一长串base64>`，建议压缩到 **1MB 以内**
-  再转（体积大会拖慢档案读写）。
+推荐流程：本地图 → base64 data URI → 上传到正式图床 `POST /api/upload` → 拿到 `data.url` → 存进
+`avatarUrl`（`PUT /api/ip-profile/:id`）。
 
 ```bash
-# 把本地头像转成 data URI（macOS/Linux 通用示例）
+# 1. 本地头像转 base64 data URI（macOS/Linux 通用示例）
 base64_data=$(base64 -i avatar.png | tr -d '\n')
+
+# 2. 上传到图床
+upload_resp=$(curl -s -X POST https://doubaoya.com/api/upload \
+  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"dataBase64\": \"data:image/png;base64,${base64_data}\"}")
+img_url=$(echo "$upload_resp" | jq -r '.data.url')
+
+# 3. 把拿到的 url 存进档案
 curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
   -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"avatarUrl\": \"data:image/png;base64,${base64_data}\"}"
+  -d "{\"avatarUrl\": \"${img_url}\"}"
 ```
 
-**这张头像还能直接当生封面/配图时的参考图**（图生图 / 保留 IP 形象条件化生成），不用另外再传一次。
+**`POST /api/upload` 契约**（鉴权同其它接口，`Authorization: Bearer $DOUBAOYA_API_KEY`）：
+- 请求体：`{ "dataBase64": "data:image/<png|jpeg|webp>;base64,<...>", "filename"?: "..." }`
+- 返回：`{ success: true, data: { url, key, contentType, size } }`；`url` 形如
+  `https://doubaoya.com/cdn/<key>`，**公开只读**，可直接当 `<img src>` 用
+- 限制：仅 **png / jpeg / webp**，体积 **≤ 2MB**（按内容 magic number 判定类型，不信文件名/Content-Type）
+- 错误码：400 `IMAGE_TOO_LARGE`（超 2MB）、400 `UNSUPPORTED_TYPE`（非 png/jpeg/webp）、400
+  `INVALID_PARAMS`（缺 `dataBase64` 或解码为空）、401 `UNAUTHORIZED`（口令/会话无效）
 
-> 正式的图床上传端点后续会加；在那之前，公网 URL 或 base64 data URI 是过渡方案，两种都能存、都能读。
+备选：也可以跳过上传，直接把一个已有的公网图片 URL 填进 `avatarUrl`。
+
+**这个 cdn URL 一图两用**：既是头像，也能直接当生封面/配图时的参考图（图生图 / 保留 IP 形象条件化
+生成），不用另外再传一次。
 
 ---
 
@@ -263,9 +279,11 @@ curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
 | DELETE | `/api/ip-profile/:id` | 删档 | — | `{ deleted: true, id }` |
 | POST | `/api/ip-profile/:id/samples` | 存一篇范文 | `title?, sourceUrl?, content` | `{ sample, dnaSampleCount }` |
 | GET | `/api/ip-profile/wechat-history` | 拉授权公众号历史图文当范文 | 查询参数 `authorizerAppid, count` | `{ articles: [{title, content, text, url}] }` |
+| POST | `/api/upload` | 上传图片到图床（存头像 / 生图参考图用） | `dataBase64（data URI，png/jpeg/webp，≤2MB）, filename?` | `{ url, key, contentType, size }` |
 
 体积上限：`writingDnaJson` ≤ 32KB（超限 400 `DNA_TOO_LARGE`）；单篇范文 `content` ≤ 50KB（超限 400
-`SAMPLE_TOO_LARGE`）。档案存取 / 范文录入 / 历史导入**全部免费**，不调 LLM、不扣点。
+`SAMPLE_TOO_LARGE`）；上传图片 ≤ 2MB（超限 400 `IMAGE_TOO_LARGE`）。档案存取 / 范文录入 / 历史导入
+**全部免费**，不调 LLM、不扣点。
 
 ---
 
@@ -280,6 +298,9 @@ curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
 | 403 | `FORBIDDEN` | `wechat-history` 里的 `authorizerAppid` 不是你已授权的公众号 | 换成自己已授权的 appid |
 | 404 | `NOT_FOUND` | 档案不存在或不属于你 | 检查 `id`，或先 `GET /api/ip-profiles` 确认 |
 | 502 | `WECHAT_HISTORY_FAILED` | 拉取公众号历史图文失败（上游临时故障） | 可重试 |
+| 400 | `IMAGE_TOO_LARGE` | 上传图片超 2MB | 压缩后重试 |
+| 400 | `UNSUPPORTED_TYPE` | 上传图片不是 png/jpeg/webp | 转换格式后重试 |
+| 502 | `UPLOAD_FAILED` | 图床上传失败（上游临时故障） | 可重试 |
 
 ---
 
