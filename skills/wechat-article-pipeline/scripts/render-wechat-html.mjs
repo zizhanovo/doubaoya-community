@@ -57,6 +57,52 @@ const MONO = "Consolas, Menlo, Monaco, 'Courier New', monospace";
 const BODY_FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif";
 
+// -----------------------------------------------------------------------------
+// COMPONENT LAYER (MVP) — built-in default component templates.
+// Agents insert components with a block syntax (:::关注卡 / > [!NOTE] / :::金句 /
+// :::标题 / :::分割); each template below is an inline-styled HTML string whose
+// {{token}} placeholders resolve from the CURRENT theme's palette/page at render
+// time, so a component automatically wears the active theme's colors.
+//
+// 公众号 red-line compliance (MUST hold for every template): pure inline `style`,
+// NO class=, NO id=, NO <style>/<script>, and any inline <svg> is minimal — no
+// id, no <defs>, no CSS selectors. A theme MAY override any of these via a
+// top-level `components` map (deep-merged over these defaults; strings still pass
+// validate-theme's safety scan). {{content}}/{{title}}/{{bar}}/{{bg}}/{{icon}}
+// are per-render fields the walker supplies (not palette tokens).
+// -----------------------------------------------------------------------------
+const COMPONENT_DEFAULTS = {
+  followCard:
+    '<section style="margin:20px 0;padding:16px 18px;background:{{bgSoft}};border:1px solid {{accent}};border-radius:10px;text-align:center;"><p style="margin:0;font-size:15px;font-weight:600;color:{{accent}};line-height:1.6;"><svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-2px;margin-right:6px;fill:{{accent}};"><path d="M12 4l7 8h-4v8H9v-8H5z"/></svg>{{content}}</p></section>',
+  callout:
+    '<section style="margin:18px 0;padding:12px 14px;background:{{bg}};border-left:4px solid {{bar}};border-radius:0 8px 8px 0;"><p style="margin:0 0 6px;font-size:15px;font-weight:700;color:{{bar}};line-height:1.5;"><svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-2px;margin-right:6px;fill:{{bar}};"><path d="{{icon}}"/></svg>{{title}}</p><p style="margin:0;font-size:15px;color:{{text}};line-height:1.7;">{{content}}</p></section>',
+  quoteCard:
+    '<section style="margin:22px 0;padding:22px 20px;background:{{bgSoft}};border-radius:12px;text-align:center;"><svg viewBox="0 0 24 24" width="26" height="26" style="fill:{{accent}};opacity:0.5;"><path d="M7 7h5v5H8v-2h2V9H7V7zm7 0h5v5h-4v-2h2V9h-3V7z"/></svg><p style="margin:10px 0;font-size:19px;font-weight:700;color:{{heading}};line-height:1.7;">{{content}}</p><div style="width:40px;height:3px;margin:8px auto 0;background:{{accent}};border-radius:2px;"></div></section>',
+  fancyTitle:
+    '<section style="margin:28px 0 16px;"><p style="margin:0;font-size:20px;font-weight:800;color:{{heading}};line-height:1.5;"><span style="display:inline-block;height:24px;line-height:24px;margin-right:10px;padding:0 8px;background:{{accent}};color:#ffffff;border-radius:6px;font-size:14px;">✦</span>{{content}}</p><div style="height:3px;margin-top:8px;background:linear-gradient(90deg,{{accent}},transparent);border-radius:2px;"></div></section>',
+  fancyDivider:
+    '<section style="margin:26px 0;text-align:center;"><span style="display:inline-block;width:30%;height:1px;vertical-align:middle;background:linear-gradient(90deg,transparent,{{accent}});"></span><svg viewBox="0 0 24 24" width="18" height="18" style="margin:0 12px;vertical-align:middle;fill:{{accent}};"><path d="M12 2l2.4 7.6H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.5 2.4-7.4L2 9.6h7.6z"/></svg><span style="display:inline-block;width:30%;height:1px;vertical-align:middle;background:linear-gradient(90deg,{{accent}},transparent);"></span></section>',
+};
+
+// Block-component name -> canonical key. Chinese names + English aliases both map
+// here (lookup lowercases first; Chinese is unaffected by toLowerCase()).
+const COMPONENT_ALIASES = {
+  关注卡: 'follow', 关注: 'follow', follow: 'follow',
+  金句: 'quote', 金句卡: 'quote', 'quote-card': 'quote', quote: 'quote',
+  标题: 'title', title: 'title',
+  分割: 'divider', 分割线: 'divider', divider: 'divider',
+};
+
+const DEFAULT_FOLLOW_COPY = '点击上方名片，关注我们，一起看更多好内容';
+
+// Per-variant styling for GFM-alert callouts. NOTE tracks the theme accent (so it
+// re-colors with the theme); TIP/WARN carry their own semantic hue + soft tint.
+const CALLOUT_VARIANTS = {
+  note: { icon: 'M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z', label: '提示' },
+  tip: { bar: '#2f9e44', bg: '#eef8f0', icon: 'M9 21h6v-1H9v1zm3-19a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z', label: '小贴士' },
+  warn: { bar: '#e8830c', bg: '#fff6ea', icon: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z', label: '注意' },
+};
+
 const DEFAULT_THEME = {
   meta: { name: 'neutral', source: 'handcrafted', notes: 'Built-in zero-brand default.' },
   palette: {
@@ -109,6 +155,9 @@ const DEFAULT_THEME = {
     articleWrap: { before: '', after: '' },
     sectionDivider: '',
   },
+  // Built-in component templates (see COMPONENT_DEFAULTS). A user theme may
+  // override any key; deep-merge keeps unspecified components at their defaults.
+  components: COMPONENT_DEFAULTS,
 };
 
 // Fixed mobile-first safety constraints always appended to the page wrapper.
@@ -327,6 +376,33 @@ function block(t, tag, html) {
 }
 
 // -----------------------------------------------------------------------------
+// Component layer: fill a component template with the resolved theme palette/page
+// plus per-render `fields`. Unknown {{tokens}} are left verbatim (components are
+// internal/controlled, so their token set is closed; no warning bookkeeping).
+// -----------------------------------------------------------------------------
+function renderComponent(t, key, fields) {
+  const comps = (t && t.components) || {};
+  const tpl = typeof comps[key] === 'string' ? comps[key] : '';
+  if (!tpl) return '';
+  const vars = { ...(t.palette || {}), ...(t.page || {}), ...fields };
+  return interpolate(tpl, vars, null);
+}
+
+// Render a GFM-alert callout (NOTE/TIP/WARN). `title` is the optional inline
+// heading after the marker; empty -> the variant's default label.
+function renderCallout(t, variant, title, body) {
+  const spec = CALLOUT_VARIANTS[variant];
+  if (!spec) return '';
+  const p = (t && t.palette) || {};
+  const bar = spec.bar || p.accent || '#555555';
+  const bg = spec.bg || p.bgSoft || '#f7f7f7';
+  const titleText = title && title.trim() ? title.trim() : spec.label;
+  const titleHtml = renderInline(titleText, t);
+  const bodyHtml = body && body.trim() ? renderInline(body, t).replace(/\n/g, '<br />') : '';
+  return renderComponent(t, 'callout', { bar, bg, icon: spec.icon, title: titleHtml, content: bodyHtml });
+}
+
+// -----------------------------------------------------------------------------
 // Core: markdown string -> inline-styled 公众号 HTML fragment.
 // opts: { title, theme, onWarn }
 // -----------------------------------------------------------------------------
@@ -376,6 +452,48 @@ export function renderWechatHtml(markdown, opts = {}) {
       continue;
     }
 
+    // Block component container: `:::组件名 [inline]` ... `:::`.
+    // Backward-compatible: prose almost never starts a line with ":::", and an
+    // UNKNOWN component name never consumes a block — it is emitted verbatim + a
+    // warning, so pure-markdown output is unchanged.
+    const dir = line.match(/^:::\s*(\S+)\s*(.*)$/);
+    if (dir) {
+      const rawName = dir[1];
+      const inlineRest = (dir[2] || '').trim();
+      const comp = COMPONENT_ALIASES[rawName.toLowerCase()] || COMPONENT_ALIASES[rawName];
+      if (!comp) {
+        if (typeof opts.onWarn === 'function') opts.onWarn([`未知组件 :::${rawName}`]);
+        out.push(block(t, 'p', `<p style="${elStyle(t, 'p')}">${renderInline(line, t)}</p>`));
+        i++;
+        continue;
+      }
+      i++; // consume the opening ::: line
+      if (comp === 'divider') {
+        out.push(renderComponent(t, 'fancyDivider', {}));
+        if (i < lines.length && /^:::\s*$/.test(lines[i])) i++; // tolerate a stray closer
+        continue;
+      }
+      // Container components: collect body lines until a lone closing ":::".
+      const bodyLines = [];
+      while (i < lines.length && !/^:::\s*$/.test(lines[i])) {
+        bodyLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) i++; // consume closing :::
+      const bodyRaw = bodyLines.join('\n').trim();
+      if (comp === 'title') {
+        const titleText = inlineRest || bodyRaw;
+        out.push(renderComponent(t, 'fancyTitle', { content: renderInline(titleText, t) }));
+      } else if (comp === 'follow') {
+        const copy = bodyRaw || inlineRest || DEFAULT_FOLLOW_COPY;
+        out.push(renderComponent(t, 'followCard', { content: renderInline(copy, t).replace(/\n/g, '<br />') }));
+      } else if (comp === 'quote') {
+        const quoteText = bodyRaw || inlineRest;
+        out.push(renderComponent(t, 'quoteCard', { content: renderInline(quoteText, t).replace(/\n/g, '<br />') }));
+      }
+      continue;
+    }
+
     // Horizontal rule: ---, ***, ___ (3+) — replaced entirely by theme hr.html.
     if (/^\s*([-*_])\s*(?:\1\s*){2,}$/.test(line)) {
       const hrHtml = (t.elements.hr && typeof t.elements.hr.html === 'string' && t.elements.hr.html) || '<hr />';
@@ -400,6 +518,17 @@ export function renderWechatHtml(markdown, opts = {}) {
       while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
         quoteLines.push(lines[i].replace(/^\s*>\s?/, ''));
         i++;
+      }
+      // GFM alert -> callout component. `> [!NOTE] optional title` + body lines.
+      const alert = quoteLines[0] && quoteLines[0].match(/^\[!(NOTE|TIP|WARN|WARNING|CAUTION|IMPORTANT)\]\s*(.*)$/i);
+      if (alert) {
+        const kind = alert[1].toUpperCase();
+        const variant =
+          kind === 'TIP' ? 'tip' : kind === 'WARN' || kind === 'WARNING' || kind === 'CAUTION' ? 'warn' : 'note';
+        const alertTitle = alert[2].trim();
+        const alertBody = quoteLines.slice(1).join('\n').trim();
+        out.push(renderCallout(t, variant, alertTitle, alertBody));
+        continue;
       }
       const inner = quoteLines
         .join('\n')
@@ -451,6 +580,7 @@ export function renderWechatHtml(markdown, opts = {}) {
       !UL_RE.test(lines[i]) &&
       !OL_RE.test(lines[i]) &&
       !/^\s*([-*_])\s*(?:\1\s*){2,}$/.test(lines[i]) &&
+      !/^:::\s*\S/.test(lines[i]) &&
       !isHtmlPassthrough(lines[i])
     ) {
       paraLines.push(lines[i]);

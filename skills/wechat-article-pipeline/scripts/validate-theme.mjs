@@ -23,7 +23,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorations']);
+const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorations', 'components']);
 const PALETTE_KEYS = new Set(['text', 'heading', 'accent', 'accent2', 'muted', 'bgSoft', 'border', 'link']);
 const ELEMENT_TAGS = new Set([
   'h1', 'h2', 'h3', 'h4', 'p', 'blockquote', 'ul', 'ol', 'li', 'img', 'hr',
@@ -160,6 +160,18 @@ export function validateTheme(theme) {
   // 5. decorations.
   if (theme.decorations !== undefined && !isPlainObject(theme.decorations)) {
     errors.push('decorations must be an object.');
+  }
+
+  // 5b. components (component-layer template overrides). Each value must be an
+  // inline-HTML string; the safety scan (step 6) covers script/class/id/src.
+  if (theme.components !== undefined) {
+    if (!isPlainObject(theme.components)) {
+      errors.push('components must be an object keyed by component name.');
+    } else {
+      for (const [name, val] of Object.entries(theme.components)) {
+        if (typeof val !== 'string') errors.push(`components.${name} must be an inline-HTML string.`);
+      }
+    }
   }
 
   // 6. Safety scan across ALL string values (公众号 constraints + src-verbatim).
