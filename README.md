@@ -37,7 +37,7 @@ npx skills add zizhanovo/doubaoya-community
 npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 ```
 
-## 技能清单（共 57 个）
+## 技能清单（共 51 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -48,7 +48,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 |------|--------|
 | **doubaoya** | 总纲技能：教 agent 用一条口令调 doubaoya.com 公开 API，挖选题 / 追热点 / 写脚本 |
 
-### 📣 公众号
+### 📣 公众号 / 视频号
 
 | 技能 | 能力 |
 |------|------|
@@ -67,6 +67,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **wechat-similar-account** | 公众号对标账号推荐，搭竞品矩阵 |
 | **wechat-title** | 公众号爆款标题创作 + 套路化评判 |
 | **wechat-cover** | 同赛道爆款封面参考，提炼可复用视觉套路 |
+| **wechat-channels-ai-feed** | AI 视频号爆款信息源，聚类成每日选题日报 |
 | **wechat-banned-words** | 公众号违禁词检测 + 合规改写 |
 | **wechat-rewrite** 🖥 | 把文案改写成公众号爆款风格 |
 | **ip-profile** | 建 / 更新公众号「创作 DNA」（人设 / 赛道 / 文风蒸馏），生成文章时全程读它 |
@@ -89,10 +90,6 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **xiaohongshu-hot-notes** | 按赛道发现高互动爆款笔记（搜索 + 互动排序） |
 | **xiaohongshu-crawler** | 按关键词爬热门作品，支持日期 / 排序筛选 |
 | **xiaohongshu-write** | 检索热门笔记 → 复盘爆款结构 → 产出新笔记 |
-| **xiaohongshu-account-analyzer** | 输入 redId 做七维度商业价值诊断 |
-| **xiaohongshu-similar-account** | 同阶对标 + 高阶标杆账号推荐 |
-| **xiaohongshu-top-account** | 小红书最夯账号榜（日 / 周 / 月） |
-| **xiaohongshu-comment** | 拉笔记一级评论，cursor 游标分页 |
 | **xiaohongshu-dailytop** | 小红书日榜，看当天哪条笔记在霸榜 |
 | **xiaohongshu-lowtop** | 小红书低粉爆款榜，挖纯内容力出圈的素人打法 |
 | **xiaohongshu-weeklytop** | 小红书周榜，看一周持续走高的中线趋势 |
@@ -118,9 +115,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | 技能 | 能力 |
 |------|------|
 | **playlet-wechat-feed** | 公众号短剧爆款文章日报内容源 |
-| **playlet-xiaohongshu-feed** | 小红书短剧爆款笔记日报内容源 |
 | **cultural-tourism-wechat-feed** | 公众号文旅爆款长文内容源 |
-| **cultural-tourism-xiaohongshu-feed** | 小红书文旅爆款笔记内容源 |
 
 ### 🎨 AI 生成 · 搜索
 
@@ -134,7 +129,6 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 
 | 技能 | 能力 |
 |------|------|
-| **zhihu-rewrite** | 把文案改写成知乎专业长文 / 答主体 |
 | **ai-intelligence-investigator** | 情报 / 竞品 / 舆情调查方法论，交叉验证产报告 |
 | **optimize-skill-md** | 把一份 SKILL.md 规范化、优化到标准格式 |
 | **pdf-image-text-extractor** | 本地从 PDF / 图片提取文字 |

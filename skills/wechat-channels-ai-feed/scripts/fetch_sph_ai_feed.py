@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""都爆鸭 · 小红书最夯账号榜
+"""都爆鸭 · AI 视频号日报内容源
 
-零依赖（仅用 Python 3 标准库 urllib），拉小红书某赛道下账号的
-日榜 / 周榜 / 月榜排行，供主 Agent 做头部账号对标 / 竞品跟踪。
+零依赖（Python 3 标准库 urllib），按关键词扫描视频号平台的
+AI 方向爆款作品，用于做每日 AI 视频号选题日报。
 
 用法:
-    python3 fetch_xhs_top_account.py [--period day|week|month] \
-        [--rank-date YYYY-MM-DD] [--type 综合全部]
-
-例如:
-    python3 fetch_xhs_top_account.py
-    python3 fetch_xhs_top_account.py --period week --type 美味佳肴
-    python3 fetch_xhs_top_account.py --period month --rank-date 2026-06-01
+    python3 fetch_sph_ai_feed.py "<关键词>" [--page N] [--size N]
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取口令（形如 dyh_…）。
@@ -20,40 +13,34 @@
 """
 
 import argparse
-import datetime
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
 
-ENDPOINT = "https://doubaoya.com/api/apis/xiaohongshu/xiaohongshu-top-account/call"
-
-
-def yesterday() -> str:
-    """默认榜单日期 = 昨天（当日数据通常尚未结算）。"""
-    return (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+ENDPOINT = "https://doubaoya.com/api/apis/sph/shipinhao-ai-feed/call"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="都爆鸭 · 小红书最夯账号榜",
+        description="都爆鸭 · AI 视频号日报内容源（按关键词）",
     )
     parser.add_argument(
-        "--period",
-        choices=["day", "week", "month"],
-        default="day",
-        help="榜单周期：day/week/month（可选，默认 day）",
+        "keyword",
+        help="AI 方向关键词（必填，如 AI / 大模型 / AI绘画 / 数字人）",
     )
     parser.add_argument(
-        "--rank-date",
-        default=None,
-        help="榜单日期 YYYY-MM-DD（可选，默认昨天；当日数据通常尚未结算）",
+        "--page",
+        type=int,
+        default=1,
+        help="页码 pageNum（可选，默认 1）",
     )
     parser.add_argument(
-        "--type",
-        default="综合全部",
-        help="赛道/分类（可选，默认 综合全部）",
+        "--size",
+        type=int,
+        default=20,
+        help="每页条数 pageSize（可选，默认 20）",
     )
     args = parser.parse_args()
 
@@ -67,12 +54,7 @@ def main() -> int:
         return 1
 
     payload = json.dumps(
-        {
-            "period": args.period,
-            "rankDate": args.rank_date or yesterday(),
-            "type": args.type,
-        },
-        ensure_ascii=False,
+        {"keyword": args.keyword, "pageNum": args.page, "pageSize": args.size}
     ).encode("utf-8")
 
     request = urllib.request.Request(
@@ -87,7 +69,7 @@ def main() -> int:
     )
 
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
+        with urllib.request.urlopen(request, timeout=30) as response:
             body = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         try:

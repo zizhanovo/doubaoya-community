@@ -73,8 +73,7 @@ CLI 参数：
 python3 "$SKILL_PATH/scripts/fetch_trends.py"
 ```
 
-拿到一张跨平台（微博/抖音/B站…）的综合热榜。想更全就顺手补一份抖音热搜：
-用 **`douyin-hot-trend`** 技能（`POST …/api/apis/trend/douyin-hot-trend/call`，`{ "platform": 2 }`，同样**不带关键词**）拉 50 条抖音热搜词。
+拿到一张跨平台（微博/抖音/B站…）的综合热榜。
 
 热榜条目字段（防御式读取，缺了就跳过）：
 - `title` 标题

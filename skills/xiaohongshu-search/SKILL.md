@@ -206,7 +206,6 @@ python3 scripts/search_xhs.py "<关键词>" [--page N]
 拿到选题后，用户往往还想再走一步。**自然地**提一句可接的兄弟技能，别硬塞：
 
 - 选定一条选题 → 接 `xiaohongshu-rewrite`（出文案）/ `xiaohongshu-title`（打磨标题）。
-- 想看这个赛道谁在领跑 → 接 `xiaohongshu-top-account` / `xiaohongshu-similar-account`（对标账号）。
 - 想看更全的赛道热度面 → 接 `trending-hub`（全网热榜）。
 - 文案写完发布前 → 接 `multi-banned-words` / `wechat-banned-words` 类（违禁词自检）。
 
@@ -245,7 +244,6 @@ python3 scripts/search_xhs.py "<关键词>" [--page N]
 ## 边界与容错
 
 - **0 条结果**：致歉并说明"该词较小众或当前页无数据"，建议换更短 / 更宽泛的关键词，或从"相关方向"里另选一个重试 —— **不要编造数据，不要追问用户真实目的**。
-- **要 secUid / 真实 id 才能查的兄弟技能**：本技能只吃 `keyword`，不需要 id；但若你顺手引导用户去 `douyin-account-insight` 等技能，记得那些需要真实账号标识，别替用户瞎猜。
 - **上游临时抖动（`PROVIDER_FAILED` / 502）**：小红书数据来自上游采集链路，偶发抖动属正常。**额度会自动退回，可安全重试**，不会重复扣费。重试一两次仍失败再告知用户稍后再试。
 - **字段缺失**：单条笔记缺字段就标"—"，别让它搞崩整张表，也别用它去算聚类。
 - **数据是快照**：互动数会变，如实说明"采集时刻快照"，不替接口"修正"或外推。

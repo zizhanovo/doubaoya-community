@@ -35,12 +35,11 @@ description: >-
 
 | 用户这么说（运营白话） | 该走哪类能力 | 典型起手 slug |
 |------------------------|--------------|---------------|
-| "最近全网在火什么？给我点选题" | 综合热点选题（无关键词直取 + 结合IP匹配） | `trending-hub`（+ `douyin-hot-trend`） |
+| "最近全网在火什么？给我点选题" | 综合热点选题（无关键词直取 + 结合IP匹配） | `trending-hub` |
 | "我这个赛道（如减脂早餐）在涨啥？" | 平台爆款搜索 | `xiaohongshu-viral-notes`、各平台 `*-ai-feed` |
-| "这个达人/竞品账号靠不靠谱？" | 账号洞察 | `douyin-account-insight` |
-| "这条链接为什么火？拆给我看" | 作品解析 | `video-downloader`、`parse-content-detail` 类 |
+| "这条链接为什么火？拆给我看" | 作品解析 | `content-parse` |
 | "帮我把这段文案过一遍，别违规" | 内容安全 | `content-safety-check` |
-| "给我配张图 / 出个视频" | 创作助手 | `gpt-image-gen`、`seedream-lite`、`seedance-video-gen` |
+| "给我配张图" | 创作助手 | `gpt-image-gen`、`seedream-lite` |
 | "把这条爆款改写成我的文案" | 改写（多在本地 agent 侧完成） | 用搜来的素材，由你合成 |
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：
@@ -52,9 +51,9 @@ description: >-
 
 > ❌ **选题铁律：不要拿用户的账号名 / IP 名当关键词去搜。**
 > 用户的公众号/账号名（如「菜籽油」）是**他是谁**（领域/人设/受众），不是搜索词——搜它只会搜到字面同名内容。
-> **综合热点用无关键词的热榜接口直取（`trending-hub` / `douyin-hot-trend`），IP 名字只用于匹配筛选。**
+> **综合热点用无关键词的热榜接口直取（`trending-hub`），IP 名字只用于匹配筛选。**
 > 做通用选题**别用** `trend-radar` / `hot-topics`（它们是关键词搜索的搬运号 feed，热度常为空、多「未命名内容」）；
-> 通用综合热点一律走 `trending-hub`（无关键词直取）+ `douyin-hot-trend`（抖音热搜）。
+> 通用综合热点一律走 `trending-hub`（无关键词直取）。
 
 ---
 
@@ -137,7 +136,6 @@ Content-Type: application/json
 | slug | 能力 | 关键入参 |
 |------|------|---------|
 | `trending-hub` | **综合热点直取**（首选）：`trend/trending-hub-keyword` **不带关键词**拉当下全网最热的一批（微博/抖音/B站） | `{ "platforms": [2,5,8] }`（**不传 keywords**） |
-| `douyin-hot-trend` | **抖音实时热榜**：`trend/douyin-hot-trend` 拉 50 条抖音热搜词（同样**不带关键词**） | `{ "platform": 2 }` |
 | `hot-keywords`（seed，可选） | **全网热搜关键词**：`trend/hot-keywords` 出 20 个热词 + 所属平台，用作选题名的种子 | `{}`（回溯时带 `startDate`/`endDate`） |
 | `cn-last30days` | **近 30 天中文社媒讨论**：某个词的跨平台舆情趋势（这是「查某词」，不是通用选题） | `{ "keyword", "days": 30, "platforms": ["xiaohongshu","douyin"] }` |
 
@@ -148,22 +146,19 @@ Content-Type: application/json
 | slug | 能力 | 关键入参 |
 |------|------|---------|
 | `xiaohongshu-viral-notes` | **小红书爆款笔记发现**：高互动笔记 | `{ "keyword", "page"? }` |
-| `douyin-account-insight` | **抖音账号洞察**：达人 / 竞品资料、粉丝量、作品概况 | `{ "secUid" }`（或 `accountId` / `uid` / `uniqueId`） |
+| `douyin-search` | **抖音爆款搜索**：关键词批量搜抖音作品，铺表选题 | `{ "keyword", "page"? }` |
 | `playlet-wechat-feed` | **公众号信息源**（短剧赛道示例）：热门文章日报 | `{ "keyword", "dateRange"?, "minReadCount"? }` |
-| `playlet-douyin-feed` | **抖音信息源**（短剧赛道示例）：按点赞筛爆款 | `{ "keyword", "page"?, "sort"? }` |
 | `wechat-channels-ai-feed` | **视频号信息源**：高热作品聚类日报 | `{ "keyword", "limit"?, "minLikeCount"? }` |
-| `kuaishou-ai-feed` | **快手信息源**：按播放量筛爆款 | `{ "keyword", "page"?, "sort"? }` |
-| `bilibili-ai-feed` | **B 站信息源**：按点赞筛爆款 | `{ "keyword", "page"?, "sort"? }` |
 
 ### 解析 / 合规 / 素材
 
 | slug | 能力 | 关键入参 |
 |------|------|---------|
 | `content-safety-check` | **多平台违禁词检测**：风险等级 + 命中词 + 替换建议 | `{ "platform", "content" }` |
-| `video-downloader` | **短视频解析**：粘公开分享链接，返回可下载结果 | `{ "url", "removeWatermark"? }` |
+| `content-parse` | **作品 / 文章解析**：粘公开链接，返回归一化详情，拆「为什么火」 | `{ "url" }` |
 
-> 还有图片 / 视频生成等创作助手类操作（如 `seedream-lite`、`gpt-image-gen`、
-> `seedance-video-gen`）。完整、最新清单请在运行时用发现接口拉取（见 §4），别把清单写死。
+> 还有图片生成等创作助手类操作（如 `seedream-lite`、`gpt-image-gen`）。
+> 完整、最新清单请在运行时用发现接口拉取（见 §4），别把清单写死。
 
 ---
 
@@ -238,7 +233,6 @@ console.log(env.data.items);
 
 1. **直取综合热点（无关键词）**：`POST /api/apis/trend/trending-hub-keyword/call`
    `{ "platforms": [2,5,8] }`（**不传 keywords**）→ 拿当下全网最热的一批（`wbList`/`dyList`/`bzList`，看 `hotCount`/`index`/`url`）。
-   顺手补抖音热搜：`POST /api/apis/trend/douyin-hot-trend/call` `{ "platform": 2 }`。
 2. **明确IP定位**：用户的账号名/IP名是**他是谁**（领域/人设/角度/受众），不是搜索词。
    从用户或其身份资料拿到这份定位；**不清楚就问用户**。
 3. **智能匹配**：扫综合热榜，挑出这个IP能**可信借势**的 2–3 条热点（`hotCount` 高 + 跨平台撞榜 + IP契合），
@@ -250,12 +244,10 @@ console.log(env.data.items);
 
 ### 工作流 B：「这条抖音/小红书链接为什么火？给我可复用的选题角度」
 
-1. **解析作品**：`POST /api/skills/video-downloader/invoke` `{ "url": "<分享链接>" }`
-   （或用发现接口找 `parse-content-detail` 类解析操作）→ 拿标题、作者、互动数据。
-2. **看作者**：若是抖音达人，`POST /api/skills/douyin-account-insight/invoke`
-   `{ "secUid": "<作者 secUid>" }` → 粉丝量 / 作品概况，判断是不是「账号势能」带火的。
-3. **找同题热度**：用标题里的核心词调 `xiaohongshu-viral-notes` / 各平台 `*-ai-feed`，看这个角度是不是赛道级在涨（这一步是**明确按某个词查证据**，与通用选题的无关键词热榜直取不同）。
-4. **产出**：拆解「它为什么火」（选题角度 / 钩子 / 时机），再给 2-3 个**可复用的同源选题**。
+1. **解析作品**：`POST /api/skills/content-parse/invoke` `{ "url": "<分享链接>" }`
+   → 拿标题、作者、互动数据。
+2. **找同题热度**：用标题里的核心词调 `xiaohongshu-viral-notes` / 各平台 `*-ai-feed`，看这个角度是不是赛道级在涨（这一步是**明确按某个词查证据**，与通用选题的无关键词热榜直取不同）。
+3. **产出**：拆解「它为什么火」（选题角度 / 钩子 / 时机），再给 2-3 个**可复用的同源选题**。
 
 ---
 
