@@ -8,7 +8,7 @@
     python3 check_multi.py "<文案>" [--platforms xiaohongshu,douyin,gongzhonghao]
 
 环境变量：
-    DOUBAOYA_API_KEY    必填，口令形如 dyh_...（绝不打印到任何输出）
+    DOUBAOYA_API_KEY    必填，密钥形如 dyh_...（绝不打印到任何输出）
 """
 
 import argparse
@@ -90,8 +90,8 @@ def main():
     if not api_key:
         sys.stderr.write(
             "错误：未检测到 DOUBAOYA_API_KEY 环境变量。\n"
-            "请到 doubaoya.com 登录 → 口令中心 → 生成口令，然后：\n"
-            "    export DOUBAOYA_API_KEY=<你的口令>\n"
+            "请到 doubaoya.com 登录 → 密钥中心 → 生成密钥，然后：\n"
+            "    export DOUBAOYA_API_KEY=<你的密钥>\n"
         )
         sys.exit(1)
 

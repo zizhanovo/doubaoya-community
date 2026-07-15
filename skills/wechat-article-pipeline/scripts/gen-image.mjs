@@ -1,23 +1,23 @@
 #!/usr/bin/env node
-// gen-image.mjs — 都爆鸭 · 公众号封面/配图 AI 生图（走口令调 doubaoya 生图接口）
+// gen-image.mjs — 都爆鸭 · 公众号封面/配图 AI 生图（走密钥调 doubaoya 生图接口）
 // -----------------------------------------------------------------------------
-// 把一段 prompt 交给 doubaoya.com 的生图口令接口（**同步**返回，单张 10–60s），
-// 拿回一张 jpeg 存到本地。密钥只在 doubaoya 服务端，skill 端只需口令（DOUBAOYA_API_KEY），
+// 把一段 prompt 交给 doubaoya.com 的生图密钥接口（**同步**返回，单张 10–60s），
+// 拿回一张 jpeg 存到本地。密钥只在 doubaoya 服务端，skill 端只需密钥（DOUBAOYA_API_KEY），
 // 每张扣点数（约 ¥0.30 上游成本）。封面（1536x1024）和正文配图（1024x1024）共用它，只是
 // --size 不同。产出的本地 jpeg 路径可以直接：
 //   * 作为封面喂给 pipeline.mjs 的 --cover（走 thumb 上传）；
 //   * 或以 <img src="本地路径"> 落进 Markdown/HTML 正文，由 preprocess-and-publish.mjs
 //     走 image 上传——**不改动任何发布链路契约**。
 //
-// 生图契约（doubaoya 口令接口，密钥只在服务端）：
+// 生图契约（doubaoya 密钥接口，密钥只在服务端）：
 //   POST {DOUBAOYA_API_BASE}/api/skills/gpt-image-gen/invoke   （默认 https://doubaoya.com）
-//   Authorization: Bearer $DOUBAOYA_API_KEY   （skill 发布本就用的这枚口令）
+//   Authorization: Bearer $DOUBAOYA_API_KEY   （skill 发布本就用的这枚密钥）
 //   body: { prompt, size }
 //   resp: { success, data: { images: [{ b64, mime }] } }（b64 无 data: 前缀）
 //   说明：上游生图密钥、model、background/n 等都收在 doubaoya 服务端，skill 端不再接触。
 //
 // env:
-//   DOUBAOYA_API_KEY  （必填）doubaoya 口令（Bearer）。缺失时报清晰错误，不崩栈。绝不打印、绝不落文件。
+//   DOUBAOYA_API_KEY  （必填）doubaoya 密钥（Bearer）。缺失时报清晰错误，不崩栈。绝不打印、绝不落文件。
 //   DOUBAOYA_API_BASE （可选）默认 https://doubaoya.com
 //
 // 零依赖（Node ≥18 内置 fetch）。
@@ -151,9 +151,9 @@ export async function generateImage(o) {
   const key = process.env.DOUBAOYA_API_KEY;
   if (!key) {
     throw new Error(
-      "缺少环境变量 DOUBAOYA_API_KEY（doubaoya 口令，Bearer）。\n" +
-        "  该口令只从环境读，绝不入库/打印。用它调 doubaoya 生图接口，扣点数，无需额外密钥。设置后重试：\n" +
-        '    export DOUBAOYA_API_KEY="你的doubaoya口令"\n' +
+      "缺少环境变量 DOUBAOYA_API_KEY（doubaoya 密钥，Bearer）。\n" +
+        "  该密钥只从环境读，绝不入库/打印。用它调 doubaoya 生图接口，扣点数，无需额外密钥。设置后重试：\n" +
+        '    export DOUBAOYA_API_KEY="你的doubaoya密钥"\n' +
         "  可选：DOUBAOYA_API_BASE（默认 https://doubaoya.com）。"
     );
   }
@@ -193,7 +193,7 @@ export async function generateImage(o) {
 
   if (!res.ok || !j || j.success === false) {
     const err = j && j.error ? `${j.error.code}：${j.error.message}` : `HTTP ${res.status}`;
-    throw new Error(`生图失败（doubaoya 口令接口）：${err}`);
+    throw new Error(`生图失败（doubaoya 密钥接口）：${err}`);
   }
 
   const img0 = j.data && Array.isArray(j.data.images) ? j.data.images[0] : null;
@@ -270,8 +270,8 @@ const HELP = `gen-image.mjs — 都爆鸭 · 公众号封面/配图生图
   -h, --help         显示帮助
 
 环境:
-  DOUBAOYA_API_KEY   （必填）doubaoya 口令（Bearer），只从环境读，绝不打印/落文件。
-                     走口令调 doubaoya 生图接口、扣点数、无需额外密钥（上游密钥只在服务端）。
+  DOUBAOYA_API_KEY   （必填）doubaoya 密钥（Bearer），只从环境读，绝不打印/落文件。
+                     走密钥调 doubaoya 生图接口、扣点数、无需额外密钥（上游密钥只在服务端）。
   DOUBAOYA_API_BASE  （可选）默认 https://doubaoya.com
 
 约 ¥0.30/张。返回后本地路径可直接喂 pipeline.mjs 的 --cover，或以 <img src=本地路径> 放进正文。

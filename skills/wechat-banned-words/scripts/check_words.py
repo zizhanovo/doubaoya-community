@@ -7,7 +7,7 @@
     python3 check_words.py "<待检测文案>" [--platform gongzhonghao]
 
 说明：
-    - 从环境变量 DOUBAOYA_API_KEY 读取口令（形如 dyh_...），缺失时报错退出，绝不打印口令本身。
+    - 从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_...），缺失时报错退出，绝不打印密钥本身。
     - 默认 platform 为 gongzhonghao（公众号）；也可传 xiaohongshu / douyin 等。
     - POST 至都爆鸭 API，解析统一信封；success != true 时输出 [error] code: message 并退出 1。
     - 成功时打印 data 字段（riskLevel / matchedWords / suggestions）的 JSON，供智能体解析。
@@ -33,13 +33,13 @@ def _fail(message):
 
 
 def _get_api_key():
-    """从环境变量读取口令；缺失则报错退出，绝不回显口令内容。"""
+    """从环境变量读取密钥；缺失则报错退出，绝不回显密钥内容。"""
     api_key = os.environ.get(ENV_KEY_NAME, "").strip()
     if not api_key:
         _fail(
             "[error] 未配置 {name}。\n"
-            "请到 doubaoya.com 登录 → 口令中心 → 生成口令，得到形如 dyh_ 开头的口令，\n"
-            "然后执行：export {name}=dyh_你的口令".format(name=ENV_KEY_NAME)
+            "请到 doubaoya.com 登录 → 密钥中心 → 生成密钥，得到形如 dyh_ 开头的密钥，\n"
+            "然后执行：export {name}=dyh_你的密钥".format(name=ENV_KEY_NAME)
         )
     return api_key
 

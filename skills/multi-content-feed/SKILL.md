@@ -10,7 +10,7 @@ dependency:
 
 嘎！本鸭一次帮你扫遍**公众号 / 抖音 / 视频号 / 小红书 / 快手 / B站**六大平台的内容出海 Top 榜——爆款作品按平台铺成表，标题、作者、点赞、封面一眼看全，帮做内容出海的你抓住每天的流量风口。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 
 > ⚠️ **数据节奏**：每日 15:00 更新前一天的数据。目标日期若尚未到更新时间、可能没有数据——这种情况先告知用户、确认后再查，别硬拉空结果。
 
@@ -80,19 +80,19 @@ python3 "$SKILL_PATH/scripts/fetch_content_export_top.py" \
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**（没有账号先注册）
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 配置到环境变量（脚本只认这个）：
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**，不要把口令带去任何其他域名。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**，不要把密钥带去任何其他域名。
 
 依赖：仅用 Python 3 标准库，无需安装任何第三方包。
 
@@ -131,7 +131,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成（不要回显口令） |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成（不要回显密钥） |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如平台编号非整数） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值 / 续额 |
 | 404 | `ENDPOINT_NOT_FOUND` | 接口路径不对 | 一般是脚本被改动，恢复默认端点路径 |

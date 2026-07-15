@@ -25,29 +25,29 @@ version: 1.0.0
 4. **统一改写**——本鸭综合所有平台的命中词与建议，给出**一版改完即可全平台发布**的安全文案。
 
 > 注意：**每个平台是一次独立计费调用**。查三个平台 = 三次调用。用户只关心某几个平台时，
-> 用 `--platforms` 缩小范围，省口令额度。
+> 用 `--platforms` 缩小范围，省密钥额度。
 
 ---
 
 ## 拿钥匙（DOUBAOYA_API_KEY）
 
-调用接口需要一把口令（API Key）：
+调用接口需要一把密钥（API Key）：
 
 1. 打开 **doubaoya.com** → **登录**。
-2. 进入 **口令中心** → 点击 **生成口令**。
-3. 复制生成的口令，形如 `dyh_xxxxxxxxxxxx`。
+2. 进入 **密钥中心** → 点击 **生成密钥**。
+3. 复制生成的密钥，形如 `dyh_xxxxxxxxxxxx`。
 
-把口令写进环境变量（脚本只从这里读，**绝不会打印你的口令**）：
+把密钥写进环境变量（脚本只从这里读，**绝不会打印你的密钥**）：
 
 ```bash
-export DOUBAOYA_API_KEY=dyh_你的口令
+export DOUBAOYA_API_KEY=dyh_你的密钥
 ```
 
 - macOS / Linux：把上面这行追加到 `~/.zshrc`（zsh）或 `~/.bashrc`（bash），再 `source` 一下让它长期生效。
-- Windows：`[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你的口令", "User")`，重开终端生效。
+- Windows：`[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你的密钥", "User")`，重开终端生效。
 - 验证：`echo $DOUBAOYA_API_KEY`（macOS/Linux）或 `echo %DOUBAOYA_API_KEY%`（Windows）。
 
-**口令安全铁律**：口令等同账号，绝不在对话、日志、报告里回显或粘贴。脚本设计上只读环境变量、从不输出 Key。
+**密钥安全铁律**：密钥等同账号，绝不在对话、日志、报告里回显或粘贴。脚本设计上只读环境变量、从不输出 Key。
 
 ---
 
@@ -105,9 +105,9 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 
 | 状态码 | code                              | 含义与处置                                                   |
 | ------ | --------------------------------- | ------------------------------------------------------------ |
-| 401    | `MISSING_API_KEY` / `UNAUTHORIZED`| 口令缺失或无效。回 doubaoya.com → 口令中心重新生成并配置环境变量。 |
+| 401    | `MISSING_API_KEY` / `UNAUTHORIZED`| 密钥缺失或无效。回 doubaoya.com → 密钥中心重新生成并配置环境变量。 |
 | 400    | `VALIDATION_ERROR`                | 参数有误，多为 `platform` 取值非法或 `content` 为空。         |
-| 402    | `INSUFFICIENT_CREDITS`            | 口令额度不足。到 doubaoya.com 充值后再试。                    |
+| 402    | `INSUFFICIENT_CREDITS`            | 密钥额度不足。到 doubaoya.com 充值后再试。                    |
 | 502    | `PROVIDER_FAILED`                 | 上游暂时抖动，**已自动退款，可安全重试**。                    |
 
 ---
@@ -154,9 +154,9 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 **Q：为什么查三个平台会扣三次额度？**
 A：每个平台是一次独立的违禁词检测调用，按平台计费。只想查某几个平台就用 `--platforms` 缩范围。
 
-**Q：提示 401 / 口令无效？**
-A：确认 `DOUBAOYA_API_KEY` 已配置（`echo $DOUBAOYA_API_KEY`），口令形如 `dyh_…`。
-失效就到 doubaoya.com → 口令中心 → 生成口令，重新配置。
+**Q：提示 401 / 密钥无效？**
+A：确认 `DOUBAOYA_API_KEY` 已配置（`echo $DOUBAOYA_API_KEY`），密钥形如 `dyh_…`。
+失效就到 doubaoya.com → 密钥中心 → 生成密钥，重新配置。
 
 **Q：某个平台报 502 怎么办？**
 A：`PROVIDER_FAILED` 是上游临时抖动，**已自动退款**，直接重试即可，不会重复扣费。

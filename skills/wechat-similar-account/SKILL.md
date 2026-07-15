@@ -7,7 +7,7 @@ description: 公众号对标账号推荐 · 输入一个公众号名称，拉同
 
 本鸭帮你从一个公众号名字出发，扒出**同赛道可直接抄玩法的对标账号**，再推几个**模式更成熟、值得追赶的高阶标杆**——一句话，把竞品矩阵给你铺出来。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 
 ---
 
@@ -49,19 +49,19 @@ python3 "$SKILL_PATH/scripts/fetch_similar.py" "某某公众号" --sync --wechat
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 配置到环境变量（脚本只认这个）：
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**。
 
 ---
 
@@ -89,7 +89,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 accountName 为空、--sync 缺 --wechat-id） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 404 | `NOT_FOUND` | 账号未收录 | 用 `--sync --wechat-id` 提交同步，约 30 分钟后重试 |

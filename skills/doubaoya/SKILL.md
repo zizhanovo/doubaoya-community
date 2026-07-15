@@ -59,12 +59,12 @@ description: >-
 
 ## 1. 拿钥匙（Auth）
 
-调用任何接口都要带一条口令（API Key）。
+调用任何接口都要带一条密钥（API Key）。
 
 **怎么拿到 key：**
 1. 打开 https://doubaoya.com → **登录**
-2. 进 **口令中心** → **生成口令**
-3. 整条口令只在生成那一下完整露脸，复制收好（形如 `dyh_…`）。
+2. 进 **密钥中心** → **生成密钥**
+3. 整条密钥只在生成那一下完整露脸，复制收好（形如 `dyh_…`）。
 
 **agent 怎么用 key：**
 - 优先从环境变量读：`DOUBAOYA_API_KEY`。
@@ -114,8 +114,8 @@ Content-Type: application/json
 
 | HTTP | error.code | 含义 | 你该怎么办 |
 |------|------------|------|-----------|
-| 401 | `MISSING_API_KEY` | 没带 key | 提示用户去 doubaoya.com 口令中心生成，并设进 `DOUBAOYA_API_KEY` |
-| 401 | `UNAUTHORIZED` | key 无效 / 已撤销 | 让用户在**口令中心**撤销并**重新生成**，更新环境变量 |
+| 401 | `MISSING_API_KEY` | 没带 key | 提示用户去 doubaoya.com 密钥中心生成，并设进 `DOUBAOYA_API_KEY` |
+| 401 | `UNAUTHORIZED` | key 无效 / 已撤销 | 让用户在**密钥中心**撤销并**重新生成**，更新环境变量 |
 | 400 | `VALIDATION_ERROR` | 入参不合法 | 看 `message` 修正入参（如缺 `keyword`） |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不够 | 提示用户去 doubaoya.com 充值额度 |
 | 404 | `SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` | slug 写错 | 先调发现接口（见 §4）确认 slug |
@@ -208,7 +208,7 @@ curl -sS https://doubaoya.com/api/apis/trend/trending-hub-keyword/call \
 
 ```js
 const key = process.env.DOUBAOYA_API_KEY;
-if (!key) throw new Error("先设好 DOUBAOYA_API_KEY：doubaoya.com → 登录 → 口令中心 → 生成口令");
+if (!key) throw new Error("先设好 DOUBAOYA_API_KEY：doubaoya.com → 登录 → 密钥中心 → 生成密钥");
 
 const res = await fetch("https://doubaoya.com/api/skills/xiaohongshu-viral-notes/invoke", {
   method: "POST",

@@ -7,23 +7,23 @@ description: 小红书日榜 · 按日期 + 分类拉小红书当天最火的笔
 
 本鸭帮你按**日期 + 分类**拉小红书日榜——一眼看清这个分类今天谁在霸榜、靠什么内容跑量，顺手锁定可对标的爆款。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 > 小贴士：如遇暂时取不到数据，是上游波动，稍后再试（不扣费）。
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**。
 
 ---
 
@@ -81,7 +81,7 @@ python3 "$SKILL_PATH/scripts/fetch_daily_top.py" --rank-date 2026-06-23 --catego
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法 | 修正 `--rank-date` / `--category` 重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
@@ -102,7 +102,7 @@ xiaohongshu-dailytop/
 ## 常见问答
 
 **Q：提示缺少 `DOUBAOYA_API_KEY`？**
-A：先 `export DOUBAOYA_API_KEY="dyh_…"`（去 doubaoya.com → 登录 → 口令中心 → 生成口令）。
+A：先 `export DOUBAOYA_API_KEY="dyh_…"`（去 doubaoya.com → 登录 → 密钥中心 → 生成密钥）。
 
 **Q：暂时取不到数据？**
 A：上游波动，稍后再试即可（不扣费）。

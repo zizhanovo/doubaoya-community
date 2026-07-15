@@ -7,7 +7,7 @@ description: 抖音实时综合搜索 · 一个关键词实时综合搜抖音内
 
 本鸭专做**实时综合搜**这一档：一个关键词下去，按你要的排序（综合/最新/最多点赞）和时间窗，把当下这条赛道的抖音内容实时捞回来，终端直接铺成可点的表格——给你做**选题洞察**用。追当下流量、盯最新发布、扒对标，先用本鸭把"面"扫开，再去挑值得拆解的"点"。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 >
 > 想按发布日期区间精确圈定爆款，用 `douyin-search`；想扒某条作品的**评论区舆情**，用 `douyin-comment`。本鸭是「关键词 → 实时综合内容」的扫面工具，支持排序与时间窗切换。
 
@@ -64,19 +64,19 @@ python3 "$SKILL_PATH/scripts/search_realtime.py" "减脂餐" --sort 3 --time 30 
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 配进环境变量（脚本只认这个）：
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**，别把口令带去任何其他域名。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**，别把密钥带去任何其他域名。
 
 ---
 
@@ -108,7 +108,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 keyword 为空、枚举值非法） | 修正后重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |

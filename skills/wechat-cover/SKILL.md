@@ -7,7 +7,7 @@ description: 公众号爆款封面参考 · 按主题关键词拉同赛道爆款
 
 本鸭帮你按主题拉一批**同赛道爆款封面**——封面图、标题、点击量一起给你，让你看清这个题材里高点击封面长什么样，再由你（主 Agent）总结出可复用的视觉套路：配色、构图、信息层级、标题钩子。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 
 ---
 
@@ -49,19 +49,19 @@ python3 "$SKILL_PATH/scripts/fetch_cover.py" "职场" --start 2026-06-01
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 配置到环境变量（脚本只认这个）：
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**。
 
 ---
 
@@ -86,7 +86,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 keyword 为空、日期格式错） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |

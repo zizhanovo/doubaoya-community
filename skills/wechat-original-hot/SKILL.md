@@ -7,7 +7,7 @@ description: 公众号原创热门榜 · 按行业分类 + 时间区间拉取微
 
 本鸭帮你按**行业分类 + 时间区间**捞出微信公众号近期的**原创**热门爆款——专盯原创创作者写出来的爆款，绕开转载、洗稿那一堆，给原创写手看清楚同行在用什么角度、什么切口把原创内容写爆。一个分类下去，终端铺出可点的原创爆文表格，再附一句创作洞察。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 
 > 说明：原创榜与 10万+ 爆文榜**接口同源**（都走 `category-time-hot`），区别在**展示层/解读层的侧重**——本技能站在原创创作者视角解读，强调"这是原创写手自己跑出来的爆款"，引导你提炼可复用的原创写法，而不是单纯看阅读量天花板。
 
@@ -55,19 +55,19 @@ python3 "$SKILL_PATH/scripts/fetch_original_hot.py" --type 财经 --start 2026-0
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 配置到环境变量（脚本只认这个）：
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**。
 
 ---
 
@@ -98,7 +98,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错） | 修正分类/日期重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |

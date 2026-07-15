@@ -207,7 +207,7 @@ async function whoami(baseUrl, key) {
 const norm = (s) => String(s).trim().toLowerCase();
 
 const NO_KEY_MSG =
-  "本地没有可用的 DOUBAOYA_API_KEY（env / ~/.doubaoya / Keychain 都没有有效凭证），请先在 doubaoya.com 生成开工口令并保存。";
+  "本地没有可用的 DOUBAOYA_API_KEY（env / ~/.doubaoya / Keychain 都没有有效凭证），请先在 doubaoya.com 生成密钥并保存。";
 
 /**
  * Collect + resolve every candidate against whoami ONCE, then pick the target.
@@ -266,7 +266,7 @@ async function resolveInternal({ account, baseUrl } = {}) {
         .join("、");
       out.error = new Error(
         `本地找到的 key 分别对应账号：${accounts}；没有一个匹配目标 ${target}。` +
-          `请设置对应账号的 DOUBAOYA_API_KEY，或重新在 doubaoya.com 生成开工口令。`
+          `请设置对应账号的 DOUBAOYA_API_KEY，或重新在 doubaoya.com 生成密钥。`
       );
       return out;
     }
@@ -392,7 +392,7 @@ async function main() {
         process.stderr.write("   本地有效候选 → 账号：\n");
         for (const c of candidateMap) {
           process.stderr.write(
-            `     - ${c.account.email}（来源 ${c.source}，口令 ${c.keyRef}）\n`
+            `     - ${c.account.email}（来源 ${c.source}，密钥 ${c.keyRef}）\n`
           );
         }
       }
@@ -419,18 +419,18 @@ async function main() {
     );
   } else {
     const lines = [
-      "✅ 已解析目标账号对应的本地开工口令（口令值不显示）",
+      "✅ 已解析目标账号对应的本地密钥（密钥值不显示）",
       `   账号:    ${chosen.account.email}`,
       `   账号 ID: ${chosen.account.id}`,
       `   来源:    ${chosen.source}`,
       `   authVia: ${JSON.stringify(chosen.authVia)}`,
-      `   口令引用: ${redactKey(chosen.key)}（仅供识别，非完整口令）`,
+      `   密钥引用: ${redactKey(chosen.key)}（仅供识别，非完整密钥）`,
       "   本地候选 → 账号：",
     ];
     for (const c of candidateMap) {
       const mark = c.source === chosen.source ? "★" : "-";
       lines.push(
-        `     ${mark} ${c.account.email}（来源 ${c.source}，口令 ${c.keyRef}）`
+        `     ${mark} ${c.account.email}（来源 ${c.source}，密钥 ${c.keyRef}）`
       );
     }
     if (res.invalidSources.length) {

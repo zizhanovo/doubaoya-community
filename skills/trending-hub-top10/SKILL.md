@@ -10,7 +10,7 @@ dependency:
 
 嘎！本鸭一次把**抖音、微博、B站、快手、知乎、头条、百度**等全网平台的热搜聚到一起——同一事件跨平台归并，按综合热度排出 TOP 榜，还标出每条上了哪些平台。早上扫一眼就知道今天全网在热什么，不用一个平台一个平台地刷。
 
-> 数据走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 >
 > ⚠️ 本工具只出**聚合热榜**，不支持查询某个具体热词的详情。
 
@@ -64,19 +64,19 @@ python3 "$SKILL_PATH/scripts/fetch_hot_keywords.py" --start-date 2026-06-20 --en
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com**
 2. **登录**（没有账号先注册）
-3. 进 **口令中心**
-4. **生成口令**（形如 `dyh_…`）
+3. 进 **密钥中心**
+4. **生成密钥**（形如 `dyh_…`）
 
 配置到环境变量（脚本只认这个）：
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**，不要把口令带去任何其他域名。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**，不要把密钥带去任何其他域名。
 
 依赖：仅用 Python 3 标准库，无需安装任何第三方包。
 
@@ -112,7 +112,7 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 | 检查 `DOUBAOYA_API_KEY`，去口令中心重新生成（不要回显口令） |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成（不要回显密钥） |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错、区间超过7天） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值 / 续额 |
 | 404 | `ENDPOINT_NOT_FOUND` | 接口路径不对 | 一般是脚本被改动，恢复默认端点路径 |

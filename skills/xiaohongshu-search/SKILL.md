@@ -86,7 +86,7 @@ dependency:
 
 ## 第三步 · 调用脚本取数
 
-脚本位置：`scripts/search_xhs.py`。它从环境变量 `DOUBAOYA_API_KEY` 读口令，POST 到
+脚本位置：`scripts/search_xhs.py`。它从环境变量 `DOUBAOYA_API_KEY` 读密钥，POST 到
 `https://doubaoya.com/api/apis/xiaohongshu/search-note/call`，把成功返回的 `data` 以 JSON 打到 stdout。
 
 ```bash
@@ -256,38 +256,38 @@ python3 scripts/search_xhs.py "<关键词>" [--page N]
 
 | code | 含义 | 应对 |
 | ---- | ---- | ---- |
-| `MISSING_API_KEY` / `UNAUTHORIZED`（401） | 没带口令 / 口令无效 | 提醒用户去 doubaoya.com → 口令中心 重新生成并重新 `export`。**不要回显口令**。 |
+| `MISSING_API_KEY` / `UNAUTHORIZED`（401） | 没带密钥 / 密钥无效 | 提醒用户去 doubaoya.com → 密钥中心 重新生成并重新 `export`。**不要回显密钥**。 |
 | `VALIDATION_ERROR`（400） | 参数不合法 | 检查 `keyword` 是否为空、`page` 是否为正整数。 |
 | `INSUFFICIENT_CREDITS`（402） | 额度不足 | 提醒用户到 doubaoya.com 查看 / 补充额度。 |
 | `ENDPOINT_NOT_FOUND`（404） | 接口路径不对 | 一般是脚本被改动，恢复默认端点路径。 |
 | `PROVIDER_FAILED`（502） | 上游临时失败 | 额度会自动退回，**可安全重试**。 |
 | `NETWORK_ERROR` | 连不上 doubaoya.com | 检查网络后重试。 |
 
-脚本若因缺口令退出，绝不会打印口令内容，只会提示去口令中心生成。
+脚本若因缺密钥退出，绝不会打印密钥内容，只会提示去密钥中心生成。
 
 ---
 
-## 先拿钥匙（口令）
+## 先拿钥匙（密钥）
 
-调用 API 前需要一把口令（API Key），形如 `dyh_…`。拿钥匙四步：
+调用 API 前需要一把密钥（API Key），形如 `dyh_…`。拿钥匙四步：
 
 1. 打开 [doubaoya.com](https://doubaoya.com)
 2. **登录**（没有账号先注册）
-3. 进入 **口令中心**
-4. 点 **生成口令**，复制形如 `dyh_…` 的字符串
+3. 进入 **密钥中心**
+4. 点 **生成密钥**，复制形如 `dyh_…` 的字符串
 
 拿到后写进环境变量（终端里执行一次即可）：
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-> 🔒 **硬规则**：本鸭永不在任何输出里打印完整口令，也只访问 doubaoya.com 的公开 API，不碰任何其它地址。
-> 口令请勿硬编码进脚本、勿提交进公开仓库。
+> 🔒 **硬规则**：本鸭永不在任何输出里打印完整密钥，也只访问 doubaoya.com 的公开 API，不碰任何其它地址。
+> 密钥请勿硬编码进脚本、勿提交进公开仓库。
 
 | 环境变量 | 说明 | 必填 | 获取方式 |
 | -------- | ---- | ---- | -------- |
-| `DOUBAOYA_API_KEY` | 都爆鸭口令（`dyh_…`） | 是 | [doubaoya.com](https://doubaoya.com) → 登录 → 口令中心 → 生成口令 |
+| `DOUBAOYA_API_KEY` | 都爆鸭密钥（`dyh_…`） | 是 | [doubaoya.com](https://doubaoya.com) → 登录 → 密钥中心 → 生成密钥 |
 
 依赖：仅用 Python 3 标准库，无需安装任何第三方包，系统装好 Python 3.x 即可。
 
@@ -313,8 +313,8 @@ xiaohongshu-search/
 
 ## 常见问答
 
-**Q：口令怎么拿？**
-A：到 [doubaoya.com](https://doubaoya.com) 登录 → 口令中心 → 生成口令，复制 `dyh_…`，`export DOUBAOYA_API_KEY="dyh_…"`。
+**Q：密钥怎么拿？**
+A：到 [doubaoya.com](https://doubaoya.com) 登录 → 密钥中心 → 生成密钥，复制 `dyh_…`，`export DOUBAOYA_API_KEY="dyh_…"`。
 
 **Q：能按日期 / 近 7 天筛吗？**
 A：接口只收 `keyword` 和 `page`，没有日期参数。时间口径在加工侧靠笔记的 `publishTime` 处理，别给脚本传不存在的日期参数。

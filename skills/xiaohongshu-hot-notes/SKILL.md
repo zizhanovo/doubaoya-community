@@ -48,32 +48,32 @@ description: 都爆鸭 · 小红书爆款笔记发现。输入一个话题或赛
 
 ---
 
-## 拿钥匙（配置口令）🔑
+## 拿钥匙（配置密钥）🔑
 
-本技能用一把**口令**（API Key）来调用都爆鸭接口。
+本技能用一把**密钥**（API Key）来调用都爆鸭接口。
 
-**怎么拿口令：**
+**怎么拿密钥：**
 
 1. 打开 [doubaoya.com](https://doubaoya.com)
 2. **登录** 你的账号
-3. 进入 **口令中心**
-4. 点击 **生成口令**，复制出来（口令形如 `dyh_…`）
+3. 进入 **密钥中心**
+4. 点击 **生成密钥**，复制出来（密钥形如 `dyh_…`）
 
 **配置到环境变量** `DOUBAOYA_API_KEY`：
 
 - **macOS / Linux**：
   ```bash
-  echo 'export DOUBAOYA_API_KEY=<你的口令>' >> ~/.zshrc
+  echo 'export DOUBAOYA_API_KEY=<你的密钥>' >> ~/.zshrc
   source ~/.zshrc
   ```
 - **Windows（PowerShell）**：
   ```powershell
-  [Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "<你的口令>", "User")
+  [Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "<你的密钥>", "User")
   ```
 
 **验证**：`echo $DOUBAOYA_API_KEY`（macOS/Linux）或 `echo %DOUBAOYA_API_KEY%`（Windows），能打印出 `dyh_…` 开头的串即生效。改完环境变量记得重开终端。
 
-> 🔒 **口令安全铁律**：口令是私密凭证，**绝不**打印到对话、日志或截图里，也别提交进公开仓库。脚本只从环境变量读取，本鸭也不会把它回显给你。
+> 🔒 **密钥安全铁律**：密钥是私密凭证，**绝不**打印到对话、日志或截图里，也别提交进公开仓库。脚本只从环境变量读取，本鸭也不会把它回显给你。
 
 ---
 
@@ -91,7 +91,7 @@ python3 scripts/fetch_hot_notes.py "通勤穿搭" --pages 3
 
 脚本会：
 
-1. 从 `DOUBAOYA_API_KEY` 读口令（没配会报错并提示去拿钥匙，不打印口令）；
+1. 从 `DOUBAOYA_API_KEY` 读密钥（没配会报错并提示去拿钥匙，不打印密钥）；
 2. 逐页 `POST https://doubaoya.com/api/apis/xiaohongshu/search-note/call`，请求体 `{"keyword": "...", "page": N}`；
 3. 汇总各页 `data.items`，按 `likeCount + commentCount` 降序排序；
 4. 把排好序的笔记列表以 JSON 打印到标准输出。
@@ -127,7 +127,7 @@ python3 scripts/fetch_hot_notes.py "通勤穿搭" --pages 3
 
 | 状态 | code | 含义与处置 |
 | --- | --- | --- |
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没配口令或口令无效。去 doubaoya.com 口令中心重新生成，重配 `DOUBAOYA_API_KEY`。 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没配密钥或密钥无效。去 doubaoya.com 密钥中心重新生成，重配 `DOUBAOYA_API_KEY`。 |
 | 400 | `VALIDATION_ERROR` | 请求参数不合法（如 keyword 为空）。换个关键词重试。 |
 | 402 | `INSUFFICIENT_CREDITS` | 余额 / 积分不足。到 doubaoya.com 充值后再试。 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障，**已自动退款，可安全重试**。稍后重跑即可。 |
@@ -150,7 +150,7 @@ xiaohongshu-hot-notes/
 ## 注意事项
 
 - **数据真实性**：榜单只认脚本返回，禁止编造排名或互动数。
-- **口令永不外泄**：不打印、不入库、不进截图。
+- **密钥永不外泄**：不打印、不入库、不进截图。
 - **榜单口径**：基于「关键词搜索 + 互动量排序」，反映该词下的高互动笔记，非平台官方实时热榜；关键词越精准越贴脸。
 - **翻页克制**：默认 1 页通常够用，最多 3 页，别无脑拉满浪费额度。
 - **合规**：跳转原文、二次使用须遵守小红书平台规则与版权要求。

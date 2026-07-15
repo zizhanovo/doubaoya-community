@@ -8,7 +8,7 @@
     python3 parse_content.py "<url>"
 
 环境变量:
-    DOUBAOYA_API_KEY  —  你的口令（形如 dyh_...），从 doubaoya.com 口令中心生成。
+    DOUBAOYA_API_KEY  —  你的密钥（形如 dyh_...），从 doubaoya.com 密钥中心生成。
 """
 
 import json
@@ -37,8 +37,8 @@ def main(argv):
     if not api_key:
         fail(
             "[error] 未检测到 DOUBAOYA_API_KEY 环境变量。\n"
-            "请前往 doubaoya.com 登录 → 口令中心 → 生成口令（形如 dyh_...），"
-            "然后 export DOUBAOYA_API_KEY=<你的口令>"
+            "请前往 doubaoya.com 登录 → 密钥中心 → 生成密钥（形如 dyh_...），"
+            "然后 export DOUBAOYA_API_KEY=<你的密钥>"
         )
 
     payload = json.dumps({"url": url}).encode("utf-8")

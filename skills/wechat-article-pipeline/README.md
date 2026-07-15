@@ -15,7 +15,7 @@
 
 - **Node ≥ 18**（内置 `fetch`），零外部依赖（仅用 Node 内置模块）。
 - 一个 **doubaoya.com** 账号，并已**绑定你自己的公众号**。
-- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 口令中心 → 生成）。
+- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。
 
 ## 安装
 
@@ -31,8 +31,8 @@ cp config.example.json config.json
 cp profiles/example-ip.json profiles/my-ip.json
 #    再把 config.json 的 ipProfile 指向 profiles/my-ip.json
 
-# 3. 口令
-export DOUBAOYA_API_KEY="dyh_你的口令"
+# 3. 密钥
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 
 # 4. 先干跑确认，再正式存草稿
 node scripts/pipeline.mjs --md article.md --title "标题" --dry-run

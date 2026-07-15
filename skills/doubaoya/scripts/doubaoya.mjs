@@ -8,7 +8,7 @@
 //   node doubaoya.mjs describe <slug>               看单个操作入参/出参
 //
 // 钥匙从环境变量读: DOUBAOYA_API_KEY
-//   去 https://doubaoya.com → 登录 → 口令中心 → 生成口令
+//   去 https://doubaoya.com → 登录 → 密钥中心 → 生成密钥
 //
 // 本脚本绝不打印整条 key（只在出错时露前缀）。
 
@@ -18,7 +18,7 @@ function getKey() {
   const key = process.env.DOUBAOYA_API_KEY;
   if (!key) {
     fail(
-      "缺少 DOUBAOYA_API_KEY。去 https://doubaoya.com → 登录 → 口令中心 → 生成口令，" +
+      "缺少 DOUBAOYA_API_KEY。去 https://doubaoya.com → 登录 → 密钥中心 → 生成密钥，" +
         "然后 `export DOUBAOYA_API_KEY=dyh_...`"
     );
   }
@@ -61,7 +61,7 @@ async function request(method, path, body) {
     const msg = env?.error?.message ?? "未知错误";
     if (code === "MISSING_API_KEY" || code === "UNAUTHORIZED") {
       fail(
-        `${msg}（当前 key ${maskKey(getKey())}）。请在 doubaoya.com 口令中心撤销并重新生成，再更新 DOUBAOYA_API_KEY。`,
+        `${msg}（当前 key ${maskKey(getKey())}）。请在 doubaoya.com 密钥中心撤销并重新生成，再更新 DOUBAOYA_API_KEY。`,
         code
       );
     }
@@ -124,7 +124,7 @@ async function main() {
           "  node doubaoya.mjs search <query>                按关键词搜操作",
           "  node doubaoya.mjs describe <slug>               看单个操作入参/出参",
           "",
-          "钥匙: export DOUBAOYA_API_KEY=dyh_...  (doubaoya.com → 口令中心 → 生成口令)"
+          "钥匙: export DOUBAOYA_API_KEY=dyh_...  (doubaoya.com → 密钥中心 → 生成密钥)"
         ].join("\n")
       );
       process.exit(cmd ? 1 : 0);

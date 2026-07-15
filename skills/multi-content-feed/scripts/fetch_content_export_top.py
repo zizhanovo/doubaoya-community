@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """都爆鸭 · 全网内容出海信息源
 
-零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取口令，
+零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取密钥，
 扫描全平台（公众号/抖音/视频号/小红书/快手/B站）内容出海 Top 榜，
 把成功返回的 data 以 JSON 打到 stdout。
 
@@ -18,8 +18,8 @@
     python3 fetch_content_export_top.py --keyword 品牌出海 --start-time 2026-06-10 --end-time 2026-06-15
 
 鉴权:
-    从环境变量 DOUBAOYA_API_KEY 读取口令（形如 dyh_…）。
-    口令绝不会被打印或写入任何文件。
+    从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
+    密钥绝不会被打印或写入任何文件。
 """
 
 import argparse
@@ -76,8 +76,8 @@ def main() -> int:
     if not api_key:
         sys.stderr.write(
             "[error] 缺少环境变量 DOUBAOYA_API_KEY。\n"
-            "请前往 doubaoya.com → 登录 → 口令中心 → 生成口令，然后:\n"
-            '  export DOUBAOYA_API_KEY="dyh_你的口令"\n'
+            "请前往 doubaoya.com → 登录 → 密钥中心 → 生成密钥，然后:\n"
+            '  export DOUBAOYA_API_KEY="dyh_你的密钥"\n'
         )
         return 1
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """都爆鸭 · 全网近30天作品聚合搜索
 
-零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取口令，
+零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取密钥，
 一次调用聚合「小红书 + 抖音 + 公众号」近30天作品，把成功返回的 data 以 JSON 打到 stdout。
 
 返回的 data 内含三组数组：
@@ -18,8 +18,8 @@
     python3 search_cn30.py "大模型" --start-date 2026-06-01 --end-date 2026-06-24
 
 鉴权:
-    从环境变量 DOUBAOYA_API_KEY 读取口令（形如 dyh_…）。
-    口令绝不会被打印或写入任何文件。
+    从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
+    密钥绝不会被打印或写入任何文件。
 """
 
 import argparse
@@ -53,8 +53,8 @@ def main() -> int:
     if not api_key:
         sys.stderr.write(
             "[error] 缺少环境变量 DOUBAOYA_API_KEY。\n"
-            "请前往 doubaoya.com → 登录 → 口令中心 → 生成口令，然后:\n"
-            '  export DOUBAOYA_API_KEY="dyh_你的口令"\n'
+            "请前往 doubaoya.com → 登录 → 密钥中心 → 生成密钥，然后:\n"
+            '  export DOUBAOYA_API_KEY="dyh_你的密钥"\n'
         )
         return 1
 

@@ -29,6 +29,6 @@ cp config.example.json config.json
 
 > **可视化设计工作台（可选）**：不想用命令行逐步选风格/生图，可起 `node scripts/design-studio.mjs --md <文章.md> --title "<标题>"`（本地 `127.0.0.1` 网页、零依赖），在页面里点完排版主题/封面/配图，「保存配置」产出一个 `design-config.json`（结构见 `schemas/design-config.schema.json`），再 `node scripts/pipeline.mjs --md … --title … --design <json>` 消费（套主题 + 设封面 + 按 h2 锚点注入配图）。`--design` 的主题/封面是默认值，显式 `--theme`/`--cover` 冲突时命令行优先并告警。生成的图落 design-config 同目录的 `.design/assets/`，与上面的字段无关，无需在 `config.json` 里配置。
 
-> **生封面/配图无需额外密钥**：`scripts/gen-image.mjs` 直接用你发布本就在用的口令 `DOUBAOYA_API_KEY`（Bearer）调 doubaoya.com 的生图接口、扣点数，上游生图密钥只在 doubaoya 服务端、skill 端不接触。口令只放环境变量（`export DOUBAOYA_API_KEY=…`），绝不落配置/文件。
+> **生封面/配图无需额外密钥**：`scripts/gen-image.mjs` 直接用你发布本就在用的密钥 `DOUBAOYA_API_KEY`（Bearer）调 doubaoya.com 的生图接口、扣点数，上游生图密钥只在 doubaoya 服务端、skill 端不接触。密钥只放环境变量（`export DOUBAOYA_API_KEY=…`），绝不落配置/文件。
 
 > 提醒：`config.json` 属于你个人，**不要**提交到公共仓库。仓库里只保留 `config.example.json`（全空/占位）。

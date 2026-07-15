@@ -19,14 +19,14 @@ description: 都爆鸭·综合热点选题（无关键词直取 + 结合个人IP
 
 ## 1. 拿钥匙（DOUBAOYA_API_KEY）
 
-调用接口需要一把口令（API Key）。拿钥匙四步走：
+调用接口需要一把密钥（API Key）。拿钥匙四步走：
 
 1. 打开 **doubaoya.com**
 2. **登录**
-3. 进入 **口令中心**
-4. 点 **生成口令**
+3. 进入 **密钥中心**
+4. 点 **生成密钥**
 
-口令形如 `dyh_xxxxxxxx`。拿到后配进环境变量：
+密钥形如 `dyh_xxxxxxxx`。拿到后配进环境变量：
 
 ```bash
 export DOUBAOYA_API_KEY="dyh_xxxxxxxx"
@@ -34,9 +34,9 @@ export DOUBAOYA_API_KEY="dyh_xxxxxxxx"
 
 | 变量名 | 说明 | 必填 |
 |--------|------|------|
-| `DOUBAOYA_API_KEY` | 都爆鸭口令，形如 `dyh_…` | 是 |
+| `DOUBAOYA_API_KEY` | 都爆鸭密钥，形如 `dyh_…` | 是 |
 
-> 安全约定：**永远不要把口令打印出来、写进日志、贴进对话或提交进仓库**。脚本只在请求头里用它，不会回显。
+> 安全约定：**永远不要把密钥打印出来、写进日志、贴进对话或提交进仓库**。脚本只在请求头里用它，不会回显。
 
 ---
 
@@ -144,7 +144,7 @@ python3 "$SKILL_PATH/scripts/fetch_trends.py"
 
 | HTTP | code | 含义 / 处理 |
 |------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令或口令无效 → 检查 `DOUBAOYA_API_KEY`，去口令中心重生成 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 → 检查 `DOUBAOYA_API_KEY`，去密钥中心重生成 |
 | 400 | `VALIDATION_ERROR` | 参数不对 → 检查 `platforms`（整数）等取值 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 → 去 doubaoya.com 充值/续额 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障，**已自动退费、可安全重试** → 稍后重跑即可 |
@@ -170,7 +170,7 @@ trending-hub/
 A：**不是！** 那是他的IP名（他是谁），不是搜索词。搜它只会搜到字面同名内容。正确做法：第 1 步无关键词直取综合热点，第 2 步把「菜籽油」理解成他的领域/人设/受众，第 3 步拿它去**匹配筛选**热榜。
 
 **Q：提示 "缺少环境变量 DOUBAOYA_API_KEY"？**
-A：先 `export DOUBAOYA_API_KEY="dyh_…"`（去 doubaoya.com → 登录 → 口令中心 → 生成口令）。
+A：先 `export DOUBAOYA_API_KEY="dyh_…"`（去 doubaoya.com → 登录 → 密钥中心 → 生成密钥）。
 
 **Q：什么时候才带 `--keywords`？**
 A：只有用户**明确说**「我就想看某个垂类词（如 AI、露营）的热榜」时才带。做选题的默认起手永远是**无关键词直取**。

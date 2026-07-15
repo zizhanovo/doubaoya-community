@@ -9,7 +9,7 @@ description: 公众号草稿发布 · 把一篇写好的图文存进你自己公
 
 > ⚠️ **这是一个「写入」能力**：跟本鸭那些只读的选题 / 搜索类技能不同，这个技能会**写到你自己的公众号后台**。所以它比读类技能更谨慎——只做「存草稿」这一步，最终群发的手一定在你自己。
 
-> 走 **doubaoya.com** 一条线，鉴权用你自己的口令（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> 走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 
 ---
 
@@ -168,7 +168,7 @@ node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" \
 node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" \
   --html a.html --title "标题" --appid wx1234567890abcdef
 
-# 只扫描本地图、不上传不发布（自检用，不需要口令）
+# 只扫描本地图、不上传不发布（自检用，不需要密钥）
 node "$SKILL_PATH/scripts/preprocess-and-publish.mjs" --html a.html --dry-run
 ```
 
@@ -230,18 +230,18 @@ python3 "$SKILL_PATH/scripts/publish_draft.py" \
 
 ---
 
-## 拿钥匙（口令）
+## 拿钥匙（密钥）
 
 1. 打开 **doubaoya.com** → **登录**
-2. 进 **口令中心** → **生成口令**（形如 `dyh_…`）
+2. 进 **密钥中心** → **生成密钥**（形如 `dyh_…`）
 
 配置到环境变量（脚本只认这个）：
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 ```
 
-**铁律：口令绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出口令。所有请求只发往 **doubaoya.com**，不要把口令带去任何其他域名。
+**铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 脚本本身也从不输出密钥。所有请求只发往 **doubaoya.com**，不要把密钥带去任何其他域名。
 
 ---
 
@@ -251,8 +251,8 @@ export DOUBAOYA_API_KEY="dyh_你的口令"
 
 | HTTP | error.code | 含义 | 你该怎么办 |
 |------|------------|------|-----------|
-| 401 | `UNAUTHORIZED` | 口令无效 / 会话失效 | 检查 `DOUBAOYA_API_KEY`，去口令中心撤销并重新生成 |
-| 403 | `FORBIDDEN` | 这个公众号**不属于**当前口令背后的用户 | 说明用的是别人绑定的公众号，或口令与绑定账号对不上——换成本人绑定该号的口令 |
+| 401 | `UNAUTHORIZED` | 密钥无效 / 会话失效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心撤销并重新生成 |
+| 403 | `FORBIDDEN` | 这个公众号**不属于**当前密钥背后的用户 | 说明用的是别人绑定的公众号，或密钥与绑定账号对不上——换成本人绑定该号的密钥 |
 | 400 | `VALIDATION_ERROR` | 缺 `authorizerAppid` / `title` / `contentHtml` | 按 `message` 补齐必填项 |
 | 502 | `WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED` | 上游 / 封面处理失败（**额度已退**） | 可安全重试；封面失败可试着换封面或不传 `thumbMediaId` |
 | 503 | `WECHAT_NOT_CONFIGURED` | 平台侧公众号能力**未配置** | 非用户能自解，提示这是平台配置问题，稍后再试 / 联系 doubaoya.com |

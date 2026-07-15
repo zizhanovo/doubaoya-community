@@ -16,7 +16,7 @@ description: >-
 **只存草稿，绝不群发**。存完给你 `mediaId`，你再去公众号后台亲眼确认、手动群发。
 
 > ⚠️ **写入能力**：会写到你自己的公众号后台。所以只做「存草稿」这一步，群发的手一定在你自己。
-> 走 **doubaoya.com** 一条线，鉴权用你自己的口令 `DOUBAOYA_API_KEY`（形如 `dyh_…`）。
+> 走 **doubaoya.com** 一条线，鉴权用你自己的密钥 `DOUBAOYA_API_KEY`（形如 `dyh_…`）。
 
 **分工**：正文由**你（agent）**依需求撰写；本流水线**不代写正文**，只自动化后续那些确定性的运维步骤
 （校验账号、渲染、传图、存草稿）。
@@ -91,7 +91,7 @@ description: >-
 |------|------|------|
 | 账号解析 | `scripts/account-verify.mjs` | `resolveAccountKey({account, baseUrl})`：多来源（env / `~/.doubaoya` / Keychain）候选 → 逐个 whoami → 按目标账号挑对 key，key 只在内存。多 key 指向不同账号且未指定 `--account` 时，报出各 key 对应账号并停。 |
 | md→公众号 HTML | `scripts/render-wechat-html.mjs` | `renderWechatHtml(md,{title})`：零依赖内联样式渲染，**原样保留图片 src**。 |
-| 封面/配图生图 | `scripts/gen-image.mjs` | `generateImage({prompt,size,out,styleId,coverGuard,referenceImage})`：零依赖，走口令 POST doubaoya `/api/skills/gpt-image-gen/invoke`（同步返回，扣点数）。传 `referenceImage`（本地路径/URL/`data:`/裸 base64，CLI `--reference-image`）时走 `operation:"edit"` 条件化，**保留参考图里的 IP 形象**；不传则文生图。另导出 `resolveReferenceImage(ref)`（本地图 → `data:` URL 小工具）。风格库 `assets/styles/index.json`，用 env `DOUBAOYA_API_KEY`（无需额外密钥）。产出本地 jpeg → 喂 `--cover` 或以 `<img src>` 落进正文，**不碰发布契约**。由 agent 在引导式设计里调用（不由 pipeline.mjs 机械触发）。 |
+| 封面/配图生图 | `scripts/gen-image.mjs` | `generateImage({prompt,size,out,styleId,coverGuard,referenceImage})`：零依赖，走密钥 POST doubaoya `/api/skills/gpt-image-gen/invoke`（同步返回，扣点数）。传 `referenceImage`（本地路径/URL/`data:`/裸 base64，CLI `--reference-image`）时走 `operation:"edit"` 条件化，**保留参考图里的 IP 形象**；不传则文生图。另导出 `resolveReferenceImage(ref)`（本地图 → `data:` URL 小工具）。风格库 `assets/styles/index.json`，用 env `DOUBAOYA_API_KEY`（无需额外密钥）。产出本地 jpeg → 喂 `--cover` 或以 `<img src>` 落进正文，**不碰发布契约**。由 agent 在引导式设计里调用（不由 pipeline.mjs 机械触发）。 |
 | 配图自动布局 | `scripts/plan-figures.mjs` | `planFigures(markdown,{maxFigures,minChars})` → `{figures[],meta}`：**确定性规则**（不接 LLM）决定在哪些 h2 小节末尾配图 + 画面建议。按小节有效字数过阈值（默认 160）挑，张数按总字数分档（<1800→3、1800–3000→4、>3000→5）封顶。CLI `node plan-figures.mjs --md <文章> [--max-figures N] [--min-chars N] [--json]`。工作台「自动配图」调它，产出直接填 `design-config.images[]`（`afterHeading` 锚点），由现有 pipeline 注入逻辑消费，**不改发布链路**。 |
 | 传图 + 存草稿 | `scripts/preprocess-and-publish.mjs` | **vendored** 自 `wechat-draft-publish` skill（两份需保持同步）。本地图预上传 + >1MB 压缩 + 存草稿（draft/add，无群发）。 |
 
@@ -103,8 +103,8 @@ description: >-
 
 第 6 步——渲染前后完成视觉设计。**引导是默认**：在下面 4 处停下来问用户；**逃生舱**：用户若说
 「封面配图你全权定 / 我赶时间」，就跳过所有停顿，用 `config.defaultStyleId` 自动出一版。
-生图脚本 `scripts/gen-image.mjs` 零依赖，走口令调 doubaoya.com 生图接口、扣点数、**无需额外密钥**
-（用发布本就在用的口令 `DOUBAOYA_API_KEY`，缺失时脚本报清晰错误、不崩）。约 ¥0.30/张。
+生图脚本 `scripts/gen-image.mjs` 零依赖，走密钥调 doubaoya.com 生图接口、扣点数、**无需额外密钥**
+（用发布本就在用的密钥 `DOUBAOYA_API_KEY`，缺失时脚本报清晰错误、不崩）。约 ¥0.30/张。
 
 1. **选风格** — 把 `assets/styles/index.json` 的 6 个风格（`name` + `id`）和各自样图 `assets/styles/<id>.jpg`
    列给用户挑（或用户说「你定」）。6 个起手风格：`杂志编辑风(magazine-editorial)`、`极简大字(minimal-bigtype)`、
@@ -128,7 +128,7 @@ description: >-
    并**确认渲染器真被调用**。
 
 > `gen-image.mjs` 生成的本地 jpeg 路径，封面喂 `pipeline.mjs --cover`、配图以 `<img src>` 落进正文——
-> 两者都不触碰微信侧发布契约。上游生图密钥只在 doubaoya 服务端，skill 端只用口令。
+> 两者都不触碰微信侧发布契约。上游生图密钥只在 doubaoya 服务端，skill 端只用密钥。
 
 ### 用设计工作台（可视化替代）
 
@@ -136,7 +136,7 @@ description: >-
 `pipeline.mjs --design` 消费。工作台零依赖（Node 内置 http + 全局 fetch），只绑 `127.0.0.1`，只写本地产物，不发布、不提交。
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"
+export DOUBAOYA_API_KEY="dyh_你的密钥"
 node scripts/design-studio.mjs --md <文章.md> --title "<标题>" \
      [--out <默认同目录 文章.design.json>] [--port 4599]
 ```
@@ -192,7 +192,7 @@ cp profiles/example-ip.json profiles/my-ip.json
 ## CLI 用法
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的口令"   # 或放 ~/.doubaoya/key、Keychain（account-verify 会找）
+export DOUBAOYA_API_KEY="dyh_你的密钥"   # 或放 ~/.doubaoya/key、Keychain（account-verify 会找）
 
 # A. 从 Markdown 开始（渲染 → 传图 → 存草稿）
 node scripts/pipeline.mjs --md article.md --title "标题" --config ./config.json
@@ -300,6 +300,6 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 
 - Node **≥ 18**（内置 `fetch`），零外部依赖。
 - 一个 **doubaoya.com** 账号，并已**绑定你自己的公众号**（去 doubaoya.com → 公众号 页面授权）。
-- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 口令中心 → 生成）。
+- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。
 
 发布前跑一次 `--dry-run`，确认身份上下文、目标账号、公众号、本地图扫描都对，再正式存草稿。

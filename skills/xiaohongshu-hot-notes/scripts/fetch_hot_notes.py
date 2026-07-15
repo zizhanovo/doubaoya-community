@@ -5,7 +5,7 @@
 把最热门的笔记冒泡到顶部，输出一个排好序的 JSON 列表。
 
 依赖：仅标准库（urllib），无需 pip install。
-鉴权：从环境变量 DOUBAOYA_API_KEY 读取口令（形如 dyh_…），绝不打印。
+鉴权：从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…），绝不打印。
 
 用法：
     python3 fetch_hot_notes.py "<关键词>" [--pages N]
@@ -94,8 +94,8 @@ def main():
     if not api_key:
         sys.stderr.write(
             "[error] 未找到环境变量 DOUBAOYA_API_KEY。\n"
-            "请到 doubaoya.com 登录 → 口令中心 → 生成口令（形如 dyh_…），\n"
-            "然后执行：export DOUBAOYA_API_KEY=<你的口令>\n"
+            "请到 doubaoya.com 登录 → 密钥中心 → 生成密钥（形如 dyh_…），\n"
+            "然后执行：export DOUBAOYA_API_KEY=<你的密钥>\n"
         )
         sys.exit(1)
 

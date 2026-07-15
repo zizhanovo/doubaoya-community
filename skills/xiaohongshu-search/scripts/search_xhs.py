@@ -3,7 +3,7 @@
 """
 都爆鸭 · 小红书爆款笔记搜索脚本
 
-零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取口令，
+零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取密钥，
 调用 doubaoya.com 公开 API 搜索小红书笔记，把成功返回的 data 以 JSON 打印到 stdout。
 
 用法:
@@ -14,7 +14,7 @@
     python3 search_xhs.py "通勤穿搭" --page 2
 
 安全约定:
-    - 绝不打印完整口令（key），即便出错也只提示"未设置/已失效"。
+    - 绝不打印完整密钥（key），即便出错也只提示"未设置/已失效"。
     - 只访问 doubaoya.com 的公开 API。
 """
 
@@ -47,12 +47,12 @@ def main():
     )
     args = parser.parse_args()
 
-    # 读取口令；绝不回显口令本身
+    # 读取密钥；绝不回显密钥本身
     api_key = os.environ.get("DOUBAOYA_API_KEY")
     if not api_key:
         eprint(
             "[error] 未检测到环境变量 DOUBAOYA_API_KEY。"
-            "请到 doubaoya.com 登录后在「口令中心」生成口令，"
+            "请到 doubaoya.com 登录后在「密钥中心」生成密钥，"
             "再执行 export DOUBAOYA_API_KEY=\"dyh_…\" 后重试。"
         )
         sys.exit(1)

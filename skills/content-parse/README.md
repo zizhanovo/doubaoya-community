@@ -26,17 +26,17 @@
 
 ## 密钥获取与安全说明
 
-- 本技能需要环境变量 `DOUBAOYA_API_KEY`，口令形如 `dyh_...`。
-- 口令由 [doubaoya.com](https://doubaoya.com) 提供：**登录 → 口令中心 → 生成口令**。
-- 配置后即可使用：`export DOUBAOYA_API_KEY=dyh_你的口令`
-- 禁止在代码、提示词、日志或输出文件中硬编码 / 明文暴露口令；本技能脚本只从环境变量读取，永不回显。
+- 本技能需要环境变量 `DOUBAOYA_API_KEY`，密钥形如 `dyh_...`。
+- 密钥由 [doubaoya.com](https://doubaoya.com) 提供：**登录 → 密钥中心 → 生成密钥**。
+- 配置后即可使用：`export DOUBAOYA_API_KEY=dyh_你的密钥`
+- 禁止在代码、提示词、日志或输出文件中硬编码 / 明文暴露密钥；本技能脚本只从环境变量读取，永不回显。
 
 ---
 
 ## 使用指南
 
 ```bash
-export DOUBAOYA_API_KEY=dyh_你的口令
+export DOUBAOYA_API_KEY=dyh_你的密钥
 python3 scripts/parse_content.py "https://example.com/content/123"
 ```
 
@@ -61,7 +61,7 @@ python3 scripts/parse_content.py "https://example.com/content/123"
 
 | HTTP | code | 含义 |
 |------|------|------|
-| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带口令 / 口令无效 |
+| 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥 / 密钥无效 |
 | 400 | `VALIDATION_ERROR` | 链接为空或格式不对 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 |
 | 502 | `PROVIDER_FAILED` | 上游失败（已自动退款，可重试） |

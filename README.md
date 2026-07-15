@@ -1,6 +1,6 @@
 # 都爆鸭 · doubaoya-community
 
-> 新媒体爆款工作搭子的技能库 —— 一条口令，让你的 AI agent 替你挖选题、追热点、搜内容、查账号、保合规、改文案。
+> 新媒体爆款工作搭子的技能库 —— 一条密钥，让你的 AI agent 替你挖选题、追热点、搜内容、查账号、保合规、改文案。
 
 这是 **都爆鸭（doubaoya）** 的社区 Agent Skill 库。把里面的技能装进你的 AI 助手
 （Claude Code / Codex 等），配上一条 `DOUBAOYA_API_KEY`，agent 就会用
@@ -14,14 +14,14 @@
 新媒体运营、内容创作者、MCN、代运营、做内容工具的开发者——任何天天跟
 **公众号 / 小红书 / 抖音** 选题和脚本打交道的人。
 
-## 先拿钥匙（口令）
+## 先拿钥匙（密钥）
 
-需要调数据的技能要一条口令（API Key）：
+需要调数据的技能要一条密钥（API Key）：
 
 1. 打开 https://doubaoya.com → **登录**
-2. 进 **口令中心** → **生成口令**
-3. 整条口令只在生成那一下完整露脸，复制收好（形如 `dyh_…`）
-4. 设进环境变量：`export DOUBAOYA_API_KEY="dyh_你的口令"`
+2. 进 **密钥中心** → **生成密钥**
+3. 整条密钥只在生成那一下完整露脸，复制收好（形如 `dyh_…`）
+4. 设进环境变量：`export DOUBAOYA_API_KEY="dyh_你的密钥"`
 
 > agent 会把 key 存进环境变量，自己调接口、自己拼结果，**绝不把整条 key 回显出来**。
 
@@ -46,7 +46,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 
 | 技能 | 一句话 |
 |------|--------|
-| **doubaoya** | 总纲技能：教 agent 用一条口令调 doubaoya.com 公开 API，挖选题 / 追热点 / 写脚本 |
+| **doubaoya** | 总纲技能：教 agent 用一条密钥调 doubaoya.com 公开 API，挖选题 / 追热点 / 写脚本 |
 
 ### 📣 公众号 / 视频号
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """都爆鸭 · 小红书作品爬取脚本
 
-零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取口令，
+零依赖（仅用 Python 3 标准库 urllib）。从环境变量 DOUBAOYA_API_KEY 读取密钥，
 调用 doubaoya.com 公开 API 按关键词爬取小红书热门作品，支持日期范围与排序方式，
 把成功返回的 data 以 JSON 打印到 stdout。
 
@@ -21,7 +21,7 @@
     _4  最热（按互动数）
 
 安全约定:
-    - 绝不打印完整口令（key），即便出错也只提示"未设置/已失效"。
+    - 绝不打印完整密钥（key），即便出错也只提示"未设置/已失效"。
     - 只访问 doubaoya.com 的公开 API。
 """
 
@@ -66,8 +66,8 @@ def main() -> int:
     if not api_key:
         eprint(
             "[error] 缺少环境变量 DOUBAOYA_API_KEY。\n"
-            "请前往 doubaoya.com → 登录 → 口令中心 → 生成口令，然后:\n"
-            '  export DOUBAOYA_API_KEY="dyh_你的口令"'
+            "请前往 doubaoya.com → 登录 → 密钥中心 → 生成密钥，然后:\n"
+            '  export DOUBAOYA_API_KEY="dyh_你的密钥"'
         )
         return 1
 

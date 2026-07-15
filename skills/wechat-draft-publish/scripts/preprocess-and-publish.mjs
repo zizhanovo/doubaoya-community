@@ -27,7 +27,7 @@
 //   node preprocess-and-publish.mjs --html a.html --title "标题" --dry-run   # 只扫描本地图，不上传/不发布
 //
 // 鉴权 / 环境:
-//   DOUBAOYA_API_KEY   口令（形如 dyh_…），必填。绝不打印、绝不写文件。
+//   DOUBAOYA_API_KEY   密钥（形如 dyh_…），必填。绝不打印、绝不写文件。
 //   DOUBAOYA_BASE_URL  基址，默认 https://doubaoya.com
 
 import { readFile } from "node:fs/promises";
@@ -309,7 +309,7 @@ async function main() {
   const allSrcs = extractImgSrcs(html);
   const localSrcs = allSrcs.filter(isLocalImageSrc);
 
-  // ---- dry-run：只报告扫描结果，不上传/不发布/不需要口令 ----
+  // ---- dry-run：只报告扫描结果，不上传/不发布/不需要密钥 ----
   if (args.dryRun) {
     process.stdout.write("扫描结果：\n");
     for (const s of allSrcs) {
@@ -322,7 +322,7 @@ async function main() {
     return;
   }
 
-  // ---- 正式流程：需要口令 ----
+  // ---- 正式流程：需要密钥 ----
   const title = args.title;
   if (!title || title === true) die("缺少 --title <标题>");
 
@@ -330,8 +330,8 @@ async function main() {
   if (!apiKey) {
     die(
       "缺少环境变量 DOUBAOYA_API_KEY。\n" +
-        "请前往 doubaoya.com → 登录 → 口令中心 → 生成口令，然后:\n" +
-        '  export DOUBAOYA_API_KEY="dyh_你的口令"'
+        "请前往 doubaoya.com → 登录 → 密钥中心 → 生成密钥，然后:\n" +
+        '  export DOUBAOYA_API_KEY="dyh_你的密钥"'
     );
   }
 
