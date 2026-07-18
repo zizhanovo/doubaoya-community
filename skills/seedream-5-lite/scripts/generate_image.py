@@ -8,7 +8,7 @@
 
 用法:
     python3 generate_image.py "<提示词>"
-    python3 generate_image.py "<提示词>" --size 1024x1024
+    python3 generate_image.py "<提示词>" --size 2048x2048
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
@@ -36,8 +36,8 @@ def main() -> int:
     parser.add_argument(
         "--size",
         dest="size",
-        default="1024x1024",
-        help="图片尺寸 WxH（默认 1024x1024）",
+        default="2048x2048",
+        help="图片尺寸 WxH（默认 2048x2048）",
     )
     args = parser.parse_args()
 
