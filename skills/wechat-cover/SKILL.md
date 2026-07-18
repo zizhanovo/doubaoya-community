@@ -38,7 +38,7 @@ python3 "$SKILL_PATH/scripts/fetch_cover.py" "职场" --start 2026-06-01
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每个主题只跑一次脚本**，读完整 stdout，别用 `head`/`tail` 预览。
 
 ### 3. 看封面、总结视觉套路
-从 `data.items` 里取每条的 **封面图 URL**、**标题**、**点击量**（字段防御式读取，缺了留空，别报错）。把高点击的几张封面对齐看，归纳：
+`data.items` 是**扁平化后的多榜合并列表**，每条形如 `{ rank, item }`：`rank` 标出这条来自哪个榜（`oneWReadingRank` 万级阅读榜 / `tenWReadingRank` 十万级阅读榜 / `originalRank` 原创榜），真正的字段在**嵌套的 `item` 对象里**——`item.coverUrl`（**封面图 URL**）、`item.title`（**标题**）、`item.clicksCount`（**点击量**）。字段防御式读取，`item` 或其子字段缺失就留空，别报错。把高点击的几张封面对齐看，归纳：
 - **配色**：主色调、对比强度、是否大色块
 - **构图**：人物/实物/纯文字、文字占比、视觉中心
 - **信息层级**：主标题字号、是否加角标/数字/箭头钩子
@@ -74,8 +74,20 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
   - `startDate`：字符串 `YYYY-MM-DD`，可选（默认今天-29 天）
 - 返回信封：
   ```json
-  { "success": true, "requestId": "...", "data": { "items": [ { "cover": "...", "title": "...", "clicksCount": 0 } ] }, "error": null }
+  {
+    "success": true,
+    "requestId": "...",
+    "data": {
+      "items": [
+        { "rank": "oneWReadingRank", "item": { "coverUrl": "...", "title": "...", "clicksCount": 0 } }
+      ],
+      "groups": { "oneWReadingRank": [], "tenWReadingRank": [], "originalRank": [] }
+    },
+    "error": null
+  }
   ```
+  - `items` 是三个榜（`oneWReadingRank` 万级阅读 / `tenWReadingRank` 十万级阅读 / `originalRank` 原创）拉平合并后的数组，每条 `{ rank, item }`；封面图在 `item.coverUrl`（**不是** `cover`），标题在 `item.title`，点击量在 `item.clicksCount`。
+  - `groups` 按榜单原样分组，一般用不到，取数以 `items` 为准。
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
 
 ---

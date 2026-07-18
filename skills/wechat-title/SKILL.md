@@ -38,7 +38,7 @@ python3 "$SKILL_PATH/scripts/fetch_title.py" "职场" --start 2026-06-15
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每个主题只跑一次脚本**，读完整 stdout，别用 `head`/`tail` 预览。
 
 ### 3. 提炼标题套路
-从 `data.items` 里取每条的 `title`（标题）和 `clicksCount`（点击量，作热度参考；防御式读取，缺了留空）。把跑量高的标题归类，提炼套路：数字清单、悬念留白、利益承诺、身份代入、对立反差、热点借势……标出每种套路对应的真实例子。
+`data.items` 是**扁平化后的多榜合并列表**，每条形如 `{ rank, item }`：`rank` 标出这条来自哪个榜（`oneWReadingRank` 万级阅读榜 / `tenWReadingRank` 十万级阅读榜 / `originalRank` 原创榜），真正的字段在**嵌套的 `item` 对象里**——取 `item.title`（标题）和 `item.clicksCount`（点击量，作热度参考；防御式读取，`item` 或其子字段缺失就留空）。把跑量高的标题归类，提炼套路：数字清单、悬念留白、利益承诺、身份代入、对立反差、热点借势……标出每种套路对应的真实例子。
 
 ### 4. 生成候选标题（或做评判）
 - **生成**：套用上面提炼的套路，围绕用户选题产出一组（建议 5~8 条）候选标题，每条标注用了哪种套路。
@@ -73,8 +73,20 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
   - `startDate`：字符串 `YYYY-MM-DD`，可选（默认今天-6 天）
 - 返回信封：
   ```json
-  { "success": true, "requestId": "...", "data": { "items": [ { "title": "...", "clicksCount": 0 } ] }, "error": null }
+  {
+    "success": true,
+    "requestId": "...",
+    "data": {
+      "items": [
+        { "rank": "oneWReadingRank", "item": { "title": "...", "clicksCount": 0 } }
+      ],
+      "groups": { "oneWReadingRank": [], "tenWReadingRank": [], "originalRank": [] }
+    },
+    "error": null
+  }
   ```
+  - `items` 是三个榜（`oneWReadingRank` 万级阅读 / `tenWReadingRank` 十万级阅读 / `originalRank` 原创）拉平合并后的数组，每条 `{ rank, item }`；标题在 `item.title`，点击量在 `item.clicksCount`。
+  - `groups` 按榜单原样分组，一般用不到，取数以 `items` 为准。
 - **先看 `success`**：为 `true` 才读 `data`；否则读 `error.code` / `error.message`。
 - 标题「评分」只是 LLM 侧的套路化判断，**不要去调任何评分接口**——本 skill 只有上面这一个取数接口。
 
