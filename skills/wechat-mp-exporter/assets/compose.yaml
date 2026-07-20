@@ -1,0 +1,27 @@
+services:
+  exporter:
+    image: "${WECHAT_MP_EXPORTER_IMAGE:?immutable image ID is required}"
+    user: "${WECHAT_MP_EXPORTER_UID:?host uid is required}:${WECHAT_MP_EXPORTER_GID:?host gid is required}"
+    ports:
+      - "127.0.0.1:${WECHAT_MP_EXPORTER_PORT:?localhost port is required}:3000"
+    volumes:
+      - "${WECHAT_MP_EXPORTER_DATA_DIR:?state data directory is required}:/app/.data"
+    environment:
+      NODE_ENV: "production"
+      HOST: "0.0.0.0"
+      PORT: "3000"
+      HOME: "/tmp/home"
+      NITRO_KV_DRIVER: "fs"
+      NITRO_KV_BASE: ".data/kv"
+      NUXT_DEBUG_MP_REQUEST: "false"
+      NUXT_PUBLIC_MEMBERSHIP_ENABLED: "false"
+      NUXT_SENTRY_DSN: ""
+      NUXT_UMAMI_ID: ""
+      NUXT_UMAMI_HOST: ""
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - "ALL"
+    tmpfs:
+      - "/tmp:rw,nosuid,nodev,size=512m,mode=1777"
+    restart: "unless-stopped"

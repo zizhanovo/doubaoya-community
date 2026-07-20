@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "default_mode": "auto",
+  "auto_order": ["lite", "docker"],
+  "ui": {
+    "defaults": {
+      "lite": "html",
+      "docker": "full"
+    },
+    "matrix": {
+      "lite": ["html", "terminal"],
+      "docker": ["full", "terminal"]
+    }
+  },
+  "browsers": {
+    "priority": ["chrome", "edge", "brave", "firefox", "safari"],
+    "support": {
+      "chrome": "tier1",
+      "edge": "compatible",
+      "brave": "experimental",
+      "firefox": "compatible",
+      "safari": "progress-only"
+    },
+    "candidates": {
+      "darwin": {
+        "chrome": ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"],
+        "edge": ["/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"],
+        "brave": ["/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"],
+        "firefox": ["/Applications/Firefox.app/Contents/MacOS/firefox"],
+        "safari": ["/Applications/Safari.app/Contents/MacOS/Safari"]
+      },
+      "linux": {
+        "chrome": ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser"],
+        "edge": ["microsoft-edge", "microsoft-edge-stable"],
+        "brave": ["brave-browser", "brave"],
+        "firefox": ["firefox"],
+        "safari": []
+      },
+      "windows": {
+        "chrome": ["C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe", "chrome.exe"],
+        "edge": ["C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "C:/Program Files/Microsoft/Edge/Application/msedge.exe", "msedge.exe"],
+        "brave": ["C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe", "C:/Program Files (x86)/BraveSoftware/Brave-Browser/Application/brave.exe", "brave.exe"],
+        "firefox": ["C:/Program Files/Mozilla Firefox/firefox.exe", "C:/Program Files (x86)/Mozilla Firefox/firefox.exe", "firefox.exe"],
+        "safari": []
+      }
+    }
+  },
+  "state_paths": {
+    "preferences": "preferences.json",
+    "docker_auth": "secrets/auth-key",
+    "lite_session": "secrets/lite/session.json",
+    "lite_root": "lite",
+    "lite_runtime": "runtime/lite.json"
+  },
+  "prerequisites": {
+    "docker": ["docker", "git"],
+    "lite": ["python3.12", "browser"]
+  }
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>MP Ark - 微信公众号归档</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f4f5f6;--panel:#fff;--text:#17191c;--muted:#626870;--line:#d8dce1;--accent:#16754a;--danger:#b42318}
+    @media(prefers-color-scheme:dark){:root{--bg:#151719;--panel:#202326;--text:#f4f5f6;--muted:#abb1b8;--line:#3a3f45;--accent:#55c68a;--danger:#ff8b82}}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0}
+    main{width:min(680px,calc(100% - 32px));margin:clamp(32px,10vh,96px) auto}h1{font-size:22px;margin:0 0 20px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:24px;min-height:260px}
+    .row{display:flex;align-items:center;gap:12px}.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}.status{font-weight:650;font-size:17px}.detail{color:var(--muted);min-height:48px;margin:14px 0 22px;overflow-wrap:anywhere}
+    progress{display:block;width:100%;height:10px;accent-color:var(--accent)}dl{display:grid;grid-template-columns:110px 1fr;gap:10px;margin:26px 0 0}dt{color:var(--muted)}dd{margin:0;overflow-wrap:anywhere}ol{margin:0;padding-left:20px}.failed .dot{background:var(--danger)}.failed .status{color:var(--danger)}
+    @media(max-width:480px){main{width:min(100% - 20px,680px);margin:20px auto}.panel{padding:18px}dl{grid-template-columns:1fr;gap:3px}dd{margin-bottom:8px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>MP Ark - 微信公众号归档</h1>
+  <section class="panel" id="panel" aria-live="polite" aria-busy="true">
+    <div class="row"><span class="dot" aria-hidden="true"></span><span class="status" id="status">正在准备</span></div>
+    <p class="detail" id="detail">等待本地任务启动。</p>
+    <progress id="progress" max="100" value="0" aria-label="任务进度">0%</progress>
+    <dl><dt>当前阶段</dt><dd id="stage">waiting</dd><dt>状态代码</dt><dd id="code">waiting</dd><dt>已处理</dt><dd id="counts">0 / 0</dd><dt>下一步</dt><dd id="next">-</dd><dt>更新时间</dt><dd id="updated">-</dd></dl>
+  </section>
+</main>
+<script>
+const labels={waiting:"等待开始",login:"等待扫码确认",search:"正在搜索公众号",archive:"正在归档文章",success:"任务完成",failure:"任务失败"};
+let terminal=false;
+function renderNext(s){const target=document.getElementById("next");target.replaceChildren();const actions=Array.isArray(s.next_actions)?s.next_actions.filter(Boolean).slice(0,3):[];if(actions.length){const list=document.createElement("ol");for(const action of actions){const item=document.createElement("li");item.textContent=String(action);list.appendChild(item)}target.appendChild(list)}else{target.textContent=s.next_action||"-"}}
+async function poll(){try{const r=await fetch("status",{cache:"no-store",credentials:"omit",redirect:"error"});if(!r.ok)throw new Error("status unavailable");const s=await r.json();const p=document.getElementById("panel");terminal=Boolean(s.terminal);p.classList.toggle("failed",s.state==="failure");p.setAttribute("aria-busy",String(!terminal));document.getElementById("status").textContent=labels[s.state]||"任务运行中";document.getElementById("detail").textContent=s.detail||"";document.getElementById("stage").textContent=s.phase||s.state;document.getElementById("code").textContent=s.code||"-";document.getElementById("counts").textContent=`${s.current||0} / ${s.total||0}`;renderNext(s);document.getElementById("updated").textContent=s.updated||"-";const v=Math.max(0,Math.min(100,Number(s.progress)||0));document.getElementById("progress").value=v;if(!terminal)setTimeout(poll,700)}catch(_){if(!terminal){document.getElementById("detail").textContent="本地任务已结束或状态连接已关闭。";document.getElementById("panel").setAttribute("aria-busy","false")}}}
+poll();
+</script>
+</body>
+</html>

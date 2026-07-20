@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "defaults": {
+    "search_limit": 5,
+    "latest_limit": 5,
+    "today_max_pages": 25,
+    "articles_groups": 20,
+    "archive_max_pages": 500,
+    "page_size": 20,
+    "account_candidates": 5,
+    "terminal_hold_seconds": 2
+  },
+  "limits": {
+    "latest": [1, 20],
+    "archive_limit": [1, 20],
+    "pick": [1, 5],
+    "today_max_pages": [1, 500]
+  },
+  "capabilities": {
+    "supported": ["account_search", "article_title", "publish_time", "article_link", "article_content", "archive"],
+    "unsupported_metrics": ["read_count", "like_count", "recommend_count", "comment_count"]
+  },
+  "login_recovery": {
+    "retry_browsers": ["chrome", "edge", "brave"],
+    "retry_codes": ["tab_crashed", "startup_failure", "devtools_disconnected", "profile_in_use"],
+    "max_retries": 1,
+    "safe_mode_flags": ["--disable-extensions"],
+    "linux_shm_flag": "--disable-dev-shm-usage",
+    "forbidden_flags": ["--no-sandbox", "--disable-gpu", "--remote-debugging-port"]
+  }
+}

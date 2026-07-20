@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "source_repository": "https://github.com/zizhanovo/mp-ark.git",
+  "source_commit": "b80fa95350f22059a0937ff4a52a7aed0212c9db",
+  "source_path": "skills/wechat-mp-exporter",
+  "files": [
+    {"path": "LICENSE", "mode": "100644", "sha256": "6d58e6cfbd7358244e1dde80f459e1797828d5b183b325f5d807666df1d063ae"},
+    {"path": "SKILL.md", "mode": "100644", "sha256": "1936da731b1a549f2b92af24ffd009a124285de46d0cb564d0417e1cdb93356d"},
+    {"path": "agents/openai.yaml", "mode": "100644", "sha256": "0df6fd04b22a99a99dfe1c4c1734ee89a80dec50230bf5768e02725ae7ffd596"},
+    {"path": "assets/backends.json", "mode": "100644", "sha256": "c100b66eaef7099ffaf41f151024977a209398005fd440d86d0f0af7de1b4089"},
+    {"path": "assets/compose.yaml", "mode": "100644", "sha256": "a18c7869d026cbbefe1584c3bb0b6e50558dd30c31b5688ce62ee281d62cf214"},
+    {"path": "assets/lite-requirements.lock", "mode": "100644", "sha256": "895708b51e7ccd2ffbbaf1cb4eefb09f85f810927eb231925f5ffcf740880c6f"},
+    {"path": "assets/lite-status.html", "mode": "100644", "sha256": "7898bb464c682d642e07a019fcf50ca86609c1133554aa2413a9a18eca5f3cfe"},
+    {"path": "assets/upstream-privacy.patch", "mode": "100644", "sha256": "6bad29b80d6c9710897a73dde499e319fb1b7b0856401e3d3d3bd1700384278c"},
+    {"path": "assets/workflows.json", "mode": "100644", "sha256": "ddcbe2515c04526a00cdb013d293db19ff4422b626adba84d780c764d0807168"},
+    {"path": "references/contracts.md", "mode": "100644", "sha256": "c675243129e374eb6d053ef6f4571d1180cd12f886c065ee07649ee6a16b4018"},
+    {"path": "references/docker.md", "mode": "100644", "sha256": "09ec1b5e4b2e6b4539e9b8160d516ae0f209bbbf7baae3f88b0c3cfdbd13e458"},
+    {"path": "references/lite.md", "mode": "100644", "sha256": "474403afcad2ede9a1f385559fa79089d09258f3364e65bd9f65e3d09d65ac6d"},
+    {"path": "references/third-party-notices.md", "mode": "100644", "sha256": "493df6eba6b104b2387ce172dddc6b8526e2ffcde54c461503c2468c7340b3d5"},
+    {"path": "scripts/lite_backend.py", "mode": "100644", "sha256": "641f268bcf5227d412c0bab4d7fedebf1dc9eec0f66ee0644ffc9d66b2465a50"},
+    {"path": "scripts/tests/test_dual_backend.py", "mode": "100644", "sha256": "a01bdc629ab2c029f347bc5291655c630452e6a08748a7dd14d785db217b4935"},
+    {"path": "scripts/tests/test_product_contract.py", "mode": "100644", "sha256": "ef7c54661cf0b1436baee67107b71fdc452fa30e30b7bc8c6afa5e885e44e90b"},
+    {"path": "scripts/tests/test_wechat_mp_exporter.py", "mode": "100644", "sha256": "dfb2360e649bbd2e7030931ec7dc8bca867f8e6ab39e0d5d92e709778e97bf25"},
+    {"path": "scripts/wechat_mp_exporter.py", "mode": "100755", "sha256": "aea11b2987bcb96814eb0521d88ea99ff9b86dbab742ce057c9c241c42ef82cf"}
+  ]
+}

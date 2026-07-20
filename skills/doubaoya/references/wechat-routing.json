@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "routes": [
+    {
+      "id": "mp-ark-local-archive",
+      "priority": 100,
+      "primary_skill": "wechat-mp-exporter",
+      "use_when": [
+        "user requests local QR login to WeChat Official Accounts",
+        "user requests latest or today's posts from a named account",
+        "user requests article body retrieval or local export",
+        "user requests resumable historical archive",
+        "user requests a local session without DOUBAOYA_API_KEY"
+      ],
+      "auth": {
+        "type": "user-approved-wechat-qr",
+        "requires_doubaoya_api_key": false
+      },
+      "unsupported": [
+        "read_count",
+        "like_count",
+        "recommend_count",
+        "comment_count"
+      ]
+    },
+    {
+      "id": "doubaoya-cloud-public-data",
+      "priority": 90,
+      "candidate_skills": [
+        "gongzhonghao-search",
+        "gzh-search",
+        "gzh-subscribe",
+        "wechat-hot-article",
+        "wechat-account-analyzer",
+        "content-parse"
+      ],
+      "use_when": [
+        "user requests public article discovery or keyword search without QR login",
+        "user requests reading, like, recommendation, or comment metrics",
+        "user requests account analysis, trend research, or topic ideation"
+      ],
+      "auth": {
+        "type": "doubaoya-api-key",
+        "requires_doubaoya_api_key": true
+      }
+    }
+  ],
+  "precedence": [
+    "Evaluate the highest-priority matching route first.",
+    "Explicit local QR, article-body, or archive intent selects mp-ark-local-archive even when the request also says Official Account.",
+    "Explicit interaction-metric intent selects doubaoya-cloud-public-data because MP Ark does not support those metrics.",
+    "When both archive and metric intents are present, split the work across the two routes and state each capability boundary."
+  ],
+  "forbidden_misroutes": [
+    {
+      "from": "mp-ark-local-archive",
+      "request_signals": [
+        "read count",
+        "like count",
+        "recommend count",
+        "comment count"
+      ],
+      "reason": "MP Ark must not fabricate or promise unsupported interaction metrics."
+    },
+    {
+      "from": "doubaoya-cloud-public-data",
+      "request_signals": [
+        "local QR login",
+        "local session",
+        "resumable archive",
+        "article body export"
+      ],
+      "reason": "Cloud discovery skills must not replace the user-approved local archive workflow."
+    }
+  ]
+}

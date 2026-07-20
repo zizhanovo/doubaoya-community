@@ -1,0 +1,4 @@
+interface:
+  display_name: "MP Ark"
+  short_description: "Search and archive WeChat with Lite or Docker"
+  default_prompt: "Use $wechat-mp-exporter to onboard with Lite or Docker, then search or archive WeChat Official Account articles."

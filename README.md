@@ -37,7 +37,13 @@ npx skills add zizhanovo/doubaoya-community
 npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 ```
 
-## 技能清单（共 51 个）
+只安装 MP Ark：
+
+```bash
+npx skills add https://github.com/zizhanovo/doubaoya-community --skill wechat-mp-exporter
+```
+
+## 技能清单（共 52 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -55,6 +61,7 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 | **gongzhonghao-search** | 按关键词搜公众号文章，做行业 / 竞品 / 选题 |
 | **gzh-search** | 关键词批量爬公众号文章，铺表 + 选题洞察 |
 | **gzh-subscribe** | 盯单个公众号，拉指定时段历史发文做追更复盘 |
+| **wechat-mp-exporter** | MP Ark：本地扫码登录，查 latest / today、拉正文、可续传归档；无需 `DOUBAOYA_API_KEY`，不支持阅读 / 点赞 / 评论数 |
 | **gzh-ai-feed** | AI 方向公众号爆款日报内容源，聚类成每日选题 |
 | **gzh-astock-top** | A股公众号大V榜：账号发现 → 数据 → 当日发文 |
 | **wechat-hot-article** | 按关键词 + 时间区间拉同主题公众号爆文 |

@@ -1,0 +1,161 @@
+diff --git a/Dockerfile b/Dockerfile
+index 5abf8ac..b4d123e 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -11,13 +11,15 @@ WORKDIR /app
+ 
+ # 复制 package.json 和 lock 文件，安装依赖
+ COPY package.json yarn.lock ./
++ENV PUPPETEER_SKIP_DOWNLOAD=true
+ RUN yarn install --frozen-lockfile --production=true && yarn cache clean
+ 
+ # 复制源代码
+ COPY . .
+ 
+ # 构建 Nuxt 应用（生成 .output 目录）
+-ENV NODE_ENV=production \
++ENV NODE_OPTIONS=--max-old-space-size=4096 \
++    NODE_ENV=production \
+     NITRO_KV_DRIVER=fs \
+     NITRO_KV_BASE=.data/kv
+ 
+diff --git a/config/public-apis.ts b/config/public-apis.ts
+index a839085..f91c94f 100644
+--- a/config/public-apis.ts
++++ b/config/public-apis.ts
+@@ -260,7 +260,7 @@ export const apis = [
+   },
+   {
+     name: '获取文章内容',
+-    description: '获取文章内容，支持 html / markdown / text / json 格式',
++    description: '获取文章内容，支持 html / markdown / text 格式',
+     url: '/api/public/v1/download',
+     method: 'GET',
+     rateLimit: { guest: '1 次/分钟', member: '60 次/分钟' },
+@@ -281,7 +281,7 @@ export const apis = [
+         required: false,
+         default: 'html',
+         type: 'String',
+-        remark: '支持 html / markdown / text / json 格式',
++        remark: '支持 html / markdown / text 格式',
+       },
+     ],
+     responseSample: {},
+diff --git a/config/public-proxy.ts b/config/public-proxy.ts
+index 4ce247d..263e68a 100644
+--- a/config/public-proxy.ts
++++ b/config/public-proxy.ts
+@@ -1,20 +1,4 @@
+ /**
+- * 公共代理节点
++ * Public proxy nodes are disabled in this local privacy-preserving build.
+  */
+-export const PUBLIC_PROXY_LIST: string[] = [
+-  ...getDomainProxyList('worker-proxy.asia'),
+-  ...getDomainProxyList('net-proxy.asia'),
+-  ...getDomainProxyList('1235566.space'),
+-  ...getDomainProxyList('worker-proxy.shop'),
+-  ...getDomainProxyList('worker-proxys.cyou'),
+-  ...getDomainProxyList('worker-proxy.cyou'),
+-];
+-
+-// 生成从00.到15.的16个二级域名
+-function getDomainProxyList(domain: string): string[] {
+-  const list: string[] = [];
+-  for (let i = 0; i < 16; i++) {
+-    list.push(`https://${('0' + i).slice(-2)}.${domain}`);
+-  }
+-  return list;
+-}
++export const PUBLIC_PROXY_LIST: string[] = [];
+diff --git a/nuxt.config.ts b/nuxt.config.ts
+index e370905..f52c18e 100644
+--- a/nuxt.config.ts
++++ b/nuxt.config.ts
+@@ -76,7 +76,7 @@ export default defineNuxtConfig({
+ 
+   // https://umami.nuxt.dev/api/configuration
+   umami: {
+-    enabled: true,
++    enabled: false,
+     id: process.env.NUXT_UMAMI_ID,
+     host: process.env.NUXT_UMAMI_HOST,
+     domains: ['down.mptext.top'],
+diff --git a/server/api/public/v1/download.get.ts b/server/api/public/v1/download.get.ts
+index 1657c3e..83900af 100644
+--- a/server/api/public/v1/download.get.ts
++++ b/server/api/public/v1/download.get.ts
+@@ -1,6 +1,6 @@
+ import TurndownService from 'turndown';
+ import { urlIsValidMpArticle } from '#shared/utils';
+-import { normalizeHtml, parseCgiDataNew } from '#shared/utils/html';
++import { normalizeHtml } from '#shared/utils/html';
+ import { USER_AGENT } from '~/config';
+ import { enforceRateLimit } from '~/server/utils/rate-limit';
+ 
+@@ -35,7 +35,7 @@ export default defineEventHandler(async event => {
+   }
+ 
+   const format: string = (query.format || 'html').toLowerCase();
+-  if (!['html', 'markdown', 'text', 'json'].includes(format)) {
++  if (!['html', 'markdown', 'text'].includes(format)) {
+     return {
+       base_resp: {
+         ret: -1,
+@@ -74,8 +74,6 @@ export default defineEventHandler(async event => {
+           'Content-Type': 'text/markdown; charset=UTF-8',
+         },
+       });
+-    case 'json':
+-      return await parseCgiDataNew(rawHtml);
+     default:
+       throw new Error(`Unknown format ${format}`);
+   }
+diff --git a/server/utils/proxy-request.ts b/server/utils/proxy-request.ts
+index 3d48ce5..de03095 100644
+--- a/server/utils/proxy-request.ts
++++ b/server/utils/proxy-request.ts
+@@ -85,7 +85,6 @@ export async function proxyMpRequest(options: RequestOptions) {
+         throw new Error(`redirect_url 中未找到 token 参数: ${redirectUrl}`);
+       }
+ 
+-      console.log('token', token);
+       const success = await cookieStore.setCookie(authKey, token, mpResponse.headers.getSetCookie());
+       if (!success) {
+         throw new Error('cookie 写入 KV 存储失败');
+diff --git a/shared/utils/html.ts b/shared/utils/html.ts
+index eae801a..387b1f6 100644
+--- a/shared/utils/html.ts
++++ b/shared/utils/html.ts
+@@ -1,5 +1,4 @@
+ import * as cheerio from 'cheerio';
+-import { EXTERNAL_API_SERVICE } from '~/config';
+ import { extractCommentId } from '~/utils/comment';
+ 
+ /**
+@@ -210,24 +209,7 @@ function parseCgiDataNewOnServerDeprecated(html: string): Promise<any> {
+  * @return window.cgiDataNew 对象，解析失败时返回 null
+  */
+ async function parseCgiDataNewOnServer(html: string): Promise<any> {
+-  const code = extractCgiScript(html);
+-  if (!code) {
+-    return Promise.resolve(null);
+-  }
+-
+-  try {
+-    const data = await fetch(`${EXTERNAL_API_SERVICE}/api/tools/eval-js-code`, {
+-      method: 'POST',
+-      body: code,
+-    }).then(res => res.json());
+-    if (data && data.executionError === null) {
+-      return data.window.cgiDataNew;
+-    }
+-    return null;
+-  } catch (error) {
+-    console.error(error);
+-  }
+-  return null;
++  throw new Error('Server-side JSON parsing is disabled in this local build');
+ }
+ 
+ /**
