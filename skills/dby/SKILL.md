@@ -91,6 +91,7 @@ version: 1.0.0
 | 要起公众号标题 / 优化标题 | `wechat-title` | 拉近期爆款提炼标题套路 + 生成候选 |
 | 要封面灵感 / 爆款封面参考 / 配色构图套路 | `wechat-cover` | 同赛道爆款封面视觉套路 |
 | 怕踩违禁词 / 要过审 / 合规改写 | `wechat-banned-words` | 违禁词检测 + 产出可直接发布的过审版 |
+| 想改 / 定制公众号排版样式（换配色 / 标题条 / 引用卡）、把默认排版改掉 | `wechat-theme-studio` | 按口语改 themeJson→本地预览→存回服务端默认排版（发文与网页工作室都读它） |
 | 文章写好了要排版 + 封面 + 存进自己公众号草稿箱 | `wechat-article-pipeline` | md→公众号 HTML→封面→草稿的确定性流水线（只存草稿、不群发） |
 | 已有排好的图文，只想推进草稿箱 | `wechat-draft-publish` | 只存草稿、绝不群发，需先绑定公众号 |
 | 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `wechat-account-analyzer` | 账号诊断，支持多号并诊做竞品对照 |
@@ -158,6 +159,7 @@ version: 1.0.0
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 标题 / 封面 / 合规都齐了 | `wechat-article-pipeline` | 素材齐，进流水线排版 + 存草稿 |
+| 对默认排版样式不满意，想先改配色 / 标题 / 主题 | `wechat-theme-studio` | 改 themeJson→预览→存回服务端默认，之后发文自动套 |
 | 合规检测发现要重写 | `wechat-rewrite` 或 `wechat-hot-write` | 违禁词太多，回去改文案再来 |
 
 #### 代发阶段 —— 来自 `wechat-article-pipeline` / `wechat-draft-publish`

@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "name": "示例·暖橘编辑",
+    "source": "handcrafted",
+    "notes": "wechat-theme-studio 的 WeChat-safe 起手模板。演示两条微信兼容红线:(1) 所有标题装饰都作为 inline style 直接写在标题元素自身(h1 底部色条 border-bottom、h2 左竖条+发丝下划线 border-left/border-bottom、h3 左竖条),绝不用独立空 <section>/<span> 装饰块——公众号编辑器会把没有文字、纯靠宽高+背景撑色块的空元素 strip 掉;(2) decorations.articleWrap 留空,不给整篇套浅底圆角外框(公众号正文里会变成突兀边框)。hr 用一条居中短色线(border 挂在 section 上,编辑器稳定)。仅 inline-style 模板 + hr.html + img figure/caption,无 script/style/class/src,过 validate-theme。想换配色只改 palette 八个键即可。"
+  },
+  "palette": {
+    "text": "#33302b",
+    "heading": "#1f1c18",
+    "accent": "#d2691e",
+    "accent2": "#a8501a",
+    "muted": "#a09a90",
+    "bgSoft": "#fbf1e7",
+    "border": "#ece3d8",
+    "link": "#a8501a"
+  },
+  "page": {
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+    "fontSize": "16px",
+    "lineHeight": "1.8",
+    "letterSpacing": "0.01em",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "font-size:25px;font-weight:800;color:{{heading}};line-height:1.4;letter-spacing:0.01em;margin:6px 0 22px;padding-bottom:12px;border-bottom:3px solid {{accent}};"
+    },
+    "h2": {
+      "style": "font-size:20px;font-weight:800;color:{{heading}};line-height:1.5;letter-spacing:0.01em;margin:32px 0 16px;padding:0 0 8px 11px;border-left:4px solid {{accent}};border-bottom:1px solid {{border}};"
+    },
+    "h3": {
+      "style": "font-size:17px;font-weight:700;color:{{accent2}};line-height:1.55;margin:24px 0 12px;padding-left:11px;border-left:3px solid {{accent}};"
+    },
+    "h4": {
+      "style": "font-size:16px;font-weight:700;color:{{heading}};line-height:1.6;margin:20px 0 10px;"
+    },
+    "p": {
+      "style": "margin:0 0 16px;font-size:16px;line-height:1.8;color:{{text}};"
+    },
+    "ul": {
+      "style": "margin:0 0 16px;padding-left:22px;"
+    },
+    "ol": {
+      "style": "margin:0 0 16px;padding-left:24px;"
+    },
+    "li": {
+      "style": "margin:0 0 10px;line-height:1.8;color:{{text}};",
+      "marker": ""
+    },
+    "blockquote": {
+      "style": "margin:20px 0;padding:15px 18px;background:{{bgSoft}};border:1px solid rgba(210,105,30,0.16);border-left:4px solid {{accent}};border-radius:10px;color:{{text}};font-size:15.5px;line-height:1.8;"
+    },
+    "img": {
+      "style": "max-width:100%;display:block;margin:0 auto;border-radius:12px;box-shadow:0 8px 24px rgba(80,44,18,0.14);",
+      "figureStyle": "margin:24px 0;text-align:center;",
+      "captionStyle": "font-size:13px;color:{{muted}};margin-top:11px;line-height:1.6;"
+    },
+    "hr": {
+      "html": "<section style='width:40px;border-top:2px solid {{accent}};margin:34px auto;'></section>"
+    },
+    "strong": {
+      "style": "font-weight:700;color:{{accent2}};background:{{bgSoft}};border-radius:4px;padding:0 4px;"
+    },
+    "em": {
+      "style": "font-style:italic;color:{{accent2}};"
+    },
+    "del": {
+      "style": "text-decoration:line-through;color:{{muted}};"
+    },
+    "a": {
+      "style": "color:{{link}};text-decoration:underline;text-underline-offset:2px;font-weight:600;word-break:break-all;"
+    },
+    "code": {
+      "style": "padding:2px 6px;background:{{bgSoft}};border-radius:4px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:14px;color:{{accent2}};"
+    },
+    "pre": {
+      "style": "margin:0 0 18px;padding:16px 18px;background:#faf6f1;border:1px solid {{border}};border-radius:10px;overflow-x:auto;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:13.5px;line-height:1.7;color:{{text}};white-space:pre-wrap;word-break:break-all;"
+    }
+  },
+  "decorations": {
+    "articleWrap": {
+      "before": "",
+      "after": ""
+    },
+    "sectionDivider": "<section style='width:40px;border-top:2px solid {{accent}};margin:34px auto;'></section>"
+  }
+}

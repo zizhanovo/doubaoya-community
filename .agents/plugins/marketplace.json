@@ -1,0 +1,20 @@
+{
+  "name": "doubaoya-community",
+  "interface": {
+    "displayName": "都爆鸭 · doubaoya"
+  },
+  "plugins": [
+    {
+      "name": "doubaoya",
+      "source": {
+        "source": "local",
+        "path": "."
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

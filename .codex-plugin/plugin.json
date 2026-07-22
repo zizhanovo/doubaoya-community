@@ -1,0 +1,44 @@
+{
+  "name": "doubaoya",
+  "version": "1.0.0",
+  "description": "都爆鸭(本鸭)新媒体爆款工作搭子:一条 DOUBAOYA_API_KEY,让你的 agent 替你挖选题、追热点、搜内容、查账号、保合规、改文案,并把文章排版存进你自己的公众号草稿箱。",
+  "author": {
+    "name": "都爆鸭 / doubaoya",
+    "url": "https://doubaoya.com"
+  },
+  "homepage": "https://doubaoya.com",
+  "repository": "https://github.com/zizhanovo/doubaoya-community",
+  "license": "MIT",
+  "keywords": [
+    "doubaoya",
+    "本鸭",
+    "都爆鸭",
+    "wechat",
+    "公众号",
+    "xiaohongshu",
+    "douyin",
+    "content",
+    "新媒体",
+    "选题",
+    "爆款",
+    "排版"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "都爆鸭 · doubaoya",
+    "shortDescription": "新媒体爆款工作搭子:挖选题、追热点、写文章、排版、代发公众号草稿",
+    "longDescription": "都爆鸭(本鸭)的新媒体技能库。围绕公众号飞轮(选题 → 写草稿 → 排版 → 代发草稿箱 → 复盘 → 反哺下一个选题)把日常运营活儿逐步跑通:挖选题 / 追全网热榜、参考爆款写文与改写、起标题 / 配封面 / 违禁词合规、按口语定制排版主题、把文章渲成公众号 HTML 并存进你自己公众号的草稿箱(只存草稿绝不群发)、给账号做体检与竞品对照。也覆盖小红书 / 抖音选题取数、PDF 提取等。大部分能力用一条 DOUBAOYA_API_KEY(doubaoya.com 密钥中心生成);改写 / 违禁词检测这类纯本地不需要 key。入口是 /dby,不知道下一步就回 /dby。",
+    "developerName": "都爆鸭 / doubaoya",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://doubaoya.com",
+    "defaultPrompt": [
+      "/dby 我想做公众号,帮我看看从哪一步开始",
+      "帮我挖几个公众号选题并写一篇初稿",
+      "改一下我公众号文章的默认排版样式",
+      "把这篇文章排版好存进我自己的公众号草稿箱"
+    ],
+    "brandColor": "#16a37a",
+    "screenshots": []
+  }
+}
