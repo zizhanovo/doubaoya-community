@@ -39,7 +39,7 @@ const __dirname = path.dirname(__filename);
 const SKILL_ROOT = path.resolve(__dirname, "..");
 const VENDORED_PUBLISH = path.join(__dirname, "preprocess-and-publish.mjs");
 const DEFAULT_BASE_URL = "https://doubaoya.com";
-export const DEFAULT_MARKDOWN_THEME = "themes/magazine.json";
+export const DEFAULT_MARKDOWN_THEME = "themes/benya-clean.json";
 
 export const BUILTIN_CONFIG = {
   targetAccount: null,
@@ -153,7 +153,7 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --digest <str>              摘要
   --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
   --profile <path>            IP/身份 profile（默认取 config.ipProfile）
-  --theme <path>              显式覆盖 Markdown 主题（默认 themes/magazine.json）
+  --theme <path>              显式覆盖 Markdown 主题（默认 themes/benya-clean.json）
   --theme neutral             显式使用中性渲染器，不套项目主题
   --design <json>             设计工作台产出的 design-config.json：套主题 + 设封面 + 按 h2
                               锚点注入配图。由 scripts/design-studio.mjs 生成。显式 --theme/

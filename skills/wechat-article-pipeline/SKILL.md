@@ -228,8 +228,10 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 [`themes/THEME-SCHEMA.md`](./themes/THEME-SCHEMA.md)（top-level 只有 `meta/palette/page/elements/decorations`）。
 校验器是 `scripts/validate-theme.mjs`，套用器是 `scripts/render-wechat-html.mjs --theme`（或 `pipeline.mjs --theme`）。
 
-> **写主题是一次性的活**；产出的 `theme.json` 之后一直用。不想从零写？先从三个内置主题
-> `themes/magazine.json` / `themes/minimal.json` / `themes/knowledge.json` 里挑一个最接近的**复制再改**。
+> **写主题是一次性的活**；产出的 `theme.json` 之后一直用。默认主题是 `themes/benya-clean.json`
+> （本鸭精品「知识清爽」风，**推荐**）。不想从零写？先从内置主题
+> `themes/benya-clean.json`（默认/推荐）/ `themes/magazine.json` / `themes/minimal.json` / `themes/knowledge.json`
+> 里挑一个最接近的**复制再改**。
 
 ### 路径 A：复刻一篇公众号文章的排版（给 URL）
 
@@ -290,7 +292,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 不需要参考文章：**你（agent）按描述的调性直接照 schema 填 `theme.json`**，再校验、渲染。
 例：「性冷淡杂志风」→ 低饱和 `palette`、细 `border`/hairline `hr`、充裕留白（大 `margin`/`line-height`）、
 克制近 small-caps 的标题（大字距、非高饱和色）。同样先 `validate-theme.mjs` 再 `render --theme`。
-起步同样建议**复制** `themes/magazine.json`（杂志风）/ `minimal.json`（极简）/ `knowledge.json`（知识卡片）之一再改。
+起步同样建议**复制** `themes/benya-clean.json`（默认/推荐）/ `magazine.json`（杂志风）/ `minimal.json`（极简）/ `knowledge.json`（知识卡片）之一再改。
 
 一切以 [`themes/THEME-SCHEMA.md`](./themes/THEME-SCHEMA.md) 为准；主题索引见 [`themes/README.md`](./themes/README.md)。
 

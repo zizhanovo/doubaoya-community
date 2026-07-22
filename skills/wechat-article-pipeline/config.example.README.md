@@ -20,7 +20,7 @@ cp config.example.json config.json
 | `coverFallback` | 无本地封面时的兜底策略标记，回报里会注明「走都爆鸭兜底」。 | `"doubaoya"` |
 | `ipProfile` | IP/身份 profile 的路径（相对本 skill 目录）。流水线会加载并回显它的 `displayName / aliases / isNot`，防止把账号名误读成通用名词。见 `profiles/README.md`。 | `"profiles/my-ip.json"` |
 | `ipImage` | 你的卡通 IP 形象图路径（相对本 skill 目录）。设计工作台/生图脚本会把它作为**参考图条件化**生成封面与配图，让全篇形象统一（走 `operation:"edit"` + `referenceImage`）。把图放进 `assets/ip/` 再指向它。`null` = 不注册 IP，封面/配图退回文生图。见 `assets/ip/README.md`。 | `"assets/ip/benya.png"` |
-| `mdTheme` | Markdown→HTML 默认主题。项目默认 `themes/magazine.json`；相对路径按配置文件所在目录解析。CLI 的 `--theme` 优先；填 `"neutral"` 可显式退回中性渲染器。 | `"themes/magazine.json"` |
+| `mdTheme` | Markdown→HTML 默认主题。项目默认 `themes/benya-clean.json`（本鸭精品「知识清爽」风，推荐）；也可换成 `themes/magazine.json` 等其它内置主题。相对路径按配置文件所在目录解析。CLI 的 `--theme` 优先；填 `"neutral"` 可显式退回中性渲染器。 | `"themes/benya-clean.json"` |
 | `draftsDir` | 本地草稿/产物目录（可选，供你归档渲染出的 HTML）。`""` = 用临时目录。 | `"./drafts"` |
 | `defaultStyleId` | 逃生舱默认风格 id（用户说「你全权定/我赶时间」时用它自动出图）。取值见 `assets/styles/index.json` 的 6 个 `id`。 | `"magazine-editorial"` |
 | `coverAutogen` | 是否在引导式设计里默认 AI 生成封面。`false` = 不生封面，走 `--cover` 或都爆鸭兜底。 | `true` |

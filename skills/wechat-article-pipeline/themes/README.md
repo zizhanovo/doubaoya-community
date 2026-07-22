@@ -8,10 +8,16 @@
 契约的**权威**是 [`THEME-SCHEMA.md`](./THEME-SCHEMA.md)——top-level 只允许
 `meta` / `palette` / `page` / `elements` / `decorations`，其余从**默认主题**深合并兜底（可以只写一部分）。
 
-## 主题清单（13 个，按来源分组）
+## 主题清单（14 个，按来源分组）
 
-拿来即用，或复制一个再改。三类来源；后两类由 `scripts/import-theme.mjs` 从开源社区主题
+拿来即用，或复制一个再改。四类来源；wewrite/doocs 两类由 `scripts/import-theme.mjs` 从开源社区主题
 转换而来（署名/许可见 [`CREDITS.md`](./CREDITS.md)）。
+
+### 本鸭精品（1，默认 / 推荐）
+
+| 主题 | 一句话风格 |
+|------|-----------|
+| [`benya-clean.json`](./benya-clean.json) | **本鸭·知识清爽（默认）**——白卡浮于淡绿页、色条 kicker 标题 + 细线、圆角绿色 callout 引用、点线分割、圆角带阴影配图、加粗带绿色高亮胶囊。一抹本鸭绿、高对比、移动优先。**不传 `--theme` 时的项目默认。** |
 
 ### 手作（3，本仓库原创，品牌中性）
 
@@ -41,7 +47,7 @@
 | [`wewrite-warm-editorial.json`](./wewrite-warm-editorial.json) | **暖编辑**——白底琥珀色，生活方式/文化。 |
 | [`wewrite-professional-clean.json`](./wewrite-professional-clean.json) | **专业净**——蓝色、中性，适合大多数商业内容的安全默认。 |
 
-**怎么挑**：观点长文 → magazine / newspaper；性冷淡/品牌感 → minimal / minimal-gold；
+**怎么挑**：没特别偏好 → `benya-clean`（默认，本鸭精品）；观点长文 → magazine / newspaper；性冷淡/品牌感 → minimal / minimal-gold；
 教程干货 → knowledge；技术 → github；商业通用 → professional-clean；文化人文 → ink。
 不完全合适就**复制一个再改**，比从零写省事。
 

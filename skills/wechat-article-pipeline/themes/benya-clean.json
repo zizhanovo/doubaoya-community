@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "name": "本鸭·知识清爽",
+    "source": "handcrafted",
+    "notes": "Candidate new default for doubaoya. Premium modern 公众号 look on the 本鸭 brand green: article sits in a white card floated on a soft tinted page (breathing room); section h2 uses a short accent kicker bar + bold heading + hairline rule (克制的引导装饰); blockquote is a rounded green callout card; hr is a green dot-and-bars divider (not a plain line); images are rounded with a soft shadow + centered caption; bold text carries a subtle green highlight pill. One 本鸭 teal-green accent, high-contrast, mobile-first. Uses only inline-style templates + wrapBefore/wrapAfter + hr.html + img figure/caption + decorations.articleWrap — no script/style/class/src, passes validate-theme."
+  },
+  "palette": {
+    "text": "#2b2f36",
+    "heading": "#14181d",
+    "accent": "#16a37a",
+    "accent2": "#0e7d5f",
+    "muted": "#97a0ab",
+    "bgSoft": "#e9f7f1",
+    "border": "#e6ebe8",
+    "link": "#0e7d5f"
+  },
+  "page": {
+    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+    "fontSize": "16px",
+    "lineHeight": "1.8",
+    "letterSpacing": "0.01em",
+    "color": "{{text}}"
+  },
+  "elements": {
+    "h1": {
+      "style": "font-size:25px;font-weight:800;color:{{heading}};line-height:1.4;letter-spacing:0.01em;margin:6px 0 6px;",
+      "wrapAfter": "<section style='margin:0 0 22px;'><span style='display:inline-block;width:40px;height:4px;border-radius:4px;background:{{accent}};vertical-align:middle;'></span></section>"
+    },
+    "h2": {
+      "style": "font-size:20px;font-weight:800;color:{{heading}};line-height:1.5;letter-spacing:0.01em;margin:8px 0 12px;",
+      "wrapBefore": "<section style='margin:32px 0 0;'><span style='display:inline-block;width:26px;height:3px;border-radius:3px;background:{{accent}};vertical-align:middle;'></span></section>",
+      "wrapAfter": "<section style='height:1px;background:{{border}};margin:0 0 18px;'></section>"
+    },
+    "h3": {
+      "style": "font-size:17px;font-weight:700;color:{{accent2}};line-height:1.55;margin:24px 0 12px;padding-left:11px;border-left:3px solid {{accent}};"
+    },
+    "h4": {
+      "style": "font-size:16px;font-weight:700;color:{{heading}};line-height:1.6;margin:20px 0 10px;"
+    },
+    "p": {
+      "style": "margin:0 0 16px;font-size:16px;line-height:1.8;color:{{text}};"
+    },
+    "ul": {
+      "style": "margin:0 0 16px;padding-left:22px;"
+    },
+    "ol": {
+      "style": "margin:0 0 16px;padding-left:24px;"
+    },
+    "li": {
+      "style": "margin:0 0 10px;line-height:1.8;color:{{text}};",
+      "marker": ""
+    },
+    "blockquote": {
+      "style": "margin:20px 0;padding:15px 18px;background:{{bgSoft}};border:1px solid rgba(22,163,122,0.16);border-left:4px solid {{accent}};border-radius:10px;color:{{text}};font-size:15.5px;line-height:1.8;"
+    },
+    "img": {
+      "style": "max-width:100%;display:block;margin:0 auto;border-radius:12px;box-shadow:0 8px 24px rgba(18,58,44,0.14);",
+      "figureStyle": "margin:24px 0;text-align:center;",
+      "captionStyle": "font-size:13px;color:{{muted}};margin-top:11px;line-height:1.6;"
+    },
+    "hr": {
+      "html": "<section style='text-align:center;margin:34px 0;line-height:1;'><span style='display:inline-block;width:34px;height:2px;border-radius:2px;background:{{accent}};vertical-align:middle;'></span><span style='display:inline-block;margin:0 12px;width:7px;height:7px;border-radius:50%;background:{{accent}};vertical-align:middle;'></span><span style='display:inline-block;width:34px;height:2px;border-radius:2px;background:{{accent}};vertical-align:middle;'></span></section>"
+    },
+    "strong": {
+      "style": "font-weight:700;color:{{accent2}};background:{{bgSoft}};border-radius:4px;padding:0 4px;"
+    },
+    "em": {
+      "style": "font-style:italic;color:{{accent2}};"
+    },
+    "del": {
+      "style": "text-decoration:line-through;color:{{muted}};"
+    },
+    "a": {
+      "style": "color:{{link}};text-decoration:underline;text-underline-offset:2px;font-weight:600;word-break:break-all;"
+    },
+    "code": {
+      "style": "padding:2px 6px;background:{{bgSoft}};border-radius:4px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:14px;color:{{accent2}};"
+    },
+    "pre": {
+      "style": "margin:0 0 18px;padding:16px 18px;background:#f6f8fa;border:1px solid {{border}};border-radius:10px;overflow-x:auto;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:13.5px;line-height:1.7;color:{{text}};white-space:pre-wrap;word-break:break-all;"
+    }
+  },
+  "decorations": {
+    "articleWrap": {
+      "before": "<section style='background:#f4f8f6;padding:20px 14px;'><section style='background:#ffffff;padding:26px 20px;border-radius:16px;box-shadow:0 6px 24px rgba(18,58,44,0.07);'>",
+      "after": "</section></section>"
+    },
+    "sectionDivider": "<section style='text-align:center;margin:34px 0;line-height:1;'><span style='display:inline-block;width:34px;height:2px;border-radius:2px;background:{{accent}};vertical-align:middle;'></span><span style='display:inline-block;margin:0 12px;width:7px;height:7px;border-radius:50%;background:{{accent}};vertical-align:middle;'></span><span style='display:inline-block;width:34px;height:2px;border-radius:2px;background:{{accent}};vertical-align:middle;'></span></section>"
+  }
+}

@@ -8,7 +8,7 @@
   "coverFallback": "doubaoya",
   "ipProfile": "profiles/example-ip.json",
   "ipImage": null,
-  "mdTheme": "themes/magazine.json",
+  "mdTheme": "themes/benya-clean.json",
   "draftsDir": "",
   "defaultStyleId": "magazine-editorial",
   "coverAutogen": true,
