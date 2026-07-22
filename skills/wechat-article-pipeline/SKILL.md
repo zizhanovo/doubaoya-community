@@ -8,6 +8,7 @@ description: >-
   跑公众号图文流水线时使用。需先在 doubaoya.com 绑定自己的公众号、并有一条 DOUBAOYA_API_KEY。
   Trigger words: 写公众号 / 转公众号排版 / 推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 /
   把文章存进公众号草稿箱 / 公众号图文流水线 / wechat-article-pipeline。
+version: 1.1.0
 ---
 
 # 公众号图文流水线（都爆鸭）
@@ -305,3 +306,14 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 - 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。
 
 发布前跑一次 `--dry-run`，确认身份上下文、目标账号、公众号、本地图扫描都对，再正式存草稿。
+
+---
+
+## 更新本技能
+
+```bash
+npx skills update wechat-article-pipeline   # 全局安装的加 -g
+```
+
+> **最近变更**：默认 Markdown 排版主题已切为 `benya-clean`（本鸭 · 知识清爽）。想沿用旧版
+> `magazine`（杂志风）的，在 `config.json` 里把 `mdTheme` 指回 `themes/magazine.json`，或渲染时加 `--theme themes/magazine.json`。

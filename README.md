@@ -43,6 +43,19 @@ npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 npx skills add https://github.com/zizhanovo/doubaoya-community --skill wechat-mp-exporter
 ```
 
+## 更新
+
+技能会持续迭代，用 `skills` 原生更新命令拿最新版：
+
+```bash
+npx skills update                          # 更新已安装的全部技能到最新
+npx skills update wechat-article-pipeline  # 只更新某一个技能
+```
+
+> **当初带 `-g` 全局安装的，更新也要带 `-g`**（如 `npx skills update wechat-article-pipeline -g`），否则更新不到全局那一份。
+
+例：公众号排版默认已升级为「本鸭 · 知识清爽（benya-clean）」，已装旧版的用户需 `update` 后新默认才生效。
+
 ## 技能清单（共 52 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
