@@ -14,7 +14,6 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
-EXPECTED_SKILL_COUNT = 52
 MP_ARK = SKILLS / "wechat-mp-exporter"
 PROVENANCE = MP_ARK / "assets" / "vendor-provenance.json"
 ROUTING = SKILLS / "doubaoya" / "references" / "wechat-routing.json"
@@ -65,10 +64,20 @@ def frontmatter_name(path: Path) -> str:
     return names[0]
 
 
-def validate_skill_inventory(root: Path = ROOT) -> None:
+def discover_skill_dirs(root: Path = ROOT) -> list[Path]:
+    """Single source of truth for the Skill inventory: the ``skills/`` directory.
+
+    Every published Skill is a ``skills/<name>/`` folder holding a ``SKILL.md``.
+    Both the count and the name set are derived here so no hardcoded tally can
+    drift out of sync with reality (it has, twice).
+    """
     skills = root / "skills"
-    directories = sorted(path for path in skills.iterdir() if path.is_dir() and (path / "SKILL.md").is_file())
-    require(len(directories) == EXPECTED_SKILL_COUNT, f"expected {EXPECTED_SKILL_COUNT} Skills, found {len(directories)}")
+    return sorted(path for path in skills.iterdir() if path.is_dir() and (path / "SKILL.md").is_file())
+
+
+def validate_skill_inventory(root: Path = ROOT) -> None:
+    directories = discover_skill_dirs(root)
+    require(bool(directories), "no Skills found under skills/")
     names: dict[str, Path] = {}
     for directory in directories:
         name = frontmatter_name(directory / "SKILL.md")
@@ -223,15 +232,13 @@ def validate_vendor(root: Path = ROOT) -> None:
 
 def validate_readme(root: Path = ROOT) -> None:
     readme = (root / "README.md").read_text(encoding="utf-8")
-    require("## 技能清单（共 52 个）" in readme, "README Skill count is stale")
+    skill_dirs = discover_skill_dirs(root)
+    count = len(skill_dirs)
+    require(f"## 技能清单（共 {count} 个）" in readme, f"README Skill count is stale (expected 共 {count} 个)")
     listed_names = re.findall(r"^\| \*\*([^*]+)\*\*", readme, flags=re.MULTILINE)
-    require(len(listed_names) == EXPECTED_SKILL_COUNT, "README Skill inventory contains missing or duplicate rows")
+    require(len(listed_names) == count, "README Skill inventory contains missing or duplicate rows")
     listed = set(listed_names)
-    actual = {
-        path.name
-        for path in (root / "skills").iterdir()
-        if path.is_dir() and (path / "SKILL.md").is_file()
-    }
+    actual = {path.name for path in skill_dirs}
     require(listed == actual, f"README Skill inventory mismatch: missing={sorted(actual - listed)}, extra={sorted(listed - actual)}")
     install = "npx skills add https://github.com/zizhanovo/doubaoya-community --skill wechat-mp-exporter"
     require(readme.count(install) == 1, "README single-Skill install command is missing or duplicated")
@@ -307,7 +314,7 @@ def validate_repository(root: Path = ROOT) -> None:
 
 def main() -> int:
     validate_repository()
-    print(f"validated doubaoya-community: {EXPECTED_SKILL_COUNT} Skills, MP Ark vendor and WeChat routing")
+    print(f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, MP Ark vendor and WeChat routing")
     return 0
 
 

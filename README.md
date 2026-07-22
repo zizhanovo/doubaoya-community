@@ -61,7 +61,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g --all`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 54 个）
+## 技能清单（共 55 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -100,6 +100,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | **ip-profile** | 建 / 更新公众号「创作 DNA」（人设 / 赛道 / 文风蒸馏），生成文章时全程读它 |
 | **wechat-article-pipeline** | 公众号图文流水线：md→公众号 HTML→封面→存草稿箱（只存草稿、不群发） |
 | **wechat-draft-publish** | 把写好的图文存进你自己公众号草稿箱（只存草稿、不群发，需先绑定公众号） |
+| **wechat-theme-studio** | 按口语描述改公众号**默认排版主题**（配色 / 标题 / 引用 / 图注），本地预览后存回服务端 |
 
 ### 🎵 抖音（跨平台选题取数用）
 
