@@ -93,6 +93,20 @@ function respond(scenario, slug) {
         })
       ];
 
+    case "ask-none-cn": // 同样无证据，但 Mera 换了文案（占位符正则匹配不中）——answer 不该被改写
+      return [
+        200,
+        envelope({
+          answer: "检索不到可支撑的内容。",
+          has_evidence: false,
+          evidence_level: "none",
+          evidence: { grade: "待核实", grounded_count: 0, reference_count: 0, note: null },
+          citations: [],
+          conversation_id: "conv_3",
+          message_id: "msg_3"
+        })
+      ];
+
     case "ask-reference": // grade 同样是「待核实」，但确实检索到了用户原文——不许当成无支撑
       return [
         200,
@@ -228,19 +242,29 @@ check("信封缺 data → 退化成空对象，不崩栈", async () => {
   assert.deepEqual(JSON.parse(r.stdout), {});
 });
 
-check("ask 无证据 → answer 不含英文占位句，但原件留在 answer_upstream", async () => {
-  const upstream = "I could not find any supported evidence to answer this query.";
+check("ask 无证据 → 整份 stdout 里都不出现那句英文占位符", async () => {
   const r = await run(["ask", '{"query_text":"我对量子计算怎么看"}'], withKey("ask-none"));
   assert.equal(r.code, 0, r.stderr);
   const data = JSON.parse(r.stdout);
   assert.equal(data.no_evidence, true);
-  // 红线是「不许把这句英文当答案转述给用户」，不是「这个字符串不许出现在管道里」
-  assert.equal(data.answer.includes("I could not find"), false);
   assert.equal(data.answer, "你的笔记里没有能支撑这个问题的内容。");
-  assert.equal(data.answer_upstream, upstream); // 加工可以，丢原件不行：逐字保留
+  // 红线（收紧版）：读 stdout 的是 LLM agent，JSON 里任何字符串它都可能转述 ——
+  // 判据下沉到**整段 stdout 文本**，不再只看 answer 字段，也不再留 answer_upstream 副本。
+  assert.equal(r.stdout.includes("I could not find"), false);
+  assert.equal("answer_upstream" in data, false);
   assert.match(data.answer_notice, /没有能支撑/);
   assert.match(r.stderr, /^\[warn\] NO_EVIDENCE: /);
   assert.equal(data.evidence_level, "none"); // 原字段照样透传
+});
+
+check("ask 无证据但 Mera 换了文案 → answer 原样保留，告警照打", async () => {
+  const r = await run(["ask", '{"query_text":"我对合成生物学怎么看"}'], withKey("ask-none-cn"));
+  assert.equal(r.code, 0, r.stderr);
+  const data = JSON.parse(r.stdout);
+  assert.equal(data.no_evidence, true);
+  // 没命中那句英文占位符 => 不加工 answer（可能是真内容），但无证据的判定/告警一个不少。
+  assert.equal(data.answer, "检索不到可支撑的内容。");
+  assert.match(r.stderr, /^\[warn\] NO_EVIDENCE: /);
 });
 
 check("ask 有 reference 证据 → 不因 grade「待核实」被误判成无支撑", async () => {

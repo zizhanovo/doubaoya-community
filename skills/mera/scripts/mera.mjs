@@ -158,10 +158,13 @@ function markNoEvidence(data) {
     no_evidence: true,
     answer_notice: `${NO_EVIDENCE_NOTICE}要明说这一点，再决定要不要用你自己的常识补一句（补了必须标明那是你的判断）。`
   };
-  // 加工可以，丢原件不行：上游那句原样留在 answer_upstream 里（排查用，agent 不得转述）。
-  if (typeof data.answer === "string") result.answer_upstream = data.answer;
   // ponytail: 只在命中那句英文占位符时替换 answer —— 它是占位符不是内容，原样转述等于甩一句英文给中文用户。
   // 天花板：Mera 改了文案就匹配不中；届时 answer 原样保留，但 no_evidence / answer_notice / stderr 照常报，agent 不会漏。
+  //
+  // 🔒 不再把上游原句抄进 answer_upstream。读 stdout 的是 LLM agent，JSON 里**任何一个字符串**它都可能
+  // 转述给用户，一句「这是排查用的原件、不转述」的注释拦不住 —— 唯一可靠的做法是那句英文**根本不出现在
+  // stdout 里**。而它是个常量，留着也零排查价值：no_evidence:true + stderr 的 [warn] NO_EVIDENCE 已经
+  // 把「走的是无证据分支」记全了；没命中占位符时 answer 本就原样未改，副本纯属重复。
   if (typeof data.answer === "string" && UNSUPPORTED_ANSWER_EN.test(data.answer.trim())) {
     result.answer = NO_EVIDENCE_NOTICE;
   }
