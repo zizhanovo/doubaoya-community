@@ -255,9 +255,13 @@ node scripts/mera.mjs read '{"source_id":"<search 结果的 id>","char_start":12
 - `from = max(0, char_start - 500)`、`to = char_end + 1500`。
 - **前 500 后 1500 是有意不对称的**：命中点之前那点上文用来交代「这段在说什么」，
   而结论、决定、后续展开几乎总在命中点**之后**，所以往后要开得更宽。
-- 想自己控制就显式传 `from` / `to`（永远优先于算出来的）；两者都不给、也没有 `char_start` 时，
-  脚本按 `0 / 20000` 兜底——**但那是没有线索时的下策，有命中位置就别用**。
+- 想自己控制就显式传 `from` / `to`（永远优先于算出来的）。**只给 `from` 不给 `to` 是合法的**——
+  脚本按 `to = from + 20000`（一个满窗）补齐，所以续读时照 `[warn] TRUNCATED` 给的 `from` 直接传就行，
+  不用自己再算 `to`。两者都不给、也没有 `char_start` 时等价于 `from=0 / to=20000`——
+  **但那是没有线索时的下策，有命中位置就别用**。
 - `char_start - 500` 为负时脚本会 clamp 到 0，你不用自己防。
+- **窗口整个落在全文末尾之后**（比如 `from` 比 `content_length` 还大）→ 服务端老实回 `content: ""` + 200，
+  脚本打 `[warn] EMPTY_WINDOW`。那是**窗口开错了位置，不是这条笔记是空的**——别这么告诉用户，把 `from` 调回范围内重读。
 
 返回 `{id, title, origin_uri, source_type, content, media_type, created_at, archived_at, from, to, content_length, truncated}`：
 

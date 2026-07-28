@@ -146,7 +146,7 @@ function validateWriteBody(body) {
 // search 的 snippet 只有 240 字，而一个 chunk 能到 2000 字，答案经常就落在片段外面——所以默认要开得比命中区间宽。
 const WINDOW_BEFORE = 500;
 const WINDOW_AFTER = 1500;
-const WINDOW_MAX = 20000; // 服务端单窗口上限，没有任何位置线索时的兜底窗口
+const WINDOW_MAX = 20000; // 服务端单窗口上限。是窗口**宽度**，不是绝对终点——见 resolveWindow
 
 // from/to 一律由脚本算好并显式发出（服务端虽有 0/20000 兜底，但不依赖它）。
 // 可以直接把 search 命中的 char_start / char_end 喂进来；显式给的 from / to 永远优先。
@@ -158,8 +158,12 @@ function resolveWindow(body) {
   let from = int(body.from);
   if (from === null) from = charStart === null ? 0 : Math.max(0, charStart - WINDOW_BEFORE);
 
+  // 没有右边界线索时，窗口终点 = from + 宽度上限，**不是**绝对的 20000。
+  // 写死 20000 时只有 from=0 才碰巧对：续读第二窗（TRUNCATED 告警教 agent 传 from=20000）
+  // 或从深处命中开窗（char_start=29980）都会算出 to <= from，被下面的空窗口检查打成硬错误——
+  // 等于脚本自己给的续读指引走不通。
   let to = int(body.to);
-  if (to === null) to = charEnd === null ? WINDOW_MAX : charEnd + WINDOW_AFTER;
+  if (to === null) to = charEnd === null ? from + WINDOW_MAX : charEnd + WINDOW_AFTER;
 
   if (from < 0) fail("VALIDATION_ERROR", "from 不能是负数。");
   if (to <= from) fail("VALIDATION_ERROR", `窗口是空的（from=${from}, to=${to}），to 必须大于 from。`);
@@ -299,6 +303,16 @@ async function main() {
           "ARCHIVED",
           `这条来源已归档（archived_at=${data.archived_at}），用户可能已经把它删了。` +
             "引用之前先跟用户说明这一点，别把它当成还在用的笔记。"
+        );
+      }
+      // 空窗口不等于空笔记：from 越过全文末尾时服务端老实回 "" + 200。不吭声的话
+      // agent 只看到 content:"" ，很容易转述成「这条笔记是空的」——那是在冤枉用户的记录。
+      if (data.content === "" && typeof data.content_length === "number" && data.content_length > 0) {
+        warn(
+          "EMPTY_WINDOW",
+          `这个窗口没读到任何内容（from=${from} 已经越过全文末尾，全文共 ${data.content_length} 字）。` +
+            "这**不是**说这条笔记是空的——把 from 调回 0～" +
+            `${data.content_length} 之间再读一次。`
         );
       }
       // 别静默截断：窗口没读完时说清楚全文有多长、下一个窗口从哪开始。

@@ -90,6 +90,10 @@ function respond(scenario, slug, body) {
         )
       ];
 
+    case "read-past-end":
+      // 服务端行为：from 越过全文末尾 → full.slice(from,to) === ""，照样 200（不是 404）
+      return [200, envelope(sourceRead(body, { content: "", content_length: 65000, truncated: false }))];
+
     case "validation":
       return [400, errorEnvelope("VALIDATION_ERROR", "q 不能为空")];
 
@@ -370,6 +374,29 @@ check("read 续读第二窗 → 起点是 from + 实际长度，不是常数 200
   const r = await run(["read", '{"source_id":"src_3","from":20000,"to":5000000}'], withKey("read-truncated"));
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stderr, /from=40000/); // 20000 + 20000
+});
+
+check("read 只给 from 续读（照 TRUNCATED 告警走）→ to 补成 from+20000，不是绝对 20000", async () => {
+  // 回归：WINDOW_MAX 是窗口**宽度**。写死成绝对 to 时，脚本自己 [warn] TRUNCATED 里
+  // 教 agent 传的 from=20000 会算出 to=20000 → 空窗口硬错误，续读指引自相矛盾。
+  const r = await run(["read", '{"source_id":"src_3","from":20000}'], withKey("read-truncated"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.deepEqual(lastBody("source-read"), { source_id: "src_3", from: 20000, to: 40000 });
+});
+
+check("read 只给深处的 char_start（无 char_end）→ 窗口跟着 from 走，不塌成空窗口", async () => {
+  const r = await run(["read", '{"source_id":"src_3","char_start":29980}'], withKey("read-truncated"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.deepEqual(lastBody("source-read"), { source_id: "src_3", from: 29480, to: 49480 });
+});
+
+check("read 窗口越过全文末尾 → [warn] EMPTY_WINDOW，不许被读成「笔记是空的」", async () => {
+  const r = await run(["read", '{"source_id":"src_past","from":100000,"to":120000}'], withKey("read-past-end"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /^\[warn\] EMPTY_WINDOW: /);
+  assert.match(r.stderr, /说这条笔记是空的/); // 必须明说「空窗口 ≠ 空笔记」
+  assert.match(r.stderr, /全文共 65000 字/); // 给出真实全长，agent 才知道该往回调
+  assert.equal(JSON.parse(r.stdout).content, "");
 });
 
 check("read 到已归档来源 → [warn] ARCHIVED，不拦截也不静默", async () => {
