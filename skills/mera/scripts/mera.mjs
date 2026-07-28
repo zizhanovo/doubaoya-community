@@ -123,18 +123,57 @@ async function call(slug, body) {
   return envelope.data && typeof envelope.data === "object" ? envelope.data : {};
 }
 
-function requireContentOrUrl(body) {
+function validateWriteBody(body) {
   const hasContent = typeof body.content === "string" && body.content.trim() !== "";
   const hasUrl = typeof body.url === "string" && body.url.trim() !== "";
   if (!hasContent && !hasUrl) {
     fail("VALIDATION_ERROR", "content 与 url 至少给一个（二选一）。");
   }
+  // url 模式下服务端硬用抓到的页面标题，客户端这几个字段会被静默丢掉 —— 丢之前先吭一声。
+  if (hasUrl) {
+    const ignored = ["title", "source_type", "origin_uri"].filter((key) => body[key] !== undefined);
+    if (ignored.length) {
+      warn(
+        "IGNORED_FIELDS",
+        `url 模式下服务端会忽略 ${ignored.join(" / ")}（标题以抓回来的页面标题为准）。别告诉用户标题按他给的存了。`
+      );
+    }
+  }
+}
+
+const NO_EVIDENCE_NOTICE = "你的笔记里没有能支撑这个问题的内容。";
+// Mera 在无证据时返回的英文硬编码占位句（不是回答内容）。
+const UNSUPPORTED_ANSWER_EN = /^I could not find any supported evidence/i;
+
+// evidence_level === "none" ⟺ has_evidence === false ⟺ citations 为空（Mera 侧三者恒等价）。
+// 注意：别拿 evidence.grade === "待核实" 当判据 —— reference 级（确实检索到了用户原文）也是这个 grade。
+function markNoEvidence(data) {
+  const citations = Array.isArray(data.citations) ? data.citations : null;
+  const noEvidence =
+    data.evidence_level === "none" || data.has_evidence === false || (citations !== null && citations.length === 0);
+  if (!noEvidence) return data;
+
+  const result = {
+    ...data,
+    no_evidence: true,
+    answer_notice: `${NO_EVIDENCE_NOTICE}要明说这一点，再决定要不要用你自己的常识补一句（补了必须标明那是你的判断）。`
+  };
+  // ponytail: 只在命中那句英文占位符时替换 answer —— 它是占位符不是内容，原样转述等于甩一句英文给中文用户。
+  // 天花板：Mera 改了文案就匹配不中；届时 answer 原样保留，但 no_evidence / answer_notice / stderr 照常报，agent 不会漏。
+  if (typeof data.answer === "string" && UNSUPPORTED_ANSWER_EN.test(data.answer.trim())) {
+    result.answer = NO_EVIDENCE_NOTICE;
+  }
+  warn(
+    "NO_EVIDENCE",
+    `${NO_EVIDENCE_NOTICE}这次问答没有任何 citation，别把 answer 当成用户的观点转述，也别编出处。`
+  );
+  return result;
 }
 
 // remember = write + 退避轮询 status 到终态。
 // 写入是异步的：只调 write 拿到 202 就说「已保存」= 撒谎，所以把轮询包进脚本，别让 agent 自己编排。
 async function remember(body) {
-  requireContentOrUrl(body);
+  validateWriteBody(body);
 
   const written = await call("note-write", body);
   const ingestionId = written.ingestion_id;
@@ -196,7 +235,7 @@ async function main() {
 
     case "write": {
       const body = parseBody(rest[0]);
-      requireContentOrUrl(body);
+      validateWriteBody(body);
       out(await call("note-write", body));
       break;
     }
@@ -220,13 +259,24 @@ async function main() {
       if (typeof body.query_text !== "string" || !body.query_text.trim()) {
         fail("VALIDATION_ERROR", 'ask 需要 query_text。示例: \'{"query_text":"我对远程办公怎么看"}\'');
       }
-      out(await call("ask", body));
+      out(markNoEvidence(await call("ask", body)));
       break;
     }
 
-    case "self":
-      out(await call("self", {}));
+    case "self": {
+      const data = await call("self", {});
+      const core = data.core && typeof data.core === "object" ? data.core : {};
+      // persona_core 为 null 是正常状态（从没跑过整理），不是错误 —— 但绝不许 agent 就此脑补用户是什么样的人。
+      if (core.persona_core === null || core.persona_core === undefined) {
+        warn(
+          "NO_PERSONA_CORE",
+          "这个账号还没有人格内核（从没跑过整理）。别脑补他是什么样的人：如实告诉他去 https://mera.doubaoya.com 跑一次整理，" +
+            "这一轮就先只用 memories 里的关键记忆。"
+        );
+      }
+      out(data);
       break;
+    }
 
     default:
       console.log(USAGE);

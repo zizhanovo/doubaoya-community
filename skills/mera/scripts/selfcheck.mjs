@@ -79,6 +79,46 @@ function respond(scenario, slug) {
         })
       ];
 
+    case "ask-none": // Mera 无证据时回的是一句英文硬编码占位符
+      return [
+        200,
+        envelope({
+          answer: "I could not find any supported evidence to answer this query.",
+          has_evidence: false,
+          evidence_level: "none",
+          evidence: { grade: "待核实", grounded_count: 0, reference_count: 0, note: null },
+          citations: [],
+          conversation_id: "conv_1",
+          message_id: "msg_1"
+        })
+      ];
+
+    case "ask-reference": // grade 同样是「待核实」，但确实检索到了用户原文——不许当成无支撑
+      return [
+        200,
+        envelope({
+          answer: "你在几条笔记里提过远程办公，倾向是「先异步、必要时再同步」。",
+          has_evidence: true,
+          evidence_level: "reference",
+          evidence: { grade: "待核实", grounded_count: 0, reference_count: 2, note: null },
+          citations: [
+            { kind: "reference", index: 1, chunk_id: "c1", raw_source_id: "r1", raw_source: { id: "r1", title: "2026-07 的一条笔记", origin_uri: null, source_type: "note" } },
+            { kind: "reference", index: 2, chunk_id: "c2", raw_source_id: "r2", raw_source: { id: "r2", title: "远程办公的三点想法", origin_uri: null, source_type: "note" } }
+          ],
+          conversation_id: "conv_2",
+          message_id: "msg_2"
+        })
+      ];
+
+    case "self-null-core": // 用户从没跑过整理：200 + persona_core: null
+      return [
+        200,
+        envelope({
+          core: { persona_core: null, current_version_no: null, versions: [] },
+          memories: [{ id: "m1", statement: "在做一个第二大脑", kind: "factual", memory_type: "project", recorded_at: "2026-07-01", source: {} }]
+        })
+      ];
+
     case "ingest-failed":
       if (slug === "note-write") return [202, envelope({ ingestion_id: "ing_4", status: "queued" })];
       return [200, envelope({ ingestion_id: "ing_4", status: "failed", error: "URL 抓取超时", stages: [{ stage: "fetch", status: "failed" }] })];
@@ -151,6 +191,8 @@ check("remember 轮询到 done → exit 0 + disposition 原样带出", async () 
   assert.equal(data.disposition.fact_count, 3);
   assert.equal(data.disposition.todo_count, 1);
   assert.deepEqual(data.disposition.entities, ["远程办公", "张三"]);
+  // 响应里没有 deduplicated 时不许合成一个 false —— 那等于替 Mera 断言「这是首次记录」
+  assert.equal("deduplicated" in data, false);
 });
 
 check("remember 轮询超时 → pending，绝不假装成功", async () => {
@@ -184,6 +226,45 @@ check("信封缺 data → 退化成空对象，不崩栈", async () => {
   const r = await run(["self"], withKey("thin-envelope"));
   assert.equal(r.code, 0, r.stderr);
   assert.deepEqual(JSON.parse(r.stdout), {});
+});
+
+check("ask 无证据 → 英文占位句不外泄，标 no_evidence", async () => {
+  const r = await run(["ask", '{"query_text":"我对量子计算怎么看"}'], withKey("ask-none"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(r.stdout.includes("I could not find any supported evidence"), false);
+  const data = JSON.parse(r.stdout);
+  assert.equal(data.no_evidence, true);
+  assert.equal(data.answer, "你的笔记里没有能支撑这个问题的内容。");
+  assert.match(data.answer_notice, /没有能支撑/);
+  assert.match(r.stderr, /^\[warn\] NO_EVIDENCE: /);
+  assert.equal(data.evidence_level, "none"); // 原字段照样透传
+});
+
+check("ask 有 reference 证据 → 不因 grade「待核实」被误判成无支撑", async () => {
+  const r = await run(["ask", '{"query_text":"我对远程办公怎么看"}'], withKey("ask-reference"));
+  assert.equal(r.code, 0, r.stderr);
+  const data = JSON.parse(r.stdout);
+  assert.equal("no_evidence" in data, false);
+  assert.match(data.answer, /先异步/); // answer 原样保留
+  assert.equal(data.citations.length, 2);
+  assert.equal(/NO_EVIDENCE/.test(r.stderr), false);
+});
+
+check("self 无人格内核 → 提醒别脑补，数据照样透传", async () => {
+  const r = await run(["self"], withKey("self-null-core"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /^\[warn\] NO_PERSONA_CORE: /);
+  assert.match(r.stderr, /别脑补/);
+  const data = JSON.parse(r.stdout);
+  assert.equal(data.core.persona_core, null);
+  assert.equal(data.memories[0].memory_type, "project");
+});
+
+check("url 模式带 title → 提醒服务端会忽略，不静默丢掉", async () => {
+  const r = await run(["write", '{"url":"https://example.com/a","title":"我起的标题"}'], withKey("poll-done"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /^\[warn\] IGNORED_FIELDS: /);
+  assert.match(r.stderr, /title/);
 });
 
 check("write 缺 content/url → 本地拦下，不浪费一次调用", async () => {

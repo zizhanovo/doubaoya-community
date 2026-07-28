@@ -179,15 +179,16 @@ Content-Type: application/json
 
 | slug（`POST /api/apis/mera/<slug>/call`） | 能力 | 关键入参 |
 |------|------|---------|
-| `note-write` | 写入（**202 异步**，返回 `ingestion_id`，必须再轮询 `note-status`） | `{ "content"? , "url"?, "title"? }`（content / url 二选一） |
+| `note-write` | 写入（**202 异步**，返回 `ingestion_id`，必须再轮询 `note-status`） | `{ "content"? , "url"?, "title"? }`（content / url 二选一；`title` 只在 content 模式生效） |
 | `note-status` | 查写入处理状态与处置结果 `disposition` | `{ "ingestion_id" }` |
-| `note-search` | 在自己的笔记里混合检索，拿**原文片段** | `{ "q" }` |
-| `ask` | 基于自己的笔记问答，返回 `answer` + `citations` | `{ "query_text", "top_k"?, "conversation_id"? }` |
+| `note-search` | 在自己的笔记里混合检索，拿**原文片段**（无分页，一次最多 20 个来源） | `{ "q" }` |
+| `ask` | 基于自己的笔记问答，返回 `answer` + `citations`（**每次 1 点**，其余四个不计点） | `{ "query_text", "top_k"?（≤50）, "conversation_id"? }` |
 | `self` | 人格内核 + 关键记忆，用来给回答定调 | `{}` |
 
 > 别自己手搓这套调用：装 `mera` Skill，用它的 `node scripts/mera.mjs remember '<json>'`——
 > 写入的轮询、收条翻译、去重与失败分支都在里面了。行为规则见 `skills/mera/SKILL.md`。
-> **红线**：没拿到 `status=done` 之前不许说「已保存」；`ask` 的结论必须带出处，`has_evidence=false` 要明说没支撑。
+> **红线**：没拿到 `status=done` 之前不许说「已保存」；`ask` 的结论必须带出处，
+> `evidence_level === "none"` 时要明说没支撑（**别拿 `evidence.grade` 判**），也别把 Mera 那句英文占位符转述给用户。
 
 ---
 

@@ -17,7 +17,9 @@
       },
       "contract": [
         "Writes are asynchronous: always use `remember`, never report success before status=done.",
-        "Translate disposition into plain words; state deduplicated and failed outcomes explicitly."
+        "Translate disposition into plain words; state failed outcomes explicitly.",
+        "Only deduplicated === true may be reported as a duplicate; a missing field never means first-time capture.",
+        "title applies to content mode only and never changes an existing record; url mode ignores it."
       ]
     },
     {
@@ -37,8 +39,9 @@
       "contract": [
         "Raw material or original wording goes to `search`; a synthesized conclusion goes to `ask`.",
         "Every `ask` answer must carry citations[].raw_source.title; never invent a source.",
-        "When has_evidence is false or evidence_level is low, say so before answering.",
-        "Take `self` once per session for tone, not on every turn."
+        "evidence_level === \"none\" is the only no-support predicate; evidence.grade is not, because reference-level evidence shares the same grade.",
+        "When evidence_level is \"none\", say so in Chinese and never relay Mera's English placeholder answer.",
+        "Take `self` once per session for tone, not on every turn; persona_core may be null and must not be invented."
       ]
     },
     {
@@ -83,6 +86,7 @@
       "request_signals": [
         "answer without citations",
         "fabricated raw_source title",
+        "English placeholder answer relayed verbatim",
         "personal note content forwarded to another service"
       ],
       "reason": "Second-brain content is private and evidence-bound; unsourced answers and outbound leaks both break that contract."
