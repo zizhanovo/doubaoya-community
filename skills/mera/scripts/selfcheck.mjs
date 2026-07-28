@@ -74,8 +74,21 @@ function respond(scenario, slug, body) {
       if (slug === "note-search") return [200, envelope(searchHit("src_2", 120, 400))];
       return [200, envelope(sourceRead(body))];
 
+    case "read-archived": // 按 id 直读是唯一能读到归档源的路径
+      return [200, envelope(sourceRead(body, { archived_at: "2026-07-25T10:00:00Z" }))];
+
     case "read-truncated":
-      return [200, envelope(sourceRead(body, { truncated: true, content_length: 65000, to: 20000 }))];
+      // 服务端行为：content = full.slice(from, to) 再砍到 20000；`to` 原样回显请求值（不是实际终点）
+      return [
+        200,
+        envelope(
+          sourceRead(body, {
+            content: `单机版${"x".repeat(19997)}`, // 恰好 20000 字
+            truncated: true,
+            content_length: 65000
+          })
+        )
+      ];
 
     case "validation":
       return [400, errorEnvelope("VALIDATION_ERROR", "q 不能为空")];
@@ -339,13 +352,38 @@ check("search → read 串联：char_start < 500 时 from clamp 到 0，绝不�
   assert.ok(body.from >= 0);
 });
 
-check("read 被截断 → [warn] TRUNCATED 带全文长度与下一个窗口起点", async () => {
-  const r = await run(["read", '{"source_id":"src_3","from":0,"to":20000}'], withKey("read-truncated"));
+check("read 被截断 → 续读起点按实际读到的长度推进，不是回显的 to", async () => {
+  // 响应里的 to 是请求原样回显（5000000）；实际只读到 20000 字。
+  // 按回显 to 续读会跳空 [20000, 5000000) —— 这正是 truncated 该防住的数据丢失。
+  const r = await run(["read", '{"source_id":"src_3","from":0,"to":5000000}'], withKey("read-truncated"));
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stderr, /^\[warn\] TRUNCATED: /);
   assert.match(r.stderr, /65000/); // 全文总长
-  assert.match(r.stderr, /from=20000/); // 下一个窗口从哪开始
-  assert.equal(JSON.parse(r.stdout).truncated, true);
+  assert.match(r.stderr, /from=20000/); // = 0 + 实际读到的 20000
+  assert.equal(/5000000/.test(r.stderr), false); // 绝不能把回显的 to 当续读起点
+  const data = JSON.parse(r.stdout);
+  assert.equal(data.truncated, true);
+  assert.equal(data.content.length, 20000);
+});
+
+check("read 续读第二窗 → 起点是 from + 实际长度，不是常数 20000", async () => {
+  const r = await run(["read", '{"source_id":"src_3","from":20000,"to":5000000}'], withKey("read-truncated"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /from=40000/); // 20000 + 20000
+});
+
+check("read 到已归档来源 → [warn] ARCHIVED，不拦截也不静默", async () => {
+  const r = await run(["read", '{"source_id":"src_old","from":0,"to":900}'], withKey("read-archived"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /^\[warn\] ARCHIVED: /);
+  assert.match(r.stderr, /2026-07-25/); // 带上归档时间
+  assert.match(JSON.parse(r.stdout).content, /单机版/); // 数据照常给，不拦截
+});
+
+check("read 未归档 → 不打 ARCHIVED 噪音", async () => {
+  const r = await run(["read", '{"source_id":"src_9","from":0,"to":900}'], withKey("read-window"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(/ARCHIVED/.test(r.stderr), false);
 });
 
 check("read 缺 source_id → 本地拦下，不浪费一次调用", async () => {

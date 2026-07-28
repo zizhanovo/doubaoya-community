@@ -293,13 +293,30 @@ async function main() {
       }
       const { from, to } = resolveWindow(body);
       const data = await call("source-read", { source_id: sourceId, from, to });
+      // 按 id 直读是唯一能读到已归档来源的路径（列表和检索都排除它们）。不拦截，但绝不静默。
+      if (data.archived_at !== null && data.archived_at !== undefined) {
+        warn(
+          "ARCHIVED",
+          `这条来源已归档（archived_at=${data.archived_at}），用户可能已经把它删了。` +
+            "引用之前先跟用户说明这一点，别把它当成还在用的笔记。"
+        );
+      }
       // 别静默截断：窗口没读完时说清楚全文有多长、下一个窗口从哪开始。
+      //
+      // 续读起点必须用「本次 from + 实际读到的长度」推进。
+      // 响应里的 to 是请求原样回显、不是实际窗口终点：截断时实际窗口只到 from+20000，
+      // 按回显的 to 续读会跳空中间一大段 —— 那正是 truncated 本该防住的数据丢失。
       if (data.truncated === true) {
-        const nextFrom = Number.isFinite(data.to) ? data.to : to;
+        const readLength = typeof data.content === "string" ? data.content.length : null;
+        const howToContinue =
+          readLength === null
+            ? "要接着读就把窗口调小一点再读一次。"
+            : `要接着读就再开一个窗口：from=${from + readLength}（＝本次 from ＋ 实际读到的长度；` +
+              "别拿响应里的 to 当续读起点，那是请求的原样回显)。";
         warn(
           "TRUNCATED",
-          `这个窗口被服务端上限截断了，后面还有内容（全文共 ${data.content_length ?? "未知"} 字）。` +
-            `要接着读就再开一个窗口：from=${nextFrom}。别把这一窗当成全文。`
+          `这个窗口被服务端 20000 字上限截断了，后面还有内容（全文共 ${data.content_length ?? "未知"} 字）。` +
+            `${howToContinue}别把这一窗当成全文。`
         );
       }
       out(data);

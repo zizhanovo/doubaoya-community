@@ -239,6 +239,9 @@ node scripts/mera.mjs status <ingestion_id>
 - **没有分页。** 接口只收 `q`，条数是服务端定死的（**一次最多 20 个来源**），返回里没有 cursor / total / next。
   别去试 `page` / `limit` / `top_k` 这类参数——不存在。要更多就**换个关键词再搜一次**，
   用户要「全部」时也如实说明「一次最多给 20 个来源」。
+- **条数可能少于 20**（归档 / 越权的来源会在二次查询时被丢掉），**别假设恒为 20**，也别因为少了就说「搜漏了」。
+- `results[].id` 是**来源（raw_source）的 id**，`read` 要的就是它；`chunk_id` 是另一张表的 id，**别拿去当 `source_id`**。
+  `search` 能搜到的一定读得到（检索侧已经排除归档源）。
 
 ### 5.2 `read`：把命中点周围的原文读出来
 
@@ -259,10 +262,24 @@ node scripts/mera.mjs read '{"source_id":"<search 结果的 id>","char_start":12
 返回 `{id, title, origin_uri, source_type, content, media_type, created_at, archived_at, from, to, content_length, truncated}`：
 
 - `content` 是**窗口内的原文切片**（不是全文）；`content_length` 是**全文总字符数**，别拿它当窗口长度。
-- `truncated === true` → 窗口撞上了服务端 20000 字上限，脚本会打 `[warn] TRUNCATED` 并告诉你下一个窗口从哪开始。
-  **别把这一窗当成全文**；用户要完整内容就顺着 `from=<上一窗的 to>` 再读一次。
+- 窗口是 **`[from, to)` 左闭右开**（`String.slice` 语义）。`to` 超出全文是**安全常态**——服务端自动截到结尾，
+  照常 200、`truncated=false`。所以 `char_end + 1500` 越界不用管，别自己先跟 `content_length` 比一遍。
+- **接着往下读的起点分两种，别只记一种**：
+  - 没截断（`truncated=false`）→ 下一窗 `from = 上一窗的 to`。
+  - **截断了（`truncated=true`）→ 下一窗 `from = 本次 from + 实际读到的 content 长度`。**
+    ⚠️ 响应里的 `to` 是**请求原样回显、不是实际窗口终点**：截断时实际只读到 `from+20000`，
+    按回显的 `to` 续读会**跳空中间一大段**。脚本已经替你按实际长度算好并写在 `[warn] TRUNCATED` 里，照它给的 `from` 走。
+  - **别把这一窗当成全文**。判断「后面还有没有内容」看 `from + content.length < content_length`，不是看 `truncated`。
+- **窗口两端可能是半截**：`content` 按字符切，两端的上下文余量可能切在句子中间、甚至劈开一张 md 表格或一个标题。
+  **命中中心那段一定是完整的**（chunk 按语义段落切），所以**读没问题，但别把窗口内容当完整结构去解析**
+  （别指望两端的表格是完整表格）。图片 / PDF 源的 `content` 是结构化 markdown（不含 base64），同理。
+- `archived_at` 非空 → 这条来源**已归档，用户可能已经删了**。脚本会打 `[warn] ARCHIVED`。
+  数据照给、不拦你，但**引用前必须先跟用户说明**「这条你已经归档/删掉了」，别把它当还在用的笔记。
+  （正常链路碰不到：`search` 和列表都排除归档源，只有按 id 直读能读到——所以一旦看到这条告警，
+  多半是你在复用旧会话里的 id 或用户手动粘的 id，更要说清楚。）
 - 一次问答里读 **1–3 条**就够了。全部读一遍既慢又会把上下文冲爆——挑 `score` 最高、`title` / `created_at` 最对得上的。
-- 计费 **0 点**，放心读；但别对同一条反复开重叠窗口。
+- 计费 **0 点**，放心读；但别对同一条反复开重叠窗口。**限流是 240 次/分钟**（所有 slug 合计），
+  1–3 条离这个天花板很远，而「把 20 条来源各开 3 个窗口」这种打法就开始贴边了——别那么干。
 
 引用时用 `read` 拿到的**真实原文**和真实 `title`，别拿 `snippet` 拼一个看起来像原话的东西。
 
@@ -409,7 +426,7 @@ node scripts/mera.mjs read '{"source_id":"<search 结果的 id>","char_start":12
 | `INSUFFICIENT_CREDITS` / `NO_CREDIT_ACCOUNT`（402） | 额度不足 / 没有额度账户 | 提醒用户到 doubaoya.com 查看 / 补充额度。 |
 | `FORBIDDEN`（403） | 没有这个能力的权限 | 如实转告，别重试。 |
 | `ENDPOINT_NOT_FOUND` / `NOT_FOUND`（404） | 接口路径不对 / 对象不存在 | 一般是脚本被改动或 `ingestion_id` 写错，核对后重试。 |
-| `RATE_LIMITED`（429） | 调太快了 | 等一会儿再来，**别原地狂重试**。 |
+| `RATE_LIMITED`（429） | 调太快了（上限 **240 次/分钟**，所有 slug 合计） | 等一会儿再来，**别原地狂重试**。正常用法碰不到，撞上说明读得太散（见 §9）。 |
 | `PROVIDER_FAILED`（502） | 上游临时失败 | **额度自动退回，可安全重试**。重试会不会存两份见 §4.4（content 模式不会，url 模式不保证）。重试一两次仍失败再告知用户。 |
 | `CAPABILITY_UNAVAILABLE`（503） | 这个部署没配 Mera | 如实告诉用户「当前服务没开通第二大脑」，**别重试**。 |
 | `NETWORK_ERROR`（脚本本地） | 连不上 doubaoya.com | 检查网络后重试。 |
@@ -424,7 +441,10 @@ node scripts/mera.mjs read '{"source_id":"<search 结果的 id>","char_start":12
 - **写入没确认就是没确认。** `pending` 不是成功，也不是失败——就照实说「已入队、还没确认」。
 - **检索 0 条**：如实说没搜到，建议换个词再搜。**绝不编内容**，也别指望换成 `ask` 就会有——它检索的是同一批笔记。
 - **别拿 240 字的 snippet 当答案**：要结论就 `read`。片段里没有的东西，**不许靠猜补全**。
-- **`read` 只是一扇窗**：`truncated === true` 时后面还有内容，别把这一窗说成全文（见 §5.2）。
+- **`read` 只是一扇窗**：`truncated === true` 时后面还有内容，别把这一窗说成全文；
+  续读起点用「本次 `from` + 实际读到的长度」，**别信响应里回显的 `to`**（见 §5.2）。
+- **限流 240 次/分钟**（所有 slug 合计）。正常用法离它很远：一轮回忆是 1 次 `search` + 1–3 次 `read`。
+  会贴边的是「把 20 个来源各开 3 个窗口」这类打法——别那么干，撞上就是 `RATE_LIMITED`。
 - **字段缺失**：Mera 的返回字段可能缺（如没有 `disposition`、没有 `citations`），
   一律「取不到就跳过这句」，别让缺字段搞崩整段汇报，也别把 `undefined` 打给用户。
 - **别越权改用户的大脑**：本 Skill 只有写入和读取，**没有删除 / 修改**能力（第一版有意如此）。
