@@ -25,6 +25,7 @@ description: >-
 - **解析作品**：粘贴一个公开链接，返回归一化的标题、作者、互动数据。
 - **保命**：发布前检测违禁词，给风险等级和替换建议。
 - **写脚本**：以上数据为素材，由你（agent）合成开场脚本 / 分镜。
+- **记进第二大脑**：用户随口说的一句话写进他**自己的**笔记，之后带着出处捞出来（`mera`）。
 
 ---
 
@@ -37,6 +38,10 @@ description: >-
 [`references/wechat-routing.json`](references/wechat-routing.json)，再按其优先级选 Skill。极简原则：
 本地扫码、按号查最新 / 今日、拉正文或历史归档走 MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 
+**「我自己的东西」例外**：只要请求指向用户**自己**的内容（帮我记一下 / 我的笔记 / 我之前说过 / 我是个什么样的人），
+先读 [`references/mera-routing.json`](references/mera-routing.json)，走 `mera` 第二大脑，别拿公开平台搜索去回答——
+公开搜索看不见用户自己的笔记，只会拿陌生人的内容糊弄他。
+
 | 用户这么说（运营白话） | 该走哪类能力 | 典型起手 slug |
 |------------------------|--------------|---------------|
 | "最近全网在火什么？给我点选题" | 综合热点选题（无关键词直取 + 结合IP匹配） | `trending-hub` |
@@ -45,6 +50,9 @@ description: >-
 | "帮我把这段文案过一遍，别违规" | 内容安全 | `content-safety-check` |
 | "给我配张图" | 创作助手 | `gpt-image-gen`、`seedream-lite` |
 | "把这条爆款改写成我的文案" | 改写（多在本地 agent 侧完成） | 用搜来的素材，由你合成 |
+| **"帮我记一下 / 存进笔记 / 我刚想到…"** | **第二大脑写入**（异步，必须轮询到收条） | Skill `mera` → `remember` |
+| **"我之前是不是说过 / 查查我的笔记 / 我对 X 怎么看"** | **第二大脑回忆**（要素材用 search、要结论用 ask） | Skill `mera` → `search` / `ask` |
+| **"我是个什么样的人 / 按我的风格写"** | **人格内核定调**（每段对话取一次就够） | Skill `mera` → `self` |
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：
 1. 先确认有没有 key（没有就带他走 §1 拿 key，一次就好）。
@@ -164,6 +172,23 @@ Content-Type: application/json
 > 还有图片生成等创作助手类操作（如 `seedream-lite`、`gpt-image-gen`）。
 > 完整、最新清单请在运行时用发现接口拉取（见 §4），别把清单写死。
 
+### 第二大脑（用户自己的内容 · 走 `mera` Skill）
+
+跟上面「往外看」的能力相反：这一组是**往里看**，读写的是用户**自己**的 Mera 第二大脑
+（https://mera.doubaoya.com），一条 `DOUBAOYA_API_KEY` 对应他自己的账号。
+
+| slug（`POST /api/apis/mera/<slug>/call`） | 能力 | 关键入参 |
+|------|------|---------|
+| `note-write` | 写入（**202 异步**，返回 `ingestion_id`，必须再轮询 `note-status`） | `{ "content"? , "url"?, "title"? }`（content / url 二选一） |
+| `note-status` | 查写入处理状态与处置结果 `disposition` | `{ "ingestion_id" }` |
+| `note-search` | 在自己的笔记里混合检索，拿**原文片段** | `{ "q" }` |
+| `ask` | 基于自己的笔记问答，返回 `answer` + `citations` | `{ "query_text", "top_k"?, "conversation_id"? }` |
+| `self` | 人格内核 + 关键记忆，用来给回答定调 | `{}` |
+
+> 别自己手搓这套调用：装 `mera` Skill，用它的 `node scripts/mera.mjs remember '<json>'`——
+> 写入的轮询、收条翻译、去重与失败分支都在里面了。行为规则见 `skills/mera/SKILL.md`。
+> **红线**：没拿到 `status=done` 之前不许说「已保存」；`ask` 的结论必须带出处，`has_evidence=false` 要明说没支撑。
+
 ---
 
 ## 4. 运行时发现操作（别把清单写死）
@@ -280,3 +305,5 @@ node scripts/doubaoya.mjs describe xiaohongshu-viral-notes
 3. **先 `success` 后取数**；`false` 时按 §2.3 处理错误码，别把原始 500/502 直接糊给用户。
 4. **slug 不确定就先发现**（§4），不要硬编死清单——平台会上新。
 5. **写脚本以真实数据为素材**，把热点 / 爆款笔记的真实角度落进脚本，别脱离数据空写。
+6. **第二大脑（`mera`）里是用户的私人内容**：只用来回答用户本人，**不得外传到别的服务**；
+   写入没拿到 `status=done` 之前**绝不说「已保存」**，任何失败都要明说，不许无声吞掉。

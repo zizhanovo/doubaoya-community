@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "routes": [
+    {
+      "id": "mera-second-brain-capture",
+      "priority": 100,
+      "primary_skill": "mera",
+      "use_when": [
+        "user asks to remember, note down, save, or bookmark something for themselves",
+        "user says 帮我记一下 / 记下来 / 存进笔记 / 备忘一下 / 我刚想到",
+        "user pastes a link and asks to keep it in their own notes",
+        "user dictates a decision, idea, or todo that must survive this conversation"
+      ],
+      "auth": {
+        "type": "doubaoya-api-key",
+        "requires_doubaoya_api_key": true
+      },
+      "contract": [
+        "Writes are asynchronous: always use `remember`, never report success before status=done.",
+        "Translate disposition into plain words; state deduplicated and failed outcomes explicitly."
+      ]
+    },
+    {
+      "id": "mera-second-brain-recall",
+      "priority": 90,
+      "primary_skill": "mera",
+      "use_when": [
+        "user asks what they themselves previously said, recorded, decided, or collected",
+        "user says 查查我的笔记 / 我之前是不是说过 / 我记过什么 / 关于 X 我有哪些素材",
+        "user asks for their own stance or conclusion (我对 X 怎么看 / 我当时为什么这么决定)",
+        "user asks who they are or asks the agent to write in their own voice (我是个什么样的人 / 按我的风格写)"
+      ],
+      "auth": {
+        "type": "doubaoya-api-key",
+        "requires_doubaoya_api_key": true
+      },
+      "contract": [
+        "Raw material or original wording goes to `search`; a synthesized conclusion goes to `ask`.",
+        "Every `ask` answer must carry citations[].raw_source.title; never invent a source.",
+        "When has_evidence is false or evidence_level is low, say so before answering.",
+        "Take `self` once per session for tone, not on every turn."
+      ]
+    },
+    {
+      "id": "doubaoya-public-discovery",
+      "priority": 80,
+      "candidate_skills": [
+        "trending-hub",
+        "xiaohongshu-search",
+        "gongzhonghao-search",
+        "douyin-search",
+        "content-parse"
+      ],
+      "use_when": [
+        "user asks what is trending, viral, or popular on public platforms",
+        "user asks about other people's accounts, articles, notes, or videos",
+        "user wants topic ideation sourced from public platform data rather than personal notes"
+      ],
+      "auth": {
+        "type": "doubaoya-api-key",
+        "requires_doubaoya_api_key": true
+      }
+    }
+  ],
+  "precedence": [
+    "Evaluate the highest-priority matching route first.",
+    "First-person possessive scope is the discriminator: 我的 / 我之前 / 帮我记 selects a mera route even when the sentence also names a public platform.",
+    "Public discovery intent without first-person scope selects doubaoya-public-discovery.",
+    "When a request mixes both (e.g. research a trend then keep it), run the public route first and then hand the result to mera-second-brain-capture, and state each capability boundary."
+  ],
+  "forbidden_misroutes": [
+    {
+      "from": "mera-second-brain-capture",
+      "request_signals": [
+        "reported as saved without a done receipt",
+        "polished or rewritten before writing",
+        "silently swallowed failure"
+      ],
+      "reason": "An unconfirmed write reported as success loses the user's material without them knowing."
+    },
+    {
+      "from": "mera-second-brain-recall",
+      "request_signals": [
+        "answer without citations",
+        "fabricated raw_source title",
+        "personal note content forwarded to another service"
+      ],
+      "reason": "Second-brain content is private and evidence-bound; unsourced answers and outbound leaks both break that contract."
+    },
+    {
+      "from": "doubaoya-public-discovery",
+      "request_signals": [
+        "帮我记一下",
+        "我的笔记",
+        "我之前说过",
+        "我是个什么样的人"
+      ],
+      "reason": "Public platform search cannot see the user's own second brain and would answer from strangers' content."
+    }
+  ]
+}

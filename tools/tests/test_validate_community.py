@@ -109,7 +109,12 @@ class CommunityValidatorTests(unittest.TestCase):
             root = Path(directory)
             self.repository_fixture(root)
             readme = root / "README.md"
-            readme.write_text(readme.read_text(encoding="utf-8").replace("共 52 个", "共 51 个"), encoding="utf-8")
+            # 计数从 skills/ 现场数出来：写死数字会随每次新增 Skill 变成哑弹（已哑过一次）。
+            count = len(validator.discover_skill_dirs(root))
+            readme.write_text(
+                readme.read_text(encoding="utf-8").replace(f"共 {count} 个", f"共 {count - 1} 个"),
+                encoding="utf-8",
+            )
             with self.assertRaisesRegex(validator.ValidationError, "README Skill count is stale"):
                 validator.validate_readme(root)
 
