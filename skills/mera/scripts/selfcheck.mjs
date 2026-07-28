@@ -228,13 +228,16 @@ check("信封缺 data → 退化成空对象，不崩栈", async () => {
   assert.deepEqual(JSON.parse(r.stdout), {});
 });
 
-check("ask 无证据 → 英文占位句不外泄，标 no_evidence", async () => {
+check("ask 无证据 → answer 不含英文占位句，但原件留在 answer_upstream", async () => {
+  const upstream = "I could not find any supported evidence to answer this query.";
   const r = await run(["ask", '{"query_text":"我对量子计算怎么看"}'], withKey("ask-none"));
   assert.equal(r.code, 0, r.stderr);
-  assert.equal(r.stdout.includes("I could not find any supported evidence"), false);
   const data = JSON.parse(r.stdout);
   assert.equal(data.no_evidence, true);
+  // 红线是「不许把这句英文当答案转述给用户」，不是「这个字符串不许出现在管道里」
+  assert.equal(data.answer.includes("I could not find"), false);
   assert.equal(data.answer, "你的笔记里没有能支撑这个问题的内容。");
+  assert.equal(data.answer_upstream, upstream); // 加工可以，丢原件不行：逐字保留
   assert.match(data.answer_notice, /没有能支撑/);
   assert.match(r.stderr, /^\[warn\] NO_EVIDENCE: /);
   assert.equal(data.evidence_level, "none"); // 原字段照样透传
@@ -245,6 +248,7 @@ check("ask 有 reference 证据 → 不因 grade「待核实」被误判成无�
   assert.equal(r.code, 0, r.stderr);
   const data = JSON.parse(r.stdout);
   assert.equal("no_evidence" in data, false);
+  assert.equal("answer_upstream" in data, false); // 有证据时不加工，也就没有原件副本
   assert.match(data.answer, /先异步/); // answer 原样保留
   assert.equal(data.citations.length, 2);
   assert.equal(/NO_EVIDENCE/.test(r.stderr), false);

@@ -45,6 +45,8 @@ description: >-
 4. **不许把那句英文占位符甩给用户。** `evidence_level === "none"` 时 Mera 返回的 `answer` 是一句硬编码英文
    （`I could not find any supported evidence…`），那是占位符不是回答。脚本已经在这种情况下把它换成中文并打上
    `no_evidence: true`，你**照 `answer_notice` 说人话**，别把英文原句转述给中文用户。
+   上游原句一个字不动地留在 **`answer_upstream`** 里——那是**排查用的原件，不是给用户看的**，
+   除非用户自己要求看原始返回，否则不转述、不翻译、不改写它。
 5. **绝不回显 / 打印 / 记录整条 `DOUBAOYA_API_KEY`**——需要确认时只露前缀（如 `dyh_xxxx…`）。
 6. **隐私不外传。** 第二大脑里的内容是用户的私人材料：不要把检索到的内容发到别的服务 / 别的 API / 公开渠道，
    不要拿它去搜索引擎里搜，不要写进任何会外发的产物里，除非用户在这一轮明确要求。
@@ -240,7 +242,8 @@ node scripts/mera.mjs status <ingestion_id>
 
 **呈现规则（硬）**：
 
-1. 先看脚本有没有给 `no_evidence: true`（`evidence_level === "none"` 时脚本会加它，并把那句英文占位符换成中文）。
+1. 先看脚本有没有给 `no_evidence: true`（`evidence_level === "none"` 时脚本会加它，把那句英文占位符换成中文，
+   并把上游原句逐字留在 `answer_upstream`——**那是排查用的原件，不转述给用户**）。
    有 → 照 `answer_notice` 说人话，**绝不把英文原句转述给用户**，然后再决定要不要用你自己的常识补一句
    （补了必须标明「这是我的判断，不是你笔记里的内容」），也可以建议他换个问法、或者先记一条再来问。
 2. 没有 → 给 `answer`，并且**一定要连出处一起给**：从 `citations[]` 里取 `raw_source.title`
