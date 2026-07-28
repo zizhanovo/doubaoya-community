@@ -15,6 +15,9 @@ import path from "node:path";
 
 const CLI = path.join(path.dirname(fileURLToPath(import.meta.url)), "mera.mjs");
 const polls = new Map(); // scenario -> 已轮询次数
+const seen = []; // 假网关收到的请求：{slug, body}，用来断言脚本算出的窗口参数
+
+const lastBody = (slug) => seen.filter((entry) => entry.slug === slug).at(-1)?.body;
 
 function envelope(data) {
   return { success: true, requestId: "req_selfcheck", data, error: null };
@@ -24,8 +27,56 @@ function errorEnvelope(code, message) {
   return { success: false, requestId: "req_selfcheck", data: null, error: { code, message } };
 }
 
-function respond(scenario, slug) {
+function searchHit(id, charStart, charEnd) {
+  return {
+    results: [
+      {
+        id,
+        title: "和老王的一次对话",
+        source_type: "note",
+        media_type: "text",
+        created_at: "2026-07-20",
+        snippet: "……决定先做单机版……",
+        score: 0.82,
+        chunk_id: "chunk_1",
+        char_start: charStart,
+        char_end: charEnd
+      }
+    ]
+  };
+}
+
+function sourceRead(body, extra) {
+  return {
+    id: body.source_id,
+    title: "和老王的一次对话",
+    origin_uri: null,
+    source_type: "note",
+    media_type: "text",
+    created_at: "2026-07-20",
+    archived_at: null,
+    content: "（窗口内的原文）跟老王聊完，决定先做单机版再联网。",
+    from: body.from,
+    to: body.to,
+    content_length: 1234,
+    truncated: false,
+    ...extra
+  };
+}
+
+function respond(scenario, slug, body) {
   switch (scenario) {
+    case "read-window": // char_start 远大于窗口余量：from = char_start - 500
+      if (slug === "note-search") return [200, envelope(searchHit("src_1", 3000, 3400))];
+      return [200, envelope(sourceRead(body))];
+
+    case "read-clamp": // char_start < 500：from 必须 clamp 到 0，绝不能是负数
+      if (slug === "note-search") return [200, envelope(searchHit("src_2", 120, 400))];
+      return [200, envelope(sourceRead(body))];
+
+    case "read-truncated":
+      return [200, envelope(sourceRead(body, { truncated: true, content_length: 65000, to: 20000 }))];
+
     case "validation":
       return [400, errorEnvelope("VALIDATION_ERROR", "q 不能为空")];
 
@@ -149,7 +200,14 @@ function startServer() {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
-      const [status, payload] = respond(scenario, slug);
+      let parsed = {};
+      try {
+        parsed = JSON.parse(body || "{}");
+      } catch {
+        parsed = {};
+      }
+      seen.push({ slug, body: parsed });
+      const [status, payload] = respond(scenario, slug, parsed);
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(payload));
     });
@@ -240,6 +298,60 @@ check("信封缺 data → 退化成空对象，不崩栈", async () => {
   const r = await run(["self"], withKey("thin-envelope"));
   assert.equal(r.code, 0, r.stderr);
   assert.deepEqual(JSON.parse(r.stdout), {});
+});
+
+check("read 显式窗口 → 原样发出，原文打到 stdout", async () => {
+  const r = await run(["read", '{"source_id":"src_9","from":100,"to":900}'], withKey("read-window"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.deepEqual(lastBody("source-read"), { source_id: "src_9", from: 100, to: 900 });
+  assert.match(JSON.parse(r.stdout).content, /单机版/);
+});
+
+check("read 无位置线索 → 显式补 0/20000，不依赖服务端兜底", async () => {
+  const r = await run(["read", '{"source_id":"src_9"}'], withKey("read-window"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.deepEqual(lastBody("source-read"), { source_id: "src_9", from: 0, to: 20000 });
+});
+
+check("search → read 串联：from = char_start-500，to = char_end+1500", async () => {
+  const s = await run(["search", "老王"], withKey("read-window"));
+  assert.equal(s.code, 0, s.stderr);
+  const hit = JSON.parse(s.stdout).results[0];
+  const r = await run(
+    ["read", JSON.stringify({ source_id: hit.id, char_start: hit.char_start, char_end: hit.char_end })],
+    withKey("read-window")
+  );
+  assert.equal(r.code, 0, r.stderr);
+  assert.deepEqual(lastBody("source-read"), { source_id: "src_1", from: 2500, to: 4900 });
+});
+
+check("search → read 串联：char_start < 500 时 from clamp 到 0，绝不为负", async () => {
+  const s = await run(["search", "老王"], withKey("read-clamp"));
+  const hit = JSON.parse(s.stdout).results[0];
+  const r = await run(
+    ["read", JSON.stringify({ source_id: hit.id, char_start: hit.char_start, char_end: hit.char_end })],
+    withKey("read-clamp")
+  );
+  assert.equal(r.code, 0, r.stderr);
+  const body = lastBody("source-read");
+  assert.equal(body.from, 0); // 120 - 500 = -380，必须 clamp
+  assert.equal(body.to, 1900);
+  assert.ok(body.from >= 0);
+});
+
+check("read 被截断 → [warn] TRUNCATED 带全文长度与下一个窗口起点", async () => {
+  const r = await run(["read", '{"source_id":"src_3","from":0,"to":20000}'], withKey("read-truncated"));
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stderr, /^\[warn\] TRUNCATED: /);
+  assert.match(r.stderr, /65000/); // 全文总长
+  assert.match(r.stderr, /from=20000/); // 下一个窗口从哪开始
+  assert.equal(JSON.parse(r.stdout).truncated, true);
+});
+
+check("read 缺 source_id → 本地拦下，不浪费一次调用", async () => {
+  const r = await run(["read", '{"from":0,"to":100}'], withKey("read-window"));
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /^\[error\] VALIDATION_ERROR: /);
 });
 
 check("ask 无证据 → 整份 stdout 里都不出现那句英文占位符", async () => {

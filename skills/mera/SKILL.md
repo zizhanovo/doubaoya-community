@@ -26,8 +26,9 @@ description: >-
 |-----------|--------|--------|
 | 「帮我记一下…」「记下来」「备忘一下」「我刚想到…」 | 写进第二大脑，**并等到收条** | `remember` |
 | 「把这个链接存了」「这篇文章收进来」 | 同上，传 `url` | `remember` |
-| 「查查我的笔记」「我之前是不是说过 X」「关于 X 我有哪些素材」 | 检索**原文片段**，给素材 | `search` |
-| 「我对 X 怎么看」「我以前是怎么决定的」 | 基于笔记**给结论 + 出处** | `ask` |
+| 「查查我的笔记」「我之前是不是说过 X」「关于 X 我有哪些素材」 | 检索命中位置，**再读原文** | `search` → `read` |
+| 「我对 X 怎么看」「我以前是怎么决定的」 | 同上：**读真实原文，自己综合**（别买二手结论） | `search` → `read` |
+| 「这结论有多少依据」「把这次问答记进 Mera」 | 才用服务端问答（已降级，判据见 §5.3） | `ask` |
 | 「你了解我吗」「我是个什么样的人」「按我的风格写」 | 取人格内核，给后续回答定调 | `self` |
 
 ---
@@ -94,8 +95,9 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 node scripts/mera.mjs remember '<json>'        # ⭐ 写入 + 轮询到终态（写入首选）
 node scripts/mera.mjs write    '<json>'        # 只写入（异步，返回 ingestion_id，你得自己轮询）
 node scripts/mera.mjs status   <ingestion_id>  # 查一次处理状态
-node scripts/mera.mjs search   "<关键词>"       # 混合检索，拿原文素材
-node scripts/mera.mjs ask      '<json>'        # 基于笔记问答（带引用）
+node scripts/mera.mjs search   "<关键词>"       # 检索，拿命中片段与位置（char_start/char_end）
+node scripts/mera.mjs read     '<json>'        # ⭐ 按窗口读原文（读取主路径的第二步）
+node scripts/mera.mjs ask      '<json>'        # 服务端问答（已降级，见 §5.3）
 node scripts/mera.mjs self                     # 人格内核 + 关键记忆
 ```
 
@@ -108,7 +110,8 @@ node scripts/mera.mjs self                     # 人格内核 + 关键记忆
 | | 存链接（**别传 title**，url 模式下服务端硬用抓到的页面标题，传了会被忽略） | `node scripts/mera.mjs remember '{"url":"https://example.com/post"}'` |
 | `status` | `<ingestion_id>` | `node scripts/mera.mjs status ing_abc123` |
 | `search` | 关键词字符串 | `node scripts/mera.mjs search "远程办公"` |
-| `ask` | `{query_text, top_k?, conversation_id?}` | `node scripts/mera.mjs ask '{"query_text":"我对远程办公是什么态度"}'` |
+| `read` | `{source_id, from?, to?}`；**直接喂 search 命中的 `char_start` / `char_end`，脚本替你算窗口** | `node scripts/mera.mjs read '{"source_id":"…","char_start":120,"char_end":400}'` |
+| `ask` | `{query_text, top_k?, conversation_id?}`（**已降级**，见 §5.3） | `node scripts/mera.mjs ask '{"query_text":"我对远程办公是什么态度"}'` |
 | `self` | 无 | `node scripts/mera.mjs self` |
 
 ---
@@ -199,15 +202,28 @@ node scripts/mera.mjs status <ingestion_id>
 
 ---
 
-## 5. 读取剧本：`search` 和 `ask` 分工
+## 5. 读取剧本：主路径是「检索 → 读原文 → 你自己综合」
 
-**一句话判据：要素材、要看原文 → `search`；要结论 → `ask`。**
+> **默认走这条，不管用户是要素材还是要结论：**
+>
+> ```
+> search "<关键词>"
+>   → 从 results 里挑 1–3 条最相关的
+>   → 对每条 read {source_id: r.id, char_start: r.char_start, char_end: r.char_end}
+>   → 拿真实原文自己综合，引用真实 title
+> ```
 
-| 用户意图 | 走哪个 | 理由 |
-|---------|--------|------|
-| 「关于 X 我有哪些素材」「我之前是不是记过这个」「把原话找出来」 | `search` | 要的是原文片段，自己读、自己挑 |
-| 「我对 X 怎么看」「我当时为什么这么决定」「总结一下我在 X 上的想法」 | `ask` | 要的是被综合过的结论 + 出处 |
-| 要拿笔记当写作素材 | 先 `search` 拿原文，再自己组织 | 素材要保真 |
+### 5.0 为什么不默认用 `ask`
+
+`ask` 是**服务端再跑一个 LLM**。而读这段文字的你本来就是 LLM，所以默认用它意味着：
+
+- **钱付两遍**：`ask` 每次 1 点，`search` / `read` **都是 0 点**。
+- **多一次往返**：等它跑完，你才拿到一段你本来就能自己写的话。
+- **它比你瞎**：Mera 那个 LLM 只拿到一句 `query_text`，**看不见你和用户的对话上下文**——
+  用户前面说的限定、口径、这轮到底在纠结什么，它全都不知道，反而更容易跑偏。
+
+`ask` 以前显得必要，一半是被 `search` 的残缺逼出来的：`snippet` 只有 **240 字**，而一个 chunk 能到 2000 字，
+答案经常就落在片段外面。现在有了 `read`，这个理由没了。**能自己读原文，就别买二手结论。**
 
 ### 5.1 `search`
 
@@ -215,13 +231,51 @@ node scripts/mera.mjs status <ingestion_id>
 `chunk_id`、`char_start`、`char_end`。
 
 - 按 `score` 排，展示时带上 `title` + `created_at`（用户认「我什么时候记的」）。
-- `snippet` 是原文片段，**照原样引**，别改写成自己的话再当成用户说过的。
+- ⚠️ **`snippet` 只有 240 字，别拿它当全部**。它是「命中在这儿」的路标，不是答案。
+  只要用户要的不止一句话（要结论、要来龙去脉、要引原话），就**接着 `read`**。
+  只有「就问有没有记过 / 大概什么时候记的」这类问题才可以只看 snippet 收工。
+- 引用 `snippet` 时**照原样引**，别改写成自己的话再当成用户说过的。
 - 0 条 → 如实说「你的笔记里没搜到这个」，可建议换个词再搜。**绝不编内容填空。**
 - **没有分页。** 接口只收 `q`，条数是服务端定死的（**一次最多 20 个来源**），返回里没有 cursor / total / next。
   别去试 `page` / `limit` / `top_k` 这类参数——不存在。要更多就**换个关键词再搜一次**，
   用户要「全部」时也如实说明「一次最多给 20 个来源」。
 
-### 5.2 `ask`
+### 5.2 `read`：把命中点周围的原文读出来
+
+```bash
+node scripts/mera.mjs read '{"source_id":"<search 结果的 id>","char_start":120,"char_end":400}'
+```
+
+`search` 返回的 `char_start` / `char_end` 是对**整篇原文的绝对字符偏移**，和 `read` 的窗口同一个坐标系，
+所以命中位置可以直接拿去开窗口。**把 `char_start` / `char_end` 原样喂给 `read` 就行，脚本会算窗口**：
+
+- `from = max(0, char_start - 500)`、`to = char_end + 1500`。
+- **前 500 后 1500 是有意不对称的**：命中点之前那点上文用来交代「这段在说什么」，
+  而结论、决定、后续展开几乎总在命中点**之后**，所以往后要开得更宽。
+- 想自己控制就显式传 `from` / `to`（永远优先于算出来的）；两者都不给、也没有 `char_start` 时，
+  脚本按 `0 / 20000` 兜底——**但那是没有线索时的下策，有命中位置就别用**。
+- `char_start - 500` 为负时脚本会 clamp 到 0，你不用自己防。
+
+返回 `{id, title, origin_uri, source_type, content, media_type, created_at, archived_at, from, to, content_length, truncated}`：
+
+- `content` 是**窗口内的原文切片**（不是全文）；`content_length` 是**全文总字符数**，别拿它当窗口长度。
+- `truncated === true` → 窗口撞上了服务端 20000 字上限，脚本会打 `[warn] TRUNCATED` 并告诉你下一个窗口从哪开始。
+  **别把这一窗当成全文**；用户要完整内容就顺着 `from=<上一窗的 to>` 再读一次。
+- 一次问答里读 **1–3 条**就够了。全部读一遍既慢又会把上下文冲爆——挑 `score` 最高、`title` / `created_at` 最对得上的。
+- 计费 **0 点**，放心读；但别对同一条反复开重叠窗口。
+
+引用时用 `read` 拿到的**真实原文**和真实 `title`，别拿 `snippet` 拼一个看起来像原话的东西。
+
+### 5.3 `ask`（已降级：默认不用）
+
+**只有这两种情况才用 `ask`，其余一律 search + read**：
+
+1. **用户需要那个证据分级当信任信号**——`确证` / `部分未核验` / `待核实` 是按引用计数**确定性算**出来的，
+   你自评「我有几成把握」造不出这个东西。用户明确要「这靠不靠谱 / 有没有依据」这种判断时用它。
+2. **用户希望这轮问答出现在 mera.doubaoya.com 的会话列表里**——`ask` 会写一条 conversation + message，
+   `search` / `read` 不会。用户说「把这次问答记下来 / 我想在 Mera 里回看」时用它。
+
+除此之外（要结论、要综合、要来龙去脉、要写作素材）**都走 search + read**：更准、更省、还带得上对话上下文。
 
 返回 `answer` + `has_evidence` + `evidence_level` + `evidence{grade, grounded_count, reference_count, note}` + `citations[]`
 + `conversation_id` + `message_id`。
@@ -252,8 +306,9 @@ node scripts/mera.mjs status <ingestion_id>
 3. **禁止编造 citation**：没有的 `title` 不许补，`citations` 为空就说没有出处。
 4. 多轮追问同一个话题时，把上一轮返回的 `conversation_id` 带进下一次 `ask`，保住上下文。
 5. 想更全的召回可以调大 `top_k`（**上限 50**，不传就用服务端默认），别盲目往大了调。
-6. 计费：`ask` 每次 **1 点**，`note-write` / `note-status` / `note-search` / `self` **不计点**。
-   所以能用 `search` 解决的别硬上 `ask`，也别为了「保险」把同一个问题问两遍。
+6. 计费：`ask` 每次 **1 点**；`note-write` / `note-status` / `note-search` / `source-read` / `self` **都不计点**。
+   这也是它降级的原因之一——能用 search + read 解决的别硬上 `ask`，更别为了「保险」把同一个问题问两遍。
+7. 无证据那套红线**不因降级而放松**：`evidence_level === "none"` 照样要明说，英文占位句照样不许转述。
 
 ---
 
@@ -322,12 +377,23 @@ node scripts/mera.mjs status <ingestion_id>
 
 **用户**（几天后）：「我之前跟老王到底怎么定的？」
 
-1. 要结论 → `ask`：
+1. **检索**（拿命中位置，不是拿答案）：
    ```bash
-   node scripts/mera.mjs ask '{"query_text":"我和老王关于产品方案是怎么定的"}'
+   node scripts/mera.mjs search "老王 方案"
    ```
-2. `has_evidence=true` → 给 `answer`，附「依据：《2026-07-27 的一条笔记》」。
-3. 用户接着说「把原话给我看看」→ 转 `search`，把 `snippet` 原样贴出来。
+   回来 3 条，最相关那条 `id=src_1`、`char_start=3000`、`char_end=3400`、`title`「和老王的一次对话」。
+2. **读原文**（把 `char_start` / `char_end` 原样喂进去，脚本算窗口 `from=2500, to=4900`）：
+   ```bash
+   node scripts/mera.mjs read '{"source_id":"src_1","char_start":3000,"char_end":3400}'
+   ```
+   相关度差不多的再读 1–2 条，最多 3 条。
+3. **自己综合**，用真实原文回答，并引真实 `title`：
+   ```
+   你们定的是「先做单机版再联网」，理由是联网那版要等对方接口。
+   （出自《和老王的一次对话》，2026-07-20）
+   ```
+   用户说「把原话给我看看」→ 直接把 `read` 拿到的 `content` 原样贴，不用再调接口。
+4. 全程 **0 点**：`search` 和 `read` 都不计费。用 `ask` 反而要 1 点，还看不见你们这轮的上下文。
 
 ---
 
@@ -356,7 +422,9 @@ node scripts/mera.mjs status <ingestion_id>
 ## 9. 边界与容错
 
 - **写入没确认就是没确认。** `pending` 不是成功，也不是失败——就照实说「已入队、还没确认」。
-- **检索 0 条**：如实说没搜到，可建议换词或换 `search`/`ask`。**绝不编内容。**
+- **检索 0 条**：如实说没搜到，建议换个词再搜。**绝不编内容**，也别指望换成 `ask` 就会有——它检索的是同一批笔记。
+- **别拿 240 字的 snippet 当答案**：要结论就 `read`。片段里没有的东西，**不许靠猜补全**。
+- **`read` 只是一扇窗**：`truncated === true` 时后面还有内容，别把这一窗说成全文（见 §5.2）。
 - **字段缺失**：Mera 的返回字段可能缺（如没有 `disposition`、没有 `citations`），
   一律「取不到就跳过这句」，别让缺字段搞崩整段汇报，也别把 `undefined` 打给用户。
 - **别越权改用户的大脑**：本 Skill 只有写入和读取，**没有删除 / 修改**能力（第一版有意如此）。
@@ -372,7 +440,7 @@ node scripts/mera.mjs status <ingestion_id>
 
 ```
 mera/
-├── SKILL.md              # 本文件：触发词 / 写入收条剧本 / search vs ask / 红线
+├── SKILL.md              # 本文件：触发词 / 写入收条剧本 / 检索→读原文主路径 / 红线
 ├── README.md             # 给人看的介绍与安装
 ├── LICENSE
 └── scripts/
@@ -399,6 +467,14 @@ A：**用 `remember`**。`write` 只在你已经明确要自己控制轮询节�
 
 **Q：写完为什么没马上能搜到？**
 A：写入是异步的，要过解析 / 抽取几道工序。拿到 `status=done` 才算真进去了。`pending` 时隔十几秒 `status` 复查一次。
+
+**Q：用户问「我对 X 怎么看」，该用 `ask` 吧？**
+A：**不该。** 走 `search` → `read` → 自己综合。`ask` 只在两种情况用：用户要那个证据分级当信任信号，
+或者要这轮问答出现在 mera.doubaoya.com 的会话列表里（判据见 §5.3）。
+
+**Q：`read` 的 `from` / `to` 我要自己算吗？**
+A：不用。把 `search` 结果里的 `char_start` / `char_end` 原样传给 `read`，脚本按「前 500 后 1500」开窗口，
+负数也替你 clamp 到 0。想自己控制就显式传 `from` / `to`。
 
 **Q：`ask` 说没证据，我该怎么回？**
 A：先明说「你的笔记里没有能支撑这个问题的内容」，再决定要不要用你自己的常识补一句——但**必须标明那是你的判断**。

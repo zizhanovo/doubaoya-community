@@ -11,8 +11,8 @@
 ## 能干啥
 
 - **记** —— 「帮我记一下」「把这个链接存了」，一句话进第二大脑；写完给你收条（识别到哪些实体、抽出几条事实 / 待办）
-- **搜** —— 「我之前是不是说过 X」「关于 X 我有哪些素材」，混合检索，返回**原文片段**
-- **问** —— 「我对 X 怎么看」「我当时为什么这么决定」，基于你自己的笔记给结论，**并附出处**
+- **搜** —— 「我之前是不是说过 X」「关于 X 我有哪些素材」，混合检索，给出命中位置
+- **读** —— 顺着命中位置把**真实原文**读出来，由 agent 自己综合、引真实标题；不是二手结论，也不额外花钱
 - **懂你** —— 「我是个什么样的人」「按我的风格写」，读人格内核给回答定调
 
 ## 先拿钥匙（密钥）
@@ -42,7 +42,7 @@ export DOUBAOYA_API_KEY=dyh_你的密钥
 
 node scripts/mera.mjs remember '{"content":"今天想到一个点子：把选题库和第二大脑打通"}'
 node scripts/mera.mjs search   "选题库"
-node scripts/mera.mjs ask      '{"query_text":"我对远程办公是什么态度"}'
+node scripts/mera.mjs read     '{"source_id":"<上面搜到的 id>","char_start":120,"char_end":400}'
 node scripts/mera.mjs self
 ```
 

@@ -51,7 +51,7 @@ description: >-
 | "给我配张图" | 创作助手 | `gpt-image-gen`、`seedream-lite` |
 | "把这条爆款改写成我的文案" | 改写（多在本地 agent 侧完成） | 用搜来的素材，由你合成 |
 | **"帮我记一下 / 存进笔记 / 我刚想到…"** | **第二大脑写入**（异步，必须轮询到收条） | Skill `mera` → `remember` |
-| **"我之前是不是说过 / 查查我的笔记 / 我对 X 怎么看"** | **第二大脑回忆**（要素材用 search、要结论用 ask） | Skill `mera` → `search` / `ask` |
+| **"我之前是不是说过 / 查查我的笔记 / 我对 X 怎么看"** | **第二大脑回忆**：检索 → 读原文 → 自己综合（`ask` 已降级） | Skill `mera` → `search` → `read` |
 | **"我是个什么样的人 / 按我的风格写"** | **人格内核定调**（每段对话取一次就够） | Skill `mera` → `self` |
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：
@@ -181,12 +181,20 @@ Content-Type: application/json
 |------|------|---------|
 | `note-write` | 写入（**202 异步**，返回 `ingestion_id`，必须再轮询 `note-status`） | `{ "content"? , "url"?, "title"? }`（content / url 二选一；`title` 只在 content 模式生效） |
 | `note-status` | 查写入处理状态与处置结果 `disposition` | `{ "ingestion_id" }` |
-| `note-search` | 在自己的笔记里混合检索，拿**原文片段**（无分页，一次最多 20 个来源） | `{ "q" }` |
-| `ask` | 基于自己的笔记问答，返回 `answer` + `citations`（**每次 1 点**，其余四个不计点） | `{ "query_text", "top_k"?（≤50）, "conversation_id"? }` |
+| `note-search` | 检索，拿命中片段（**只有 240 字**）与绝对位置 `char_start`/`char_end`（无分页，一次最多 20 个来源） | `{ "q" }` |
+| `source-read` | **读原文窗口**（读取主路径第二步）：按字符区间取真实原文，与 search 同一坐标系 | `{ "source_id", "from"?, "to"? }` |
+| `ask` | 服务端问答（**已降级**，见下）：返回 `answer` + `citations`（**每次 1 点**，其余五个不计点） | `{ "query_text", "top_k"?（≤50）, "conversation_id"? }` |
 | `self` | 人格内核 + 关键记忆，用来给回答定调 | `{}` |
 
-> 别自己手搓这套调用：装 `mera` Skill，用它的 `node scripts/mera.mjs remember '<json>'`——
-> 写入的轮询、收条翻译、去重与失败分支都在里面了。行为规则见 `skills/mera/SKILL.md`。
+> **读取主路径是「检索 → 读原文 → agent 自己综合」**：`note-search` 拿命中位置 → `source-read` 把命中点周围的
+> 真实原文读出来 → 你自己综合、引真实 title。**别默认用 `ask`**——那是为一个 LLM（你）再买一次服务端 LLM，
+> 钱付两遍、多一次往返，而且它只拿到一句 `query_text`，看不见你和用户的对话上下文。
+> `ask` 只在两种情况用：用户要那个 `确证/部分未核验/待核实` 的证据分级当信任信号，
+> 或者要这轮问答留在 mera.doubaoya.com 的会话列表里。
+>
+> 别自己手搓这套调用：装 `mera` Skill，用它的 `node scripts/mera.mjs remember '<json>'` /
+> `search` / `read '<json>'`——写入的轮询、收条翻译、读原文的窗口计算（含负数 clamp）都在里面了。
+> 行为规则见 `skills/mera/SKILL.md`。
 > **红线**：没拿到 `status=done` 之前不许说「已保存」；`ask` 的结论必须带出处，
 > `evidence_level === "none"` 时要明说没支撑（**别拿 `evidence.grade` 判**），也别把 Mera 那句英文占位符转述给用户。
 

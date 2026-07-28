@@ -5,8 +5,9 @@
 //   node mera.mjs write    '<json>'        写入第二大脑（{content?, url?, title?}，content/url 二选一）
 //   node mera.mjs status   <ingestion_id>  查一次写入的处理状态
 //   node mera.mjs remember '<json>'        ⭐ 写入 + 自动退避轮询到终态（写入首选这个）
-//   node mera.mjs search   "<关键词>"       在自己的笔记里做混合检索，拿原文素材
-//   node mera.mjs ask      '<json>'        基于自己的笔记问答（{query_text, top_k?, conversation_id?}）
+//   node mera.mjs search   "<关键词>"       在自己的笔记里做混合检索，拿命中片段与位置
+//   node mera.mjs read     '<json>'        ⭐ 按窗口读原文（{source_id, from?, to?} 或直接喂 search 命中的 char_start/char_end）
+//   node mera.mjs ask      '<json>'        服务端问答（已降级，只在要证据分级 / 要留会话记录时用）
 //   node mera.mjs self                     取人格内核 + 关键记忆，给回答定调
 //
 // 钥匙从环境变量读: DOUBAOYA_API_KEY
@@ -141,6 +142,30 @@ function validateWriteBody(body) {
   }
 }
 
+// 读原文的默认窗口：命中点前留 500 字（往往交代了「这是在说什么」），后留 1500 字（结论通常在命中点之后）。
+// search 的 snippet 只有 240 字，而一个 chunk 能到 2000 字，答案经常就落在片段外面——所以默认要开得比命中区间宽。
+const WINDOW_BEFORE = 500;
+const WINDOW_AFTER = 1500;
+const WINDOW_MAX = 20000; // 服务端单窗口上限，没有任何位置线索时的兜底窗口
+
+// from/to 一律由脚本算好并显式发出（服务端虽有 0/20000 兜底，但不依赖它）。
+// 可以直接把 search 命中的 char_start / char_end 喂进来；显式给的 from / to 永远优先。
+function resolveWindow(body) {
+  const int = (value) => (Number.isFinite(value) && Number.isInteger(value) ? value : null);
+  const charStart = int(body.char_start);
+  const charEnd = int(body.char_end);
+
+  let from = int(body.from);
+  if (from === null) from = charStart === null ? 0 : Math.max(0, charStart - WINDOW_BEFORE);
+
+  let to = int(body.to);
+  if (to === null) to = charEnd === null ? WINDOW_MAX : charEnd + WINDOW_AFTER;
+
+  if (from < 0) fail("VALIDATION_ERROR", "from 不能是负数。");
+  if (to <= from) fail("VALIDATION_ERROR", `窗口是空的（from=${from}, to=${to}），to 必须大于 from。`);
+  return { from, to };
+}
+
 const NO_EVIDENCE_NOTICE = "你的笔记里没有能支撑这个问题的内容。";
 // Mera 在无证据时返回的英文硬编码占位句（不是回答内容）。
 const UNSUPPORTED_ANSWER_EN = /^I could not find any supported evidence/i;
@@ -223,8 +248,9 @@ const USAGE = [
   "  node mera.mjs remember '<json>'        ⭐ 写入并轮询到终态（{content?, url?, title?}）",
   "  node mera.mjs write    '<json>'        只写入（异步，返回 ingestion_id，需自行轮询）",
   "  node mera.mjs status   <ingestion_id>  查一次处理状态",
-  "  node mera.mjs search   \"<关键词>\"       在自己的笔记里检索原文素材",
-  "  node mera.mjs ask      '<json>'        基于自己的笔记问答（{query_text, top_k?, conversation_id?}）",
+  "  node mera.mjs search   \"<关键词>\"       检索，拿命中片段与位置（char_start/char_end）",
+  "  node mera.mjs read     '<json>'        ⭐ 按窗口读原文（{source_id, from?, to?}，或直接喂 char_start/char_end）",
+  "  node mera.mjs ask      '<json>'        服务端问答（已降级：只在要证据分级 / 要留会话记录时用）",
   "  node mera.mjs self                     取人格内核 + 关键记忆",
   "",
   "钥匙: export DOUBAOYA_API_KEY=dyh_...  (doubaoya.com → 密钥中心 → 生成密钥)"
@@ -256,6 +282,27 @@ async function main() {
       const q = rest.join(" ").trim();
       if (!q) fail("VALIDATION_ERROR", '用法: node mera.mjs search "<关键词>"');
       out(await call("note-search", { q }));
+      break;
+    }
+
+    case "read": {
+      const body = parseBody(rest[0]);
+      const sourceId = body.source_id;
+      if (typeof sourceId !== "string" || !sourceId.trim()) {
+        fail("VALIDATION_ERROR", 'read 需要 source_id（用 search 结果里的 id）。示例: \'{"source_id":"…","char_start":120,"char_end":400}\'');
+      }
+      const { from, to } = resolveWindow(body);
+      const data = await call("source-read", { source_id: sourceId, from, to });
+      // 别静默截断：窗口没读完时说清楚全文有多长、下一个窗口从哪开始。
+      if (data.truncated === true) {
+        const nextFrom = Number.isFinite(data.to) ? data.to : to;
+        warn(
+          "TRUNCATED",
+          `这个窗口被服务端上限截断了，后面还有内容（全文共 ${data.content_length ?? "未知"} 字）。` +
+            `要接着读就再开一个窗口：from=${nextFrom}。别把这一窗当成全文。`
+        );
+      }
+      out(data);
       break;
     }
 

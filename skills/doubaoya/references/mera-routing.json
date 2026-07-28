@@ -37,7 +37,9 @@
         "requires_doubaoya_api_key": true
       },
       "contract": [
-        "Raw material or original wording goes to `search`; a synthesized conclusion goes to `ask`.",
+        "Default path is search -> read -> synthesize locally: search returns 240-char snippets plus absolute char offsets, read returns the real source text around them.",
+        "`ask` is demoted: use it only when the user needs the deterministic evidence grade as a trust signal, or wants the exchange recorded in the mera.doubaoya.com conversation list.",
+        "Never default to `ask`: it bills a second LLM for an LLM consumer, adds a round trip, and only sees query_text without the current conversation context.",
         "Every `ask` answer must carry citations[].raw_source.title; never invent a source.",
         "evidence_level === \"none\" is the only no-support predicate; evidence.grade is not, because reference-level evidence shares the same grade.",
         "When evidence_level is \"none\", say so in Chinese and never relay Mera's English placeholder answer.",
