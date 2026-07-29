@@ -28,7 +28,20 @@ import urllib.error
 import urllib.request
 
 ENDPOINT = "https://doubaoya.com/api/apis/xiaohongshu/search-work/call"
-USER_AGENT = "doubaoya-skill/1.0"
+
+
+def _skill_user_agent() -> str:
+    """读取同目录下 .version 文件里发布时盖的版本戳；没有则退回旧版通用值（向后兼容）。"""
+    try:
+        version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".version")
+        with open(version_path, "r", encoding="utf-8") as f:
+            value = f.read().strip()
+        return value or "doubaoya-skill/1.0"
+    except OSError:
+        return "doubaoya-skill/1.0"
+
+
+USER_AGENT = _skill_user_agent()
 
 
 def eprint(*args):
