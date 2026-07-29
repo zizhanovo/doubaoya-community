@@ -23,6 +23,17 @@ import urllib.request
 ENDPOINT = "https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-coze-cover/call"
 
 
+
+def _skill_user_agent() -> str:
+    """读取同目录下 .version 文件里发布时盖的版本戳；没有则退回旧版通用值（向后兼容）。"""
+    try:
+        version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".version")
+        with open(version_path, "r", encoding="utf-8") as f:
+            value = f.read().strip()
+        return value or "doubaoya-skill/1.0"
+    except OSError:
+        return "doubaoya-skill/1.0"
+
 def default_start() -> str:
     """默认起始日期 = 今天 - 6 天（近 7 天爆款，时效更强）。"""
     return (datetime.date.today() - datetime.timedelta(days=6)).isoformat()
@@ -60,7 +71,7 @@ def main() -> int:
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer " + api_key,
-            "User-Agent": "doubaoya-skill/1.0",
+            "User-Agent": _skill_user_agent(),
         },
     )
 

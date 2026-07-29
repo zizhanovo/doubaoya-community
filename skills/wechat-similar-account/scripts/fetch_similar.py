@@ -31,6 +31,17 @@ SYNC_ENDPOINT = (
 )
 
 
+
+def _skill_user_agent() -> str:
+    """读取同目录下 .version 文件里发布时盖的版本戳；没有则退回旧版通用值（向后兼容）。"""
+    try:
+        version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".version")
+        with open(version_path, "r", encoding="utf-8") as f:
+            value = f.read().strip()
+        return value or "doubaoya-skill/1.0"
+    except OSError:
+        return "doubaoya-skill/1.0"
+
 def post(endpoint: str, body: dict, api_key: str):
     """发一次 POST，返回 (ok, data_or_none, err_tuple_or_none)。"""
     payload = json.dumps(body).encode("utf-8")
@@ -41,7 +52,7 @@ def post(endpoint: str, body: dict, api_key: str):
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer " + api_key,
-            "User-Agent": "doubaoya-skill/1.0",
+            "User-Agent": _skill_user_agent(),
         },
     )
     try:

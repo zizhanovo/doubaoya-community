@@ -25,6 +25,17 @@ import urllib.request
 ENDPOINT = "https://doubaoya.com/api/skills/gpt-image-gen/invoke"
 
 
+
+def _skill_user_agent() -> str:
+    """读取同目录下 .version 文件里发布时盖的版本戳；没有则退回旧版通用值（向后兼容）。"""
+    try:
+        version_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".version")
+        with open(version_path, "r", encoding="utf-8") as f:
+            value = f.read().strip()
+        return value or "doubaoya-skill/1.0"
+    except OSError:
+        return "doubaoya-skill/1.0"
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="都爆鸭 · GPT-image2 AI 图片生成（异步约 3 分钟）",
@@ -62,7 +73,7 @@ def main() -> int:
         headers={
             "Content-Type": "application/json",
             "Authorization": "Bearer " + api_key,
-            "User-Agent": "doubaoya-skill/1.0",
+            "User-Agent": _skill_user_agent(),
         },
     )
 
