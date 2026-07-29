@@ -218,7 +218,7 @@ def validate_vendor(root: Path = ROOT) -> None:
     for path in skill.rglob("*"):
         relative = path.relative_to(skill).as_posix()
         require(not path.is_symlink(), f"symlink is not publishable: {relative}")
-        if path.is_file() and relative != provenance_relative:
+        if path.is_file() and relative != provenance_relative and not path.name.startswith(".version"):
             actual_paths.add(relative)
     require(actual_paths == set(expected), f"vendor file set mismatch: missing={sorted(set(expected) - actual_paths)}, extra={sorted(actual_paths - set(expected))}")
 
