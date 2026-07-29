@@ -26,7 +26,13 @@ def _list_files(skill_dir: Path) -> list[Path]:
     files = [
         path
         for path in skill_dir.rglob("*")
-        if path.is_file() and path.name != ".version"
+        if path.is_file()
+        and path.name != ".version"
+        and "__pycache__" not in path.relative_to(skill_dir).parts
+        and not any(
+            part.startswith(".") and part != ".version"
+            for part in path.relative_to(skill_dir).parts
+        )
     ]
     return sorted(files, key=lambda p: p.relative_to(skill_dir).as_posix())
 
