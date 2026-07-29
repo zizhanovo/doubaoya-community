@@ -209,3 +209,23 @@ node scripts/render-wechat-html.mjs --md article.md --title "标题" --theme the
 node scripts/validate-theme.mjs themes/my-theme.json
 node scripts/pipeline.mjs --md article.md --title "标题" --theme themes/my-theme.json   # --theme ignored with --html
 ```
+
+## 装饰块占位法铁律（decorative-block leaf placeholder）
+
+任何靠 `background` / `border` / `linear-gradient` 画出来的**纯装饰** `section`/`span`——
+即出现在 `elements.<tag>.wrapBefore` / `wrapAfter`、`elements.hr.html`、
+`decorations.articleWrap.before/after` 里的装饰块——**内部必须含一个非空叶子**：
+
+    <span leaf=""><br></span>
+
+否则公众号（WeChat 公众号）草稿编辑器会把「看起来是空的」装饰 section 连同它的
+inline 样式一起 strip 掉，装饰当场消失。占位叶子让编辑器认为该 section 有内容、予以保留。
+
+- 这条只针对**纯装饰、无文本子节点**的块。像 `blockquote`（本身含引用文字）这类
+  非空元素不需要占位。
+- 占位是主题作者的**契约**，不由渲染器自动注入——写 wrapBefore/hr.html 时必须手写进去，
+  且**勿在成品里手工删除**。
+- 真机验证是唯一证据：网页 WYSIWYG 预览 ≈ 浏览器渲染，但 strip 行为只有把渲染 HTML
+  真机粘进公众号编辑器才暴露。装饰型主题必须过一道人工真机闸。
+
+参考实现：`themes/benya-premium.json` 的 `h2.wrapBefore` 与 `hr.html`。
