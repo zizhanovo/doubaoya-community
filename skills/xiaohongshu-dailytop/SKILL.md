@@ -106,3 +106,7 @@ A：先 `export DOUBAOYA_API_KEY="dyh_…"`（去 doubaoya.com → 登录 → �
 
 **Q：暂时取不到数据？**
 A：上游波动，稍后再试即可（不扣费）。
+
+## 关于响应里的 notice 字段
+
+调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。

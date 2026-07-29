@@ -271,3 +271,7 @@ wechat-draft-publish/
     ├── publish_draft.py          # 零依赖脚本（urllib）：查绑定 → 存草稿（无本地图片时用）
     └── preprocess-and-publish.mjs # Node 脚本：预上传本地正文图/封面 → 改写 HTML → 存草稿
 ```
+
+## 关于响应里的 notice 字段
+
+调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。

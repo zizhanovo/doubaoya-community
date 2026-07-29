@@ -132,3 +132,7 @@ cn-last30days/
 └── scripts/
     └── search_cn30.py        # 零依赖聚合脚本（urllib），调用 doubaoya.com
 ```
+
+## 关于响应里的 notice 字段
+
+调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。
