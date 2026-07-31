@@ -1,0 +1,317 @@
+{
+  "version": "2026-07-31",
+  "note": "celebrity-slice 数值规则单一事实源。scripts/*.py 与 agent 共读本文件，代码不硬编码数值。合并自源项目 pipeline 规则（price/pacing/energy/clean/caption/breath）、选段打分规则（selection_signals/rubric/power_words/rules）与字幕样式（caption_styles），键名保留原样。",
+  "price_rule": {
+    "default": "do_not_use_price_as_hook",
+    "allowed_when": [
+      "source audio explicitly says the price",
+      "user wants conversion-first product traffic",
+      "price is late in the arc or offloaded to title/comment/product card",
+      "price is labelled as live-session information when time-sensitive"
+    ],
+    "avoid": [
+      "repeated price chants",
+      "low-price promotion tone in premium 明星切片",
+      "unsupported permanent price or stock promises"
+    ]
+  },
+  "pacing_rule": {
+    "default": "preserve_breath_and_action_beats",
+    "keep_when": [
+      "anchor finishes a thought naturally",
+      "garment proof needs a visible beat",
+      "viewer needs time to read a dense subtitle",
+      "section transition would otherwise feel abrupt",
+      "attitude/body movement helps celebrity-style seeding"
+    ],
+    "timing_guidance": {
+      "numeric_source": "breath_rule",
+      "proof_line_tail_seconds": "breath_rule.evidence_tail_s",
+      "major_section_buffer_seconds": "breath_rule.paragraph_lead_s"
+    },
+    "avoid": [
+      "cutting inside syllables or trailing particles",
+      "interrupting hand/product proof",
+      "subtitles that change too fast to read",
+      "sentence-collage pacing with no expressive beat"
+    ]
+  },
+  "energy_rule": {
+    "note": "能量-ASR 互证参数（机制来源 auto-editor：解码音频算每窗 RMS）。snap_breath.py 与 validate_edl.py 只读本段；气口窗内 RMS 低于全片 P{p_quiet} = quiet（可信切点），高于 P{p_noisy} = noisy（背景音/叫卖，不宜作切点），其间 = mid。",
+    "window_ms": 100,
+    "p_quiet": 20,
+    "p_noisy": 50
+  },
+  "clean_rule": {
+    "note": "段内清洗（EDL clip.cuts）与拼接顺滑参数。渲染时保留区间间音频 acrossfade（audio_crossfade_s）；cut 边界距最近字边界超过 cut_boundary_char_tol_s 时 validate_edl.py 给 warn（cuts 应贴字边界）。split_edit_range_s=重口播拼接的 split edit/crossfade 可测试区间；ambient_bed_volume_ratio=噪声地板断裂时铺源环境声的音量比例区间。红线：气口是资产，清洗只删明确标出的词区间，默认不动停顿。",
+    "audio_crossfade_s": 0.06,
+    "cut_boundary_char_tol_s": 0.1,
+    "split_edit_range_s": [0.12, 0.25],
+    "ambient_bed_volume_ratio": [0.03, 0.04]
+  },
+  "caption_rule": {
+    "note": "字幕-分镜边界参数。字幕跨明显视觉切点时：在切点前 visual_cut_guard_s 内结束，或切点后同区间再开始（保护间隔取区间内值）。methodology.md 的字幕边界配方引用本段字段名，不另存数值。",
+    "visual_cut_guard_s": [0.04, 0.06]
+  },
+  "breath_rule": {
+    "note": "气口/留白数值单一事实源。snap_breath.py 与 validate_edl.py 只读本段，不许硬编码；字级时间戳上相邻字间隔 >= breath_gap_min_s 视为气口候选，>= strong_gap_min_s 为强气口。",
+    "pad_start_s": 0.12,
+    "pad_end_s": 0.10,
+    "evidence_tail_s": [0.15, 0.35],
+    "paragraph_lead_s": [0.2, 0.5],
+    "min_pause_untouched_s": 0.6,
+    "long_pause_tighten_to_s": 0.8,
+    "min_clip_s": 1.0,
+    "snap_tolerance_s": 0.5,
+    "breath_gap_min_s": 0.3,
+    "strong_gap_min_s": 1.0,
+    "verify_tolerance_s": 0.3
+  },
+  "caption_group_rule": {
+    "note": "字幕/语句聚合规则（源自源项目 group_captions，从代码硬编码外化）：相邻字间隔 > gap_flush_s 换块；累计字数 >= max_chars_flush，或 >= punct_flush_min_chars 且当前字是标点时换块。make_captions.py 与 asr_transcribe.py 的 SRT 输出共读本段。",
+    "gap_flush_s": 0.55,
+    "max_chars_flush": 16,
+    "punct_flush_min_chars": 8
+  },
+  "selection_signals": {
+    "levels": [
+      {
+        "level": 1,
+        "name": "价格锚点/限时逼单",
+        "description": "报价、到手价、限量、倒计时逼单。注意：明星切片定位下受 price_rule 约束——价格默认不做钩子，只做后段短 CTA 或 offload 到标题/商品卡。",
+        "example": "今天到手价还是活动价三百六十八"
+      },
+      {
+        "level": 2,
+        "name": "产品演示高潮",
+        "description": "上身、对比、怼镜头、抻拉/翻面等动作证明，画面强于口播。",
+        "example": "你看我就是完全盖住屁股我身高一米六穿鞋一米六零体重八十斤然后你们可以参考一下"
+      },
+      {
+        "level": 3,
+        "name": "痛点共鸣",
+        "description": "点出观众的真实顾虑/踩坑经历（透、变形、起球、闷汗、显胖）。",
+        "example": "他的克重那么高你看洗个几次他还是那种变形的感觉"
+      },
+      {
+        "level": 4,
+        "name": "信任背书",
+        "description": "专柜价对比、面料产地、供应商、销量/名人同款等可追溯背书。",
+        "example": "这款面料在BC专柜它就是卖一万多而且它是长青的"
+      },
+      {
+        "level": 5,
+        "name": "金句口播",
+        "description": "一句话可独立成钩子/收束的金句，短、有态度、可做开场句。",
+        "example": "好的面料自己会说话"
+      },
+      {
+        "level": 6,
+        "name": "真实反应/翻车",
+        "description": "主播真实情绪、意外、自嘲、翻车瞬间，人味强、适合做真实感切片。",
+        "example": "哇今天我是不是有点憔悴啊多喝水好累"
+      }
+    ],
+    "boundary_signals": {
+      "start_phrases": ["接下来给大家看", "我给你们讲", "来我们试一下", "来我给你看", "我给你们上身", "你看这是"],
+      "end_phrases": ["好我们看下一个", "拍完扣1", "链接挂好了", "可以扣一", "给大家返场返一下", "留下你的身高体重"],
+      "no_cut_points": [
+        "句中（任何一个字的中间，入出点必须落在字间气口）",
+        "逻辑展开中（因为/所以/但是/然后 刚起头未闭合）",
+        "报数据报尺码念到一半（身高体重/克重/价格数字未念完）",
+        "动作证明进行中（抻拉面料/上身展示未到可见节拍）"
+      ]
+    }
+  },
+  "rubric": {
+    "note": "电商五维 rubric。每维 0-20 分四档锚点，总分 0-100 = 五维之和（total 必须等于五维和）。选段 agent 在选段闸末按本表给每份方案自评，写进 EDL 或选段说明。",
+    "total_max": 100,
+    "dimensions": [
+      {
+        "key": "hook",
+        "name": "钩子",
+        "description": "前 3 秒钩子潜力：开场句能否让刷到的人停下。",
+        "max": 20,
+        "anchors": {
+          "0-5": "开场是过程性口播/寒暄/报库存，无信息增量，3 秒内给不出停留理由。",
+          "6-10": "开场点到产品或场景，但平铺直叙（如「今天我们新款」），需要观众自己等后文。",
+          "11-15": "开场带痛点/反差/具体数字之一（如「白色的还不透」），3 秒内能建立一个疑问。",
+          "16-20": "开场即金句或强反差（如「好的面料自己会说话」「一万多的面料三百多穿」），停留理由即时且强。"
+        }
+      },
+      {
+        "key": "demo",
+        "name": "演示",
+        "description": "演示效果强度：画面动作证明（上身/抻拉/对比/怼镜头）强于纯口播。",
+        "max": 20,
+        "anchors": {
+          "0-5": "全程坐播口述，无任何产品动作，画面信息约等于电台。",
+          "6-10": "有产品出镜但静态（拿着/挂着讲），动作不构成证据。",
+          "11-15": "有一处明确动作证明（上身展示/抻拉面料/翻面看工艺），画面能替口播作证。",
+          "16-20": "动作证明贯穿且有对比参照（身高体重参照上身、专柜同款对比、怼镜头看纱线），静音也能看懂卖点。"
+        }
+      },
+      {
+        "key": "emotion",
+        "name": "情绪",
+        "description": "情绪浓度：主播的真实情绪/态度/人味（不等于喊叫）。",
+        "max": 20,
+        "anchors": {
+          "0-5": "念稿感，语气平直无起伏，无个人态度。",
+          "6-10": "有礼貌性热情但模板化（「宝宝们」「姐妹们」堆叠），情绪不指向内容。",
+          "11-15": "对卖点有真实的态度输出（笃定/嫌弃对比款/自嘲），情绪与内容咬合。",
+          "16-20": "有记忆点的情绪瞬间（翻车自嘲/意外真实反应/强烈笃定的断言），可单独做人设切片。"
+        }
+      },
+      {
+        "key": "standalone",
+        "name": "独立",
+        "description": "脱离上下文独立可看性：不看直播全场也能看懂这条切片。",
+        "max": 20,
+        "anchors": {
+          "0-5": "满是指代词（「这个」「刚才那个」「上一件」），不看前文不知所云。",
+          "6-10": "能看懂在卖衣服，但产品是什么/为什么好，缺关键上下文。",
+          "11-15": "产品身份+核心卖点在片内自洽，个别指代需观众脑补。",
+          "16-20": "完整微叙事：是什么→为什么好→凭什么信，零上下文观众也能完整接收。"
+        }
+      },
+      {
+        "key": "cta",
+        "name": "转化",
+        "description": "转化钩子力：给观众的下一步动作是否明确、可信、不惹反感（受 price_rule 约束：价格不做钩子）。",
+        "max": 20,
+        "anchors": {
+          "0-5": "无任何行动指向，看完即划走。",
+          "6-10": "有泛泛引导（「喜欢的拍」）但无具体动作/时机/稀缺信息。",
+          "11-15": "有具体行动点（尺码怎么拍/链接位置/扣 1 返场）且出现在内容之后不打断。",
+          "16-20": "行动点+可信稀缺（现货数量少/最后返场）自然收束，且价格未做钩子（合规 price_rule）。"
+        }
+      }
+    ]
+  },
+  "power_words": {
+    "note": "词级 karaoke 字幕强调词单一事实源（strong 色）。中文电商：价格数字（阿拉伯/中文数字+块/元/折）、限量词、行动词。make_captions.py 只读本段做正则/词面匹配，不硬编码。",
+    "regex_patterns": [
+      "[0-9０-９]+(?:块|元|折)",
+      "[一二三四五六七八九十百千两零]{3,}"
+    ],
+    "words": ["最后", "仅剩", "现货", "拍", "上链接", "扣1", "扣一"]
+  },
+  "rules": [
+    {
+      "tag": "痛点",
+      "type": "keyword",
+      "weight": 2,
+      "max_hits": 3,
+      "keywords": ["透", "闷", "勒", "压迫", "显胖", "起球", "变形", "缩水", "扎人", "刺痒", "廉价", "怕热", "出汗", "紧绷", "闷汗", "最怕"]
+    },
+    {
+      "tag": "面料证据",
+      "type": "keyword",
+      "weight": 2,
+      "max_hits": 4,
+      "keywords": ["面料", "棉", "克重", "垂感", "亲肤", "贴肤", "透气", "零压", "无压", "空间感", "同源", "意大利", "BC", "纱", "织", "柔软", "丝滑", "质感", "工艺", "水洗", "缩率"]
+    },
+    {
+      "tag": "版型证据",
+      "type": "keyword",
+      "weight": 2,
+      "max_hits": 4,
+      "keywords": ["版型", "宽松", "落肩", "廓形", "松量", "oversize", "剪裁", "肩线", "袖", "领口", "下摆", "遮肉", "显瘦", "上身", "身材", "男女", "unisex", "百搭"]
+    },
+    {
+      "tag": "场景",
+      "type": "keyword",
+      "weight": 1,
+      "max_hits": 2,
+      "keywords": ["夏天", "夏季", "通勤", "度假", "日常", "搭配", "出街", "旅行", "衬衫", "外套", "叠穿"]
+    },
+    {
+      "tag": "CTA",
+      "type": "keyword",
+      "weight": 1,
+      "max_hits": 2,
+      "keywords": ["拍", "下单", "链接", "现货", "库存", "数量不多", "最后", "抓紧", "先抢"]
+    },
+    {
+      "tag": "具体数字",
+      "type": "regex",
+      "weight": 1,
+      "max_hits": 2,
+      "pattern": "[0-9０-９]+"
+    },
+    {
+      "tag": "重复喊价",
+      "type": "keyword_repeat",
+      "weight": -3,
+      "min_count": 2,
+      "keywords": ["368", "价格", "块钱", "到手价", "活动价", "专柜价", "多少钱"]
+    },
+    {
+      "tag": "空洞夸张",
+      "type": "keyword",
+      "weight": -2,
+      "max_hits": 3,
+      "keywords": ["绝绝子", "天花板", "无敌", "炸裂", "天花乱坠", "哇塞", "成功人士"]
+    },
+    {
+      "tag": "口水词",
+      "type": "filler_density",
+      "weight": -3,
+      "threshold": 0.28,
+      "min_len": 6,
+      "chars": "啊呢吧呀嘛哦嗯诶哎呦",
+      "words": ["这个", "那个", "就是", "然后", "反正", "对不对", "是不是", "怎么说"]
+    },
+    {
+      "tag": "重复内容",
+      "type": "duplicate",
+      "weight": -3,
+      "threshold": 0.6,
+      "min_len": 8
+    }
+  ],
+  "caption_styles": {
+    "note": "字幕样式单一事实源（声明式）。make_captions.py 的 ASS 生成只读本段，不硬编码样式。default=静态样式；karaoke=词级逐字高亮（中文按字幕块内逐字换色高亮、不缩放字体避免整行重排抖动）。颜色为 ASS &HAABBGGRR。strong_color 用于命中 power_words 的字。max_chars_per_line=0 表示不折行。",
+    "default_style": "default",
+    "play_res": [1080, 1920],
+    "styles": {
+      "default": {
+        "name": "静态",
+        "font": "PingFang SC",
+        "font_size": 72,
+        "primary_color": "&H00FFFFFF",
+        "outline_color": "&H00000000",
+        "back_color": "&H7F000000",
+        "bold": 1,
+        "outline": 3,
+        "shadow": 0,
+        "alignment": 2,
+        "margin_l": 60,
+        "margin_r": 60,
+        "margin_v": 220,
+        "max_chars_per_line": 0,
+        "karaoke": false
+      },
+      "karaoke": {
+        "name": "逐字高亮 karaoke",
+        "font": "PingFang SC",
+        "font_size": 72,
+        "primary_color": "&H00FFFFFF",
+        "highlight_color": "&H005AB4E8",
+        "strong_color": "&H005A5AFF",
+        "outline_color": "&H00000000",
+        "back_color": "&H7F000000",
+        "bold": 1,
+        "outline": 3,
+        "shadow": 0,
+        "alignment": 2,
+        "margin_l": 60,
+        "margin_r": 60,
+        "margin_v": 220,
+        "max_chars_per_line": 16,
+        "karaoke": true
+      }
+    }
+  }
+}
