@@ -91,6 +91,11 @@ export DOUBAOYA_API_KEY="dyh_xxxxxxxx"
 }
 ```
 
+> ⚠️ **`start`/`end` 必须覆盖整句**（从句首字的 `start` 到句尾字的 `end`）。校对句的时间范围决定
+> 「哪一段原始 ASR 字符被 `corrected` 顶替」——若声明的 `end` 比整句实际终点短，尾部那几个字会
+> **既被纠错文本覆盖、又以原始 ASR 形态保留一遍**，字幕里出现重复尾巴（如
+> `洗几次都不变形。` 后面紧跟一块 `不变形。`）。宁可把 `end` 取到下一句开始前，也不要取短。
+
 ## 3. 五闸工作流
 
 ### 闸 1 — ASR（词级转写）
@@ -132,7 +137,24 @@ python3 "$SKILL_PATH/scripts/make_captions.py" --asr words.json --proofread proo
 ffmpeg -y -i raw_no_caption.mp4 -vf "ass=captions.ass" -c:v libx264 -crf 18 -c:a copy final.mp4
 ```
 
-注意：带 `cuts` 的 clip 要在 4.2 前先按保留区间展开成子段（cuts 的合法性由闸 5 机检把关）。
+**关于 `edl_snapped.json` 的形状**：`snap_breath.py --apply --out` 的输出是一个信封——顶层
+`clips` 是**吸附报告行**（`snapped_start`/`gap_before_s`/`start_energy` 等，不含 `id`/`cuts`，
+且 `source_start`/`source_end` 仍是吸附**前**的原值），**回写后的 EDL 在 `edl` 子键下**：
+
+```json
+{ "clips": [ /* 吸附报告 */ ], "rule": {...}, "energy_rule": {...},
+  "edl": { "clips": [ /* 回写坐标后的真 EDL */ ] } }
+```
+
+`make_captions.py --edl` 与 `validate_edl.py --edl` 会自动识别并取用 `edl` 子对象，所以
+**直接传 `edl_snapped.json` 即可**，不必手工拆。但你自己用 `jq` 等工具读时要记得取 `.edl`——
+读顶层 `clips` 会拿到未吸附坐标且丢失 `id` 与溯源字段。
+
+**关于带 `cuts` 的 clip**：`cuts` 只被闸 5 的机检读（第 6、10 项），**4.2 的 ffmpeg 裁切和 4.3 的
+`make_captions.py --edl` 都不认它**——两者都按 `source_start`→`source_end` 的整段处理。所以带
+`cuts` 的 clip 必须**先按保留区间展开成多个子段**，再喂给 4.2 和 4.3（两处用同一份展开后的 EDL，
+否则成片是净时长、字幕是毛时长，`cuts` 之后的字幕会整体漂移一个 `cuts` 总长）。闸 5 则仍用**未展开、
+带 `cuts` 的**那份 EDL 跑，才能校验 cuts 合法性。
 
 ### 闸 5 — QA（两层，都过才能交付）
 
@@ -158,11 +180,12 @@ warn 级 5 项：无过短碎片 / 切点贴气口（附能量标注）/ cuts �
 | 脚本 | 作用 | 关键参数 |
 |------|------|----------|
 | `scripts/asr_transcribe.py` | 抽音频→分块→POST doubaoya ASR→合并词级 JSON+SRT | `<video>` `--language zh` `--chunk-seconds 600` `--endpoint URL` `--out-json` `--out-srt`；退出码 2=无密钥 |
-| `scripts/snap_breath.py` | EDL 切点吸附到气口 + RMS 能量互证标注 | `--edl` `--asr` `--video` `--energy`（能量缓存，读写）`--apply`（回写坐标）`--rules` `--out` |
-| `scripts/make_captions.py` | 词级 ASR+校对稿 → SRT/ASS（含 karaoke），可按 EDL 重映射到成片时间轴 | `--asr` `--proofread` `--edl` `--format srt\|ass` `--style` `--source-map-out` `--rules` `--out` |
+| `scripts/snap_breath.py` | EDL 切点吸附到气口 + RMS 能量互证标注 | `--edl` `--asr` `--video` `--energy`（能量缓存，读写）`--apply`（回写坐标，**结果在输出的 `edl` 子键下**）`--rules` `--out` |
+| `scripts/make_captions.py` | 词级 ASR+校对稿 → SRT/ASS（含 karaoke），可按 EDL 重映射到成片时间轴 | `--asr` `--proofread` `--edl` `--format srt\|ass` `--style` `--source-map-out`（需配 `--edl`）`--rules` `--out` |
 | `scripts/validate_edl.py` | 12 项机检，输出机检清单 JSON | `--edl` `--asr` `--video` `--energy` `--rules` `--out`；退出码 0=fail 清零，1=有 fail |
 
 所有脚本的 `--rules` 默认指向 `references/rules.json`，一般不用传。
+`make_captions.py` / `validate_edl.py` 的 `--edl` 既吃裸 EDL，也吃 `snap_breath.py --apply` 的输出信封（自动取 `edl` 子对象）。
 
 ## 5. 错误码（ASR 接口）
 
