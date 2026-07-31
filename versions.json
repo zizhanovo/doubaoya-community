@@ -1,7 +1,8 @@
 {
-  "generatedAt": "2026-07-31T02:45:14.565824+00:00",
+  "generatedAt": "2026-07-31T19:31:44.263023+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
+    "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
     "cn-last30days": "doubaoya-skill/cn-last30days@8ab1d5dc820b",
     "content-parse": "doubaoya-skill/content-parse@52f068c4240e",
     "cultural-tourism-wechat-feed": "doubaoya-skill/cultural-tourism-wechat-feed@86dc1f0f16cc",

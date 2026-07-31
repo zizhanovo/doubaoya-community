@@ -61,7 +61,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g --all`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 56 个）
+## 技能清单（共 57 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -143,6 +143,12 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | **content-parse** | 粘公开链接，返回归一化作品 / 文章详情，拆解「为什么火」 |
 | **multi-banned-words** | 跨平台违禁词对照 + 统一安全改写 |
 | **multi-rewrite** 🖥 | 一稿多发：按各平台规则改写成多平台版本 |
+
+### ✂️ 直播切片
+
+| 技能 | 能力 |
+|------|------|
+| **celebrity-slice** | 直播录像剪 50-70s 竖版高级种草切片：ASR→校对→选段→气口吸附→字幕烧制→双层 QA（ASR 代理待上线，可降级本机 whisper） |
 
 ### 🎬 短剧 · 文旅
 
