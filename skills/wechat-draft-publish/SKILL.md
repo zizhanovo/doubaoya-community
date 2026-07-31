@@ -18,6 +18,7 @@ description: 公众号草稿发布 · 把一篇写好的图文存进你自己公
 - ✅ 把 `{标题 + 公众号风格 HTML 正文}` 存进公众号**草稿箱**。
 - ✅ 正文里的外链图片（`<img src="http…">`）会被**自动搬运**成公众号图床地址（mmbiz）；个别图搬运失败会**跳过**，不影响整篇。
 - ✅ 封面（thumb）不指定时会**自动兜底**一张。
+- ✅ **免费能力、不扣点**——存草稿这一步不消耗你的点数（写稿、生图那些能力才扣）。
 - ❌ **绝不群发 / 不推送 / 不定时发**——只落草稿。群发这一步永远由你在公众号后台手动完成。
 - ❌ **不能替你绑定公众号**——得你先在 doubaoya.com 授权。
 
@@ -254,10 +255,10 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 401 | `UNAUTHORIZED` | 密钥无效 / 会话失效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心撤销并重新生成 |
 | 403 | `FORBIDDEN` | 这个公众号**不属于**当前密钥背后的用户 | 说明用的是别人绑定的公众号，或密钥与绑定账号对不上——换成本人绑定该号的密钥 |
 | 400 | `VALIDATION_ERROR` | 缺 `authorizerAppid` / `title` / `contentHtml` | 按 `message` 补齐必填项 |
-| 502 | `WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED` | 上游 / 封面处理失败（**额度已退**） | 可安全重试；封面失败可试着换封面或不传 `thumbMediaId` |
+| 502 | `WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED` | 上游 / 封面处理失败 | 可安全重试；封面失败可试着换封面或不传 `thumbMediaId` |
 | 503 | `WECHAT_NOT_CONFIGURED` | 平台侧公众号能力**未配置** | 非用户能自解，提示这是平台配置问题，稍后再试 / 联系 doubaoya.com |
 
-> `502` 类失败会**自动退还额度**，重试是安全的，不会重复扣费。
+> `502` 类失败重试是安全的：同标题同正文的重试会被去重，不会在草稿箱里堆出重复草稿。
 > 若 `GET /api/wechat/status` 的 `accounts` 为空 → 不是错误码问题，是**还没绑定公众号**：让用户先去 doubaoya.com → 公众号 页面绑定，本技能替不了他绑。
 
 ---
