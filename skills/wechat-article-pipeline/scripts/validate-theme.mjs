@@ -25,9 +25,13 @@ import process from 'node:process';
 
 const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorations', 'components']);
 const PALETTE_KEYS = new Set(['text', 'heading', 'accent', 'accent2', 'muted', 'bgSoft', 'border', 'link']);
+// NOTE: this list only decides whether an `elements.<tag>` key gets a
+// "not a recognized tag" WARNING — it is not part of the safety boundary
+// (that's UNSAFE_PATTERNS below). h5/h6 and table/th/td joined it when the
+// renderer stopped collapsing h5/h6 into h4 and gained GFM table support.
 const ELEMENT_TAGS = new Set([
-  'h1', 'h2', 'h3', 'h4', 'p', 'blockquote', 'ul', 'ol', 'li', 'img', 'hr',
-  'strong', 'em', 'del', 'a', 'code', 'pre',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'blockquote', 'ul', 'ol', 'li', 'img', 'hr',
+  'strong', 'em', 'del', 'a', 'code', 'pre', 'table', 'th', 'td',
 ]);
 const PAGE_KEYS = new Set(['fontFamily', 'fontSize', 'lineHeight', 'letterSpacing', 'color']);
 
