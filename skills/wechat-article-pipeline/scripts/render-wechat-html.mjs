@@ -130,6 +130,12 @@ const DEFAULT_THEME = {
     },
     h3: { style: 'font-size:18px;font-weight:700;color:{{heading}};line-height:1.4;margin:22px 0 12px;' },
     h4: { style: 'font-size:16px;font-weight:700;color:{{heading}};line-height:1.5;margin:18px 0 10px;' },
+    // h5/h6 used to collapse into h4. They now render as themselves; the built-in
+    // defaults step down in size and (h6) drop to the muted color. A theme that
+    // only styles h1–h4 (all 18 built-ins do) inherits these — still palette-driven
+    // via {{heading}}/{{muted}}, so the color stays on-theme.
+    h5: { style: 'font-size:15px;font-weight:700;color:{{heading}};line-height:1.5;margin:16px 0 8px;' },
+    h6: { style: 'font-size:14px;font-weight:700;color:{{muted}};line-height:1.5;margin:14px 0 8px;' },
     p: { style: 'margin:0 0 16px;font-size:16px;line-height:1.75;color:{{text}};' },
     ul: { style: 'margin:0 0 16px;padding-left:24px;' },
     ol: { style: 'margin:0 0 16px;padding-left:24px;' },
@@ -145,6 +151,19 @@ const DEFAULT_THEME = {
     del: { style: 'text-decoration:line-through;color:{{muted}};' },
     a: { style: 'color:{{link}};text-decoration:underline;word-break:break-all;' },
     code: { style: `padding:2px 6px;background:#f6f6f6;border-radius:4px;font-family:${MONO};font-size:14px;color:#c7254e;` },
+    // GFM tables. 公众号 正文 is a narrow phone column and offers no horizontal
+    // scroll, so the table MUST fit: `table-layout:fixed` + `width:100%` +
+    // per-cell `word-break` make columns share the width and wrap instead of
+    // overflowing. Never give these a fixed px width.
+    // th/td carry NO text-align: the renderer always appends one, taken from the
+    // delimiter row (`:-:` etc.), because column alignment is the author's call
+    // in the markdown, not the theme's. Without it <th> would centre by UA default.
+    table: { style: 'width:100%;table-layout:fixed;border-collapse:collapse;margin:0 0 16px;font-size:14px;line-height:1.6;' },
+    th: {
+      style:
+        'border:1px solid {{border}};padding:8px 10px;background:{{bgSoft}};color:{{heading}};font-weight:700;word-break:break-word;',
+    },
+    td: { style: 'border:1px solid {{border}};padding:8px 10px;color:{{text}};word-break:break-word;' },
     pre: {
       style: `margin:0 0 16px;padding:14px 16px;background:#f6f6f6;border-radius:8px;overflow-x:auto;font-family:${MONO};font-size:14px;line-height:1.6;color:{{text}};white-space:pre-wrap;word-break:break-all;`,
     },
@@ -270,46 +289,109 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Escape only text destined for an attribute value (href/src/alt).
+// Escape a RAW (never-yet-escaped) string destined for an attribute value
+// (href/src/alt). `<`/`>` cannot terminate a quoted attribute value, but we
+// escape them anyway so the emitted tag stays unambiguous to the downstream
+// regex-based consumers (e.g. the mmbiz <img src> uploader in wechat/routes.ts).
+// Those consumers MUST decode the entities back before using the value as a URL
+// (apps/api .../wechat/html-entities.ts) — every entity produced here is on its
+// list. Add one here, add it there.
 function escapeAttr(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 // -----------------------------------------------------------------------------
-// Inline markdown -> inline HTML.
-// Order matters: we protect code spans first so their contents are not further
-// parsed, then handle images, links, emphasis, strike. All element styles come
-// from the resolved theme `t`.
+// href scheme whitelist — a TRUST BOUNDARY, not a nicety.
+//
+// A markdown link's href is author input that ends up verbatim inside HTML we
+// hand to 公众号 AND serve back into our own preview. `[x](javascript:alert(1))`
+// must never become a live `href="javascript:…"`. Today's blast radius is small
+// (the web preview iframe is sandbox="", 公众号 strips it too), but neither of
+// those is ours to rely on — this renderer is vendored and reused elsewhere.
+//
+// Rule: no scheme at all → relative/anchor/query (`/x`, `./x`, `#a`, `?q=1`,
+// `//host/x`) → allowed. Has a scheme → must be on the list.
+//
+// NOTE — <img src> is deliberately NOT filtered by this. `data:` URIs are a
+// supported, in-use image input (apps/web's SAMPLE_MD ships a data:image/svg+xml),
+// and images are not a script-execution sink. Do not "unify" the two.
 // -----------------------------------------------------------------------------
+const ALLOWED_HREF_SCHEMES = new Set(['http', 'https', 'mailto']);
+const SCHEME_RE = /^([a-zA-Z][a-zA-Z0-9+.-]*):/;
+
+function isSafeHref(href) {
+  // Browsers ignore ASCII control chars / whitespace when parsing the scheme, so
+  // strip them BEFORE deciding — `\x01javascript:alert(1)` IS a live javascript:
+  // URL, and the link regex (`[^)\s]+`) happily lets control chars through.
+  const scheme = String(href).replace(/[\u0000-\u0020]/g, '').match(SCHEME_RE);
+  return !scheme || ALLOWED_HREF_SCHEMES.has(scheme[1].toLowerCase());
+}
+
+// -----------------------------------------------------------------------------
+// Placeholder protection (used by renderInline).
+//
+// Fragments that are ALREADY final HTML (code spans, <img>, <a> open/close tags)
+// are swapped out for a sentinel before the bulk escape/emphasis passes, then
+// swapped back at the end. The sentinel is NUL-delimited: renderWechatHtml
+// strips NUL from the input (CommonMark §2.3), so author text can never forge
+// one, and no escape or emphasis regex touches it.
+//
+// This is what fixes the `&` DOUBLE-ESCAPE bug: attribute values are now escaped
+// exactly once, from the RAW markdown source, BEFORE escapeHtml() runs over the
+// surrounding text — instead of being escaped by escapeHtml() and then escaped a
+// second time by escapeAttr(), which turned `?a=1&b=2` into `?a=1&amp;amp;b=2`
+// and produced links that were genuinely broken in the published article.
+// -----------------------------------------------------------------------------
+// U+0000. renderWechatHtml() replaces every NUL in the input with U+FFFD
+// (CommonMark §2.3), so author text can never forge a sentinel.
+const SENTINEL = '\u0000';
+const HELD_RE = /\u0000(\d+)\u0000/g;
+
+function protect(store, html) {
+  return `${SENTINEL}${store.push(html) - 1}${SENTINEL}`;
+}
+
 function renderInline(text, t) {
-  const codeSpans = [];
-  // 1. Inline code: `code` — capture, escape contents, replace later.
-  let out = text.replace(/`([^`]+)`/g, (_m, code) => {
-    const token = ` CODE${codeSpans.length} `;
-    codeSpans.push(`<code style="${elStyle(t, 'code')}">${escapeHtml(code)}</code>`);
-    return token;
-  });
+  const held = [];
 
-  // 2. Escape the remaining raw text so stray <, >, & don't break the fragment.
-  out = escapeHtml(out);
+  // 1. Inline code: `code` — contents are escaped and never parsed further.
+  let out = text.replace(/`([^`]+)`/g, (_m, code) =>
+    protect(held, `<code style="${elStyle(t, 'code')}">${escapeHtml(code)}</code>`),
+  );
 
-  // 3. Images: ![alt](src) — PRESERVE src verbatim (no rewrite/resolve).
-  out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, alt, src) => {
-    return renderImage(src, alt, t);
-  });
+  // 2. Images: ![alt](src) — src PRESERVED verbatim (no rewrite/resolve), only
+  //    attribute-escaped. Held whole, so the bulk escape can't touch the tag.
+  out = out.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, alt, src) =>
+    protect(held, renderImage(src, alt, t)),
+  );
 
-  // 4. Links: [text](href). Note: 公众号 only makes whitelisted external links
-  //    clickable; others are flattened to plain text. We keep href regardless.
+  // 3. Links: [text](href). Only the <a …> / </a> TAGS are held — the label stays
+  //    in the stream so it still gets escaped and emphasis-parsed (`[**b**](u)`).
+  //    Note: 公众号 only makes whitelisted external links clickable; others are
+  //    flattened to plain text. We keep href regardless — unless isSafeHref()
+  //    rejects the scheme, in which case we flatten it the same way 公众号 does:
+  //    the label is returned to the stream as ordinary text (escaped, emphasis
+  //    still parsed), so nothing the reader was meant to SEE is lost — only the
+  //    unusable href goes away.
   out = out.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (_m, label, href) => {
-    return `<a href="${escapeAttr(href)}" style="${elStyle(t, 'a')}">${label}</a>`;
+    if (!isSafeHref(href)) return label;
+    const open = protect(held, `<a href="${escapeAttr(href)}" style="${elStyle(t, 'a')}">`);
+    return `${open}${label}${protect(held, '</a>')}`;
   });
+
+  // 4. Escape the remaining raw text so stray <, >, & don't break the fragment.
+  out = escapeHtml(out);
 
   // 5. Bold: **text** or __text__
   out = out.replace(/\*\*([^*]+)\*\*/g, `<strong style="${elStyle(t, 'strong')}">$1</strong>`);
   out = out.replace(/__([^_]+)__/g, `<strong style="${elStyle(t, 'strong')}">$1</strong>`);
 
-  // 6. Strikethrough: ~~text~~
-  out = out.replace(/~~([^~]+)~~/g, `<span style="${elStyle(t, 'del')}">$1</span>`);
+  // 6. Strikethrough: ~~text~~ — a real <del>, not a styled <span>.
+  out = out.replace(/~~([^~]+)~~/g, `<del style="${elStyle(t, 'del')}">$1</del>`);
 
   // 7. Italic: *text* or _text_ (after bold so ** already consumed).
   out = out.replace(/(^|[^*])\*([^*\n]+)\*/g, `$1<em style="${elStyle(t, 'em')}">$2</em>`);
@@ -318,17 +400,26 @@ function renderInline(text, t) {
   // 8. Hard line break: two trailing spaces, or a backslash, before newline.
   out = out.replace(/( {2,}|\\)\n/g, '<br />');
 
-  // 9. Restore code spans.
-  out = out.replace(/ CODE(\d+) /g, (_m, i) => codeSpans[Number(i)]);
+  // 9. Restore the held fragments.
+  out = out.replace(HELD_RE, (_m, i) => held[Number(i)]);
 
   return out;
 }
 
 // Render an image, preserving src verbatim. When the theme sets img.captionStyle
 // (or img.figureStyle), wrap it in a <figure> with the alt text as <figcaption>.
-function renderImage(src, alt, t) {
+//
+// `asBlock` decides whether the <figure> is allowed AT ALL, and only the walker's
+// own-line branch passes it. <figure> is block-level flow content: emitted from
+// renderInline it lands INSIDE a <p>, and the HTML parser closes that <p> at the
+// <figure> start tag — the rest of the sentence falls out of the paragraph and
+// loses its styling. So an image mixed into a sentence stays a bare <img>, which
+// is also what it means: no caption, no 26px block margins, no centering.
+// (Same for a list item / table cell — those go through renderInline too.)
+function renderImage(src, alt, t, asBlock = false) {
   const imgEl = t.elements.img || {};
   const imgTag = `<img src="${escapeAttr(src)}" alt="${escapeAttr(alt)}" style="${imgEl.style || ''}" />`;
+  if (!asBlock) return imgTag;
   const figureStyle = typeof imgEl.figureStyle === 'string' ? imgEl.figureStyle : '';
   const captionStyle = typeof imgEl.captionStyle === 'string' ? imgEl.captionStyle : '';
   if (!figureStyle && !captionStyle) return imgTag;
@@ -340,27 +431,220 @@ function renderImage(src, alt, t) {
 // -----------------------------------------------------------------------------
 // Heuristic: is this line an already-formed HTML block we should pass through?
 // Lets pre-made HTML snippets (raw <img>, <a>, <div>, <table>, <section>...)
-// survive verbatim so authors can drop in ready HTML.
+// survive verbatim so authors can drop in ready HTML. The `\/?` covers CLOSING
+// tags too — without it a multi-line snippet passed its `<div>` through but then
+// escaped the matching `</div>` into a paragraph, leaking `&lt;/div&gt;` to the
+// reader.
+//
+// ponytail: line-level only, by design. Raw HTML mixed INSIDE a sentence
+// (`文字 <span style="…">x</span> 文字`) is still escaped. Ceiling: supporting it
+// means letting arbitrary author markup skip escapeHtml mid-stream, i.e. writing
+// a real tag+attribute sanitizer (this renderer's output is inlined into a page
+// the API serves back). A half-sanitizer is worse than none. Upgrade path: if
+// inline HTML is ever needed, add an explicit tag+attribute allowlist scrubber
+// next to validate-theme.mjs's UNSAFE_PATTERNS and hold matches via protect().
 // -----------------------------------------------------------------------------
 const HTML_BLOCK_RE =
-  /^<(img|a|div|section|table|figure|iframe|video|audio|p|span|br|hr|blockquote|ul|ol|li|h[1-6]|center|font|strong|em|svg)\b/i;
+  /^<\/?(img|a|div|section|table|thead|tbody|tr|th|td|figure|iframe|video|audio|p|span|br|hr|blockquote|ul|ol|li|h[1-6]|center|font|strong|em|del|svg)\b/i;
 
 function isHtmlPassthrough(line) {
   return HTML_BLOCK_RE.test(line.trim());
 }
 
 // -----------------------------------------------------------------------------
-// List parsing helpers (supports one level of nesting via indentation).
+// Block-start predicates — the SINGLE source of truth for "this line begins a
+// non-paragraph block". Both the main walker and the paragraph gatherer read
+// them, so adding a block type can't silently forget to stop paragraphs.
 // -----------------------------------------------------------------------------
+const FENCE_RE = /^\s*(```+|~~~+)\s*([\w-]*)\s*$/;
+const HR_RE = /^\s*([-*_])\s*(?:\1\s*){2,}$/;
+const ATX_RE = /^(#{1,6})\s+(.*)$/;
+const QUOTE_RE = /^\s*>\s?/;
 const UL_RE = /^(\s*)[-*+]\s+(.*)$/;
 const OL_RE = /^(\s*)\d+[.)]\s+(.*)$/;
+// A line that is NOTHING BUT an image — rendered as a block image instead of
+// being buried in a <p> (a <figure> inside a <p> is invalid HTML, and the
+// paragraph's margins/line-height had no business wrapping a block-level image).
+const IMG_ONLY_RE = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)\s*$/;
+// Setext underline: === (h1) or --- (h2) under a line of text.
+const SETEXT_RE = /^\s*(=+|-+)\s*$/;
+// Block component opener `:::组件名 [inline]`. Requires a non-space after ":::",
+// so a LONE ":::" (an orphaned closer) is deliberately NOT a block start and
+// still falls through to the paragraph branch as literal text, as before.
+// Single source of truth: both isBlockStart() and the walker branch use this.
+const DIRECTIVE_RE = /^:::\s*(\S+)\s*(.*)$/;
+// GFM table delimiter row: | --- | :-: | ---: |
+const TABLE_DELIM_RE = /^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-*:?\s*\|?\s*$/;
+// Task list item: `- [ ] todo` / `- [x] done` (the leading marker is consumed by
+// UL_RE/OL_RE first, so this matches the item TEXT).
+const TASK_RE = /^\[([ xX])\]\s+(.*)$/;
+
+function isTableStart(lines, i) {
+  const head = lines[i];
+  const delim = lines[i + 1];
+  if (head === undefined || delim === undefined) return false;
+  if (!head.includes('|') || !TABLE_DELIM_RE.test(delim)) return false;
+  // Guard against a paragraph line that merely contains a pipe: the delimiter
+  // row must describe the same number of columns as the header.
+  return splitTableRow(head).length === splitTableRow(delim).length;
+}
+
+/** True if line `i` starts any block that is not a paragraph. */
+function isBlockStart(lines, i) {
+  const line = lines[i];
+  return (
+    FENCE_RE.test(line) ||
+    HR_RE.test(line) ||
+    ATX_RE.test(line) ||
+    QUOTE_RE.test(line) ||
+    UL_RE.test(line) ||
+    OL_RE.test(line) ||
+    IMG_ONLY_RE.test(line) ||
+    isTableStart(lines, i) ||
+    // Block component container (`:::关注卡` …). Upstream-only — the doubaoyahub
+    // vendor copy has no component layer, so this arm does not exist there. It
+    // MUST stay in this shared predicate: the paragraph gatherer below stops on
+    // isBlockStart(), and without it a `:::` line is swallowed as body text and
+    // the component silently degrades to literal prose.
+    DIRECTIVE_RE.test(line) ||
+    isHtmlPassthrough(line)
+  );
+}
+
+// -----------------------------------------------------------------------------
+// GFM tables
+// -----------------------------------------------------------------------------
+/**
+ * Split one table row into trimmed cell strings, honouring `\|` escapes.
+ * Scanned by hand rather than split-on-regex: a lookbehind (`(?<!\\)\|`) is a
+ * PARSE-time error on older Safari, which would take down the whole web bundle,
+ * and this module ships to the browser.
+ */
+function splitTableRow(row) {
+  let s = row.trim();
+  if (s.startsWith('|')) s = s.slice(1);
+  if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+  const cells = [];
+  let buf = '';
+  for (let k = 0; k < s.length; k++) {
+    if (s[k] === '\\' && s[k + 1] === '|') {
+      buf += '|';
+      k++;
+    } else if (s[k] === '|') {
+      cells.push(buf.trim());
+      buf = '';
+    } else {
+      buf += s[k];
+    }
+  }
+  cells.push(buf.trim());
+  return cells;
+}
+
+/** `:---` -> left, `:-:` -> center, `---:` -> right, `---` -> '' (renderTable
+ *  turns the empty case into an explicit `left`). */
+function columnAlign(cell) {
+  const left = cell.startsWith(':');
+  const right = cell.endsWith(':');
+  if (left && right) return 'center';
+  if (right) return 'right';
+  if (left) return 'left';
+  return '';
+}
+
+function renderTable(header, aligns, rows, t) {
+  const cell = (tag, text, align) => {
+    const style = `${elStyle(t, tag)}text-align:${align || 'left'};`;
+    return `<${tag} style="${style}">${renderInline(text, t)}</${tag}>`;
+  };
+  const head = `<thead><tr>${header.map((c, k) => cell('th', c, aligns[k])).join('')}</tr></thead>`;
+  const body = rows
+    .map((r) => `<tr>${header.map((_h, k) => cell('td', r[k] ?? '', aligns[k])).join('')}</tr>`)
+    .join('');
+  return `<table style="${elStyle(t, 'table')}">${head}<tbody>${body}</tbody></table>`;
+}
+
+// -----------------------------------------------------------------------------
+// List parsing — arbitrary nesting depth via an indent stack, and LOOSE lists
+// (blank lines between items) stay ONE list. The old code cut a loose list into
+// one <ul>/<ol> per item, which restarted ordered numbering at 1 on every item.
+// -----------------------------------------------------------------------------
+const indentOf = (ws) => ws.replace(/\t/g, '    ').length;
+/** Nesting needs at least 2 more columns of indent than the enclosing level. */
+const NEST_INDENT = 2;
+
+/**
+ * Parse a run of list lines starting at `start` into a tree of
+ * { text, task, children, childOrdered } items.
+ * @returns {{ items: object[], next: number, ordered: boolean }}
+ */
+function parseList(lines, start) {
+  const ordered = OL_RE.test(lines[start]);
+  const rootItems = [];
+  // Each stack level owns the item array for one list depth.
+  const stack = [{ indent: indentOf((lines[start].match(UL_RE) || lines[start].match(OL_RE))[1]), items: rootItems }];
+  let i = start;
+
+  while (i < lines.length) {
+    if (lines[i].trim() === '') {
+      // Loose list: blank lines stay inside the list only if another item of the
+      // SAME top-level kind follows; otherwise the list ends here.
+      let j = i;
+      while (j < lines.length && lines[j].trim() === '') j++;
+      if (j >= lines.length || HR_RE.test(lines[j])) break;
+      const m = lines[j].match(UL_RE) || lines[j].match(OL_RE);
+      if (!m) break;
+      if (indentOf(m[1]) < NEST_INDENT && OL_RE.test(lines[j]) !== ordered) break;
+      i = j;
+      continue;
+    }
+    // `- - -` matches UL_RE but is a horizontal rule, not an item.
+    if (HR_RE.test(lines[i])) break;
+    const m = lines[i].match(UL_RE) || lines[i].match(OL_RE);
+    if (!m) break;
+
+    const ind = indentOf(m[1]);
+    const isOrdered = OL_RE.test(lines[i]);
+    while (stack.length > 1 && ind < stack[stack.length - 1].indent) stack.pop();
+
+    let level = stack[stack.length - 1];
+    if (ind >= level.indent + NEST_INDENT) {
+      const parent = level.items[level.items.length - 1];
+      if (parent) {
+        // APPEND into the parent's existing child array — never re-assign it.
+        // Sloppy but perfectly common indentation (`   - b` then `  - c`) pops a
+        // level and then re-descends into the SAME parent; a fresh `[]` here
+        // silently DELETED every child already parsed under it (`b` vanished
+        // from the output entirely). The first child still decides ul vs ol.
+        if (!parent.children.length) parent.childOrdered = isOrdered;
+        level = { indent: ind, items: parent.children };
+        stack.push(level);
+      }
+    }
+
+    const task = m[2].match(TASK_RE);
+    level.items.push({
+      text: task ? task[2] : m[2],
+      task: task ? (task[1].toLowerCase() === 'x' ? 'done' : 'todo') : null,
+      children: [],
+      childOrdered: false,
+    });
+    i++;
+  }
+  return { items: rootItems, next: i, ordered };
+}
+
+// Task-list boxes. 公众号 strips <input>, so a checkbox can only be a character.
+const TASK_BOX = { done: '☑ ', todo: '☐ ' };
 
 function renderListItems(items, t) {
   const marker = (t.elements.li && typeof t.elements.li.marker === 'string' && t.elements.li.marker) || '';
   return items
     .map((it) => {
       let inner = renderInline(it.text, t);
-      if (marker) inner = `${marker}${inner}`;
+      // A checkbox IS the bullet — it replaces the theme's marker for task items.
+      if (it.task) inner = `${TASK_BOX[it.task]}${inner}`;
+      else if (marker) inner = `${marker}${inner}`;
       if (it.children && it.children.length) {
         const tag = it.childOrdered ? 'ol' : 'ul';
         inner += `<${tag} style="${elStyle(t, tag)}">${renderListItems(it.children, t)}</${tag}>`;
@@ -416,7 +700,9 @@ export function renderWechatHtml(markdown, opts = {}) {
     }
   }
 
-  const src = String(markdown).replace(/\r\n?/g, '\n');
+  // NUL -> U+FFFD (CommonMark §2.3). Also a hard guarantee that author text can
+  // never forge a renderInline() placeholder sentinel.
+  const src = String(markdown).replace(/\r\n?/g, '\n').replace(/\u0000/g, '\uFFFD');
   const lines = src.split('\n');
   const out = [];
   let i = 0;
@@ -438,7 +724,7 @@ export function renderWechatHtml(markdown, opts = {}) {
     }
 
     // Fenced code block: ``` or ~~~
-    const fence = line.match(/^\s*(```+|~~~+)\s*([\w-]*)\s*$/);
+    const fence = line.match(FENCE_RE);
     if (fence) {
       const fenceMark = fence[1][0];
       const codeLines = [];
@@ -456,7 +742,7 @@ export function renderWechatHtml(markdown, opts = {}) {
     // Backward-compatible: prose almost never starts a line with ":::", and an
     // UNKNOWN component name never consumes a block — it is emitted verbatim + a
     // warning, so pure-markdown output is unchanged.
-    const dir = line.match(/^:::\s*(\S+)\s*(.*)$/);
+    const dir = line.match(DIRECTIVE_RE);
     if (dir) {
       const rawName = dir[1];
       const inlineRest = (dir[2] || '').trim();
@@ -503,28 +789,27 @@ export function renderWechatHtml(markdown, opts = {}) {
     }
 
     // Horizontal rule: ---, ***, ___ (3+) — replaced entirely by theme hr.html.
-    if (/^\s*([-*_])\s*(?:\1\s*){2,}$/.test(line)) {
+    if (HR_RE.test(line)) {
       const hrHtml = (t.elements.hr && typeof t.elements.hr.html === 'string' && t.elements.hr.html) || '<hr />';
       out.push(hrHtml);
       i++;
       continue;
     }
 
-    // ATX headings h1-h4 (h5/h6 collapse to h4 styling).
-    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    // ATX headings h1-h6 (h5/h6 used to collapse into h4).
+    const h = line.match(ATX_RE);
     if (h) {
-      const level = Math.min(h[1].length, 4);
-      const key = `h${level}`;
+      const key = `h${h[1].length}`;
       out.push(block(t, key, `<${key} style="${elStyle(t, key)}">${renderInline(h[2].trim(), t)}</${key}>`));
       i++;
       continue;
     }
 
     // Blockquote (collect consecutive > lines).
-    if (/^\s*>\s?/.test(line)) {
+    if (QUOTE_RE.test(line)) {
       const quoteLines = [];
-      while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
-        quoteLines.push(lines[i].replace(/^\s*>\s?/, ''));
+      while (i < lines.length && QUOTE_RE.test(lines[i])) {
+        quoteLines.push(lines[i].replace(QUOTE_RE, ''));
         i++;
       }
       // GFM alert -> callout component. `> [!NOTE] optional title` + body lines.
@@ -547,26 +832,34 @@ export function renderWechatHtml(markdown, opts = {}) {
       continue;
     }
 
-    // Lists (unordered / ordered), one level of nesting.
-    if (UL_RE.test(line) || OL_RE.test(line)) {
-      const ordered = OL_RE.test(line);
-      const items = [];
-      let cur = null;
-      while (i < lines.length && (UL_RE.test(lines[i]) || OL_RE.test(lines[i]))) {
-        const m = lines[i].match(UL_RE) || lines[i].match(OL_RE);
-        const indent = m[1].replace(/\t/g, '    ').length;
-        const childOrdered = OL_RE.test(lines[i]);
-        if (indent >= 2 && cur) {
-          cur.children.push({ text: m[2], children: [] });
-          cur.childOrdered = childOrdered;
-        } else {
-          cur = { text: m[2], children: [], childOrdered: false };
-          items.push(cur);
-        }
+    // GFM table: a header row followed by a | --- | --- | delimiter row.
+    if (isTableStart(lines, i)) {
+      const header = splitTableRow(lines[i]);
+      const aligns = splitTableRow(lines[i + 1]).map(columnAlign);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].trim() !== '' && lines[i].includes('|') && !isBlockStart(lines, i)) {
+        rows.push(splitTableRow(lines[i]));
         i++;
       }
+      out.push(block(t, 'table', renderTable(header, aligns, rows, t)));
+      continue;
+    }
+
+    // Lists (unordered / ordered), arbitrary nesting, loose lists stay one list.
+    if (UL_RE.test(line) || OL_RE.test(line)) {
+      const { items, next, ordered } = parseList(lines, i);
+      i = next;
       const tag = ordered ? 'ol' : 'ul';
       out.push(block(t, tag, `<${tag} style="${elStyle(t, tag)}">${renderListItems(items, t)}</${tag}>`));
+      continue;
+    }
+
+    // A line that is nothing but an image → block-level image, NOT wrapped in <p>.
+    const imgOnly = line.match(IMG_ONLY_RE);
+    if (imgOnly) {
+      out.push(block(t, 'img', renderImage(imgOnly[2], imgOnly[1], t, true)));
+      i++;
       continue;
     }
 
@@ -577,25 +870,41 @@ export function renderWechatHtml(markdown, opts = {}) {
       continue;
     }
 
-    // Paragraph: gather consecutive non-blank, non-block lines.
+    // Setext heading: a line of text with === (h1) or --- (h2) directly under it.
+    // Reached only after every other block test failed, i.e. `line` is plain
+    // paragraph text — exactly CommonMark's condition. Note this is also what
+    // stops a bare `---` under a paragraph from being eaten as a horizontal rule.
+    // ponytail: single-line content only (CommonMark lets the heading span the
+    // whole preceding paragraph). Ceiling: `段落\n文字\n===` renders <p>段落</p> +
+    // <h1>文字</h1> rather than one two-line h1. Upgrade path: hand the collected
+    // paraLines to the setext branch instead of just `line`.
+    const setext = i + 1 < lines.length ? lines[i + 1].match(SETEXT_RE) : null;
+    if (setext) {
+      const key = setext[1][0] === '=' ? 'h1' : 'h2';
+      out.push(block(t, key, `<${key} style="${elStyle(t, key)}">${renderInline(line.trim(), t)}</${key}>`));
+      i += 2;
+      continue;
+    }
+
+    // Paragraph: gather consecutive non-blank, non-block lines. The stop
+    // condition is isBlockStart() — the same predicate the walker branches on,
+    // so a new block type can never be handled above but forgotten here.
     const paraLines = [];
-    while (
-      i < lines.length &&
-      lines[i].trim() !== '' &&
-      !/^\s*(```+|~~~+)/.test(lines[i]) &&
-      !/^(#{1,6})\s+/.test(lines[i]) &&
-      !/^\s*>\s?/.test(lines[i]) &&
-      !UL_RE.test(lines[i]) &&
-      !OL_RE.test(lines[i]) &&
-      !/^\s*([-*_])\s*(?:\1\s*){2,}$/.test(lines[i]) &&
-      !/^:::\s*\S/.test(lines[i]) &&
-      !isHtmlPassthrough(lines[i])
-    ) {
+    while (i < lines.length && lines[i].trim() !== '' && !isBlockStart(lines, i)) {
+      // Stop BEFORE a line that carries a setext underline, so the branch above
+      // gets to turn it into a heading instead of swallowing it as body text.
+      if (paraLines.length && i + 1 < lines.length && SETEXT_RE.test(lines[i + 1])) break;
       paraLines.push(lines[i]);
       i++;
     }
     if (paraLines.length) {
       out.push(block(t, 'p', `<p style="${elStyle(t, 'p')}">${renderInline(paraLines.join('\n'), t)}</p>`));
+    } else {
+      // Unreachable by construction: every isBlockStart() predicate has a branch
+      // above that consumes the line. Kept as an unconditional forward-progress
+      // guarantee anyway — this walker runs server-side on user input, where a
+      // non-advancing `i` would spin a request worker forever.
+      i++;
     }
   }
 
