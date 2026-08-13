@@ -25,15 +25,23 @@ description: 公众号阅读增长榜（黑马账号）· 按日期拉公众号�
 ## 工作流（4 步）
 
 ### 1. 定日期
-默认拉**昨天**的榜（当日数据通常尚未结算）。`--date` 接受口语化 `yesterday` / `today`，也接受具体 `YYYY-MM-DD`。
+默认拉 **`latest`（今天往前 2 天）** 的榜。两条硬规矩（2026-08-13 实测）：
+
+- **出数滞后约两天**：昨天和今天的榜都还没结算，直接查必然是空的。所以默认是 T-2，
+  别改成"昨天"——`--date yesterday` 现在几乎稳定拿空榜。
+- **只保留最近 30 天**：更早的日期不会返空榜，而是直接被判为查无结果（422）。
+  `--auto-back` 最多往前挪 7 天，跨不过这道 30 天的墙。
+
+`--date` 接受 `latest` / `yesterday` / `today`，也接受具体 `YYYY-MM-DD`。
 
 ### 2. 调用脚本
 ```bash
 python3 "$SKILL_PATH/scripts/fetch_growth_rank.py"
 ```
-指定日期：
+指定日期时**按今天现算，别照抄写死的日期**（写死的日期迟早滑出 30 天窗口）：
 ```bash
-python3 "$SKILL_PATH/scripts/fetch_growth_rank.py" --date 2026-06-25
+python3 "$SKILL_PATH/scripts/fetch_growth_rank.py" \
+  --date "$(date -d '-5 days' +%F 2>/dev/null || date -v-5d +%F)"
 ```
 若某天没数据，加 `--auto-back` 让脚本自动向前逐天追溯（最多 7 天），找到即停：
 ```bash
@@ -41,7 +49,7 @@ python3 "$SKILL_PATH/scripts/fetch_growth_rank.py" --date yesterday --auto-back
 ```
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次只跑一次脚本**，读完整 stdout，别用 `head`/`tail` 预览。
 
-> 即便不加 `--auto-back`，遇到「指定日无数据」时也可以让主 Agent 主动把 `--date` 往前挪一天再跑，直到拿到数据。
+> 即便不加 `--auto-back`，遇到「指定日无数据」时也可以让主 Agent 主动把 `--date` 往前挪一天再跑，直到拿到数据——但别挪出最近 30 天。
 
 ### 3. 渲染增长榜表格
 从 `data.items` 里取 **rank（名次）**、**accountName（账号名）**、**readRaise（阅读增长）** 等字段（防御式读取，缺了留空），铺成 Markdown 表，按名次升序：
@@ -77,8 +85,9 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 
 - `POST https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-raise-rank/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
-- 请求体：`{ "rankDate": "2026-06-26" }`
-  - `rankDate`：字符串 `YYYY-MM-DD`，默认昨天（脚本把 `yesterday`/`today` 映射成具体日期）
+- 请求体：`{ "rankDate": "YYYY-MM-DD" }`
+  - `rankDate`：字符串 `YYYY-MM-DD`，**必填**；只保留最近 30 天，且出数滞后约两天
+    （脚本把 `latest`/`yesterday`/`today` 映射成具体日期，默认 `latest` = 今天往前 2 天）
 - 返回信封：
   ```json
   { "success": true, "requestId": "...", "data": { "items": [ { "rank": 1, "accountName": "...", "readRaise": "..." } ] }, "error": null }
@@ -97,9 +106,13 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错） | 修正 `--date` 重试 |
 | —  | `NO_DATA` | 追溯多天仍无榜单 | 换个日期，或确认数据窗口 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
+| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据，**多半是日期超出最近 30 天** | 把 `--date` 挪进最近 30 天（推荐 T-2）重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。
+
+**榜是空的**（`success: true` 但 0 条）：不是故障，也**不扣你的点**——响应会带一个
+`noResult` 标记，点数当场退回。最常见的原因就是日期取到了昨天/今天，往前挪两天再来。
 
 ---
 

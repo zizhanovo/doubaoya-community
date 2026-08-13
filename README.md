@@ -94,7 +94,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | **wechat-hot-write** | 拉同主题爆文当样本，辅助写出能跑量的公众号文章 |
 | **wechat-10w-hot** | 按行业 + 时间拉公众号 10万+ 阅读爆文榜 |
 | **wechat-original-hot** | 公众号原创热门榜（区别于转载 / 洗稿） |
-| **wechat-top-account** | 公众号热度指数榜（日 / 周 / 月榜） |
+| **wechat-top-account** | 公众号热度指数日榜，按行业分类看头部格局 |
 | **wechat-fastest-growing** | 公众号阅读增长榜，挖近期黑马账号 |
 | **wechat-account-analyzer** | 公众号账号诊断 / 体检，支持多号竞品对照 |
 | **wechat-similar-account** | 公众号对标账号推荐，搭竞品矩阵 |

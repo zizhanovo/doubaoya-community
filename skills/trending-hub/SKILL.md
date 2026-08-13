@@ -48,9 +48,14 @@ export DOUBAOYA_API_KEY="dyh_xxxxxxxx"
 # 直取综合热点（无关键词，把当下全网最热的一批拉下来）——选题的正确起手
 python3 "$SKILL_PATH/scripts/fetch_trends.py"
 
-# 只是想收窄平台 / 框时间窗（依然不带关键词）
-python3 "$SKILL_PATH/scripts/fetch_trends.py" --platforms 2,5,8 --start-date "2026-06-24 00:00:00" --end-date "2026-06-24 01:00:00"
+# 只是想收窄平台（依然不带关键词、不带时间窗）
+python3 "$SKILL_PATH/scripts/fetch_trends.py" --platforms 2,5,8
 ```
+
+**🔴 别框时间窗。** 热榜是"当下快照"，不是可回溯的时间序列——实测（2026-08-13）带上任何
+时间区间都会把结果切成零星几条（连"今天 00:00 到此刻"这种看起来最合理的窗口都只剩 2 条），
+**不传日期才回落到完整的最新一批**（实测 130+ 条）。`--start-date` / `--end-date` 现在默认不传，
+除非你确知自己要什么，否则别加。
 
 CLI 参数：
 
@@ -58,8 +63,8 @@ CLI 参数：
 |------|------|------|
 | `--platforms` | 逗号分隔的平台编号（整数），如 `2,5,8` | `2,5,8` |
 | `--keywords` | 逗号分隔的关键词。**默认不带（综合热点直取）**。仅在「明确要看某个垂类词的热榜」时才用——**绝不用账号名/IP名** | 空（不带） |
-| `--start-date` | 区间起始 datetime `"YYYY-MM-DD HH:MM:SS"` | 今天 00:00:00 |
-| `--end-date` | 区间结束 datetime `"YYYY-MM-DD HH:MM:SS"` | 当前时刻 |
+| `--start-date` | 区间起始 datetime `"YYYY-MM-DD HH:MM:SS"`。**日常别传**，带时间窗会把热榜切得很零星 | 不传 |
+| `--end-date` | 区间结束 datetime `"YYYY-MM-DD HH:MM:SS"`。同上 | 不传 |
 
 ---
 
@@ -121,11 +126,12 @@ python3 "$SKILL_PATH/scripts/fetch_trends.py"
 - 鉴权：请求头 `Authorization: Bearer $DOUBAOYA_API_KEY`
 - 请求体（**综合热点直取，不带关键词**）：
   ```json
-  { "platforms": [2, 5, 8], "startDate": "2026-06-24 00:00:00", "endDate": "2026-06-24 01:00:00" }
+  { "platforms": [2, 5, 8] }
   ```
   - `platforms`：整数数组（平台编号）
   - `keywords`：字符串数组，**可选**；默认不传就是综合热点直取（**绝不放账号名/IP名**）
-  - `startDate` / `endDate`：datetime 字符串 `"YYYY-MM-DD HH:MM:SS"`
+  - `startDate` / `endDate`：datetime 字符串 `"YYYY-MM-DD HH:MM:SS"`，**可选且日常别传**——
+    热榜是当下快照，带时间窗只会把结果切得零星
 - 返回信封（envelope）：
   ```json
   {

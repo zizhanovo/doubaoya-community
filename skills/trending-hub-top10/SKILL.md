@@ -1,6 +1,6 @@
 ---
 name: trending-hub-top10
-description: 全网聚合热搜 TOP10 · 一次聚合抖音/微博/B站/快手/知乎/头条/百度等全网平台的热搜关键词，跨平台归并后输出综合热度最高的 TOP 榜，附所属平台分布；支持回溯近7天。只出聚合热榜，不支持查询具体某个热点详情。当用户需要全网热搜、聚合热点榜、今日热点、热榜 TOP10、跨平台热搜、选题热点扫描时使用。触发词：全网热搜、聚合热榜、今日热点、热榜TOP10、跨平台热搜、热点榜、热搜关键词。
+description: 全网聚合热搜 TOP10 · 一次聚合抖音/微博/B站/快手/知乎/头条/百度等全网平台的热搜关键词，跨平台归并后输出综合热度最高的 TOP 榜，附所属平台分布。只出当下最新一批聚合热榜，不支持回溯历史、也不支持查询具体某个热点详情。当用户需要全网热搜、聚合热点榜、今日热点、热榜 TOP10、跨平台热搜、选题热点扫描时使用。触发词：全网热搜、聚合热榜、今日热点、热榜TOP10、跨平台热搜、热点榜、热搜关键词。
 dependency:
   python: []
   system:
@@ -23,7 +23,7 @@ dependency:
 | **今日热点扫描** | 直接跑（不带日期） | 当下全网最热的聚合 TOP 榜 |
 | **选题决策** | 看 TOP 榜 + 所属平台分布 | 5 分钟定位高价值选题 |
 | **舆情 / 借势** | 看哪条跨多平台霸榜 | 第一时间发现可借势 / 需关注的事件 |
-| **趋势回溯** | `--start-date` 回溯近7天 | 追一段时间内的热点演变 |
+| **热点台账** | 每天固定跑一次并存下来 | 攒出自己看得见的热点演变 |
 
 ---
 
@@ -36,16 +36,14 @@ dependency:
 ## 工作流（4 步）
 
 ### 1. 决定时间口径
-- **最新（默认）**：不带日期，取当前全网聚合热榜。
-- **回溯历史**：`--start-date` 给起始日（最长回溯近7天）；`--end-date` 可选，不给时默认今天。
+**就一种口径：不带日期。** 热搜榜是"当下快照"，不是可回溯的时间序列——实测（2026-08-13）
+带上任何日期区间（连昨天到今天都算）都会返回 **0 条**，不带日期才拿到最新一批 20 个热词。
+`--start-date` / `--end-date` 目前**在上游没有可用数据**，别用。
 
 ### 2. 调用脚本
 ```bash
-# 最新聚合热榜
+# 最新聚合热榜 —— 就这一条命令，别加日期参数
 python3 "$SKILL_PATH/scripts/fetch_hot_keywords.py"
-
-# 回溯近一周
-python3 "$SKILL_PATH/scripts/fetch_hot_keywords.py" --start-date 2026-06-20 --end-date 2026-06-24
 ```
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次查询只跑一次脚本**，直接读完整 stdout，别用 `head` / `tail` 预览或重复调用。
 
@@ -86,8 +84,9 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 
 - `POST https://doubaoya.com/api/apis/trend/hot-keywords/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
-- 请求体：`{}`（取最新），回溯时带 `startDate` / `endDate`
-  - `startDate` / `endDate`：`YYYY-MM-DD`，**可选**——只在回溯历史时带上，最长近7天；给了 `startDate` 而没给 `endDate` 时脚本自动补今天
+- 请求体：`{}`（取最新）
+  - `startDate` / `endDate`：`YYYY-MM-DD`，**可选，但目前带上必返 0 条**（上游只供最新一批），
+    所以正常用法就是空请求体
 - 返回信封：
   ```json
   {
@@ -113,7 +112,7 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成（不要回显密钥） |
-| 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错、区间超过7天） | 修正参数重试 |
+| 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值 / 续额 |
 | 404 | `ENDPOINT_NOT_FOUND` | 接口路径不对 | 一般是脚本被改动，恢复默认端点路径 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |

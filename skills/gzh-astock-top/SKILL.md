@@ -29,18 +29,20 @@ description: A股公众号大V榜 · 一条命令编排「账号发现 → 账�
 
 1. **账号发现**（搜索账号）：用 `--keyword`（默认 `A股`）搜出 A股公众号，取前 N 个（默认 30）账号名。**这一步失败 = 没有账号 → 直接退出 1。**
 2. **账号画像**（账号诊断）：把这批账号名喂给账号分析接口，拿到平均阅读（`avgReadCount`）、健康度（`healthScore`）等数据。
-3. **当日发文**：按 `--date`（默认今天）查这批账号当天发了什么。
+3. **当日发文**：按 `--date`（**默认昨天**）查这批账号那天发了什么。
+   > 实测（2026-08-13）：当天的发文要到**次日**才归档，用今天的日期查恒返 0 个账号——所以默认是昨天，别改回今天。
 4. **（可选）账号爆文**：加 `--with-hot` 时，逐个账号拉近期爆文。
 
 后续单步（2/3/4）若某一步失败，**不中断整轮**，把该步错误收进结果的 `errors` 字段，其余数据照常返回。
 
 ### 调用脚本
 ```bash
-# 默认：关键词 A股，日期今天，前 30 个账号
+# 默认：关键词 A股，日期昨天（当天发文次日才归档），前 30 个账号
 python3 "$SKILL_PATH/scripts/fetch_astock_top.py"
 
 # 指定日期 / 关键词 / 账号数量
-python3 "$SKILL_PATH/scripts/fetch_astock_top.py" --keyword A股 --date 2026-06-20 --top 30
+python3 "$SKILL_PATH/scripts/fetch_astock_top.py" --keyword A股 --top 30 \
+  --date "$(date -d '-1 day' +%F 2>/dev/null || date -v-1d +%F)"
 
 # 额外拉各账号近期爆文（多花若干次调用）
 python3 "$SKILL_PATH/scripts/fetch_astock_top.py" --with-hot
@@ -54,7 +56,7 @@ python3 "$SKILL_PATH/scripts/fetch_astock_top.py" --with-hot
 ```json
 {
   "keyword": "A股",
-  "date": "2026-06-27",
+  "date": "YYYY-MM-DD",
   "accounts": ["大V账号1", "大V账号2"],
   "analysis": { /* 账号诊断 data */ },
   "dailyPublish": { /* 当日发文 data */ },
@@ -89,7 +91,7 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 |------|------|--------|
 | 1 账号发现 | `https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-search-user/call` | `{ "keyword": "A股", "page": 1 }` |
 | 2 账号画像 | `https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-account-analyzer/call` | `{ "accountNames": ["账号1", "账号2"] }` |
-| 3 当日发文 | `https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-daily-publish/call` | `{ "date": "2026-06-27", "accountNames": ["账号1"] }` |
+| 3 当日发文 | `https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-daily-publish/call` | `{ "date": "YYYY-MM-DD", "accountNames": ["账号1"] }`（当天发文次日才归档，用昨天） |
 | 4 账号爆文（可选 `--with-hot`） | `https://doubaoya.com/api/apis/gongzhonghao/hot-article/call` | `{ "keyword": "账号名", "startDate": "...", "endDate": "..." }` |
 
 - 每个子调用都走同一套**信封**：先看 `success===true` 才读 `data`，否则读 `error.code` / `error.message`。

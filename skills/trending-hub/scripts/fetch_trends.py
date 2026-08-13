@@ -104,8 +104,16 @@ def main() -> int:
     )
     parser.add_argument("--platforms", default="2,5,8", help="逗号分隔的平台编号（整数，默认 2,5,8）")
     parser.add_argument("--keywords", default=None, help="逗号分隔的关键词（默认不带 = 综合热点直取；仅垂类场景才用，绝不用账号名/IP名）")
-    parser.add_argument("--start-date", default=None, help='区间起始 datetime "YYYY-MM-DD HH:MM:SS"（默认今天 00:00:00）')
-    parser.add_argument("--end-date", default=None, help='区间结束 datetime "YYYY-MM-DD HH:MM:SS"（默认当前时刻）')
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help='区间起始 datetime "YYYY-MM-DD HH:MM:SS"（默认不传；带时间窗会把热榜切得很零星）',
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help='区间结束 datetime "YYYY-MM-DD HH:MM:SS"（默认不传，同上）',
+    )
     args = parser.parse_args()
 
     api_key = os.environ.get("DOUBAOYA_API_KEY")
@@ -131,15 +139,15 @@ def main() -> int:
     if args.keywords:
         keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
 
-    now = datetime.datetime.now()
-    start_date = args.start_date or now.strftime("%Y-%m-%d 00:00:00")
-    end_date = args.end_date or now.strftime("%Y-%m-%d %H:%M:%S")
-
-    payload = {
-        "platforms": platforms,
-        "startDate": start_date,
-        "endDate": end_date,
-    }
+    # 🔴 默认**不带时间窗**。实测（2026-08-13）：热榜是"当下快照"，带任何时间区间都会把
+    # 结果切成零星几条（今天 00:00 到此刻这种"看起来最合理"的窗口实测只剩 2 条），
+    # 不传日期才回落到完整的最新一批（实测 130+ 条）。原来这里默认塞今天的窗口，
+    # 等于每次都把综合热点榨成一小撮。
+    payload = {"platforms": platforms}
+    if args.start_date:
+        payload["startDate"] = args.start_date
+    if args.end_date:
+        payload["endDate"] = args.end_date
     if keywords:
         payload["keywords"] = keywords
 

@@ -7,8 +7,17 @@
 用法:
     python3 fetch_low_fans_top.py [--rank-date YYYY-MM-DD] [--category 综合]
 
-    --rank-date 榜单日期 YYYY-MM-DD，默认昨天。
-    --category  分类，默认「综合」。
+    --rank-date 榜单日期 YYYY-MM-DD，默认今天往前 2 天。
+    --category  分类，默认「综合全部」（官方闭集里的泛分类值）。
+
+日期与分类口径（2026-08-13 实测）:
+    · 出数滞后约两天 —— 昨天(T-1)与今天(T-0)都是空榜，所以默认取 T-2。
+    · 榜单只保留最近 30 天，更早的日期上游直接判为查无结果。
+    · 分类是官方闭集（25 个），泛分类的正确写法是「综合全部」，不是「综合」——
+      「综合」不在闭集里，传了会被判查无结果（不是空榜，是直接报错）。
+    · 可选值：综合全部、出行代步、休闲爱好、影视娱乐、数码科技、医疗保健、综合杂项、星座情感、时尚穿搭、婚庆婚礼、拍摄记录、学习教育、化妆美容、居家装修、旅行度假、亲子育儿、个人护理、美味佳肴、职业发展、宠物天地、潮流鞋包、日常生活、科学探索、新闻资讯、体育锻炼
+    · 上游偶发瞬时空值：同一组参数一次空、下一次满榜都出现过，返空先原样重试一次
+      再下"这天/这个分类没数据"的结论。
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
@@ -95,8 +104,14 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="都爆鸭 · 小红书低粉爆款榜",
     )
-    parser.add_argument("--rank-date", default=None, help="榜单日期 YYYY-MM-DD（默认昨天）")
-    parser.add_argument("--category", default="综合", help="分类（默认 综合）")
+    parser.add_argument(
+        "--rank-date", default=None, help="榜单日期 YYYY-MM-DD（默认今天往前 2 天；只保留最近 30 天）"
+    )
+    parser.add_argument(
+        "--category",
+        default="综合全部",
+        help="分类（默认 综合全部）。别传「综合」——它不在官方闭集里，会被判查无结果",
+    )
     args = parser.parse_args()
 
     api_key = os.environ.get("DOUBAOYA_API_KEY")
@@ -116,9 +131,15 @@ def main() -> int:
             return 1
         rank_date = args.rank_date
     else:
-        rank_date = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+        # T-1 / T-0 上游还没结算，直接查是空榜；T-2 起才有数据。
+        rank_date = (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
 
-    return call_api(api_key, {"rankDate": rank_date, "category": args.category})
+    body = {"rankDate": rank_date}
+    # 分类是官方闭集，泛分类值是「综合全部」（实测 50 条满榜）。曾经的默认值「综合」
+    # 不在闭集里，上游直接判查无结果 —— 那是本 skill 默认调用长期拿不到数据的真因。
+    if args.category:
+        body["category"] = args.category
+    return call_api(api_key, body)
 
 
 if __name__ == "__main__":
