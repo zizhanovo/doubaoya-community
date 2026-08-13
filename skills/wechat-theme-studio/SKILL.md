@@ -155,8 +155,6 @@ node wechat-article-pipeline/scripts/design-studio.mjs --md sample.md --title "�
 >
 > 所以:改完主题**两处都要落**。只存服务端就用 pipeline 发文,发出去的还是旧排版;
 > 只存本机文件,网页工作室和 `/api/wechat/render` 那边还是旧的。
->
-> 让发文流水线自动拉取服务端默认主题的能力**正在做,尚未上线**;在它上线之前,以本节两步为准。
 
 **第一步 · 存回服务端(网页工作室 + `/api/wechat/render` 这条路生效):**
 
