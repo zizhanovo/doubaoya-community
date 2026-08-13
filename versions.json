@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-08-11T16:49:49.399091+00:00",
+  "generatedAt": "2026-08-13T02:38:27.380256+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
     "cn-last30days": "doubaoya-skill/cn-last30days@8ab1d5dc820b",
     "content-parse": "doubaoya-skill/content-parse@52f068c4240e",
     "cultural-tourism-wechat-feed": "doubaoya-skill/cultural-tourism-wechat-feed@86dc1f0f16cc",
-    "dby": "doubaoya-skill/dby@578b1a067705",
+    "dby": "doubaoya-skill/dby@e0ef82da64ee",
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
     "dby-update": "doubaoya-skill/dby-update@53d92b2192de",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
@@ -45,7 +45,7 @@
     "wechat-original-hot": "doubaoya-skill/wechat-original-hot@354d1bfacaf9",
     "wechat-rewrite": "doubaoya-skill/wechat-rewrite@d8ac8745b5c1",
     "wechat-similar-account": "doubaoya-skill/wechat-similar-account@47507a389767",
-    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@4e815a9c4498",
+    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@81ae208bad6f",
     "wechat-title": "doubaoya-skill/wechat-title@084421ccadf1",
     "wechat-top-account": "doubaoya-skill/wechat-top-account@728023ecefac",
     "xiaohongshu-cover": "doubaoya-skill/xiaohongshu-cover@063503aa95fe",

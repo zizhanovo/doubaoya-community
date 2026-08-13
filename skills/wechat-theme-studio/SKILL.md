@@ -2,8 +2,9 @@
 name: wechat-theme-studio
 description: >-
   公众号排版主题工作室 · 按你的口语描述改公众号文章的**默认排版样式**（配色 / 标题 / 引用 / 图注等），
-  本地即时预览，最后**存回服务端**成为发文与网页排版工作室都读的那份默认主题。闭环:读当前主题 →
-  改 themeJson → 本地校验 + 预览 → POST/PUT 存回服务端默认。走 doubaoya.com,鉴权用你自己的
+  本地即时预览,最后同时落到两处:**存回服务端**(网页排版工作室与 /api/wechat/render 读它)+
+  **落成本机 theme 文件**(本机发文流水线读它)。闭环:读当前主题 →
+  改 themeJson → 本地校验 + 预览 → POST/PUT 存回服务端默认 + 存一份本机 theme.json。走 doubaoya.com,鉴权用你自己的
   DOUBAOYA_API_KEY(Bearer)。当用户要改公众号排版、定制主题样式、换配色 / 换标题样式 / 调排版、
   「排版长得像 XX」、把默认排版改掉时使用。
   触发方式:/wechat-theme-studio、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
@@ -15,7 +16,8 @@ version: 1.0.0
 # 公众号排版主题工作室（都爆鸭）
 
 帮用户把公众号文章的**排版样式**（配色 / 标题条 / 引用卡 / 图注 / 分割线…）按口语描述改成想要的样子，
-本地即时预览，最后**存回服务端**成为「默认排版」——发文流水线和网页排版工作室都会自动套这份。
+本地即时预览,最后把这份主题**落到两处**——存回服务端(doubaoya.com 网页排版工作室与 `POST /api/wechat/render` 读它),
+以及存成**本机 theme 文件**(`wechat-article-pipeline` 发文时读它)。两条路各读各的,**只落一处会有一边还是旧排版**,详见 §5。
 
 > 排版是一份声明式的 **`themeJson`**（配色 palette + 每个标签的 inline-style 模板）。渲染器按它把
 > Markdown 确定性地渲成公众号内联样式 HTML。你（agent）的活是**按描述生成 / 修改合法的 themeJson**，
@@ -143,11 +145,20 @@ node wechat-article-pipeline/scripts/design-studio.mjs --md sample.md --title "�
 
 （该工作台只绑本机、只写本地产物、不发布、不提交。它主打「选主题 + 封面 + 配图」,改 themeJson 本身仍以路 (a) 为准。）
 
-### 5. ⚠️ 存回服务端默认（关键断层,必须做,否则等于没改）
+### 5. ⚠️ 落到两处（关键断层:两条渲染路各读各的主题源）
 
-> **本地 `theme.json` 只用于本地渲染/预览。发文流水线和 doubaoya.com 网页排版工作室读的是服务端
-> `userWechatTheme` 里的那份默认主题。只有把主题 `POST`/`PUT` 存回服务端并置 `isDefault:true`,才真正改掉了「默认排版」。**
-> 别让用户以为「本地存了个 theme.json」就改好了——那份服务端根本读不到。
+> **服务端默认主题**(`POST`/`PUT` + `isDefault:true`,存在 `userWechatTheme` 表里)决定
+> **doubaoya.com 网页排版工作室**和 **`POST /api/wechat/render`** 渲染出来的 HTML。
+> **本机 theme 文件**决定 **`wechat-article-pipeline` 发文**时的排版——它按
+> `--theme x.json` > `config.json` 的 `mdTheme` > 项目默认(`themes/benya-clean.json`)取本地文件,
+> **不会**去请求服务端主题。
+>
+> 所以:改完主题**两处都要落**。只存服务端就用 pipeline 发文,发出去的还是旧排版;
+> 只存本机文件,网页工作室和 `/api/wechat/render` 那边还是旧的。
+>
+> 让发文流水线自动拉取服务端默认主题的能力**正在做,尚未上线**;在它上线之前,以本节两步为准。
+
+**第一步 · 存回服务端(网页工作室 + `/api/wechat/render` 这条路生效):**
 
 ```bash
 # 新建并设为默认(首次)
@@ -162,7 +173,27 @@ curl -s -X PUT -H "$AUTH" -H 'Content-Type: application/json' \
   "$BASE/api/wechat/theme/<主题id>" | jq '.data.theme.updatedAt'
 ```
 
-存回成功后告诉用户:**默认排版已更新,下次发文 / 网页排版工作室会自动套这套**。
+**第二步 · 落成本机 theme 文件(`wechat-article-pipeline` 发文这条路生效):**
+
+```bash
+# 放进 pipeline 的 themes/ 目录(路径按本机 wechat-article-pipeline 的实际安装位置)
+cp /tmp/my-theme.json <wechat-article-pipeline>/themes/my-theme.json
+
+# 发文时显式指定这份主题
+node scripts/pipeline.mjs --md a.md --title "标题" --theme themes/my-theme.json
+# 或把 config.json 的 "mdTheme" 指向 themes/my-theme.json,以后不必每次带 --theme
+```
+
+> **主题是在 doubaoya.com 网页排版工作室里调的?** 先把它拉下来再落到本机,别手抄:
+>
+> ```bash
+> curl -s -H "$AUTH" "$BASE/api/wechat/theme" | jq '.data.theme.themeJson' > /tmp/my-theme.json
+> ```
+
+两步都做完再向用户汇报,并**如实说清各自的生效范围**:
+**服务端默认排版已更新——网页排版工作室和 `POST /api/wechat/render` 立刻生效;
+本机发文用的是刚落下的 `themes/my-theme.json`,发文时带 `--theme`(或已写进 `config.mdTheme`)才会套上。**
+别说成「以后发文自动套这套」——发文流水线目前不读服务端主题。
 
 ---
 
