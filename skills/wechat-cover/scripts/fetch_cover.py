@@ -34,9 +34,6 @@ def _skill_user_agent() -> str:
     except OSError:
         return "doubaoya-skill/1.0"
 
-def default_start() -> str:
-    """默认起始日期 = 今天 - 29 天（覆盖近 30 天爆款窗口）。"""
-    return (datetime.date.today() - datetime.timedelta(days=29)).isoformat()
 
 
 def main() -> int:
@@ -47,7 +44,7 @@ def main() -> int:
     parser.add_argument(
         "--start",
         default=None,
-        help="起始日期 YYYY-MM-DD（可选，默认今天-29天）",
+        help="起始日期 YYYY-MM-DD（可选，默认不传 = 最全的一份榜；不得早于今天往前 60 天）",
     )
     args = parser.parse_args()
 
@@ -61,7 +58,10 @@ def main() -> int:
         return 1
 
     payload = json.dumps(
-        {"keyword": args.keyword, "startDate": args.start or default_start()}
+        # startDate 只在调用方明确给了才带上。实测（2026-08-13）：不传起始日期拿到的是
+        # 最全的一份榜；带上起始日期只会把榜裁短，而超出 60 天保留期的起始日期还会被
+        # 上游判成「日期格式错误」（其实格式没问题，是超窗）。
+        {"keyword": args.keyword, **({"startDate": args.start} if args.start else {})}
     ).encode("utf-8")
 
     request = urllib.request.Request(

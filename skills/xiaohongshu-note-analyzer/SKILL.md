@@ -32,17 +32,19 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 零依赖，标准库即可（Python 3）。
 
 ```bash
-# 默认：起始日期 30 天前
+# 就这一条：关键词下去，直接拿最新一批爆款榜
 python3 "$SKILL_PATH/scripts/fetch_note_data.py" --keyword 露营
-
-# 指定起始日期
-python3 "$SKILL_PATH/scripts/fetch_note_data.py" --keyword 露营 --start-date 2026-06-01
 ```
+
+**🔴 别加 `--start-date`。** 上游这份爆款榜是**按批次归档**的，不是按天切片——
+实测（2026-08-13）任何「最近 N 天」的起始日期都会把整份榜过滤成空（四张榜全 0 条），
+**不传起始日期才回落到最新一批满榜数据**。这个参数只有在你确知目标批次日期时才有意义，
+日常用法就是不传。
 
 | 参数 | 说明 | 默认 |
 |------|------|------|
 | `--keyword` | 关键词（**必填**） | — |
-| `--start-date` | 起始日期 `YYYY-MM-DD` | 30 天前 |
+| `--start-date` | 起始日期 `YYYY-MM-DD`，**日常别传**（传了大概率整份返空） | 不传 = 最新一批 |
 
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次只跑一次脚本**，读完整 stdout。
 
@@ -62,7 +64,8 @@ python3 "$SKILL_PATH/scripts/fetch_note_data.py" --keyword 露营 --start-date 2
 
 - `POST https://doubaoya.com/api/apis/xiaohongshu/xiaohongshu-coze/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
-- 请求体：`{ "keyword": "露营", "startDate": "2026-06-01" }`
+- 请求体：`{ "keyword": "露营" }`（`startDate` 可选，**日常别传**——
+  带上任何近期起始日期都会把四张榜过滤成空）
 - 返回信封：
   ```json
   { "success": true, "requestId": "...", "data": { "items": [ { "rank": "likeTheTop500", "item": { "title": "...", "likedCount": 12000 } } ] }, "error": null }
@@ -80,6 +83,7 @@ python3 "$SKILL_PATH/scripts/fetch_note_data.py" --keyword 露营 --start-date 2
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如关键词为空） | 修正 `--keyword` / `--start-date` 重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
+| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据 | 换个关键词重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 ---

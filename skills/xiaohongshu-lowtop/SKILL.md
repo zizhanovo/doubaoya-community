@@ -32,17 +32,33 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 零依赖，标准库即可（Python 3）。
 
 ```bash
-# 默认：综合分类，昨天
+# 默认：综合全部，今天往前 2 天
 python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py"
 
-# 指定日期 + 分类
-python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py" --rank-date 2026-06-23 --category 综合
+# 指定日期 + 分类（日期按今天现算，别照抄写死的日期）
+python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py" \
+  --rank-date "$(date -d '-3 days' +%F 2>/dev/null || date -v-3d +%F)" --category 化妆美容
 ```
+
+**🔴 两条口径先看清楚**（2026-08-13 实测）：
+
+- **泛分类要写 `综合全部`，不是 `综合`。** `综合` 不在官方闭集里，传了会被直接判「查无结果」——
+  这不是"这天没榜"，是名字不对。分类是一张 25 个赛道的闭集，照抄别自造：
+
+  > `综合全部` `出行代步` `休闲爱好` `影视娱乐` `数码科技` `医疗保健` `综合杂项` `星座情感`
+> `时尚穿搭` `婚庆婚礼` `拍摄记录` `学习教育` `化妆美容` `居家装修` `旅行度假` `亲子育儿`
+> `个人护理` `美味佳肴` `职业发展` `宠物天地` `潮流鞋包` `日常生活` `科学探索` `新闻资讯`
+> `体育锻炼`
+
+  用户说的简称先映射到全称：美妆 → `化妆美容`，美食 → `美味佳肴`，穿搭 → `时尚穿搭`，
+  旅行 → `旅行度假`，母婴 → `亲子育儿`，健身 → `体育锻炼`，数码 → `数码科技`。
+- **日期滞后约两天，且只保留最近 30 天**。昨天和今天的榜都还没结算（空榜），
+  所以默认取 T-2；比 30 天更早的日期会被判查无结果（不是空榜）。
 
 | 参数 | 说明 | 默认 |
 |------|------|------|
-| `--rank-date` | 榜单日期 `YYYY-MM-DD` | 昨天 |
-| `--category` | 分类 | `综合` |
+| `--rank-date` | 榜单日期 `YYYY-MM-DD`，只保留最近 30 天 | 今天往前 2 天 |
+| `--category` | 分类，25 个闭集之一；别传 `综合` | `综合全部` |
 
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每次只跑一次脚本**，读完整 stdout。
 
@@ -50,7 +66,7 @@ python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py" --rank-date 2026-06-23 --cat
 
 ## 工作流（3 步）
 
-1. **定日期 + 分类**：默认综合、昨天。
+1. **定日期 + 分类**：默认分类 `综合全部`、日期取今天往前 2 天。
 2. **调脚本拿数据**：榜单在 `data.items`，每条含 `title`（标题）、`likedCount`（点赞数）、`fansCount`（粉丝数）。
 3. **铺榜 + 给素人打法洞察**：按点赞降序铺表，把 `fansCount` 一并展示突出「低粉高赞」反差，表后用本鸭口吻补一句——这些素人是靠什么钩子/选题以小博大、有没有可直接套用的模板。
 
@@ -66,7 +82,9 @@ python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py" --rank-date 2026-06-23 --cat
 
 - `POST https://doubaoya.com/api/apis/xiaohongshu/xiaohongshu-low-fans-top/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
-- 请求体：`{ "rankDate": "2026-06-23", "category": "综合" }`
+- 请求体：`{ "rankDate": "YYYY-MM-DD", "category": "综合全部" }`
+  （`category` 取上面 25 个之一，**别传 `综合`**——它不在闭集里；
+  `rankDate` 只保留最近 30 天，且滞后约两天）
 - 返回信封：
   ```json
   { "success": true, "requestId": "...", "data": { "items": [ { "title": "...", "likedCount": 123, "fansCount": 456 } ] }, "error": null }
@@ -84,6 +102,7 @@ python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py" --rank-date 2026-06-23 --cat
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法 | 修正 `--rank-date` / `--category` 重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
+| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据。**多半是分类名不在 25 个闭集里（比如写了 `综合`），或日期超出最近 30 天** | 把分类换成闭集里的全称、把日期挪进最近 30 天重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 ---
@@ -105,7 +124,9 @@ xiaohongshu-lowtop/
 A：低粉高赞=纯内容力出圈，套路最干净、最好复制，冷启动和小号最该研究。
 
 **Q：暂时取不到数据？**
-A：上游波动，稍后再试即可（不扣费）。
+A：先按上面两条口径自查——分类名是不是不在 25 个闭集里（比如写了 `综合`）、日期是不是取到了
+昨天/今天（还没结算）或超出最近 30 天。都排除了就**间隔一会儿原样重试一次**：上游偶发瞬时空值，
+同一组参数一次空、下一次满榜本鸭实测遇到过，别只凭一次空就下结论（空结果不扣费）。
 
 ## 关于响应里的 notice 字段
 

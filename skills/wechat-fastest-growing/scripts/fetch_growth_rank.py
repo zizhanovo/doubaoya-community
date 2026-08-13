@@ -5,10 +5,15 @@
 供主 Agent 发现高增长黑马账号 / 判断流量风向。
 
 用法:
-    python3 fetch_growth_rank.py [--date yesterday|today|YYYY-MM-DD] [--auto-back]
+    python3 fetch_growth_rank.py [--date latest|yesterday|today|YYYY-MM-DD] [--auto-back]
 
-    --date 接受口语化 "yesterday" / "today" 或具体 YYYY-MM-DD，默认昨天。
+    --date 接受 "latest"(默认，= 今天往前 2 天) / "yesterday" / "today" /
+           具体 YYYY-MM-DD。
     --auto-back 当指定日期无数据时，自动向前逐天追溯（最多 7 天），找到即停。
+
+日期口径（2026-08-13 实测）:
+    · 出数滞后约两天 —— 昨天(T-1)与今天(T-0)都是空榜，所以默认取 T-2。
+    · 榜单只保留最近 30 天，更早的日期上游直接判为查无结果（不是空榜）。
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
@@ -38,9 +43,14 @@ def _skill_user_agent() -> str:
         return "doubaoya-skill/1.0"
 
 def resolve_date(raw: str) -> str:
-    """把 yesterday/today/YYYY-MM-DD 映射成具体日期串，默认昨天。"""
+    """把 latest/yesterday/today/YYYY-MM-DD 映射成具体日期串，默认 latest。
+
+    latest = 今天往前 2 天：实测昨天与今天都还没出数，直接查会拿到空榜。
+    """
     today = datetime.date.today()
-    if not raw or raw == "yesterday":
+    if not raw or raw == "latest":
+        return (today - datetime.timedelta(days=2)).isoformat()
+    if raw == "yesterday":
         return (today - datetime.timedelta(days=1)).isoformat()
     if raw == "today":
         return today.isoformat()
@@ -101,8 +111,11 @@ def main() -> int:
     )
     parser.add_argument(
         "--date",
-        default="yesterday",
-        help="榜单日期：yesterday / today / YYYY-MM-DD（可选，默认昨天）",
+        default="latest",
+        help=(
+            "榜单日期：latest / yesterday / today / YYYY-MM-DD"
+            "（可选，默认 latest = 今天往前 2 天；榜单只保留最近 30 天）"
+        ),
     )
     parser.add_argument(
         "--auto-back",
@@ -124,7 +137,7 @@ def main() -> int:
         start_date = resolve_date(args.date)
     except ValueError:
         sys.stderr.write(
-            "[error] VALIDATION_ERROR: --date 需为 yesterday / today / YYYY-MM-DD\n"
+            "[error] VALIDATION_ERROR: --date 需为 latest / yesterday / today / YYYY-MM-DD\n"
         )
         return 1
 

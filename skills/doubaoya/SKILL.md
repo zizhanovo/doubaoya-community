@@ -148,7 +148,7 @@ Content-Type: application/json
 | slug | 能力 | 关键入参 |
 |------|------|---------|
 | `trending-hub` | **综合热点直取**（首选）：`trend/trending-hub-keyword` **不带关键词**拉当下全网最热的一批（微博/抖音/B站） | `{ "platforms": [2,5,8] }`（**不传 keywords**） |
-| `hot-keywords`（seed，可选） | **全网热搜关键词**：`trend/hot-keywords` 出 20 个热词 + 所属平台，用作选题名的种子 | `{}`（回溯时带 `startDate`/`endDate`） |
+| `hot-keywords`（seed，可选） | **全网热搜关键词**：`trend/hot-keywords` 出 20 个热词 + 所属平台，用作选题名的种子 | `{}`（**别带日期**：上游只供最新一批，带日期区间必返 0 条） |
 | `cn-last30days` | **近 30 天中文社媒讨论**：某个词的跨平台舆情趋势（这是「查某词」，不是通用选题） | `{ "keyword", "days": 30, "platforms": ["xiaohongshu","douyin"] }` |
 
 > ⚠️ 通用综合热点**别用** `trend-radar` / `hot-topics`——它们是关键词搜索的搬运号 feed（热度常为 `null`、多「未命名内容」），只在明确要「按某个词搜同名内容 feed」的窄场景才考虑。

@@ -31,9 +31,13 @@ description: 公众号爆款封面参考 · 按主题关键词拉同赛道爆款
 ```bash
 python3 "$SKILL_PATH/scripts/fetch_cover.py" "职场"
 ```
-指定起始日期（默认今天-29 天，覆盖近 30 天爆款窗口）：
+默认**不传起始日期**，拿到的是最全的一份榜（实测 2026-08-13）。只有确实要限定时间窗
+时才加 `--start`，且**不得早于今天往前 60 天**——超出保留期时接口会回一句
+「日期格式错误」，那是**误导性报错**，格式其实没问题，把日期往后挪即可。日期按今天现算，
+别照抄写死的日期：
 ```bash
-python3 "$SKILL_PATH/scripts/fetch_cover.py" "职场" --start 2026-06-01
+python3 "$SKILL_PATH/scripts/fetch_cover.py" "职场" \
+  --start "$(date -d '-29 days' +%F 2>/dev/null || date -v-29d +%F)"
 ```
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每个主题只跑一次脚本**，读完整 stdout，别用 `head`/`tail` 预览。
 
@@ -69,9 +73,10 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 
 - `POST https://doubaoya.com/api/apis/gongzhonghao/gongzhonghao-coze-cover/call`
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
-- 请求体：`{ "keyword": "职场", "startDate": "2026-05-28" }`
+- 请求体：`{ "keyword": "职场" }`（`startDate` 可选）
   - `keyword`：字符串，必填
-  - `startDate`：字符串 `YYYY-MM-DD`，可选（默认今天-29 天）
+  - `startDate`：字符串 `YYYY-MM-DD`，可选。**默认不传 = 最全的一份榜**；
+    传了只会把榜裁短，且不得早于今天往前 60 天（超窗会回误导性的「日期格式错误」）
 - 返回信封：
   ```json
   {
@@ -101,6 +106,7 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 keyword 为空、日期格式错） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
+| 422 | `REDFOX_NO_RESULT` | 查不到数据。**若带了 `--start`，多半是它早于 60 天保留期** | 去掉 `--start` 或把它挪进 60 天内重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。

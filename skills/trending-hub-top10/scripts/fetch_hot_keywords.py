@@ -4,14 +4,17 @@
 
 零依赖（仅用 Python 3 标准库 urllib / datetime）。从环境变量 DOUBAOYA_API_KEY 读取密钥，
 聚合全网各平台（抖音/微博/B站/快手/知乎/头条/百度等）热搜关键词，
-把成功返回的 data 以 JSON 打到 stdout。支持回溯近7天。
+把成功返回的 data 以 JSON 打到 stdout。只供最新一批（不支持回溯，见下）。
 
 用法:
     python3 fetch_hot_keywords.py [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD]
 
 例如:
     python3 fetch_hot_keywords.py
-    python3 fetch_hot_keywords.py --start-date 2026-06-20 --end-date 2026-06-24
+
+日期口径（2026-08-13 实测）:
+    上游只供"最新一批"热搜词。带上任何日期区间都返 0 条，不带日期才拿到 20 个热词 ——
+    所以 --start-date / --end-date 保留只为向后兼容，日常别传。
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
@@ -51,12 +54,12 @@ def main() -> int:
     parser.add_argument(
         "--start-date",
         default=None,
-        help="起始日期 YYYY-MM-DD（可选，回溯历史时给，最长近7天）",
+        help="起始日期 YYYY-MM-DD（可选；实测带任何日期区间都返 0 条，日常别传）",
     )
     parser.add_argument(
         "--end-date",
         default=None,
-        help="结束日期 YYYY-MM-DD（可选，默认今天）",
+        help="结束日期 YYYY-MM-DD（可选；同 --start-date，日常别传）",
     )
     args = parser.parse_args()
 

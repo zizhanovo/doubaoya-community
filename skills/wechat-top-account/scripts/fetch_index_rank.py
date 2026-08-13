@@ -5,8 +5,16 @@
 供主 Agent 做头部账号对标 / 竞品跟踪。
 
 用法:
-    python3 fetch_index_rank.py [--rank-type day|week|month] \
-        [--date YYYY-MM-DD] [--category 人文资讯]
+    python3 fetch_index_rank.py [--date YYYY-MM-DD] [--category 人文资讯]
+
+分类只认官方 22 个赛道全称（实测 22 个全部出数）:
+    人文资讯 知识百科 健康养生 时尚潮流 美食餐饮 乐活生活 旅游出行 搞笑幽默
+    情感心理 体育娱乐 美容美体 文摘精选 民生资讯 财富理财 科技数码 创投商业
+    汽车交通 房产楼市 职场发展 教育考试 学术研究 企业品牌
+写「职场」「财经」这类简称不会报错，只会返空榜 —— 正确写法是 职场发展 / 财富理财。
+
+日期口径: 榜单只保留最近 7 天，且出数滞后约两天 —— 默认取今天往前 2 天。
+周期: 目前只有 day(日榜) 有数据，week/month 上游一律返空榜。
 
 鉴权:
     从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_…）。
@@ -35,9 +43,13 @@ def _skill_user_agent() -> str:
     except OSError:
         return "doubaoya-skill/1.0"
 
-def yesterday() -> str:
-    """默认榜单日期 = 昨天（当日数据通常尚未结算）。"""
-    return (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+def default_rank_date() -> str:
+    """默认榜单日期 = 今天往前 2 天。
+
+    实测（2026-08-13）：昨天(T-1)与今天(T-0)都还没结算，返回空榜；T-2 起才有数据。
+    榜单只保留最近 7 天，更早的日期上游直接判为查无结果。
+    """
+    return (datetime.date.today() - datetime.timedelta(days=2)).isoformat()
 
 
 def main() -> int:
@@ -48,17 +60,21 @@ def main() -> int:
         "--rank-type",
         choices=["day", "week", "month"],
         default="day",
-        help="榜单周期：day/week/month（可选，默认 day）",
+        help="榜单周期（可选，默认 day）。实测只有 day 出数，week/month 上游返空榜",
     )
     parser.add_argument(
         "--date",
         default=None,
-        help="榜单日期 YYYY-MM-DD（可选，默认昨天）",
+        help="榜单日期 YYYY-MM-DD（可选，默认今天往前 2 天；只保留最近 7 天）",
     )
     parser.add_argument(
         "--category",
         default="人文资讯",
-        help="垂直分类（可选，默认 人文资讯）",
+        help=(
+            "垂直分类，只认官方 22 个赛道全称（可选，默认 人文资讯）。"
+            "写「职场」「财经」这类简称只会返空榜，正确写法是 职场发展 / 财富理财。"
+            "可选值：人文资讯/知识百科/健康养生/时尚潮流/美食餐饮/乐活生活/旅游出行/搞笑幽默/情感心理/体育娱乐/美容美体/文摘精选/民生资讯/财富理财/科技数码/创投商业/汽车交通/房产楼市/职场发展/教育考试/学术研究/企业品牌"
+        ),
     )
     args = parser.parse_args()
 
@@ -74,7 +90,7 @@ def main() -> int:
     payload = json.dumps(
         {
             "rankType": args.rank_type,
-            "rankDate": args.date or yesterday(),
+            "rankDate": args.date or default_rank_date(),
             "category": args.category,
         }
     ).encode("utf-8")

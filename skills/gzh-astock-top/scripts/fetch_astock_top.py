@@ -125,8 +125,10 @@ def main() -> int:
     parser.add_argument("--keyword", default="A股", help="账号发现关键词（默认 A股）")
     parser.add_argument(
         "--date",
-        default=today.isoformat(),
-        help="当日发文日期 YYYY-MM-DD（默认今天）",
+        # 实测（2026-08-13）：当天的发文要到次日才归档 —— 用今天查恒返 0 个账号，
+        # 昨天就是满的。所以默认取昨天，别改回今天。
+        default=(today - datetime.timedelta(days=1)).isoformat(),
+        help="当日发文日期 YYYY-MM-DD（默认昨天；当天的发文要到次日才归档）",
     )
     parser.add_argument("--top", type=int, default=30, help="取前 N 个账号（默认 30）")
     parser.add_argument(

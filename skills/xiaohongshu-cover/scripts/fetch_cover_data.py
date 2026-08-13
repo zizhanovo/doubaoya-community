@@ -96,7 +96,11 @@ def main() -> int:
         description="都爆鸭 · 小红书封面选题数据",
     )
     parser.add_argument("--keyword", required=True, help="关键词（必填）")
-    parser.add_argument("--start-date", default=None, help="起始日期 YYYY-MM-DD（默认 30 天前）")
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help="起始日期 YYYY-MM-DD（可选，默认不传 = 上游最新一批爆款榜）",
+    )
     args = parser.parse_args()
 
     api_key = os.environ.get("DOUBAOYA_API_KEY")
@@ -108,17 +112,19 @@ def main() -> int:
         )
         return 1
 
+    body = {"keyword": args.keyword}
+    # startDate 只在调用方明确给了才带上。实测（2026-08-13）：上游这份爆款榜是按批次
+    # 归档的，任何"最近 N 天"的 startDate 都会把整份榜过滤成空（四张榜全 0 条）；
+    # 不传 startDate 才回落到最新一批满榜数据。原来这里默认塞 T-30，等于每次必空。
     if args.start_date:
         try:
             datetime.date.fromisoformat(args.start_date)
         except ValueError:
             sys.stderr.write("[error] VALIDATION_ERROR: --start-date 需为 YYYY-MM-DD 格式\n")
             return 1
-        start_date = args.start_date
-    else:
-        start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+        body["startDate"] = args.start_date
 
-    return call_api(api_key, {"keyword": args.keyword, "startDate": start_date})
+    return call_api(api_key, body)
 
 
 if __name__ == "__main__":
