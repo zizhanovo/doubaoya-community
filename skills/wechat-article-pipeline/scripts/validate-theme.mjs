@@ -23,7 +23,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorations', 'components']);
+const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorations', 'components', 'tokens']);
 const PALETTE_KEYS = new Set(['text', 'heading', 'accent', 'accent2', 'muted', 'bgSoft', 'border', 'link']);
 // NOTE: this list only decides whether an `elements.<tag>` key gets a
 // "not a recognized tag" WARNING — it is not part of the safety boundary
@@ -39,7 +39,7 @@ const PAGE_KEYS = new Set(['fontFamily', 'fontSize', 'lineHeight', 'letterSpacin
 // a common CSS named color, `transparent`, `currentColor`, or a {{token}}.
 const HEX_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const FUNC_RE = /^(?:rgb|rgba|hsl|hsla)\([^)]*\)$/;
-const TOKEN_RE = /^\{\{\s*[\w-]+\s*\}\}$/;
+const TOKEN_RE = /^\{\{\s*[\w.-]+\s*\}\}$/;
 const NAMED_COLORS = new Set([
   'transparent', 'currentcolor', 'inherit', 'black', 'white', 'red', 'green', 'blue',
   'gray', 'grey', 'silver', 'gold', 'orange', 'yellow', 'purple', 'pink', 'brown',
@@ -58,6 +58,15 @@ const UNSAFE_PATTERNS = [
   { re: /\bsrc\s*=/i, label: 'src= (image-src injection/rewrite)' },
   { re: /javascript:/i, label: 'javascript: URI' },
   { re: /\son\w+\s*=/i, label: 'inline event handler (onX=)' },
+  // v2 新增 —— 这两条写下去在本地预览完全正常、发到公众号却会**静默毁版**：
+  // 1) `--x:` 声明必被剥离，且写在首位会连带吃掉紧随其后的声明（矩阵 §3 实测
+  //    `--px:#cc0000;color:#111111` 两条一起消失）。
+  // 2) `url(data:…)` 会让**整个元素连同样式**被剥离，只剩裸文本（矩阵 §8）——
+  //    比 <img src="data:"> 只剥 src 更狠。
+  // 边界：这两条只管**主题字符串**。正文里的 <img src="data:…"> 不在扫描范围
+  // （255 篇盘点无此类样本、内置主题也不产它，加了是投机）。
+  { re: /(^|[;{"'\s])--[\w-]+\s*:/, label: 'CSS custom property declaration' },
+  { re: /url\(\s*['"]?\s*data:/i, label: 'data: URI in url() (element gets stripped entirely)' },
 ];
 
 function isPlainObject(v) {
@@ -73,7 +82,7 @@ function looksLikeColor(v) {
 // Collect every {{token}} used across all string values.
 function collectTokens(node, acc) {
   if (typeof node === 'string') {
-    const re = /\{\{\s*([\w-]+)\s*\}\}/g;
+    const re = /\{\{\s*([\w.-]+)\s*\}\}/g;
     let m;
     while ((m = re.exec(node))) acc.add(m[1]);
   } else if (Array.isArray(node)) {
@@ -109,6 +118,80 @@ export function validateTheme(theme) {
   for (const k of Object.keys(theme)) {
     if (!TOP_LEVEL_KEYS.has(k)) {
       errors.push(`unknown top-level key "${k}". Allowed: ${[...TOP_LEVEL_KEYS].join(', ')}.`);
+    }
+  }
+
+  // 1b. meta.engine / meta.extends（v2）。engine 缺省 = 1（存量主题一个字都不用改）。
+  const BASE_TEMPLATE_IDS = ['base-17@1'];   // 与 src/base-templates.mjs 同步；
+                                             // 这里刻意**不 import** —— 本文件要能整份 mirror 到社区仓。
+  const PAIR_ROLES = new Set(['body', 'large', 'mark', 'decor']);
+  if (isPlainObject(theme.meta)) {
+    const engine = theme.meta.engine;
+    if (engine !== undefined && engine !== 1 && engine !== 2) {
+      errors.push(`meta.engine 只能是 1 或 2（缺省 1），得到 ${JSON.stringify(engine)}。`);
+    }
+    if (theme.meta.extends !== undefined) {
+      if (engine !== 2) {
+        errors.push('meta.extends 只有 meta.engine === 2 时才有意义。');
+      } else if (!BASE_TEMPLATE_IDS.includes(theme.meta.extends)) {
+        errors.push(`meta.extends ${JSON.stringify(theme.meta.extends)} 不是内置基线模板。可选：${BASE_TEMPLATE_IDS.join(', ')}。`);
+      }
+    }
+  }
+
+  // 1c. tokens 三层结构（v2）。求值交给 render 侧的 resolveTokens()，这里只管形状。
+  if (theme.tokens !== undefined) {
+    if (!isPlainObject(theme.tokens)) {
+      errors.push('tokens must be an object.');
+    } else {
+      for (const k of Object.keys(theme.tokens)) {
+        if (!['ref', 'sys', 'cmp', 'pairs'].includes(k)) {
+          errors.push(`tokens.${k} is not a recognized token layer (ref, sys, cmp, pairs).`);
+        }
+      }
+      const walkLayer = (layer, node, path) => {
+        if (!isPlainObject(node)) return;
+        for (const [k, v] of Object.entries(node)) {
+          const p = `${path}.${k}`;
+          if (typeof v === 'string') continue;
+          if (isPlainObject(v) && typeof v.value === 'string') {
+            if (layer === 'ref') errors.push(`${p}: tokens.ref 只接受字符串字面量。`);
+            if (v.darkPolicy !== undefined && v.darkPolicy !== 'adapt' && v.darkPolicy !== 'lock') {
+              errors.push(`${p}.darkPolicy 只能是 "adapt" 或 "lock"。`);
+            }
+            if (v.area !== undefined && v.area !== 'inline' && v.area !== 'block') {
+              errors.push(`${p}.area 只能是 "inline" 或 "block"。`);
+            }
+            if (v.escapeHatch !== undefined && typeof v.escapeHatch !== 'boolean') {
+              errors.push(`${p}.escapeHatch 必须是布尔值。`);
+            }
+            continue;
+          }
+          if (isPlainObject(v)) { walkLayer(layer, v, p); continue; }
+          errors.push(`${p} must be a string or a token object with a string "value".`);
+        }
+      };
+      for (const layer of ['ref', 'sys', 'cmp']) {
+        if (theme.tokens[layer] !== undefined) {
+          if (!isPlainObject(theme.tokens[layer])) errors.push(`tokens.${layer} must be an object.`);
+          else walkLayer(layer, theme.tokens[layer], `tokens.${layer}`);
+        }
+      }
+      if (theme.tokens.pairs !== undefined) {
+        if (!Array.isArray(theme.tokens.pairs)) {
+          errors.push('tokens.pairs must be an array of { fg, bg, role } objects.');
+        } else {
+          theme.tokens.pairs.forEach((p, i) => {
+            if (!isPlainObject(p)) { errors.push(`tokens.pairs[${i}] must be an object.`); return; }
+            for (const side of ['fg', 'bg']) {
+              if (typeof p[side] !== 'string') errors.push(`tokens.pairs[${i}].${side} must be a token path string.`);
+            }
+            if (!PAIR_ROLES.has(p.role)) {
+              errors.push(`tokens.pairs[${i}].role must be one of: ${[...PAIR_ROLES].join(', ')}.`);
+            }
+          });
+        }
+      }
     }
   }
 
@@ -179,9 +262,15 @@ export function validateTheme(theme) {
   }
 
   // 6. Safety scan across ALL string values (公众号 constraints + src-verbatim).
+  // Also scan a CSS-comment-stripped copy of each string: a real CSS tokenizer
+  // removes /* ... */ before it ever looks for `--x:` or `url(data:` — so
+  // `--/**/px:` and `url(/**/data:` are indistinguishable from the unescaped
+  // form once 公众号 actually renders them, even though the raw regex misses
+  // the split form. The scan must see what the renderer sees.
   walkStrings(theme, '', (str, where) => {
+    const scrubbed = str.replace(/\/\*[\s\S]*?\*\//g, '');
     for (const { re, label } of UNSAFE_PATTERNS) {
-      if (re.test(str)) {
+      if (re.test(str) || re.test(scrubbed)) {
         errors.push(`unsafe content at ${where || '(root)'}: contains ${label}. Themes must not inject scripts/styles/classes or rewrite image srcs.`);
       }
     }
@@ -191,6 +280,18 @@ export function validateTheme(theme) {
   const knownTokens = new Set([...PALETTE_KEYS, ...PAGE_KEYS]);
   if (isPlainObject(theme.palette)) for (const k of Object.keys(theme.palette)) knownTokens.add(k);
   if (isPlainObject(theme.page)) for (const k of Object.keys(theme.page)) knownTokens.add(k);
+  // v2：tokens 的点号路径也是已知 token（任意深度）。
+  const addTokenPaths = (node, prefix) => {
+    if (!isPlainObject(node)) return;
+    for (const [k, v] of Object.entries(node)) {
+      const p = `${prefix}.${k}`;
+      if (typeof v === 'string' || (isPlainObject(v) && typeof v.value === 'string')) knownTokens.add(p);
+      else if (isPlainObject(v)) addTokenPaths(v, p);
+    }
+  };
+  if (isPlainObject(theme.tokens)) {
+    for (const layer of ['ref', 'sys', 'cmp']) addTokenPaths(theme.tokens[layer], layer);
+  }
   const used = new Set();
   collectTokens(theme, used);
   for (const tok of used) {
