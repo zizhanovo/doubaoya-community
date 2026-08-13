@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T02:38:27.380256+00:00",
+  "generatedAt": "2026-08-13T02:47:02.243667+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -45,7 +45,7 @@
     "wechat-original-hot": "doubaoya-skill/wechat-original-hot@354d1bfacaf9",
     "wechat-rewrite": "doubaoya-skill/wechat-rewrite@d8ac8745b5c1",
     "wechat-similar-account": "doubaoya-skill/wechat-similar-account@47507a389767",
-    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@81ae208bad6f",
+    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@3dfb22b2d2e8",
     "wechat-title": "doubaoya-skill/wechat-title@084421ccadf1",
     "wechat-top-account": "doubaoya-skill/wechat-top-account@728023ecefac",
     "xiaohongshu-cover": "doubaoya-skill/xiaohongshu-cover@063503aa95fe",
