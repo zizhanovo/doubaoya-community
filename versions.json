@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T10:10:27.506895+00:00",
+  "generatedAt": "2026-08-14T09:46:40.871024+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -33,11 +33,11 @@
     "trending-hub-top10": "doubaoya-skill/trending-hub-top10@759f77d28df3",
     "wechat-10w-hot": "doubaoya-skill/wechat-10w-hot@6220c344c078",
     "wechat-account-analyzer": "doubaoya-skill/wechat-account-analyzer@153389f9602d",
-    "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@f501d5f2fbde",
+    "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@c394ba22e112",
     "wechat-banned-words": "doubaoya-skill/wechat-banned-words@40f0b53c178e",
     "wechat-channels-ai-feed": "doubaoya-skill/wechat-channels-ai-feed@3958c899a0cc",
     "wechat-cover": "doubaoya-skill/wechat-cover@ff68f2fabfee",
-    "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@1cff688f3db3",
+    "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@85a1a1eee05b",
     "wechat-fastest-growing": "doubaoya-skill/wechat-fastest-growing@c4fe892097f5",
     "wechat-hot-article": "doubaoya-skill/wechat-hot-article@498c02f187b3",
     "wechat-hot-write": "doubaoya-skill/wechat-hot-write@cc0f1c703ea2",
