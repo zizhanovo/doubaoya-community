@@ -113,7 +113,7 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错、周期非法） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 404 | `NOT_FOUND` | 该日期/分类无榜单 | 换日期或换分类重试 |
-| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据，**多半是日期超出最近 7 天** | 把 `--date` 挪进最近 7 天（推荐 T-2）重试 |
+| 422 | `PROVIDER_NO_RESULT` | 这组入参查不到数据，**多半是日期超出最近 7 天** | 把 `--date` 挪进最近 7 天（推荐 T-2）重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。

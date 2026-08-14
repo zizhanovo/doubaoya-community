@@ -102,7 +102,7 @@ python3 "$SKILL_PATH/scripts/fetch_low_fans_top.py" \
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法 | 修正 `--rank-date` / `--category` 重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
-| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据。**多半是分类名不在 25 个闭集里（比如写了 `综合`），或日期超出最近 30 天** | 把分类换成闭集里的全称、把日期挪进最近 30 天重试 |
+| 422 | `PROVIDER_NO_RESULT` | 这组入参查不到数据。**多半是分类名不在 25 个闭集里（比如写了 `综合`），或日期超出最近 30 天** | 把分类换成闭集里的全称、把日期挪进最近 30 天重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 ---

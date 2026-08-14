@@ -83,7 +83,7 @@ python3 "$SKILL_PATH/scripts/fetch_cover_data.py" --keyword 露营
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如关键词为空） | 修正 `--keyword` / `--start-date` 重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
-| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据 | 换个关键词重试 |
+| 422 | `PROVIDER_NO_RESULT` | 这组入参查不到数据 | 换个关键词重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 ---
