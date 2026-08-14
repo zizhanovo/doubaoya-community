@@ -247,6 +247,33 @@ def validate_readme(root: Path = ROOT) -> None:
     require("无需 `DOUBAOYA_API_KEY`" in rows[0] and "不支持阅读 / 点赞 / 评论数" in rows[0], "README MP Ark capability boundary is incomplete")
 
 
+def validate_clawhub_manifest(root: Path = ROOT) -> None:
+    """ClawHub 上架清单必须与 skills/ 一一对应（元数据外置，漏一个就少上架一个）。"""
+    manifest = load_json(root / "tools" / "clawhub.json")
+    require(isinstance(manifest, dict), "clawhub.json must be an object")
+    require(manifest.get("schema_version") == 1, "unsupported clawhub manifest schema")
+    owner = manifest.get("owner")
+    require(isinstance(owner, str) and owner, "clawhub manifest needs an owner handle")
+    skills = manifest.get("skills")
+    require(isinstance(skills, dict) and skills, "clawhub manifest needs a skills map")
+    listed = set(skills)
+    actual = {path.name for path in discover_skill_dirs(root)}
+    require(
+        listed == actual,
+        f"clawhub manifest mismatch: missing={sorted(actual - listed)}, extra={sorted(listed - actual)}",
+    )
+    for slug, entry in sorted(skills.items()):
+        require(isinstance(entry, dict), f"clawhub manifest entry must be an object: {slug}")
+        require(set(entry) <= {"displayName", "topics"}, f"unexpected clawhub manifest keys: {slug}")
+        name = entry.get("displayName")
+        require(isinstance(name, str) and name.strip(), f"clawhub manifest needs a displayName: {slug}")
+        topics = entry.get("topics", [])
+        require(
+            isinstance(topics, list) and all(isinstance(item, str) and item.strip() for item in topics),
+            f"clawhub manifest topics must be non-empty strings: {slug}",
+        )
+
+
 def publishable_files(root: Path = ROOT) -> list[Path]:
     git = subprocess.run(
         ["git", "-C", str(root), "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
@@ -307,6 +334,7 @@ def validate_artifacts(root: Path = ROOT) -> None:
 def validate_repository(root: Path = ROOT) -> None:
     validate_skill_inventory(root)
     validate_readme(root)
+    validate_clawhub_manifest(root)
     validate_routing(root)
     validate_vendor(root)
     validate_artifacts(root)
@@ -314,7 +342,10 @@ def validate_repository(root: Path = ROOT) -> None:
 
 def main() -> int:
     validate_repository()
-    print(f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, MP Ark vendor and WeChat routing")
+    print(
+        f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, "
+        "ClawHub manifest, MP Ark vendor and WeChat routing"
+    )
     return 0
 
 
