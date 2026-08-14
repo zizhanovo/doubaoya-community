@@ -106,7 +106,7 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 keyword 为空、日期格式错） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
-| 422 | `REDFOX_NO_RESULT` | 查不到数据。**若带了 `--start`，多半是它早于 60 天保留期** | 去掉 `--start` 或把它挪进 60 天内重试 |
+| 422 | `PROVIDER_NO_RESULT` | 查不到数据。**若带了 `--start`，多半是它早于 60 天保留期** | 去掉 `--start` 或把它挪进 60 天内重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。

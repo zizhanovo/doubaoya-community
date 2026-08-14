@@ -126,7 +126,7 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如日期格式错） | 修正分类/日期重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
-| 422 | `REDFOX_NO_RESULT` | 这组入参查不到数据。**多半是开始日超出 60 天保留期**——哪怕它说的是"日期格式错误" | 把开始日往后挪进 60 天内重试，别改日期格式 |
+| 422 | `PROVIDER_NO_RESULT` | 这组入参查不到数据。**多半是开始日超出 60 天保留期**——哪怕它说的是"日期格式错误" | 把开始日往后挪进 60 天内重试，别改日期格式 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。
