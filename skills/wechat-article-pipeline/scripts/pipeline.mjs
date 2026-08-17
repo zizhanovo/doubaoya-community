@@ -153,7 +153,10 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --digest <str>              摘要
   --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
   --profile <path>            IP/身份 profile（默认取 config.ipProfile）
-  --theme <path>              显式覆盖 Markdown 主题（默认 themes/benya-clean.json）
+  --theme <path>              显式覆盖 Markdown 主题。不显式指定（且 config 未写 mdTheme 路径）时，
+                              先用密钥拉服务端编译主题（你在 doubaoya.com 设置的默认排版，
+                              GET /api/wechat/theme?format=compiled，拉不到就静默回退），
+                              最后兜底 themes/benya-clean.json
   --theme neutral             显式使用中性渲染器，不套项目主题
   --design <json>             设计工作台产出的 design-config.json：套主题 + 设封面 + 按 h2
                               锚点注入配图。由 scripts/design-studio.mjs 生成。显式 --theme/
@@ -195,6 +198,64 @@ async function readJsonMaybe(p) {
   } catch {
     return null;
   }
+}
+
+// 是否显式钉了本机主题（--theme 或 config.json 里写了 mdTheme 路径）。
+// 钉了就不去拉服务端编译主题——显式配置永远赢过远端默认。
+export function hasExplicitLocalTheme({ cliTheme, configuredTheme, configHasTheme = false } = {}) {
+  const fromCli = typeof cliTheme === "string" && cliTheme.length > 0;
+  const fromConfig = configHasTheme && typeof configuredTheme === "string" && configuredTheme.length > 0;
+  return fromCli || fromConfig;
+}
+
+// 拉服务端编译主题（用户在 doubaoya.com 设置的默认排版，engine-2 已在服务端编译成
+// engine-1 形状的全字面量 JSON）。接口尚未处处可用，所以任何失败都优雅回退本机主题：
+// 401 → warn（密钥问题要让用户知道）；404/网络错/超时 → 一句 info，不重试不刷屏。
+// 拉到后先过 validateTheme 保险带再交给渲染器。成功返回 data（{theme, themeName, …}），
+// 任何失败返回 null。
+export async function fetchCompiledTheme({
+  baseUrl,
+  apiKey,
+  timeoutMs = 5000,
+  onInfo = () => {},
+  onWarn = () => {},
+} = {}) {
+  if (!apiKey) return null;
+  let res;
+  try {
+    res = await fetch(`${baseUrl}/api/wechat/theme?format=compiled`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (e) {
+    const why = e && (e.name === "TimeoutError" || e.name === "AbortError") ? "超时" : "网络错误";
+    onInfo(`服务端编译主题拉取失败（${why}），本次用本机主题。`);
+    return null;
+  }
+  if (res.status === 401) {
+    onWarn("拉取服务端主题被拒（401）：DOUBAOYA_API_KEY 无效或缺失，请检查密钥配置；本次用本机主题。");
+    return null;
+  }
+  let env = null;
+  try {
+    env = JSON.parse(await res.text());
+  } catch {}
+  const data = env && env.success === true ? env.data || {} : null;
+  if (!res.ok || !data || typeof data.theme !== "object" || data.theme === null) {
+    onInfo(`服务端编译主题不可用（HTTP ${res.status}），本次用本机主题。`);
+    return null;
+  }
+  const { errors, warnings } = validateTheme(data.theme);
+  for (const w of warnings) onWarn(`服务端主题告警: ${w}`);
+  if (errors.length) {
+    onWarn(`服务端编译主题未通过本地校验（${errors.length} 个错误，首个: ${errors[0]}），本次用本机主题。`);
+    return null;
+  }
+  if (Array.isArray(data.dropped) && data.dropped.length) {
+    onWarn(`服务端编译时降级丢弃了 ${data.dropped.length} 项: ${data.dropped.join("、")}`);
+  }
+  return data;
 }
 
 // 解析 Markdown 主题路径：显式 --theme 优先，其次 config.mdTheme，最后项目默认主题。
@@ -542,7 +603,8 @@ async function main() {
     } catch (e) {
       fail(`读不到 Markdown 文件 ${resolvedMd}（${e.message}）`);
     }
-    // 项目默认主题：显式 --theme 优先，其次 config.mdTheme，最后项目默认主题。
+    // 主题优先级：--theme（含 --design 折算）> config.mdTheme（显式写了路径时）>
+    // 服务端编译主题（用户在 doubaoya.com 设置的默认排版）> 项目默认主题。
     // "neutral" 是唯一显式退回中性渲染器的标记。
     // --design 的主题作为 cliTheme 入口生效；显式 --theme 冲突时命令行优先并告警。
     let effectiveCliTheme = args.theme;
@@ -551,12 +613,31 @@ async function main() {
       else effectiveCliTheme = designThemeCli;
     }
     let theme;
-    const themePath = resolveMarkdownThemePath({
-      cliTheme: effectiveCliTheme,
-      configuredTheme: config.mdTheme,
-      configHasTheme,
-      configDir: path.dirname(configPath),
-    });
+    if (
+      !hasExplicitLocalTheme({
+        cliTheme: effectiveCliTheme,
+        configuredTheme: config.mdTheme,
+        configHasTheme,
+      })
+    ) {
+      const remote = await fetchCompiledTheme({ baseUrl, apiKey, onInfo: info, onWarn: warn });
+      if (remote) {
+        theme = remote.theme;
+        info(
+          `已拉取服务端编译主题: ${remote.themeName || "(未命名)"}` +
+            `（source=${remote.source || "?"}, compiledFrom=engine ${remote.compiledFrom || 1}` +
+            `${remote.isDefault ? ", 账号默认排版" : ""}）`
+        );
+      }
+    }
+    const themePath = theme
+      ? null
+      : resolveMarkdownThemePath({
+          cliTheme: effectiveCliTheme,
+          configuredTheme: config.mdTheme,
+          configHasTheme,
+          configDir: path.dirname(configPath),
+        });
     if (themePath) {
       const themeObj = await readJsonMaybe(themePath);
       if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
@@ -567,7 +648,7 @@ async function main() {
       }
       theme = themeObj;
       info(`已加载主题: ${themePath}（${themeObj.meta && themeObj.meta.name ? themeObj.meta.name : "未命名"}）`);
-    } else {
+    } else if (!theme) {
       info("已显式使用中性渲染器（未套项目主题）。");
     }
     // 设计配置的配图：渲染前按 h2 锚点注入到 Markdown 源。

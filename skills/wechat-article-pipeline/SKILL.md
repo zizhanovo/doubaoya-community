@@ -8,7 +8,7 @@ description: >-
   跑公众号图文流水线时使用。需先在 doubaoya.com 绑定自己的公众号、并有一条 DOUBAOYA_API_KEY。
   Trigger words: 写公众号 / 转公众号排版 / 推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 /
   把文章存进公众号草稿箱 / 公众号图文流水线 / wechat-article-pipeline。
-version: 1.1.0
+version: 1.2.0
 ---
 
 # 公众号图文流水线（都爆鸭）
@@ -103,9 +103,22 @@ curl -sS https://doubaoya.com/api/wechat/writing-spec \
 `spec` 里分两块，**成立条件不一样**：
 
 1. **结构建议 + 平台硬约束** —— 与排版无关，**永远成立**，照做。
-2. **本主题的呈现** —— 只在这篇**真用服务端那套排版渲染**时成立。本流水线用的是**本机 theme 文件**
-   （见 [`themes/README.md`](./themes/README.md)），不读服务端主题，所以走本流水线发文时**第二块不适用**，
-   只照第一块写。
+2. **本主题的呈现** —— 只在这篇**真用服务端那套排版渲染**时成立。本流水线在你**没有显式钉本机主题**
+   （不带 `--theme`，`config.json` 也没把 `mdTheme` 写成路径）时，会用同一条 `DOUBAOYA_API_KEY`
+   自动拉取**服务端默认排版的编译版**（`GET /api/wechat/theme?format=compiled`）来渲染——
+   此时**第二块适用**，照着写。显式 `--theme` / `config.mdTheme` 钉了本机主题，或没拉到服务端主题
+   而回退本机主题时，第二块**不适用**，只照第一块写（流水线日志会打出本次实际用了哪份主题）。
+
+#### 主题来源与优先级
+
+渲染用哪份主题，按下面顺序取第一个成立的（详见 [`themes/README.md`](./themes/README.md)）：
+
+1. `--theme <path|neutral>`（含 `--design` 折算的主题）——显式指定，永远赢；
+2. `config.json` 里显式写成路径的 `mdTheme`——钉死本机主题，不发任何请求；
+3. **服务端编译主题** `GET /api/wechat/theme?format=compiled`——你在 doubaoya.com 排版工作室设置的
+   默认排版（engine-2 主题服务端已编译成本机渲染器认识的全字面量形状）。拉取带 5s 超时，
+   **拉不到就优雅回退**：401 告警提示检查密钥（不中断），404/网络错误只打一句提示，不重试；
+4. 项目默认主题 `themes/benya-clean.json`。
 
 > **一处例外**：规范里「`:::` 组件语法与 `> [!NOTE]` 提示块渲染器不解析、别写」那条，说的是**服务端
 > 渲染器**。本流水线的 `render-wechat-html.mjs` **解析**这两套语法（见下节），走本流水线时照常用。
@@ -185,8 +198,9 @@ curl -sS https://doubaoya.com/api/wechat/writing-spec \
    ```
    配图落进 Markdown 后**回到第 5 步重渲染**。这些本地图会被现有 `preprocess-and-publish.mjs` 走 `image` 上传，
    **无需改动任何发布链路**。
-4. **排版** — 确认用哪套主题（默认 `config.mdTheme`，或用 `--theme` 换一套；写主题见下方「复刻参考排版风格」），
-   并**确认渲染器真被调用**。
+4. **排版** — 确认用哪套主题（默认按[主题来源与优先级](#主题来源与优先级)自动取：有 key 时先拉
+   服务端默认排版的编译版，或用 `--theme` / `config.mdTheme` 钉一套本机主题；写主题见下方
+   「复刻参考排版风格」），并**确认渲染器真被调用**。
 
 > `gen-image.mjs` 生成的本地 jpeg 路径，封面喂 `pipeline.mjs --cover`、配图以 `<img src>` 落进正文——
 > 两者都不触碰微信侧发布契约。上游生图密钥只在 doubaoya 服务端，skill 端只用密钥。
@@ -375,5 +389,10 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 npx skills update wechat-article-pipeline   # 全局安装的加 -g
 ```
 
-> **最近变更**：默认 Markdown 排版主题已切为 `benya-clean`（本鸭 · 知识清爽）。想沿用旧版
-> `magazine`（杂志风）的，在 `config.json` 里把 `mdTheme` 指回 `themes/magazine.json`，或渲染时加 `--theme themes/magazine.json`。
+> **最近变更**：
+> - 未显式钉本机主题时，流水线现在会**优先拉取服务端编译主题**（你在 doubaoya.com 设置的默认排版，
+>   `GET /api/wechat/theme?format=compiled`；拉不到就优雅回退本机）。想钉死本机主题的，
+>   `--theme` 或 `config.mdTheme` 写成路径即可。同时 `validate-theme.mjs` 对 engine-2 主题
+>   （`meta.engine:2` / `tokens` / 带点号 token）从告警升级为**硬错误**——这类主题只能用服务端编译版。
+> - 默认 Markdown 排版主题已切为 `benya-clean`（本鸭 · 知识清爽）。想沿用旧版
+>   `magazine`（杂志风）的，在 `config.json` 里把 `mdTheme` 指回 `themes/magazine.json`，或渲染时加 `--theme themes/magazine.json`。
