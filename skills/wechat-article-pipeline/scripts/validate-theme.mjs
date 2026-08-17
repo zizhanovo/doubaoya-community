@@ -24,6 +24,17 @@ import path from 'node:path';
 import process from 'node:process';
 
 const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorations', 'components', 'tokens']);
+
+// ⚠️⚠️ 社区仓独有硬闸（engine-2 拒收）——从主仓 re-sync/mirror 时必须保留本块 ⚠️⚠️
+// 主仓（doubaoyahub）渲染器支持 engine 2，故主仓版本的 validateTheme **没有**这道闸；
+// 本仓渲染器是 engine 1：不认识 meta.engine:2 / tokens 三层 / 带点号 token（渲染时
+// 点号 token 原样留在 HTML 里，静默毁版）。所以 engine-2 主题在这里必须硬拦（error
+// 而非 warning），指路服务端编译版。冲掉本块（ENGINE2_HINT 与它的三处 errors.push）
+// = engine-2 主题重新静默烂 HTML 进草稿箱——selfcheck-remote-theme.mjs 第 5 项守着它，
+// re-sync 后跑一遍自检即可发现。
+const ENGINE2_HINT =
+  '此主题为 engine 2，本机渲染器（engine 1）不认识它，渲染会把 {{ref.xxx}} 原样留在正文里。' +
+  '需要服务端编译版：配置 DOUBAOYA_API_KEY 后由流水线自动拉取，或 GET /api/wechat/theme?format=compiled。';
 const PALETTE_KEYS = new Set(['text', 'heading', 'accent', 'accent2', 'muted', 'bgSoft', 'border', 'link']);
 // NOTE: this list only decides whether an `elements.<tag>` key gets a
 // "not a recognized tag" WARNING — it is not part of the safety boundary
@@ -130,6 +141,9 @@ export function validateTheme(theme) {
     if (engine !== undefined && engine !== 1 && engine !== 2) {
       errors.push(`meta.engine 只能是 1 或 2（缺省 1），得到 ${JSON.stringify(engine)}。`);
     }
+    if (engine === 2) {
+      errors.push(`meta.engine === 2：${ENGINE2_HINT}`);
+    }
     if (theme.meta.extends !== undefined) {
       if (engine !== 2) {
         errors.push('meta.extends 只有 meta.engine === 2 时才有意义。');
@@ -139,8 +153,10 @@ export function validateTheme(theme) {
     }
   }
 
-  // 1c. tokens 三层结构（v2）。求值交给 render 侧的 resolveTokens()，这里只管形状。
+  // 1c. tokens 三层结构（v2）。带 tokens 的主题本机渲染不了 → 硬拦；后面的形状检查
+  // 照跑，让报错更具体。
   if (theme.tokens !== undefined) {
+    errors.push(`存在 top-level "tokens"：${ENGINE2_HINT}`);
     if (!isPlainObject(theme.tokens)) {
       errors.push('tokens must be an object.');
     } else {
@@ -295,6 +311,12 @@ export function validateTheme(theme) {
   const used = new Set();
   collectTokens(theme, used);
   for (const tok of used) {
+    // 带点号的 token（{{ref.xxx}} 等）本机渲染器的替换正则（[\w-]）根本不匹配，
+    // 会原样落进正文 —— engine-2 专属写法，硬拦。
+    if (tok.includes('.')) {
+      errors.push(`{{${tok}}} 是带点号的 token：${ENGINE2_HINT}`);
+      continue;
+    }
     if (!knownTokens.has(tok)) {
       warnings.push(`{{${tok}}} is used but not defined in palette/page — it will be left as-is at render time.`);
     }
