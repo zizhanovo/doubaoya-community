@@ -1,9 +1,30 @@
 {
   "schema_version": 1,
+  "retired": {
+    "status": "retired",
+    "scope": "Every route whose primary_skill is `mera`. The doubaoya-public-discovery route below is unaffected and still valid.",
+    "historical_facts": [
+      "2026-08-10: the doubaoya production stack migrated to a new host; the Mera second-brain service did not migrate and entered retirement on the old host.",
+      "The DNS record for mera.doubaoya.com has been removed; the name resolves to NXDOMAIN on public resolvers."
+    ],
+    "call_outcome": [
+      "All six api.mera.* capabilities fail. Deployments without a configured backend address are stopped by the availability gate BEFORE any credit is debited and return 503 CAPABILITY_UNAVAILABLE (no charge at all).",
+      "Deployments still holding the stale old-host address cannot reach it and return 502 PROVIDER_FAILED, with the debited credits refunded automatically.",
+      "Neither path leaves the user out of pocket, and neither returns data. Retrying, changing keys, changing parameters and changing networks are all pointless."
+    ],
+    "agent_behaviour": [
+      "Tell the user plainly that the second-brain capability has been retired, then ask what they would like to do instead.",
+      "There is NO substitute skill and NO acceptable degradation.",
+      "Never fall back to doubaoya-public-discovery for a first-person request: public platform search cannot see the user's own notes, so answering 我之前说过什么 from public content passes strangers' material off as the user's own memory — worse than saying the capability is gone."
+    ],
+    "still_listed_in_discovery": "GET /api/apis still returns the six mera/* entries with prices. Presence in the discovery listing does NOT mean the capability is callable; this block is the reason that distinction matters.",
+    "invalidated_when": "This retirement block expires once mera.doubaoya.com resolves again (no longer NXDOMAIN) AND an api.mera.* call returns real data instead of 503/502. At that point restore the call contracts rather than trusting this file."
+  },
   "routes": [
     {
       "id": "mera-second-brain-capture",
-      "priority": 100,
+      "retired": true,
+      "priority": 0,
       "primary_skill": "mera",
       "use_when": [
         "user asks to remember, note down, save, or bookmark something for themselves",
@@ -24,7 +45,8 @@
     },
     {
       "id": "mera-second-brain-recall",
-      "priority": 90,
+      "retired": true,
+      "priority": 0,
       "primary_skill": "mera",
       "use_when": [
         "user asks what they themselves previously said, recorded, decided, or collected",
@@ -68,10 +90,10 @@
     }
   ],
   "precedence": [
-    "Evaluate the highest-priority matching route first.",
-    "First-person possessive scope is the discriminator: 我的 / 我之前 / 帮我记 selects a mera route even when the sentence also names a public platform.",
-    "Public discovery intent without first-person scope selects doubaoya-public-discovery.",
-    "When a request mixes both (e.g. research a trend then keep it), run the public route first and then hand the result to mera-second-brain-capture, and state each capability boundary."
+    "Any route marked \"retired\": true is never selected. Its use_when list is kept only so you can RECOGNISE the request and answer that the capability is retired — it is no longer a routing target.",
+    "First-person possessive scope (我的 / 我之前 / 帮我记) still identifies a second-brain request; because both second-brain routes are retired, the correct response is to say so, not to route anywhere.",
+    "Public discovery intent without first-person scope selects doubaoya-public-discovery, which is unaffected by the retirement.",
+    "When a request mixes both (e.g. research a trend then keep it), run the public route and deliver its result, then state plainly that the keeping step is unavailable because the second brain has been retired."
   ],
   "forbidden_misroutes": [
     {
@@ -101,7 +123,16 @@
         "我之前说过",
         "我是个什么样的人"
       ],
-      "reason": "Public platform search cannot see the user's own second brain and would answer from strangers' content."
+      "reason": "Public platform search cannot see the user's own second brain and would answer from strangers' content. Since the second brain was retired this is the single most likely mistake: with no mera route left to take, an agent is tempted to substitute public search. Say the capability is retired instead."
+    },
+    {
+      "from": "any",
+      "request_signals": [
+        "calling POST /api/apis/mera/<slug>/call because the capability still appears in GET /api/apis",
+        "retrying a mera 503 or 502 in the hope it is transient",
+        "reporting a note as saved when the write could not have happened"
+      ],
+      "reason": "The mera capabilities are retired: they are still listed in the discovery response but cannot succeed. See the top-level `retired` block."
     }
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T10:19:40.155069+00:00",
+  "generatedAt": "2026-08-18T10:33:43.459113+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -10,7 +10,7 @@
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
     "dby-update": "doubaoya-skill/dby-update@53d92b2192de",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
-    "doubaoya": "doubaoya-skill/doubaoya@035c62d0cddb",
+    "doubaoya": "doubaoya-skill/doubaoya@9f93465da94f",
     "douyin-comment": "doubaoya-skill/douyin-comment@94cf3e281b04",
     "douyin-realtime-search": "doubaoya-skill/douyin-realtime-search@d861c99e79a8",
     "douyin-search": "doubaoya-skill/douyin-search@154c60c5923a",
@@ -21,7 +21,7 @@
     "gzh-subscribe": "doubaoya-skill/gzh-subscribe@9b3420dcf641",
     "image-gen": "doubaoya-skill/image-gen@7b1584092802",
     "ip-profile": "doubaoya-skill/ip-profile@b36db0c86bf5",
-    "mera": "doubaoya-skill/mera@cca381f912d6",
+    "mera": "doubaoya-skill/mera@80c955d249ac",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
     "multi-content-feed": "doubaoya-skill/multi-content-feed@258b43f01e0b",
     "multi-rewrite": "doubaoya-skill/multi-rewrite@c025bdecf97c",
