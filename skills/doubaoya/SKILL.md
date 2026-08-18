@@ -289,7 +289,9 @@ console.log(env.data.items);
    每条给出这个IP的**独家切角**；必要时用 `xiaohongshu-viral-notes` / `*-ai-feed` 验证「真的在爆」。
 4. **写开场脚本**：基于选中的热点 + IP独家切角，给每个选题写 **3 秒开场钩子 + 一段开场脚本**（别脱离数据空写）。
 5. **保命**：脚本丢进 `POST /api/skills/content-safety-check/invoke`
-   `{ "platform": "douyin", "content": "<脚本>" }`，命中风险词按 `suggestions` 替换。
+   `{ "platform": "douyin", "content": "<脚本>" }`——返回 `content`（标注版）/ `originalContent`（原文）/
+   `prohibitedWordsType`（风险类别）；命中词从 `content` 的标注定位，替换建议由你结合上下文给。
+   🔴 这三个字段都读不到时如实说「没拿到检测结果」，别当成合规放行。
 6. **交付选题**：3–5 个选题（每个：蹭哪条热点 + 我这IP的独家切角 + 为什么现在能爆）+ 各自开场脚本 + 已过违禁词检测。
 7. **选题落地成文章**（用户要的是**公众号文章**而不是短视频脚本时，第 6 步之后还有路）：
    选定一个选题 → `wechat-hot-write` 拉同主题爆文样本写正文 → `wechat-title` 起标题 /

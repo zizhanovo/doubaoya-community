@@ -10,7 +10,8 @@
     - 从环境变量 DOUBAOYA_API_KEY 读取密钥（形如 dyh_...），缺失时报错退出，绝不打印密钥本身。
     - 默认 platform 为 gongzhonghao（公众号）；也可传 xiaohongshu / douyin 等。
     - POST 至都爆鸭 API，解析统一信封；success != true 时输出 [error] code: message 并退出 1。
-    - 成功时打印 data 字段（riskLevel / matchedWords / suggestions）的 JSON，供智能体解析。
+    - 成功时打印 data 字段（source / content / originalContent / prohibitedWordsType / raw）的 JSON，
+      供智能体解析；命中词只能从 content 的标注里定位，接口不回风险等级与替换建议。
 """
 
 import argparse

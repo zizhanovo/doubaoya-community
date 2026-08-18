@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T08:40:06.259643+00:00",
+  "generatedAt": "2026-08-18T09:11:06.822101+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -10,7 +10,7 @@
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
     "dby-update": "doubaoya-skill/dby-update@53d92b2192de",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
-    "doubaoya": "doubaoya-skill/doubaoya@e59ca8d2e11c",
+    "doubaoya": "doubaoya-skill/doubaoya@934637117ed3",
     "douyin-comment": "doubaoya-skill/douyin-comment@94cf3e281b04",
     "douyin-realtime-search": "doubaoya-skill/douyin-realtime-search@d861c99e79a8",
     "douyin-search": "doubaoya-skill/douyin-search@154c60c5923a",
@@ -22,7 +22,7 @@
     "image-gen": "doubaoya-skill/image-gen@7b1584092802",
     "ip-profile": "doubaoya-skill/ip-profile@b36db0c86bf5",
     "mera": "doubaoya-skill/mera@cca381f912d6",
-    "multi-banned-words": "doubaoya-skill/multi-banned-words@359ff74d7f2f",
+    "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
     "multi-content-feed": "doubaoya-skill/multi-content-feed@258b43f01e0b",
     "multi-rewrite": "doubaoya-skill/multi-rewrite@c025bdecf97c",
     "optimize-skill-md": "doubaoya-skill/optimize-skill-md@b70db0754ccf",
@@ -34,7 +34,7 @@
     "wechat-10w-hot": "doubaoya-skill/wechat-10w-hot@b82f2ab8e880",
     "wechat-account-analyzer": "doubaoya-skill/wechat-account-analyzer@153389f9602d",
     "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@2ee559010b10",
-    "wechat-banned-words": "doubaoya-skill/wechat-banned-words@9fa04f5e25f2",
+    "wechat-banned-words": "doubaoya-skill/wechat-banned-words@2e29d74ce37d",
     "wechat-channels-ai-feed": "doubaoya-skill/wechat-channels-ai-feed@3958c899a0cc",
     "wechat-cover": "doubaoya-skill/wechat-cover@80f58ab682c1",
     "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@24d35d8ef1cc",

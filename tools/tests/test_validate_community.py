@@ -172,6 +172,32 @@ class CommunityValidatorTests(unittest.TestCase):
         shutil.copytree(validator.SKILLS, root / "skills")
         shutil.copy2(validator.ROOT / "README.md", root / "README.md")
 
+    def test_banned_word_gate_rejects_ghost_fields(self):
+        # 三个字段上游从来没回过。文档教 agent 读 `matchedWords` 的那阵子，「为空 ⇒ 合规 ✅」
+        # 是个恒真判据，每一段文案都被放行——变异证据分别覆盖「全仓禁」与「只在违禁词 Skill 禁」两类。
+        for skill_name, injection, ghost in (
+            ("wechat-banned-words", "若 `matchedWords` 为空则合规。", "matchedWords"),
+            ("multi-banned-words", "读 `data.suggestions` 拿建议。", "suggestions"),
+            ("doubao-websearch", "整体风险等级看 `riskLevel`。", "riskLevel"),
+        ):
+            with self.subTest(skill=skill_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.repository_fixture(root)
+                skill = root / "skills" / skill_name / "SKILL.md"
+                skill.write_text(skill.read_text(encoding="utf-8") + f"\n\n{injection}\n", encoding="utf-8")
+                with self.assertRaisesRegex(validator.ValidationError, f"still names .{ghost}."):
+                    validator.validate_banned_word_fields(root)
+
+    def test_banned_word_gate_keeps_the_real_suggestions_field(self):
+        # `result.suggestions` 是搜索能力的真字段。闸若一刀切禁掉 `suggestions`，
+        # 就会把这份没问题的文档打红，逼着后来的人删掉正确的指引——所以按 Skill 分域禁。
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            search_skill = root / "skills" / "doubao-websearch" / "SKILL.md"
+            self.assertIn("result.suggestions", search_skill.read_text(encoding="utf-8"))
+            validator.validate_banned_word_fields(root)
+
     def test_readme_rejects_stale_count_and_inventory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
