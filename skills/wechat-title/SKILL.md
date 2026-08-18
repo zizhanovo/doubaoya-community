@@ -122,6 +122,22 @@ wechat-title/
     └── fetch_title.py        # 零依赖脚本（urllib），调用 doubaoya.com
 ```
 
+---
+
+## 下一步（标题定了之后往哪走）
+
+标题只是这篇稿子的一环。定完标题接着往下交，别让稿子停在候选清单上：
+
+| 接下来要做的事 | 交给 |
+|---|---|
+| 配封面 | `wechat-cover` |
+| 正文过违禁词、出过审版 | `wechat-banned-words` |
+| 排版成公众号 HTML + 存进自己公众号草稿箱（**终点**，标题走 `--title` 参数） | `wechat-article-pipeline` |
+| 正文还没写 | `wechat-hot-write` |
+| 拿不准先走哪一步 | `dby`（公众号飞轮的任务后导航） |
+
+> 🔴 定下的标题**只走 `--title` 参数**，别再写进正文——公众号总是拿草稿 `title` 渲大标题，正文里再放一遍会显示两次。
+
 ## 关于响应里的 notice 字段
 
 调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。

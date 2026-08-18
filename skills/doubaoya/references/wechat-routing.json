@@ -24,6 +24,32 @@
       ]
     },
     {
+      "id": "doubaoya-authoring-delivery",
+      "priority": 95,
+      "terminal_skill": "wechat-article-pipeline",
+      "candidate_skills": [
+        "wechat-hot-write",
+        "wechat-title",
+        "wechat-cover",
+        "wechat-banned-words",
+        "wechat-theme-studio",
+        "wechat-article-pipeline",
+        "wechat-draft-publish",
+        "dby"
+      ],
+      "use_when": [
+        "user requests a complete Official Account article to be written and delivered",
+        "user requests title, cover, or compliance work on an article they are writing",
+        "user requests layout rendering into Official Account HTML",
+        "user requests saving an article into their own draft box",
+        "user asks which step of the writing flywheel comes next"
+      ],
+      "auth": {
+        "type": "doubaoya-api-key-plus-bound-official-account",
+        "requires_doubaoya_api_key": true
+      }
+    },
+    {
       "id": "doubaoya-cloud-public-data",
       "priority": 90,
       "candidate_skills": [
@@ -48,8 +74,10 @@
   "precedence": [
     "Evaluate the highest-priority matching route first.",
     "Explicit local QR, article-body, or archive intent selects mp-ark-local-archive even when the request also says Official Account.",
+    "Intent to write, lay out, or deliver the user's own article selects doubaoya-authoring-delivery, whose terminal skill is wechat-article-pipeline (draft box), not the raw article text.",
     "Explicit interaction-metric intent selects doubaoya-cloud-public-data because MP Ark does not support those metrics.",
-    "When both archive and metric intents are present, split the work across the two routes and state each capability boundary."
+    "When both archive and metric intents are present, split the work across the two routes and state each capability boundary.",
+    "Research routes feed the authoring route: once a topic is chosen, hand the work forward instead of ending at a search result."
   ],
   "forbidden_misroutes": [
     {
@@ -61,6 +89,16 @@
         "comment count"
       ],
       "reason": "MP Ark must not fabricate or promise unsupported interaction metrics."
+    },
+    {
+      "from": "doubaoya-authoring-delivery",
+      "request_signals": [
+        "stop at the drafted article text",
+        "stop at the banned-word check",
+        "deliver markdown only",
+        "declare the article finished before the draft box"
+      ],
+      "reason": "Writing and compliance skills must hand the article forward to title, cover, layout and the draft box; the user asked for a publishable post, not a text file."
     },
     {
       "from": "doubaoya-cloud-public-data",

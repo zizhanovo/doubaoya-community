@@ -1,13 +1,17 @@
 ---
 name: wechat-article-pipeline
 description: >-
-  公众号图文流水线 · 把一篇写好的 Markdown/HTML 走确定性的机械步骤，最终存进你自己公众号的**草稿箱**
-  （只存草稿、绝不群发；之后你去公众号后台确认后手动群发）。它自动化后续运维：加载身份上下文 →
+  公众号图文流水线 · **正文写好之后回来找它**：把 Markdown/HTML 排版成公众号 HTML、配封面，
+  最终存进你自己公众号的**草稿箱**（只存草稿、绝不群发；之后你去公众号后台确认后手动群发）。
+  正文由 agent 自己写（本流水线不代写），它接手写完之后的确定性运维：加载身份上下文 →
   whoami 校验目标账号 → 前置检查 → md→公众号 HTML 渲染 → 本地图片预上传 → 封面 → 保存草稿 → 回报。
-  当用户要写公众号、转公众号排版、推公众号草稿、重新推草稿、带封面发布到草稿箱、把文章存进公众号草稿箱、
-  跑公众号图文流水线时使用。需先在 doubaoya.com 绑定自己的公众号、并有一条 DOUBAOYA_API_KEY。
-  Trigger words: 写公众号 / 转公众号排版 / 推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 /
-  把文章存进公众号草稿箱 / 公众号图文流水线 / wechat-article-pipeline。
+  当用户说正文写好了 / 文章写完了怎么发 / 接着排版发草稿 / 帮我写一篇公众号文章（写完这一步交给它）/
+  转公众号排版 / 推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 /
+  跑公众号图文流水线时使用。存草稿需先在 doubaoya.com 绑定自己的公众号 + 一条 DOUBAOYA_API_KEY；
+  只做本地排版渲染 / 换主题 / 预览时**不需要绑号也不需要密钥**（见 SKILL.md 前置条件分层表）。
+  Trigger words: 正文写好了 / 接着排版发草稿 / 文章写完了怎么发 / 写公众号 / 转公众号排版 /
+  推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 /
+  wechat-article-pipeline。
 version: 1.2.0
 ---
 
@@ -15,6 +19,11 @@ version: 1.2.0
 
 本鸭帮你把一篇**已经写好的**图文，走一串**确定性的机械步骤**，最终存进你自己公众号的**草稿箱**——
 **只存草稿，绝不群发**。存完给你 `mediaId`，你再去公众号后台亲眼确认、手动群发。
+
+> 📍 **接的是哪一棒**：用户说「帮我写一篇公众号文章」时，正文先由你（agent）写
+> （选题/写作走 `wechat-hot-write`，标题走 `wechat-title`，封面套路走 `wechat-cover`，
+> 合规走 `wechat-banned-words`）——**正文一落地就回到这里**把它排版、配封面、存进草稿箱。
+> 一篇稿子只交到 Markdown 为止不算交付：用户要的是公众号草稿箱里能看见的那篇图文。
 
 > ⚠️ **写入能力**：会写到你自己的公众号后台。所以只做「存草稿」这一步，群发的手一定在你自己。
 > 走 **doubaoya.com** 一条线，鉴权用你自己的密钥 `DOUBAOYA_API_KEY`（形如 `dyh_…`）。
@@ -373,13 +382,43 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 
 ---
 
-## 前置条件
+## 前置条件（分层：不是每一步都要绑公众号）
 
-- Node **≥ 18**（内置 `fetch`），零外部依赖。
-- 一个 **doubaoya.com** 账号，并已**绑定你自己的公众号**（去 doubaoya.com → 公众号 页面授权）。
-- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。
+统一前置：**Node ≥ 18**（内置 `fetch`），零外部依赖。除此之外**按你要做的事分三层**——
+只想看排版效果、写/换主题、规划配图位置的用户，**没有密钥、没绑公众号也能干活**：
 
-发布前跑一次 `--dry-run`，确认身份上下文、目标账号、公众号、本地图扫描都对，再正式存草稿。
+| 想做的事 | 除 Node 外还需要 | 怎么跑 |
+|---|---|---|
+| md → 公众号内联样式 HTML（本地出稿 / 看排版效果） | 无 | `node scripts/render-wechat-html.mjs --md a.md --theme themes/benya-clean.json --out a.html` |
+| 校主题 / 写主题 / 导入外部主题格式 | 无 | `scripts/validate-theme.mjs`、`scripts/import-theme.mjs`、`scripts/extract-theme.mjs --html ref.html` |
+| 复刻某篇**公开**文章的排版 | 公网（**不要密钥**） | `scripts/fetch-article.mjs --url …`、`scripts/extract-theme.mjs --url …` |
+| 配图自动布局规划（确定性规则，不接 LLM） | 无 | `node scripts/plan-figures.mjs --md a.md` |
+| 起本地设计工作台：实时预览、换肤、自动配图排位、存 `design-config` | 无（**只有页面里点「生成」才要密钥**） | `node scripts/design-studio.mjs --md a.md --title "标题"` |
+| AI 生封面 / 生配图 | 一条 **`DOUBAOYA_API_KEY`**（扣点数，约 ¥0.30/张） | `scripts/gen-image.mjs`，或工作台里点生成 |
+| 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`**（拉不到会静默回退本机主题，不中断） | 流水线自动拉 `GET /api/wechat/theme?format=compiled` |
+| **跑 `pipeline.mjs`（含 `--dry-run`）** | **密钥 + 已在 doubaoya.com 绑定公众号** | `node scripts/pipeline.mjs --md a.md --title "标题" --dry-run` |
+| 本地图预上传 / 存草稿 | 同上 | `pipeline.mjs`、`wechat-draft-publish` |
+
+> ⚠️ **`--dry-run` 不是免密钥预览**。它虽然什么都不发，但 whoami 校验账号与草稿前置检查
+> （`GET /api/wechat/status`）都排在它**前面**：没有密钥会停在「本地没有可用的 `DOUBAOYA_API_KEY`」，
+> 有密钥但没绑号会停在「目标账号没有已绑定的公众号」。
+> **还没绑号、只想先看这篇排出来什么样**：走 `render-wechat-html.mjs` 或设计工作台（都纯本地）。
+> 注意单跑渲染器时 `--title` 会往正文顶部插一个 `<h1>`（本地预览用），那份产物别拿去发布——见[正文不要写标题](#-正文不要写标题)。
+
+绑好号、配好密钥之后，发布前先跑一次 `--dry-run`，确认身份上下文、目标账号、公众号、本地图扫描都对，再正式存草稿。
+
+---
+
+## 下一步（草稿存好之后往哪走）
+
+本流水线是公众号写作链的**终点**——但它只把稿子放进草稿箱，**群发的手始终在用户自己**：
+
+1. 去公众号后台**亲眼确认**草稿（排版、封面、图片都对），再手动群发。本 skill 没有任何群发路径。
+2. 发出去攒几天数据后：`wechat-account-analyzer` 给号做体检 / 看发文表现。
+3. 想盯自己或竞品的发文节奏：`gzh-subscribe`。
+4. 已发布的文章要拉正文归档：`wechat-mp-exporter`。
+5. 复盘信号回喂下一轮选题：`doubaoya`（挖选题 / 追热点）或 `wechat-hot-write`（拉样本开写）。
+6. 拿不准下一步：`dby`（公众号飞轮的任务后导航）。
 
 ---
 

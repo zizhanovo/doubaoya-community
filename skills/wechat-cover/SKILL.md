@@ -122,6 +122,20 @@ wechat-cover/
     └── fetch_cover.py        # 零依赖脚本（urllib），调用 doubaoya.com
 ```
 
+---
+
+## 下一步（封面套路拿到之后往哪走）
+
+本 skill 给的是**同赛道封面的视觉套路**（配色 / 构图 / 文字排布），不产出封面图文件本身。拿到套路之后：
+
+| 接下来要做的事 | 交给 |
+|---|---|
+| 按这套路真生成一张封面图，并连着排版一起存进草稿箱（**终点**，封面走 `--cover` 参数） | `wechat-article-pipeline`（其 `scripts/gen-image.mjs` 生图，`--cover-guard` 防裁切） |
+| 正文过违禁词、出过审版 | `wechat-banned-words` |
+| 标题还没起 | `wechat-title` |
+| 正文还没写 | `wechat-hot-write` |
+| 拿不准先走哪一步 | `dby`（公众号飞轮的任务后导航） |
+
 ## 关于响应里的 notice 字段
 
 调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。
