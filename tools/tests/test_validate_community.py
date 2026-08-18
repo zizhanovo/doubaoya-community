@@ -128,6 +128,32 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "has no .* section"):
                 validator.validate_authoring_chain(root)
 
+    def test_authoring_chain_rejects_section_naming_no_downstream_skill(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "wechat-title" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            start = text.index(validator.NEXT_STEP_HEADING)
+            end = text.index("\n## ", start)
+            # 有标题、有正文、没点名任何下游——比整节缺失更难肉眼发现的断头方式。
+            skill.write_text(
+                text[:start] + f"{validator.NEXT_STEP_HEADING}\n\n到此为止。\n" + text[end + 1 :],
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "names no downstream Skill"):
+                validator.validate_authoring_chain(root)
+
+    def test_authoring_chain_rejects_dead_skill_link_in_dby(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            # dby 是任务后导航的单一事实源，它整篇都要扫——链上 skill 只扫「下一步」那一节。
+            skill = root / "skills" / "dby" / "SKILL.md"
+            skill.write_text(skill.read_text(encoding="utf-8") + "\n\n排版走 `wechat-render`。\n", encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, "dby/SKILL.md routes to Skills"):
+                validator.validate_authoring_chain(root)
+
     def test_authoring_chain_rejects_dead_skill_link(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
