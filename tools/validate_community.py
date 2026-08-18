@@ -32,6 +32,11 @@ AUTHORING_CHAIN = (
 NEXT_STEP_HEADING = "## 下一步"
 # 一个 Skill 名长这样：小写、带连字符。反引号里符合这个形状的 token 必须真的是 skills/ 下的一个
 # 目录——`wechat-render` 那类"听起来很像但不存在"的引用就是这么混进文档的。
+#
+# ponytail: 这个形状会误伤 CSS 属性与文件名，所以只扫「下一步」那一节（外加整篇 dby）,不扫全文。
+# 天花板：链上 skill 的正文里若出现死链，本闸看不见。升级路径是加白名单——但那份白名单自己会漂移，
+# 所以先不加。实测若改成扫全文，wechat-theme-studio 会被 `line-height`/`border-left`/`benya-clean`
+# 打红，wechat-article-pipeline 会被 `font-size`/`letter-spacing`/`design-config` 打红，全是误报。
 SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 
 
