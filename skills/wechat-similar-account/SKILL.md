@@ -37,12 +37,14 @@ python3 "$SKILL_PATH/scripts/fetch_similar.py" "某某公众号" --type "职场"
 ```
 脚本把成功信封里的 `data` 以 JSON 打到 stdout。**每个种子只跑一次脚本**，读完整 stdout，别用 `head`/`tail` 预览。
 
-### 3. 账号未收录时：可选预同步
+### 3. 账号未收录时：可选预同步（尽力而为）
 如果该账号尚未入库，可先提交同步受理（异步，约 30 分钟生效）。需要同时给微信号：
 ```bash
 python3 "$SKILL_PATH/scripts/fetch_similar.py" "某某公众号" --sync --wechat-id "gh_xxxx"
 ```
-`--sync` 会先发受理请求，回执后立刻继续拉当前可用的相似账号。若刚提交、数据还没回来，过约 30 分钟再跑一次即可。
+`--sync` 会先发受理请求，然后**不管受理成没成，都继续拉当前可用的相似账号**。若刚提交、数据还没回来，过约 30 分钟再跑一次即可。
+
+> ⚠️ **同步接口当前处于维护中**（上游 404），`--sync` 大概率会返 `503 CAPABILITY_UNAVAILABLE`。这条是**尽力而为的可选前置**，失败只在 stderr 打一条 `[warn] 预同步没做成……`，**不阻断主查询**——看到这条 warn 就知道本次没能提交入库，结果可能不含该账号的最新数据，照常按 stdout 的 JSON 往下做即可。主查询自身失败仍照常报错退出。
 
 ### 4. 铺对标矩阵 + 给一句洞察
 从 `data.items` 里取对标账号字段——`accountName`（账号名）、`avgReadCount`（平均阅读量）、`similarity`（相似度），防御式读取，缺了留空。按 `avgReadCount` 量级铺成两层 Markdown 表：**同阶对标**（量级相近、可直接抄玩法）和 **高阶标杆**（量级更大、模式可追赶）；`similarity` 越高越贴种子赛道。表后用本鸭口吻补一句：这个赛道头部在抢什么、自己的号该贴哪一档去打。
@@ -73,7 +75,8 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
     - `accountType`：字符串，可选（收窄赛道）
 - 可选预同步：`POST https://doubaoya.com/api/apis/gongzhonghao/gzh-sync-account/call`
   - 请求体：`{ "wechatId": "gh_xxxx", "accountName": "某某公众号" }`
-  - 返回受理回执，异步生效（约 30 分钟）
+  - 返回受理回执，异步生效（约 30 分钟）；仅返回受理回执，**不计费**
+  - **当前维护中**（上游 404），会返 `503 CAPABILITY_UNAVAILABLE`；该状态在扣点前拦下，不产生费用
 - 鉴权头：`Authorization: Bearer $DOUBAOYA_API_KEY`
 - 返回信封：
   ```json
@@ -85,15 +88,16 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 
 ## 错误处理
 
-脚本失败时向 stderr 打印 `[error] CODE: message` 并以退出码 1 结束。常见情况：
+**主查询**失败时向 stderr 打印 `[error] CODE: message` 并以退出码 1 结束。（唯一例外是 `--sync` 的可选预同步：它失败只打 `[warn]` 并继续跑主查询，不影响退出码。）常见情况：
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 accountName 为空、--sync 缺 --wechat-id） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
-| 404 | `NOT_FOUND` | 账号未收录 | 用 `--sync --wechat-id` 提交同步，约 30 分钟后重试 |
+| 404 | `NOT_FOUND` | 账号未收录 | 可试 `--sync --wechat-id` 提交同步（当前维护中，多半提交不上），约 30 分钟后重试 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
+| 503 | `CAPABILITY_UNAVAILABLE` | 该能力维护中（当前 `--sync` 的同步接口即此状态） | 预同步遇到它只降级告警，主查询继续；不计费 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。
 
