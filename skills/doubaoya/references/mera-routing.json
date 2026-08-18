@@ -17,7 +17,7 @@
       "There is NO substitute skill and NO acceptable degradation.",
       "Never fall back to doubaoya-public-discovery for a first-person request: public platform search cannot see the user's own notes, so answering 我之前说过什么 from public content passes strangers' material off as the user's own memory — worse than saying the capability is gone."
     ],
-    "still_listed_in_discovery": "GET /api/apis still returns the six mera/* entries with prices. Presence in the discovery listing does NOT mean the capability is callable; this block is the reason that distinction matters.",
+    "discovery_visibility": "Do not infer anything from the discovery listing, in either direction. The six mera/* entries are flagged hidden, and hidden entries are filtered out of GET /api/apis while GET /api/apis/mera/<slug> answers the same 404 as a slug that never existed; older deployments that predate that flag still list them with prices. So you may find them or not find them depending on the build you are talking to, and neither observation changes the answer: absent from the listing is not 'try again later', and present in the listing is not 'callable'. Decide from this block, never from the listing.",
     "invalidated_when": "This retirement block expires once mera.doubaoya.com resolves again (no longer NXDOMAIN) AND an api.mera.* call returns real data instead of 503/502. At that point restore the call contracts rather than trusting this file."
   },
   "routes": [
@@ -128,11 +128,12 @@
     {
       "from": "any",
       "request_signals": [
-        "calling POST /api/apis/mera/<slug>/call because the capability still appears in GET /api/apis",
+        "calling POST /api/apis/mera/<slug>/call on the strength of the discovery listing — whether the entry is still visible there or has already been filtered out as hidden",
+        "treating the entry's disappearance from GET /api/apis as a transient listing glitch worth calling through anyway",
         "retrying a mera 503 or 502 in the hope it is transient",
         "reporting a note as saved when the write could not have happened"
       ],
-      "reason": "The mera capabilities are retired: they are still listed in the discovery response but cannot succeed. See the top-level `retired` block."
+      "reason": "The mera capabilities are retired and cannot succeed. The discovery listing is not the evidence either way — see `discovery_visibility` in the top-level `retired` block."
     }
   ]
 }

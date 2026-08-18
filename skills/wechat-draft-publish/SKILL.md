@@ -18,7 +18,9 @@ description: 公众号草稿发布 · 把一篇写好的图文存进你自己公
 - ✅ 把 `{标题 + 公众号风格 HTML 正文}` 存进公众号**草稿箱**。
 - ✅ 正文里的外链图片（`<img src="http…">`）会被**自动搬运**成公众号图床地址（mmbiz）；个别图搬运失败会**跳过**，不影响整篇。
 - ✅ 封面（thumb）不指定时会**自动兜底**一张。
-- ✅ **免费能力、不扣点**——存草稿这一步不消耗你的点数（写稿、生图那些能力才扣）。
+- ✅ **每次成功扣 1 点**——存草稿成功了才扣这 1 点；发布失败（`502 WECHAT_PUBLISH_FAILED` /
+  `WECHAT_COVER_FAILED`）服务端会**自动把这 1 点退回**，参数被前置拦下的 `400 VALIDATION_ERROR`
+  则压根不扣。
 - ❌ **绝不群发 / 不推送 / 不定时发**——只落草稿。群发这一步永远由你在公众号后台手动完成。
 - ❌ **不能替你绑定公众号**——得你先在 doubaoya.com 授权。
 
@@ -273,8 +275,10 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 | 401 | `UNAUTHORIZED` | 密钥无效 / 会话失效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心撤销并重新生成 |
 | 403 | `FORBIDDEN` | 这个公众号**不属于**当前密钥背后的用户 | 说明用的是别人绑定的公众号，或密钥与绑定账号对不上——换成本人绑定该号的密钥 |
 | 400 | `VALIDATION_ERROR` | 缺 `authorizerAppid` / `title` / `contentHtml` | 按 `message` 补齐必填项 |
-| 502 | `WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED` | 微信侧拒收 | **不要无脑重试**——先读 `error.message`，见下节「微信侧错误码」 |
+| 402 | `INSUFFICIENT_CREDITS` / `NO_CREDIT_ACCOUNT` | 点数不足（本能力每次成功扣 1 点） | 让用户去 doubaoya.com 充值后再试 |
+| 502 | `WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED` | 微信侧拒收（**已扣的 1 点自动退回**） | **不要无脑重试**——先读 `error.message`，见下节「微信侧错误码」 |
 | 503 | `WECHAT_NOT_CONFIGURED` | 平台侧公众号能力**未配置** | 非用户能自解，提示这是平台配置问题，稍后再试 / 联系 doubaoya.com |
+| 504 | `WECHAT_PUBLISH_TIMEOUT` | 超时返回，但**服务端仍在后台把这篇发完** | **别另起一篇重发**。等 30 秒后用**完全相同的标题与正文**重试——服务端按内容去重，会把同一篇的结果还给你，不会建出第二篇草稿；也可以直接让用户去公众号后台草稿箱看。后台最终成功则保留那 1 点，最终失败则自动退回 |
 
 > 若 `GET /api/wechat/status` 的 `accounts` 为空 → 不是错误码问题，是**还没绑定公众号**：让用户先去 doubaoya.com → 公众号 页面绑定，本技能替不了他绑。
 
