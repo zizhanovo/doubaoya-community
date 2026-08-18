@@ -95,11 +95,15 @@ class RetirementGateTests(unittest.TestCase):
             )
         return root
 
-    def test_the_real_seedream_skill_is_refused(self):
+    def test_the_real_retired_skills_are_refused(self):
+        # 这张清单是**账本**，不是断言糖：真仓库里挂了下架牌的就该恰好是这些。
+        # 新下架一个能力时这条会打红 —— 那正是它的用途，把清单补上即可。
+        expected = ["mera", "seedream-5-lite"]
         publishable, refused = publisher.partition_publishable(publisher.discover_slugs())
-        self.assertEqual([slug for slug, _ in refused], ["seedream-5-lite"])
-        self.assertNotIn("seedream-5-lite", publishable)
-        self.assertIn("已下架", refused[0][1])
+        self.assertEqual(sorted(slug for slug, _ in refused), expected)
+        for slug, reason in refused:
+            self.assertNotIn(slug, publishable)
+            self.assertIn("已下架", reason)
 
     def test_every_other_skill_still_publishes(self):
         # 一条坏的不该阻断全部。
