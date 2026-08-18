@@ -116,14 +116,17 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 
 平台有**两个能力集合，各管一半，彼此不回落**：
 
-| 集合 | 发现接口 | 调用路由 | 当前条数 |
+| 集合 | 发现接口 | 调用路由 | 量级 |
 |------|----------|----------|---------|
-| 产品化 Skill | `GET /api/skills` | `POST /api/skills/<slug>/invoke` | 17 |
-| 平台数据能力 | `GET /api/apis` | `POST /api/apis/<platform>/<slug>/call` | 83 |
+| 产品化 Skill | `GET /api/skills` | `POST /api/skills/<slug>/invoke` | 十几条 |
+| 平台数据能力 | `GET /api/apis` | `POST /api/apis/<platform>/<slug>/call` | 七八十条（数量上的大头） |
+
+> 这一列**只给量级、不给准数**：能力会上新、也会下架（下架的条目会从发现接口里滤掉），
+> 准数永远以你这一次实拉发现接口的 `total` 为准。别把某个数字抄进你的判断里。
 
 🔴 **这两条路由不是同一批能力的两个别名，是两个不相交的集合。**
 拿数据能力的 slug 去打 `/api/skills/<slug>/invoke` 一律 404 `SKILL_NOT_FOUND`（数量上的大头
-——100 条里的 83 条——全在这一侧），反过来同样 404 `ENDPOINT_NOT_FOUND`。**别靠记忆猜某个能力
+——八成以上的能力——全在这一侧），反过来同样 404 `ENDPOINT_NOT_FOUND`。**别靠记忆猜某个能力
 属于哪一半。**
 
 **唯一正确姿势：从发现接口（§4）拿到能力对象，直接读它的 `execution.target`，照着打。**
@@ -145,7 +148,7 @@ Authorization: Bearer $DOUBAOYA_API_KEY
   硬调返回 503 `CAPABILITY_UNAVAILABLE`，`availability.note` 是可以转述给用户的原因。
 
 `target.path` 是**完整路径**，前面拼上 `https://doubaoya.com` 就能发；**不要自己再去拼
-`/api/skills/…`**——本文档历史上就是这么把 83 条数据能力全写成必然 404 的。
+`/api/skills/…`**——本文档历史上就是这么把整整一侧的数据能力全写成必然 404 的。
 
 ```
 POST https://doubaoya.com<execution.target.path>
@@ -198,7 +201,7 @@ Content-Type: application/json
 
 1. **两个集合都查一遍**：`GET /api/skills` 和 `GET /api/apis`（§4）。八成是能力在另一半，
    路由挑错了。
-2. 用 `GET /api/skills/search?query=…` 或 `POST /api/skills/recommend` 按意图找（只覆盖 skills 那 17 条）。
+2. 用 `GET /api/skills/search?query=…` 或 `POST /api/skills/recommend` 按意图找（只覆盖 skills 那一侧）。
 3. 找到之后**照它的 `execution.target.path` 打**，不要自己拼路径。
 4. 两个集合都没有 → 这个能力**不存在**（或已下架）。如实告诉用户，别再猜别的 slug。
 
@@ -262,9 +265,11 @@ Content-Type: application/json
 （**根本不计费**），要么连不通返 `502 PROVIDER_FAILED`（**已扣的点自动退回**）。两条路都不会白扣
 用户的点，但重试、换密钥、换参数都没有意义。
 
-> ⚠️ **仍会出现在发现接口里**：`GET /api/apis` 目前**照旧列出**这 6 条（带价格，`ask` 10 点、
-> 其余各 1 点）。**「清单里有」不等于「调得通」**——这正是本节存在的理由。你按 §4 拉清单时会看到
-> 它们，别因此以为能用。
+> ⚠️ **别拿发现接口当判据，两个方向都别**：这 6 条已被标为下架（hidden），发现接口会把下架条目
+> 从 `GET /api/apis` 里滤掉、`GET /api/apis/mera/<slug>` 与「压根不存在」同为 404；而早于这次
+> 标注的部署仍会照旧列出它们（带价格）。所以你按 §4 拉清单时**可能看得见、也可能看不见**，
+> 两种情况的结论完全一样：**「清单里有」不等于「调得通」，「清单里没了」也不等于「过会儿再试」**。
+> 判据以本节为准，不看清单。
 >
 > ⚠️ **没有替代能力，也不许降级**：第二大脑装的是用户**自己的**私人笔记。本文档里所有「往外看」的
 > 公开平台能力都看不见它——拿公开搜索去回答「我之前说过什么」，等于拿陌生人的内容冒充用户自己的
@@ -279,12 +284,12 @@ Content-Type: application/json
 
 平台随时可能上新操作，**优先在运行时拉清单**，再决定调哪条。
 
-🔴 **发现面有两条，必须两条都拉。** 只拉 `/api/skills` 你只看得见 17 条，
-另外 83 条在你的世界里根本不存在——**不会报错，只会沉默地少掉一大半能力**。
+🔴 **发现面有两条，必须两条都拉。** 只拉 `/api/skills` 你只看得见小的那一半，
+另一侧（数量上的大头）在你的世界里根本不存在——**不会报错，只会沉默地少掉一大半能力**。
 这正是本文档过去犯的错。
 
 ```
-# ① 产品化 Skill（17 条）
+# ① 产品化 Skill
 GET  https://doubaoya.com/api/skills                    → data: { items, total }
 GET  https://doubaoya.com/api/skills/<slug>             → data: 单条详情（不存在 / 已下架同为 404）
 GET  https://doubaoya.com/api/skills/search?query=选题&category=数据查询&limit=12
@@ -292,13 +297,13 @@ GET  https://doubaoya.com/api/skills/search?query=选题&category=数据查询&l
 POST https://doubaoya.com/api/skills/recommend          body: { "query": "帮我找选题", "category"?: "全部", "limit"?: 6 }
                                                         → data: { primary, candidates, decisionSummary, signals }
 
-# ② 平台数据能力（83 条 —— 数量上的大头，别漏）
+# ② 平台数据能力（数量上的大头，别漏）
 GET  https://doubaoya.com/api/apis                      → data: { items, total }
 GET  https://doubaoya.com/api/apis/<platform>/<slug>    → data: 单条详情
 ```
 
 `platform` 现有取值：`douyin` / `xiaohongshu` / `gongzhonghao` / `sph`（视频号）/ `bilibili` /
-`kuaishou` / `tiktok` / `trend` / `tool` / `multi` / ~~`mera`~~（⛔ 已下架，仍会出现在清单里但调不通，见 §3）。
+`kuaishou` / `tiktok` / `trend` / `tool` / `multi` / ~~`mera`~~（⛔ 已下架，调不通；清单里看不看得见都不是判据，见 §3）。
 
 **每个条目里有什么：**
 
@@ -319,7 +324,7 @@ GET  https://doubaoya.com/api/apis/<platform>/<slug>    → data: 单条详情
 - 四条 `GET` 发现接口**不需要 key** 就能拉（但带上也无妨）。
 - `POST /api/skills/recommend` **务必带上 `Authorization` 头**：它本身不校验身份，
   但没有 Bearer 头的 POST 会被跨站防护挡成 403 `CSRF_FORBIDDEN`。`query` 为空会 400 `INVALID_PARAMS`。
-- `recommend` / `search` **只在那 17 条 skills 里排序**，看不见 83 条 apis。
+- `recommend` / `search` **只在 skills 那一侧排序**，看不见 apis 那一侧。
   当"拿不准先问一嘴"用可以，**别拿它当全量目录**——全量在 `GET /api/skills` + `GET /api/apis` 两条里。
 - 已下架的能力不会出现在任何发现接口里（列表里没有 ≠ 你搜错了，是真没有）。
 
@@ -416,7 +421,7 @@ console.log(env.data.items);
 
 ```bash
 # 运行时发现（两个集合都拉，不需要 key）
-node scripts/doubaoya.mjs list                  # 17 条 skills + 83 条 apis，每行直接给出完整调用路径
+node scripts/doubaoya.mjs list                  # 两个集合一起拉，每行直接给出完整调用路径
 node scripts/doubaoya.mjs list --apis           # 只看平台数据能力
 node scripts/doubaoya.mjs search 小红书 爆款      # 两个集合一起搜
 node scripts/doubaoya.mjs describe trending-hub-keyword
@@ -472,6 +477,9 @@ node scripts/doubaoya.mjs selfcheck
   带副作用的尤其不能省（`wechat-article-pipeline` / `wechat-draft-publish` 会写进用户自己的公众号后台）；
   ⛔ 已下架的能力（如 `mera`，见 §3）如果用户的需求点到了它，也写进「跳过」并说明已下架。
 - **如实**：跑了但失败的写在「执行」并注明失败，不许挪进「跳过」粉饰；没做质检就写「无」。
+- **回执里只许写能证明的量。** 括号里的结论必须回指某个**真实返回的字段**（如违禁词检测的
+  `prohibitedWordsType` 是个类别数组，「命中 N 类」可证；接口**不回**风险等级 / 评分 / 命中词清单，
+  「0 高危」「低风险」这类就是编的）。拿不准是不是真字段，就别在回执里写这个量。
 - **简短**：这是交付的一部分，不是另一份报告。四行以内，别展开成段落。
 
 ---
@@ -482,7 +490,7 @@ node scripts/doubaoya.mjs selfcheck
 2. **只通过 `https://doubaoya.com` 的公开 `/api/...` 接口**取数；不要向用户描述、猜测或暴露任何上游数据来源 / 内部服务。对用户而言，能力来自「都爆鸭」。
 3. **先 `success` 后取数**；`false` 时按 §2.3 处理错误码，别把原始 500/502 直接糊给用户。
 4. **调用路径以发现接口返回的 `execution.target` 为准**，不要自己拼、不要硬编死清单（§2.1 / §4）。
-   发现面**有两条**（`GET /api/skills` + `GET /api/apis`），只拉一条你会沉默地少看见 83 条能力。
+   发现面**有两条**（`GET /api/skills` + `GET /api/apis`），只拉一条你会沉默地少看见大半能力。
    技能包目录名 ≠ 调用 slug。
 5. **写脚本以真实数据为素材**，把热点 / 爆款笔记的真实角度落进脚本，别脱离数据空写。
 6. **第二大脑（`mera`）已下架**（§3）：别调，也**别拿公开搜索去顶替**——公开能力看不见用户自己的

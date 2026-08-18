@@ -399,7 +399,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 | AI 生封面 / 生配图 | 一条 **`DOUBAOYA_API_KEY`**（扣点数，约 ¥0.30/张） | `scripts/gen-image.mjs`，或工作台里点生成 |
 | 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`**（拉不到会静默回退本机主题，不中断） | 流水线自动拉 `GET /api/wechat/theme?format=compiled` |
 | **跑 `pipeline.mjs`（含 `--dry-run`）** | **密钥 + 已在 doubaoya.com 绑定公众号** | `node scripts/pipeline.mjs --md a.md --title "标题" --dry-run` |
-| 本地图预上传 / 存草稿 | 同上 | `pipeline.mjs`、`wechat-draft-publish` |
+| 本地图预上传 / 存草稿 | 同上（**存草稿每次成功扣 1 点**，失败自动退回） | `pipeline.mjs`、`wechat-draft-publish` |
 
 > ⚠️ **`--dry-run` 不是免密钥预览**。它虽然什么都不发，但 whoami 校验账号与草稿前置检查
 > （`GET /api/wechat/status`）都排在它**前面**：没有密钥会停在「本地没有可用的 `DOUBAOYA_API_KEY`」，
