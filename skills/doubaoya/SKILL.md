@@ -36,7 +36,15 @@ description: >-
 
 **公众号请求例外**：只要请求涉及公众号，先读
 [`references/wechat-routing.json`](references/wechat-routing.json)，再按其优先级选 Skill。极简原则：
-本地扫码、按号查最新 / 今日、拉正文或历史归档走 MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
+**要交付一篇完整文章（写 + 排版 + 存草稿）走写作交付链**；本地扫码、按号查最新 / 今日、拉正文或历史归档走
+MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
+
+**「帮我写一篇公众号文章」例外**：这不是一个 API 能干完的活，是**一条跨 5 个 Skill 的链**——
+`wechat-hot-write`（拉爆文样本 + 写正文）→ `wechat-title`（标题）/ `wechat-cover`（封面）→
+`wechat-banned-words`（合规）→ `wechat-article-pipeline`（排版 + 封面 + **存进用户自己的公众号草稿箱**）。
+🔴 **正文写完不等于交付完成**：交一段 Markdown 就收尾是本链最常见的断头——用户要的是草稿箱里那篇图文。
+逐跳导航（做完这一步该走哪一步）由 `dby` 负责，它有完整的**任务后导航图**；把交棒说清楚再交过去，
+用户没装 `dby` 时就按上面这条链自己接续。
 
 **「我自己的东西」例外**：只要请求指向用户**自己**的内容（帮我记一下 / 我的笔记 / 我之前说过 / 我是个什么样的人），
 先读 [`references/mera-routing.json`](references/mera-routing.json)，走 `mera` 第二大脑，别拿公开平台搜索去回答——
@@ -49,7 +57,8 @@ description: >-
 | "这条链接为什么火？拆给我看" | 作品解析 | `content-parse` |
 | "帮我把这段文案过一遍，别违规" | 内容安全 | `content-safety-check` |
 | "给我配张图" | 创作助手 | `gpt-image-gen`、`seedream-lite` |
-| "把这条爆款改写成我的文案" | 改写（多在本地 agent 侧完成） | 用搜来的素材，由你合成 |
+| "把这条爆款改写成我的文案" | 改写（纯本地，不联网、不要 key） | Skill `wechat-rewrite`（公众号）/ `xiaohongshu-rewrite`（小红书）；没装就用搜来的素材由你合成 |
+| **"帮我写一篇公众号文章 / 写完要排版发草稿"** | **公众号写作交付链**（跨 Skill，不是单个 slug） | Skill `wechat-hot-write` → `wechat-title` / `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（终点=草稿箱）；逐跳导航问 `dby` |
 | **"帮我记一下 / 存进笔记 / 我刚想到…"** | **第二大脑写入**（异步，必须轮询到收条） | Skill `mera` → `remember` |
 | **"我之前是不是说过 / 查查我的笔记 / 我对 X 怎么看"** | **第二大脑回忆**：检索 → 读原文 → 自己综合（`ask` 已降级） | Skill `mera` → `search` → `read` |
 | **"我是个什么样的人 / 按我的风格写"** | **人格内核定调**（每段对话取一次就够） | Skill `mera` → `self` |
@@ -278,7 +287,13 @@ console.log(env.data.items);
 4. **写开场脚本**：基于选中的热点 + IP独家切角，给每个选题写 **3 秒开场钩子 + 一段开场脚本**（别脱离数据空写）。
 5. **保命**：脚本丢进 `POST /api/skills/content-safety-check/invoke`
    `{ "platform": "douyin", "content": "<脚本>" }`，命中风险词按 `suggestions` 替换。
-6. **交付**：3–5 个选题（每个：蹭哪条热点 + 我这IP的独家切角 + 为什么现在能爆）+ 各自开场脚本 + 已过违禁词检测。
+6. **交付选题**：3–5 个选题（每个：蹭哪条热点 + 我这IP的独家切角 + 为什么现在能爆）+ 各自开场脚本 + 已过违禁词检测。
+7. **选题落地成文章**（用户要的是**公众号文章**而不是短视频脚本时，**别停在第 6 步**）：
+   选定一个选题 → `wechat-hot-write` 拉同主题爆文样本写正文 → `wechat-title` 起标题 /
+   `wechat-cover` 定封面套路 → `wechat-banned-words` 出过审版正文 →
+   **`wechat-article-pipeline` 排版 + 配封面 + 存进用户自己的公众号草稿箱**（只存草稿、绝不群发）。
+   > 🔴 **这条工作流的终点是草稿箱，不是违禁词检测**。检测只是链上的一环；交一段 Markdown 就收尾，
+   > 用户手上仍然什么都没有。逐跳导航（做完这步走哪步）交给 `dby`。
 
 ### 工作流 B：「这条抖音/小红书链接为什么火？给我可复用的选题角度」
 

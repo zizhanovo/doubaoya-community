@@ -114,6 +114,25 @@ wechat-hot-write/
     └── hot_write.py          # 零依赖取样脚本（urllib），调用 doubaoya.com
 ```
 
+---
+
+## 下一步（正文写完之后往哪走）
+
+**写出正文不等于交付完成**。用户要的是公众号里能发出去的那篇图文，而标题、封面、合规、排版、草稿箱这几步
+本 skill 一步都不做。正文一落地，就照下表把稿子继续往下交，别在这里收尾：
+
+| 接下来要做的事 | 交给 |
+|---|---|
+| 起一个能拉开打开率的标题 | `wechat-title` |
+| 配封面（同赛道爆款封面套路） | `wechat-cover` |
+| 发布前过违禁词、出过审版正文 | `wechat-banned-words` |
+| 排版成公众号 HTML + 配封面 + 存进自己公众号草稿箱 | `wechat-article-pipeline` |
+| 想先改掉默认排版配色 / 标题样式再排版 | `wechat-theme-studio` |
+| 拿不准先走哪一步 | `dby`（公众号飞轮的任务后导航，逐跳给下一步） |
+
+典型顺序：正文 → `wechat-title` → `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（存草稿）。
+标题/封面/合规三步彼此独立，缺哪步补哪步；`wechat-article-pipeline` 是这条链的终点（只存草稿、绝不群发）。
+
 ## 关于响应里的 notice 字段
 
 调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。

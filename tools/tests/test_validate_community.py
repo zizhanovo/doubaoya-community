@@ -72,11 +72,16 @@ class CommunityValidatorTests(unittest.TestCase):
         mutation(value)
         path.write_text(json.dumps(value), encoding="utf-8")
 
+    @staticmethod
+    def route(value: dict, route_id: str) -> dict:
+        """按 id 取路由：按下标取会在新增一条路由时静默指向别人（已踩过）。"""
+        return next(route for route in value["routes"] if route["id"] == route_id)
+
     def test_routing_rejects_unknown_fields(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             routing = self.routing_fixture(root)
-            self.mutate_json(routing, lambda value: value["routes"][0].update({"fallback": "cloud"}))
+            self.mutate_json(routing, lambda value: self.route(value, "mp-ark-local-archive").update({"fallback": "cloud"}))
             with self.assertRaisesRegex(validator.ValidationError, "unexpected route mp-ark-local-archive keys"):
                 validator.validate_routing(root)
 
@@ -84,7 +89,7 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             routing = self.routing_fixture(root)
-            self.mutate_json(routing, lambda value: value["routes"][0]["unsupported"].remove("comment_count"))
+            self.mutate_json(routing, lambda value: self.route(value, "mp-ark-local-archive")["unsupported"].remove("comment_count"))
             with self.assertRaisesRegex(validator.ValidationError, "unsupported metrics are incomplete"):
                 validator.validate_routing(root)
 
@@ -94,11 +99,48 @@ class CommunityValidatorTests(unittest.TestCase):
             routing = self.routing_fixture(root)
 
             def remove_auth_boundary(value):
-                value["routes"][1]["auth"]["requires_doubaoya_api_key"] = False
+                self.route(value, "doubaoya-cloud-public-data")["auth"]["requires_doubaoya_api_key"] = False
 
             self.mutate_json(routing, remove_auth_boundary)
             with self.assertRaisesRegex(validator.ValidationError, "invalid cloud auth boundary"):
                 validator.validate_routing(root)
+
+    def test_routing_rejects_authoring_route_below_cloud(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            routing = self.routing_fixture(root)
+
+            def demote_authoring(value):
+                self.route(value, "doubaoya-authoring-delivery")["priority"] = 80
+                value["routes"] = sorted(value["routes"], key=lambda route: -route["priority"])
+
+            self.mutate_json(routing, demote_authoring)
+            with self.assertRaisesRegex(validator.ValidationError, "authoring route must precede"):
+                validator.validate_routing(root)
+
+    def test_authoring_chain_rejects_missing_forward_pointer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "wechat-hot-write" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            skill.write_text(text[: text.index(validator.NEXT_STEP_HEADING)], encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, "has no .* section"):
+                validator.validate_authoring_chain(root)
+
+    def test_authoring_chain_rejects_dead_skill_link(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "wechat-banned-words" / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            # `wechat-render` 只是一个 API 端点，不是 Skill——正是幻觉引用最爱的那种名字。
+            skill.write_text(
+                text.replace(validator.NEXT_STEP_HEADING, f"{validator.NEXT_STEP_HEADING}\n\n排版走 `wechat-render`。", 1),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "wechat-render"):
+                validator.validate_authoring_chain(root)
 
     def repository_fixture(self, root: Path) -> None:
         shutil.copytree(validator.SKILLS, root / "skills")

@@ -18,6 +18,22 @@ MP_ARK = SKILLS / "wechat-mp-exporter"
 PROVENANCE = MP_ARK / "assets" / "vendor-provenance.json"
 ROUTING = SKILLS / "doubaoya" / "references" / "wechat-routing.json"
 
+# 公众号写作链：从"写正文"到"存进草稿箱"的每一跳。链上每个 Skill 都必须在自己的 SKILL.md 里
+# 声明前向指针（一节 `## 下一步`，点名下游的真实 Skill）。没有它，agent 写完正文就宣布交付完成，
+# 用户手上仍然只有一段 Markdown——这条链断过一次，本闸就是防它再静默断掉。
+AUTHORING_CHAIN = (
+    "wechat-hot-write",
+    "wechat-banned-words",
+    "wechat-title",
+    "wechat-cover",
+    "wechat-theme-studio",
+    "wechat-article-pipeline",
+)
+NEXT_STEP_HEADING = "## 下一步"
+# 一个 Skill 名长这样：小写、带连字符。反引号里符合这个形状的 token 必须真的是 skills/ 下的一个
+# 目录——`wechat-render` 那类"听起来很像但不存在"的引用就是这么混进文档的。
+SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
+
 
 class ValidationError(RuntimeError):
     pass
@@ -106,6 +122,7 @@ def validate_routing(root: Path = ROOT) -> None:
         require(isinstance(route_id, str) and route_id and route_id not in route_ids, "route IDs must be unique strings")
         expected_keys = {
             "mp-ark-local-archive": {"id", "priority", "primary_skill", "use_when", "auth", "unsupported"},
+            "doubaoya-authoring-delivery": {"id", "priority", "terminal_skill", "candidate_skills", "use_when", "auth"},
             "doubaoya-cloud-public-data": {"id", "priority", "candidate_skills", "use_when", "auth"},
         }
         require(route_id in expected_keys, f"unknown route ID: {route_id}")
@@ -113,7 +130,7 @@ def validate_routing(root: Path = ROOT) -> None:
         require(type(priority) is int, f"route priority must be an integer: {route_id}")
         route_ids.add(route_id)
         priorities.append(priority)
-        primary = route.get("primary_skill")
+        primary = route.get("primary_skill") or route.get("terminal_skill")
         candidates = route.get("candidate_skills", [])
         require(primary is not None or candidates, f"route has no Skill target: {route_id}")
         if primary is not None:
@@ -129,15 +146,30 @@ def validate_routing(root: Path = ROOT) -> None:
         require(all(isinstance(item, str) and item for item in route["use_when"]), f"invalid use_when: {route_id}")
 
     require(priorities == sorted(priorities, reverse=True) and len(priorities) == len(set(priorities)), "routes must have unique descending priorities")
-    require(route_ids == {"mp-ark-local-archive", "doubaoya-cloud-public-data"}, "required WeChat routes are missing")
+    require(
+        route_ids == {"mp-ark-local-archive", "doubaoya-authoring-delivery", "doubaoya-cloud-public-data"},
+        "required WeChat routes are missing",
+    )
     for skill_name in sorted(referenced_skills):
         require((root / "skills" / skill_name / "SKILL.md").is_file(), f"routing references missing Skill: {skill_name}")
 
     route_by_id = {route["id"]: route for route in routes}
     local = route_by_id["mp-ark-local-archive"]
+    authoring = route_by_id["doubaoya-authoring-delivery"]
     cloud = route_by_id["doubaoya-cloud-public-data"]
     metrics = {"read_count", "like_count", "recommend_count", "comment_count"}
     require(local["priority"] > cloud["priority"], "local archive route must precede the general cloud route")
+    # 写侧必须压过泛化的云端搜索路由：否则「帮我写一篇公众号文章」又会被导进只管搜索的那条路。
+    require(authoring["priority"] > cloud["priority"], "authoring route must precede the general cloud route")
+    require(authoring["terminal_skill"] == "wechat-article-pipeline", "authoring route must terminate at wechat-article-pipeline")
+    require(
+        set(AUTHORING_CHAIN) <= set(authoring["candidate_skills"]),
+        f"authoring route is missing chain Skills: {sorted(set(AUTHORING_CHAIN) - set(authoring['candidate_skills']))}",
+    )
+    require(authoring["auth"]["requires_doubaoya_api_key"] is True, "authoring route must declare the API key requirement")
+    authoring_intents = " ".join(authoring["use_when"]).lower()
+    for intent in ("complete official account article", "layout", "draft box", "next"):
+        require(intent in authoring_intents, f"authoring route is missing intent: {intent}")
     require(local["primary_skill"] == "wechat-mp-exporter", "local archive route must select wechat-mp-exporter")
     require(local["auth"] == {"type": "user-approved-wechat-qr", "requires_doubaoya_api_key": False}, "invalid local auth boundary")
     require(set(local["unsupported"]) == metrics and len(local["unsupported"]) == len(metrics), "local unsupported metrics are incomplete")
@@ -171,6 +203,9 @@ def validate_routing(root: Path = ROOT) -> None:
     require(set(forbidden_by_route) == route_ids, "each route needs one forbidden-misroute contract")
     local_metric_signals = {signal.replace(" ", "_") for signal in forbidden_by_route["mp-ark-local-archive"]["request_signals"]}
     require(local_metric_signals == metrics, "local forbidden-misroute metrics are incomplete")
+    authoring_signals = " ".join(forbidden_by_route["doubaoya-authoring-delivery"]["request_signals"]).lower()
+    for signal in ("drafted article text", "banned-word check", "markdown only"):
+        require(signal in authoring_signals, f"authoring forbidden-misroute signals are missing: {signal}")
     cloud_signals = " ".join(forbidden_by_route["doubaoya-cloud-public-data"]["request_signals"]).lower()
     for signal in ("local qr login", "local session", "resumable archive", "article body export"):
         require(signal in cloud_signals, f"cloud forbidden-misroute signals are missing: {signal}")
@@ -178,6 +213,47 @@ def validate_routing(root: Path = ROOT) -> None:
     doubaoya_text = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
     require("references/wechat-routing.json" in doubaoya_text, "doubaoya SKILL.md does not load the routing source")
     require("MP Ark" in doubaoya_text and "互动指标" in doubaoya_text, "doubaoya SKILL.md does not state the WeChat capability split")
+
+
+def next_step_section(text: str) -> str | None:
+    """取 SKILL.md 里 ``## 下一步`` 那一节的正文（到下一个同级标题或文末为止）。"""
+    start = text.find(NEXT_STEP_HEADING)
+    if start == -1:
+        return None
+    body = text[start:]
+    end = body.find("\n## ", len(NEXT_STEP_HEADING))
+    return body if end == -1 else body[:end]
+
+
+def validate_authoring_chain(root: Path = ROOT) -> None:
+    """公众号写作链上的每一跳都必须有指向下游 Skill 的前向指针，且引用的 Skill 真实存在。"""
+    installed = {path.name for path in discover_skill_dirs(root)}
+    for name in AUTHORING_CHAIN:
+        skill_md = root / "skills" / name / "SKILL.md"
+        require(skill_md.is_file(), f"authoring chain Skill is missing: {name}")
+        section = next_step_section(skill_md.read_text(encoding="utf-8"))
+        require(
+            section is not None,
+            f"{name}/SKILL.md has no `{NEXT_STEP_HEADING}` section: a chain Skill that names no downstream "
+            "Skill lets the agent stop here and call the job done",
+        )
+        referenced = set(SKILL_TOKEN.findall(section))
+        dead = sorted(referenced - installed)
+        require(not dead, f"{name}/SKILL.md 下一步 references Skills that do not exist: {dead}")
+        forward = referenced - {name}
+        require(forward, f"{name}/SKILL.md 下一步 names no downstream Skill")
+
+    # dby 是任务后导航的单一事实源——它的路由表里出现死链，等于把用户导进空气。
+    dby_text = (root / "skills" / "dby" / "SKILL.md").read_text(encoding="utf-8")
+    dead_in_dby = sorted(set(SKILL_TOKEN.findall(dby_text)) - installed)
+    require(not dead_in_dby, f"dby/SKILL.md routes to Skills that do not exist: {dead_in_dby}")
+
+    # 总入口必须知道这条链存在（否则"帮我写一篇公众号文章"又只会命中单个搜索类能力），
+    # 至少要点名起点、合规环与终点这三跳。
+    doubaoya_text = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
+    must_route = ("wechat-hot-write", "wechat-banned-words", "wechat-article-pipeline", "dby")
+    missing = sorted(name for name in must_route if f"`{name}`" not in doubaoya_text)
+    require(not missing, f"doubaoya SKILL.md does not route to the authoring chain: {missing}")
 
 
 def safe_vendor_path(value: object) -> str:
@@ -336,6 +412,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_readme(root)
     validate_clawhub_manifest(root)
     validate_routing(root)
+    validate_authoring_chain(root)
     validate_vendor(root)
     validate_artifacts(root)
 
@@ -344,7 +421,7 @@ def main() -> int:
     validate_repository()
     print(
         f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, "
-        "ClawHub manifest, MP Ark vendor and WeChat routing"
+        f"ClawHub manifest, MP Ark vendor, WeChat routing and the {len(AUTHORING_CHAIN)}-hop authoring chain"
     )
     return 0
 
