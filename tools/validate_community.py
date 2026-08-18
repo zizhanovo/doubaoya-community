@@ -122,7 +122,7 @@ def validate_routing(root: Path = ROOT) -> None:
         require(isinstance(route_id, str) and route_id and route_id not in route_ids, "route IDs must be unique strings")
         expected_keys = {
             "mp-ark-local-archive": {"id", "priority", "primary_skill", "use_when", "auth", "unsupported"},
-            "doubaoya-authoring-delivery": {"id", "priority", "terminal_skill", "candidate_skills", "use_when", "auth"},
+            "doubaoya-authoring-delivery": {"id", "priority", "terminal_skill", "candidate_skills", "use_when", "target_state_gates", "auth"},
             "doubaoya-cloud-public-data": {"id", "priority", "candidate_skills", "use_when", "auth"},
         }
         require(route_id in expected_keys, f"unknown route ID: {route_id}")
@@ -170,6 +170,12 @@ def validate_routing(root: Path = ROOT) -> None:
     authoring_intents = " ".join(authoring["use_when"]).lower()
     for intent in ("complete official account article", "layout", "draft box", "next"):
         require(intent in authoring_intents, f"authoring route is missing intent: {intent}")
+    # 这条链走多远由用户要的终态决定，不是无条件一路推到底：终点会写进用户自己的公众号后台。
+    gates = authoring.get("target_state_gates")
+    require(isinstance(gates, list) and gates and all(isinstance(item, str) and item for item in gates), "authoring route needs target-state gates")
+    gate_text = " ".join(gates).lower()
+    for contract in ("target state", "ask when it is unstated", "draft only, never mass send"):
+        require(contract in gate_text, f"authoring target-state gates are missing contract: {contract}")
     require(local["primary_skill"] == "wechat-mp-exporter", "local archive route must select wechat-mp-exporter")
     require(local["auth"] == {"type": "user-approved-wechat-qr", "requires_doubaoya_api_key": False}, "invalid local auth boundary")
     require(set(local["unsupported"]) == metrics and len(local["unsupported"]) == len(metrics), "local unsupported metrics are incomplete")
