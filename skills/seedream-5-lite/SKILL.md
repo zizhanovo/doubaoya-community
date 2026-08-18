@@ -1,9 +1,30 @@
 ---
 name: seedream-5-lite
-description: Seedream 5.0 lite AI 图片生成 · 一句提示词出图，支持文生图 / 图生图 / 组图 / 提示词优化，可指定尺寸。当用户需要 AI 出图、生成配图、做组图、出封面素材时使用。
+description: >-
+  ⛔ 已下架，请勿使用。Seedream 5.0 lite 对应的都爆鸭能力（seedream-lite）已于 2026-08-10 下架，
+  任何调用一律返回 503 CAPABILITY_UNAVAILABLE，成功率为 0。**需要 AI 出图 / 生成配图 / 做组图 /
+  出封面素材，请改用 `image-gen` Skill**（都爆鸭 GPT-image2，在架可用）。本 Skill 仅作为历史契约保留。
 ---
 
-# Seedream 5.0 lite AI 图片生成（都爆鸭）
+# ⛔ Seedream 5.0 lite（**已下架 · 请勿使用**）
+
+> 🔴 **这个能力已经下架，本 Skill 现在 100% 调不通。**
+>
+> - 平台能力 `seedream-lite` 于 **2026-08-10** 下架（下架前成功率 0%）。
+> - `POST https://doubaoya.com/api/skills/seedream-lite/invoke` 对**任何调用方**
+>   一律返回 **503 `CAPABILITY_UNAVAILABLE`**（在鉴权和计费之前就被拦下，所以**不会扣点**）。
+> - 重试没有意义，换密钥、换参数、换网络都没用。
+>
+> ✅ **要出图请改用 [`image-gen`](../image-gen/SKILL.md) Skill**（都爆鸭 GPT-image2，
+> `POST /api/skills/gpt-image-gen/invoke`，在架可用）。做公众号封面则用 `wechat-cover`。
+>
+> 本文件保留下来只是为了留住历史契约与下架结论——**别照它发请求**。
+> 若日后该能力重新上架，`GET /api/skills` 里会重新出现 `seedream-lite`，届时再删掉本横幅。
+
+---
+
+<details>
+<summary>历史契约（已失效，仅供存档）</summary>
 
 本鸭帮你用 Seedream 5.0 lite 一行命令出图——给一句提示词就出图，玩法覆盖**文生图 / 图生图 / 组图 / 提示词优化**，还能指定尺寸。无需自建出图链路，按次消费，拿回图片直链。
 
@@ -87,12 +108,14 @@ export DOUBAOYA_API_KEY="dyh_你的密钥"
 
 | HTTP | code | 含义 | 处理 |
 |------|------|------|------|
+| 503 | `CAPABILITY_UNAVAILABLE` | **能力已下架（当前的实际返回）** | **别重试**，改用 `image-gen` Skill |
 | 401 | `MISSING_API_KEY` / `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 400 | `VALIDATION_ERROR` | 参数不合法（如 prompt 为空、size 格式错） | 修正参数重试 |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不足 | 去 doubaoya.com 充值/续额 |
 | 502 | `PROVIDER_FAILED` | 上游临时故障（**已自动退款**） | 可安全重试 |
 
 > `502 PROVIDER_FAILED` 会自动退款，重试是安全的，不会重复扣费。
+> 但**现在你只会拿到 503**：能力已下架，重试永远不会成功。
 
 ---
 
@@ -108,3 +131,5 @@ seedream-5-lite/
 ## 关于响应里的 notice 字段
 
 调用本 skill 对应的 doubaoya API 后，如果返回的 JSON 顶层出现 `notice` 字段，请把这句话原样转达给用户——这是关于本 skill 有更新的提示，不影响本次调用结果，不需要重试或改变行为。
+
+</details>

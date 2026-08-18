@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import re
 import stat
@@ -38,6 +39,34 @@ NEXT_STEP_HEADING = "## 下一步"
 # 所以先不加。实测若改成扫全文，wechat-theme-studio 会被 `line-height`/`border-left`/`benya-clean`
 # 打红，wechat-article-pipeline 会被 `font-size`/`letter-spacing`/`design-config` 打红，全是误报。
 SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
+
+# ── 调用路由闸 ────────────────────────────────────────────────────────────────
+# 平台有**两个不相交的能力集合**，各走一条路由，彼此不回落：
+#   产品化 Skill  → POST /api/skills/<slug>/invoke          （catalog 的 skillDefinitions）
+#   平台数据能力  → POST /api/apis/<platform>/<slug>/call    （catalog 的 apiEndpointDefinitions）
+# 拿错集合的 slug 去打另一条，返回 404，且**没有任何回落**。本仓文档一度把技能包的**目录名**
+# （trending-hub / content-parse / douyin-search）当成调用 slug 写进 /api/skills/<slug>/invoke，
+# 于是那几条示例注定 404——而 §「404 就回去查发现接口」的指引又永远查不到它们，agent 原地死循环。
+# 本闸就是钉死这件事：文档/脚本里出现的每一条调用路径，都必须真的在主仓目录里。
+SKILL_INVOKE_PATH = re.compile(r"/api/skills/([A-Za-z0-9][A-Za-z0-9._~-]*)/invoke")
+API_CALL_PATH = re.compile(r"/api/apis/([A-Za-z0-9][A-Za-z0-9._~-]*)/([A-Za-z0-9][A-Za-z0-9._~-]*)/call")
+# 占位符写法（`<slug>` / `${slug}` / `%s`）不含上面字符类里的字符，天然不参与匹配。
+
+# 主仓 catalog 的单一事实源。**不能写死绝对路径**——本文件自己会被 validate_artifacts 的
+# 「开发者路径」正则扫描。默认按兄弟目录找，可用环境变量覆盖；找不到就跳过并 warn
+# （社区仓要能在没有主仓的机器上独立通过校验）。
+CATALOG_ENV = "DOUBAOYA_CATALOG"
+CATALOG_SIBLING = PurePosixPath("doubaoyahub/packages/catalog/src/index.ts")
+CATALOG_MARKERS = (
+    ("const skillDefinitions: SkillDefinition[] = [", "export const skills: Skill[] ="),
+    ("const apiEndpointDefinitions: ApiEndpointDefinition[] = [", "export const apiEndpoints: ApiEndpoint[] ="),
+)
+
+# 还没上线的后端路由：契约先行，skill 端已按契约实现并自带 404 降级。
+# 见 skills/celebrity-slice/references/asr-api.md。这是一张**会自动清账的**豁免表——
+# 一旦路由真的上线（出现在 catalog 里），下面的断言会反过来要求把它从这里删掉，
+# 免得豁免留成一个永久的洞。
+PENDING_UPSTREAM_ROUTES = {("media", "asr")}
 
 
 class ValidationError(RuntimeError):
@@ -295,6 +324,95 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
     require(not missing, f"doubaoya SKILL.md does not route to the authoring chain: {missing}")
 
 
+def locate_catalog(root: Path = ROOT) -> Path | None:
+    """主仓 catalog 的路径：环境变量优先，否则找兄弟目录。找不到返回 None（调用方跳过并 warn）。"""
+    override = os.environ.get(CATALOG_ENV)
+    if override:
+        return Path(override)
+    candidate = root.parent / CATALOG_SIBLING
+    return candidate if candidate.is_file() else None
+
+
+def parse_catalog(path: Path) -> tuple[set[str], set[tuple[str, str]]]:
+    """从主仓 catalog 里抠出两个集合的成员。
+
+    正经做法是引 TypeScript 跑一次导出，但那要给一个纯 Python 的校验器装上 node 工具链。
+    这里退而求其次做文本切片：两个定义数组各有明确的首尾标记，缺任何一个就说明主仓的结构
+    变了——**那时直接打红**，因为一个悄悄退化成「什么都不检查」的闸比没有闸更糟。
+    """
+    source = path.read_text(encoding="utf-8")
+    regions = []
+    for start, end in CATALOG_MARKERS:
+        head = source.find(start)
+        require(head != -1, f"catalog 结构已变，找不到标记 {start!r}（请更新 parse_catalog 或改 {CATALOG_ENV}）")
+        tail = source.find(end, head)
+        require(tail != -1, f"catalog 结构已变，找不到标记 {end!r}（请更新 parse_catalog 或改 {CATALOG_ENV}）")
+        regions.append(source[head:tail])
+
+    skill_slugs = set(re.findall(r'^\s{4}slug: "([^"]+)",$', regions[0], re.MULTILINE))
+    api_refs = set(re.findall(r'^\s{4}platform: "([^"]+)",\n\s{4}slug: "([^"]+)",$', regions[1], re.MULTILINE))
+    require(bool(skill_slugs), "catalog 里没解析出任何 skill slug（解析规则已失效）")
+    require(bool(api_refs), "catalog 里没解析出任何 api endpoint（解析规则已失效）")
+    return skill_slugs, api_refs
+
+
+def validate_call_routes(root: Path = ROOT) -> None:
+    """文档与脚本里写死的每一条调用路径，都必须真的存在于主仓目录的对应集合里。
+
+    只查「存在于哪个集合」，不查是否已下架——已下架的能力允许（而且应该）被点名，
+    比如 seedream-5-lite/SKILL.md 就得写明 seedream-lite 已经不能用了。
+    ponytail: 天花板 = 抓不到「把在架能力写成已下架」这类反向错误；升级路径是把
+    availability 一起解析出来，但那需要一份哪些文档「有意提到下架能力」的白名单，会自己漂移。
+    """
+    catalog = locate_catalog(root)
+    if catalog is None or not catalog.is_file():
+        print(
+            f"warning: 跳过调用路由校验——找不到主仓 catalog（设 {CATALOG_ENV}=<…/packages/catalog/src/index.ts> 可启用）",
+            file=sys.stderr,
+        )
+        return
+
+    skill_slugs, api_refs = parse_catalog(catalog)
+    scanned_suffixes = {".md", ".py", ".mjs", ".json", ".txt"}
+
+    for path in publishable_files(root):
+        if path.suffix.lower() not in scanned_suffixes or not path.is_file():
+            continue
+        relative = display_path(path)
+        # 测试套件里的坏路径是**变异用例**，不是调用点——扫它等于要求本闸的红测永远为绿。
+        if relative.startswith("tools/tests/"):
+            continue
+        text = path.read_text(encoding="utf-8")
+
+        for slug in sorted(set(SKILL_INVOKE_PATH.findall(text))):
+            require(
+                slug in skill_slugs,
+                f"{relative} 调用了 /api/skills/{slug}/invoke，但「{slug}」不在主仓 catalog 的 skills 集合里"
+                + (
+                    f"——它其实是 apis 集合里的能力，得走 /api/apis/<platform>/{slug}/call"
+                    if any(slug == api_slug for _, api_slug in api_refs)
+                    else "——多半把技能包目录名当成了调用 slug，这条路径必然 404"
+                ),
+            )
+
+        for platform, slug in sorted(set(API_CALL_PATH.findall(text))):
+            if (platform, slug) in PENDING_UPSTREAM_ROUTES:
+                require(
+                    (platform, slug) not in api_refs,
+                    f"{platform}/{slug} 已经上线到 catalog，请把它从 PENDING_UPSTREAM_ROUTES 里删掉",
+                )
+                continue
+            require(
+                (platform, slug) in api_refs,
+                f"{relative} 调用了 /api/apis/{platform}/{slug}/call，但主仓 catalog 的 apis 集合里没有这条"
+                + (
+                    f"——「{slug}」是 skills 集合里的能力，得走 /api/skills/{slug}/invoke"
+                    if slug in skill_slugs
+                    else "，这条路径必然 404"
+                ),
+            )
+
+
 def safe_vendor_path(value: object) -> str:
     require(isinstance(value, str) and value, "vendor path must be a non-empty string")
     path = PurePosixPath(value)
@@ -453,6 +571,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_routing(root)
     validate_authoring_chain(root)
     validate_banned_word_fields(root)
+    validate_call_routes(root)
     validate_vendor(root)
     validate_artifacts(root)
 

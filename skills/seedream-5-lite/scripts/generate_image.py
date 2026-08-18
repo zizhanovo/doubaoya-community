@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""都爆鸭 · Seedream 5.0 lite AI 图片生成
+"""都爆鸭 · Seedream 5.0 lite AI 图片生成 —— ⛔ 能力已下架，本脚本恒失败
+
+上游能力 `seedream-lite` 于 2026-08-10 下架（下架前成功率 0%）。服务端在鉴权与计费
+之前就返回 503 CAPABILITY_UNAVAILABLE，所以本脚本**不会扣点**，也**不会等 6 分钟**——
+它会立刻拿到 503 并打印改用 image-gen 的指引。脚本本身保留原契约不改：若该能力日后
+重新上架，无需改代码即可恢复工作。
+
+要出图请改用 image-gen Skill（POST /api/skills/gpt-image-gen/invoke）。
 
 零依赖（Python 3 标准库 urllib），用一句提示词生成图片，可指定尺寸。
 支持文生图 / 图生图 / 组图 / 提示词优化等玩法。
@@ -24,6 +31,18 @@ import urllib.request
 
 ENDPOINT = "https://doubaoya.com/api/skills/seedream-lite/invoke"
 
+RETIRED_HINT = (
+    "该能力（seedream-lite）已于 2026-08-10 下架，任何调用都会返回 503，重试不会成功。\n"
+    "        请改用 image-gen Skill 出图：POST /api/skills/gpt-image-gen/invoke\n"
+    "        （做公众号封面则用 wechat-cover Skill）"
+)
+
+
+def _explain(code: str, message: str) -> str:
+    """把服务端错误码翻成人话。503 是本能力的常态，必须给出替代路径而不是让调用方干瞪眼。"""
+    if code == "CAPABILITY_UNAVAILABLE":
+        return "%s: %s\n        %s" % (code, message, RETIRED_HINT)
+    return "%s: %s" % (code, message)
 
 
 def _skill_user_agent() -> str:
@@ -76,7 +95,10 @@ def main() -> int:
         },
     )
 
-    sys.stderr.write("[info] 已提交，服务端生成中，可能需要数分钟，请耐心等待…\n")
+    sys.stderr.write(
+        "[warn] seedream-lite 已下架，本次调用预计返回 503；要出图请改用 image-gen Skill。\n"
+    )
+    sys.stderr.write("[info] 已提交，等待服务端响应（成功时出图需数分钟）…\n")
 
     try:
         with urllib.request.urlopen(request, timeout=420) as response:
@@ -88,7 +110,7 @@ def main() -> int:
             err = envelope.get("error") or {}
             code = err.get("code", "HTTP_%d" % exc.code)
             message = err.get("message", exc.reason or "请求失败")
-            sys.stderr.write("[error] %s: %s\n" % (code, message))
+            sys.stderr.write("[error] %s\n" % _explain(code, message))
         except Exception:
             sys.stderr.write(
                 "[error] HTTP_%d: %s\n" % (exc.code, exc.reason or "请求失败")
@@ -110,7 +132,7 @@ def main() -> int:
         err = envelope.get("error") or {}
         code = err.get("code", "UNKNOWN")
         message = err.get("message", "请求未成功")
-        sys.stderr.write("[error] %s: %s\n" % (code, message))
+        sys.stderr.write("[error] %s\n" % _explain(code, message))
         return 1
 
     data = envelope.get("data", {})

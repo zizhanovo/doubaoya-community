@@ -53,13 +53,13 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 先读 [`references/mera-routing.json`](references/mera-routing.json)，走 `mera` 第二大脑，别拿公开平台搜索去回答——
 公开搜索看不见用户自己的笔记，只会拿陌生人的内容糊弄他。
 
-| 用户这么说（运营白话） | 该走哪类能力 | 典型起手 slug |
+| 用户这么说（运营白话） | 该走哪类能力 | 典型起手（**完整路径**，别当它是 slug 去拼） |
 |------------------------|--------------|---------------|
-| "最近全网在火什么？给我点选题" | 综合热点选题（无关键词直取 + 结合IP匹配） | `trending-hub` |
-| "我这个赛道（如减脂早餐）在涨啥？" | 平台爆款搜索 | `xiaohongshu-viral-notes`、各平台 `*-ai-feed` |
-| "这条链接为什么火？拆给我看" | 作品解析 | `content-parse` |
-| "帮我把这段文案过一遍，别违规" | 内容安全 | `content-safety-check` |
-| "给我配张图" | 创作助手 | `gpt-image-gen`、`seedream-lite` |
+| "最近全网在火什么？给我点选题" | 综合热点选题（无关键词直取 + 结合IP匹配） | `POST /api/apis/trend/trending-hub-keyword/call` |
+| "我这个赛道（如减脂早餐）在涨啥？" | 平台爆款搜索 | `POST /api/skills/xiaohongshu-viral-notes/invoke`、各平台日报源（`GET /api/apis` 里搜 `ai-feed`） |
+| "这条链接为什么火？拆给我看" | 作品解析 | `POST /api/apis/tool/parse-content-detail/call` |
+| "帮我把这段文案过一遍，别违规" | 内容安全 | `POST /api/skills/content-safety-check/invoke` |
+| "给我配张图" | 创作助手 | `POST /api/skills/gpt-image-gen/invoke` |
 | "把这条爆款改写成我的文案" | 改写（纯本地，不联网、不要 key） | Skill `wechat-rewrite`（公众号）/ `xiaohongshu-rewrite`（小红书）；没装就用搜来的素材由你合成 |
 | **"帮我写一篇公众号文章 / 写完要排版发草稿"** | **公众号写作交付链**（跨 Skill，不是单个 slug；**先问终态**：只要成稿 vs 要进草稿箱） | Skill `wechat-hot-write` → `wechat-title` / `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（要草稿箱才走到这站）；逐跳导航问 `dby` |
 | **"帮我记一下 / 存进笔记 / 我刚想到…"** | **第二大脑写入**（异步，必须轮询到收条） | Skill `mera` → `remember` |
@@ -73,11 +73,15 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 
 > 别一上来甩一长串 slug 清单给用户看——用户要的是"帮我做事"，不是 API 目录。slug 是你内部选路用的。
 
+> ⚠️ **上面这一列是路径，不是 slug。** 平台有两个不相交的能力集合，走两条不同的路由（见 §2.1）；
+> 拿路径尾巴上那截当 slug 去拼另一条路由，必然 404。拿不准就先跑发现接口（§4）。
+
 > ❌ **选题铁律：不要拿用户的账号名 / IP 名当关键词去搜。**
 > 用户的公众号/账号名（如「菜籽油」）是**他是谁**（领域/人设/受众），不是搜索词——搜它只会搜到字面同名内容。
-> **综合热点用无关键词的热榜接口直取（`trending-hub`），IP 名字只用于匹配筛选。**
-> 做通用选题**别用** `trend-radar` / `hot-topics`（它们是关键词搜索的搬运号 feed，热度常为空、多「未命名内容」）；
-> 通用综合热点一律走 `trending-hub`（无关键词直取）。
+> **综合热点用无关键词的热榜接口直取（`POST /api/apis/trend/trending-hub-keyword/call`），IP 名字只用于匹配筛选。**
+> 做通用选题**别用**跨平台趋势雷达（`/api/skills/trend-radar/invoke`）或全网热榜聚合
+> （`/api/apis/trend/hot-topics/call`）——它们是关键词搜索的搬运号 feed，热度常为空、多「未命名内容」；
+> 通用综合热点一律走 trending-hub-keyword（无关键词直取）。
 
 ---
 
@@ -105,20 +109,51 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 
 ## 2. 怎么调（统一约定）
 
-所有公开能力都挂在 `https://doubaoya.com/api/...` 下，POST 调用，JSON 进 JSON 出。
+所有公开能力都挂在 `https://doubaoya.com/api/...` 下，JSON 进 JSON 出。绝大多数是 POST；
+少数专用路由用 `PUT` / `GET`，**方法以能力自己的 `execution.target.method` 为准**（见 §2.1）。
 
-### 2.1 调用一个操作（skill）
+### 2.1 调用一个操作：先发现，再照 `execution.target` 打
+
+平台有**两个能力集合，各管一半，彼此不回落**：
+
+| 集合 | 发现接口 | 调用路由 | 当前条数 |
+|------|----------|----------|---------|
+| 产品化 Skill | `GET /api/skills` | `POST /api/skills/<slug>/invoke` | 17 |
+| 平台数据能力 | `GET /api/apis` | `POST /api/apis/<platform>/<slug>/call` | 83 |
+
+🔴 **这两条路由不是同一批能力的两个别名，是两个不相交的集合。**
+拿数据能力的 slug 去打 `/api/skills/<slug>/invoke` 一律 404 `SKILL_NOT_FOUND`（数量上的大头
+——100 条里的 83 条——全在这一侧），反过来同样 404 `ENDPOINT_NOT_FOUND`。**别靠记忆猜某个能力
+属于哪一半。**
+
+**唯一正确姿势：从发现接口（§4）拿到能力对象，直接读它的 `execution.target`，照着打。**
+每条能力（两个集合都一样）都带这么一块：
+
+```jsonc
+"execution": {
+  "mode": "generic",          // generic=通用调用代理 / dedicated=专用路由 / unavailable=当前不可调
+  "sideEffect": "read",       // read / generate / write_internal / write_external
+  "target": { "method": "POST", "path": "/api/apis/trend/trending-hub-keyword/call" }
+}
+```
+
+- `mode: "generic"` → 按 `target.method` + `target.path` 发请求，body 就是该能力的入参。
+- `mode: "dedicated"` → 同样照 `target` 打，但它是专用路由，**方法未必是 POST**
+  （如号章程是 `PUT /api/ip-profile/:id/charter`）。误走通用 `/invoke` 会 400 `DEDICATED_ROUTE`，
+  错误信息里直接写着该走哪条。
+- `mode: "unavailable"`（**这时没有 `target` 字段**）→ 该能力正在维护或已下架，**别调**；
+  硬调返回 503 `CAPABILITY_UNAVAILABLE`，`availability.note` 是可以转述给用户的原因。
+
+`target.path` 是**完整路径**，前面拼上 `https://doubaoya.com` 就能发；**不要自己再去拼
+`/api/skills/…`**——本文档历史上就是这么把 83 条数据能力全写成必然 404 的。
 
 ```
-POST https://doubaoya.com/api/skills/<slug>/invoke
+POST https://doubaoya.com<execution.target.path>
 Authorization: Bearer $DOUBAOYA_API_KEY
 Content-Type: application/json
 
 { ...该操作的入参... }
 ```
-
-> 平台还提供等价的细粒度入口 `POST /api/apis/<platform>/<slug>/call`，
-> 入参 / 出参与上面一致。本 Skill 统一用 `/api/skills/<slug>/invoke`，更好记。
 
 ### 2.2 统一返回信封（envelope）
 
@@ -134,6 +169,14 @@ Content-Type: application/json
 
 **永远先看 `success`**：`true` 取 `data`，`false` 读 `error.code` / `error.message`。
 
+成功信封上还可能多出三个可选字段（缺席是常态，别当异常）：
+
+- `noResult`：`{ "code": "NO_RESULT", "message": "…" }`。**查询合法、就是没查到数据**，
+  这次**已不计费**。别把它当失败重试，也别当"接口坏了"——如实告诉用户没结果，
+  建议换关键词 / 时间范围 / 筛选条件。
+- `notice`：关于本 Skill 有更新的提示，**原样转达给用户**，不影响本次结果，不用重试。
+- `detailUrl`：这次调用结果在 doubaoya.com 上的详情页链接，可以给用户点。
+
 ### 2.3 错误码怎么处理
 
 | HTTP | error.code | 含义 | 你该怎么办 |
@@ -141,61 +184,84 @@ Content-Type: application/json
 | 401 | `MISSING_API_KEY` | 没带 key | 提示用户去 doubaoya.com 密钥中心生成，并设进 `DOUBAOYA_API_KEY` |
 | 401 | `UNAUTHORIZED` | key 无效 / 已撤销 | 让用户在**密钥中心**撤销并**重新生成**，更新环境变量 |
 | 400 | `VALIDATION_ERROR` | 入参不合法 | 看 `message` 修正入参（如缺 `keyword`） |
+| 400 | `DEDICATED_ROUTE` | 这条能力有专用路由，你走了通用代理 | `message` 里就写着该打哪条；照 `execution.target` 重发（§2.1） |
 | 402 | `INSUFFICIENT_CREDITS` | 额度不够 | 提示用户去 doubaoya.com 充值额度 |
-| 404 | `SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` | slug 写错 | 先调发现接口（见 §4）确认 slug |
+| 404 | `SKILL_NOT_FOUND` | 这个 slug 不在 **skills** 集合里 | 见下方「404 怎么破」 |
+| 404 | `ENDPOINT_NOT_FOUND` | 这个 platform/slug 不在 **apis** 集合里 | 见下方「404 怎么破」 |
+| 503 | `CAPABILITY_UNAVAILABLE` | 能力维护中 / 已下架（`execution.mode` 是 `unavailable`） | **别重试**：换一条能力，或如实告诉用户这个能力暂时用不了 |
 | 502 | `PROVIDER_FAILED` | 上游临时失败（**已自动退还额度**） | 稍后重试；重试前不用补额度 |
 
 > 小贴士：`PROVIDER_FAILED` 时额度会自动退回，放心重试即可，别重复扣费焦虑。
 
+**404 怎么破**（🔴 别原地换着花样重试同一条路由——两条路由查的是两个不相交的集合，
+在错的那一半上试一百次也还是 404）：
+
+1. **两个集合都查一遍**：`GET /api/skills` 和 `GET /api/apis`（§4）。八成是能力在另一半，
+   路由挑错了。
+2. 用 `GET /api/skills/search?query=…` 或 `POST /api/skills/recommend` 按意图找（只覆盖 skills 那 17 条）。
+3. 找到之后**照它的 `execution.target.path` 打**，不要自己拼路径。
+4. 两个集合都没有 → 这个能力**不存在**（或已下架）。如实告诉用户，别再猜别的 slug。
+
+> ⚠️ 你脑子里 / 本文里记住的 slug 只是**起手线索**；能不能调、怎么调，以发现接口的返回为准。
+> 尤其别把**技能包目录名**（`npx skills add` 装进来的那个文件夹名，如 `trending-hub`、
+> `content-parse`、`douyin-search`）当成调用 slug——它们**不是**，打过去必 404。
+
 ---
 
-## 3. 能力清单（操作 = slug）
+## 3. 常用能力起手表（**路径已核对，slug 不是目录名**）
 
-下面是本鸭常用的公开操作。`slug` 用于 `POST /api/skills/<slug>/invoke`。
+下面这张表给的是**完整调用路径**，不是"slug"——因为一条能力走哪条路由，取决于它在哪个集合里（§2.1）。
+表里每条都已对着平台目录核过，可以直接打。
+
+> 🔴 **这张表只是起手线索，不是清单。** 平台现有 **100** 条能力（17 skills + 83 apis），
+> 这里只列最常用的十来条。要全量、要最新、要准确入参，**运行时用发现接口拉**（§4）。
 
 ### 综合热点选题（无关键词直取 + 结合IP匹配）
 
 做选题的**正确起手**：先无关键词直取综合热点，再结合用户IP定位智能匹配。**别用账号名/IP名当关键词。**
 
-| slug | 能力 | 关键入参 |
-|------|------|---------|
-| `trending-hub` | **综合热点直取**（首选）：`trend/trending-hub-keyword` **不带关键词**拉当下全网最热的一批（微博/抖音/B站） | `{ "platforms": [2,5,8] }`（**不传 keywords**） |
-| `hot-keywords`（seed，可选） | **全网热搜关键词**：`trend/hot-keywords` 出 20 个热词 + 所属平台，用作选题名的种子 | `{}`（**别带日期**：上游只供最新一批，带日期区间必返 0 条） |
-| `cn-last30days` | **近 30 天中文社媒讨论**：某个词的跨平台舆情趋势（这是「查某词」，不是通用选题） | `{ "keyword", "days": 30, "platforms": ["xiaohongshu","douyin"] }` |
+| 能力 | 怎么调（完整路径） | 关键入参 |
+|------|-------------------|---------|
+| **综合热点直取**（首选）：**不带关键词**拉当下全网最热的一批（微博/抖音/B站） | `POST /api/apis/trend/trending-hub-keyword/call` | `{ "platforms": [2,5,8] }`（**不传 keywords**） |
+| **全网热搜关键词**（seed，可选）：出一批热词 + 所属平台，用作选题名的种子 | `POST /api/apis/trend/hot-keywords/call` | `{}`（**别带日期**：上游只供最新一批，带日期区间必返 0 条） |
+| **近 30 天中文社媒讨论**：某个词的跨平台舆情趋势（这是「查某词」，不是通用选题） | `POST /api/skills/cn-last30days/invoke` | `{ "keyword", "days": 30, "platforms": ["xiaohongshu","douyin"] }` |
 
-> ⚠️ 通用综合热点**别用** `trend-radar` / `hot-topics`——它们是关键词搜索的搬运号 feed（热度常为 `null`、多「未命名内容」），只在明确要「按某个词搜同名内容 feed」的窄场景才考虑。
+> ⚠️ 通用综合热点**别用**跨平台趋势雷达（`POST /api/skills/trend-radar/invoke`）或全网热榜聚合
+> （`POST /api/apis/trend/hot-topics/call`）——它们是关键词搜索的搬运号 feed（热度常为 `null`、
+> 多「未命名内容」），只在明确要「按某个词搜同名内容 feed」的窄场景才考虑。
 
-### 搜内容（三大平台）
+### 搜内容（各平台）
 
-| slug | 能力 | 关键入参 |
-|------|------|---------|
-| `xiaohongshu-viral-notes` | **小红书爆款笔记发现**：高互动笔记 | `{ "keyword", "page"? }` |
-| `douyin-search` | **抖音爆款搜索**：关键词批量搜抖音作品，铺表选题 | `{ "keyword", "page"? }` |
-| `playlet-wechat-feed` | **公众号信息源**（短剧赛道示例）：热门文章日报 | `{ "keyword", "dateRange"?, "minReadCount"? }` |
-| `wechat-channels-ai-feed` | **视频号信息源**：高热作品聚类日报 | `{ "keyword", "limit"?, "minLikeCount"? }` |
+| 能力 | 怎么调（完整路径） | 关键入参 |
+|------|-------------------|---------|
+| **小红书爆款笔记发现**：高互动笔记 | `POST /api/skills/xiaohongshu-viral-notes/invoke` | `{ "keyword", "page"? }` |
+| **抖音作品搜索**：关键词批量搜抖音作品，铺表选题 | `POST /api/apis/douyin/search-work/call` | `{ "keyword", "page"? }` |
+| **公众号信息源**（短剧赛道示例）：热门文章日报 | `POST /api/skills/playlet-wechat-feed/invoke` | `{ "keyword", "dateRange"?, "minReadCount"? }` |
+| **视频号信息源**：高热作品聚类日报 | `POST /api/skills/wechat-channels-ai-feed/invoke` | `{ "keyword", "limit"?, "minLikeCount"? }` |
+
+> 小红书 / 抖音 / 公众号 / 视频号 / B站 / 快手 / TikTok 的搜索、账号、榜单、日报源加起来有 80 多条，
+> 全在 `GET /api/apis` 里。**要找某个平台的某种数据，先去那儿翻，别在这张短表里找不到就放弃。**
 
 ### 解析 / 合规 / 素材
 
-| slug | 能力 | 关键入参 |
-|------|------|---------|
-| `content-safety-check` | **多平台违禁词检测**：风险等级 + 命中词 + 替换建议 | `{ "platform", "content" }` |
-| `content-parse` | **作品 / 文章解析**：粘公开链接，返回归一化详情，拆「为什么火」 | `{ "url" }` |
-
-> 还有图片生成等创作助手类操作（如 `seedream-lite`、`gpt-image-gen`）。
-> 完整、最新清单请在运行时用发现接口拉取（见 §4），别把清单写死。
+| 能力 | 怎么调（完整路径） | 关键入参 |
+|------|-------------------|---------|
+| **多平台违禁词检测**：命中标注 + 风险类别 | `POST /api/skills/content-safety-check/invoke` | `{ "platform", "content" }` |
+| **作品 / 文章解析**：粘公开链接，返回归一化详情，拆「为什么火」 | `POST /api/apis/tool/parse-content-detail/call` | `{ "url" }` |
+| **AI 生图 / 改图**：出配图、素材、封面图 | `POST /api/skills/gpt-image-gen/invoke` | `{ "prompt", "size"? }`（慢操作，单请求内等结果） |
 
 ### 第二大脑（用户自己的内容 · 走 `mera` Skill）
 
 跟上面「往外看」的能力相反：这一组是**往里看**，读写的是用户**自己**的 Mera 第二大脑
 （https://mera.doubaoya.com），一条 `DOUBAOYA_API_KEY` 对应他自己的账号。
 
-| slug（`POST /api/apis/mera/<slug>/call`） | 能力 | 关键入参 |
+| slug（都走 `POST /api/apis/mera/<slug>/call`） | 能力 | 关键入参 |
 |------|------|---------|
 | `note-write` | 写入（**202 异步**，返回 `ingestion_id`，必须再轮询 `note-status`） | `{ "content"? , "url"?, "title"? }`（content / url 二选一；`title` 只在 content 模式生效） |
 | `note-status` | 查写入处理状态与处置结果 `disposition` | `{ "ingestion_id" }` |
 | `note-search` | 检索，拿命中片段（**只有 240 字**）与绝对位置 `char_start`/`char_end`（无分页，一次最多 20 个来源） | `{ "q" }` |
 | `source-read` | **读原文窗口**（读取主路径第二步）：按字符区间取真实原文，与 search 同一坐标系 | `{ "source_id", "from"?, "to"? }` |
-| `ask` | 服务端问答（**已降级**，见下）：返回 `answer` + `citations`（**每次 1 点**，其余五个不计点） | `{ "query_text", "top_k"?（≤50）, "conversation_id"? }` |
+| `ask` | 服务端问答（**已降级**，见下）：返回 `answer` + `citations`（**每次 10 点**，是另外五个的 10 倍） | `{ "query_text", "top_k"?（≤50）, "conversation_id"? }` |
 | `self` | 人格内核 + 关键记忆，用来给回答定调 | `{}` |
 
 > **读取主路径是「检索 → 读原文 → agent 自己综合」**：`note-search` 拿命中位置 → `source-read` 把命中点周围的
@@ -214,16 +280,51 @@ Content-Type: application/json
 
 ## 4. 运行时发现操作（别把清单写死）
 
-平台随时可能上新操作，**优先在运行时拉清单**，再决定调哪个 slug：
+平台随时可能上新操作，**优先在运行时拉清单**，再决定调哪条。
+
+🔴 **发现面有两条，必须两条都拉。** 只拉 `/api/skills` 你只看得见 17 条，
+另外 83 条在你的世界里根本不存在——**不会报错，只会沉默地少掉一大半能力**。
+这正是本文档过去犯的错。
 
 ```
-GET https://doubaoya.com/api/skills            # 全部操作 { data: { items, total } }
-GET https://doubaoya.com/api/skills/search?query=选题&category=数据查询   # 按关键词 / 分类搜
-GET https://doubaoya.com/api/skills/<slug>     # 看单个操作的入参 / 出参示例
+# ① 产品化 Skill（17 条）
+GET  https://doubaoya.com/api/skills                    → data: { items, total }
+GET  https://doubaoya.com/api/skills/<slug>             → data: 单条详情（不存在 / 已下架同为 404）
+GET  https://doubaoya.com/api/skills/search?query=选题&category=数据查询&limit=12
+                                                        → data: { items, total, categories, query, category }
+POST https://doubaoya.com/api/skills/recommend          body: { "query": "帮我找选题", "category"?: "全部", "limit"?: 6 }
+                                                        → data: { primary, candidates, decisionSummary, signals }
+
+# ② 平台数据能力（83 条 —— 数量上的大头，别漏）
+GET  https://doubaoya.com/api/apis                      → data: { items, total }
+GET  https://doubaoya.com/api/apis/<platform>/<slug>    → data: 单条详情
 ```
 
-每个操作对象里带 `slug` / `title` / `summary` / `inputSchema` / `outputExample` / `category`，
-足够你判断该不该用、怎么传参。`category` 取值：数据查询 / 作品分析 / 效率工具 / 创作助手 / 账号分析 / 内容安全。
+`platform` 现有取值：`douyin` / `xiaohongshu` / `gongzhonghao` / `sph`（视频号）/ `bilibili` /
+`kuaishou` / `tiktok` / `trend` / `tool` / `multi` / `mera`。
+
+**每个条目里有什么：**
+
+| 字段 | skills | apis | 说明 |
+|------|--------|------|------|
+| `slug` | ✓ | ✓ | apis 还多一个 `platform`，两个一起才定位一条 |
+| `title` / `summary` / `tags` | ✓ | ✓ | 判断该不该用 |
+| `unitPrice` | ✓ | ✓ | 本次调用要扣的点数（¥1 = 100 点） |
+| 入参示例 | `inputSchema` | `requestSchema` | ⚠️ **是一份示例值，不是 JSON Schema**——照着它的键名和值的形状传 |
+| 出参示例 | `outputExample` | `responseExample` | 同上，用来对齐你要读哪些字段 |
+| `execution` | ✓ | ✓ | 🔑 **`execution.target.path` 就是这条能力的完整调用路径**（见 §2.1） |
+| `availability` | 可选 | 可选 | 出现即表示维护中（`status: "maintenance"` + `note`），配合 `execution.mode === "unavailable"` |
+
+`category`（只有 skills 有）不用背，`GET /api/skills/search` 的返回里就带一份实时的 `categories` 数组。
+
+**几条实测得来的注意事项：**
+
+- 四条 `GET` 发现接口**不需要 key** 就能拉（但带上也无妨）。
+- `POST /api/skills/recommend` **务必带上 `Authorization` 头**：它本身不校验身份，
+  但没有 Bearer 头的 POST 会被跨站防护挡成 403 `CSRF_FORBIDDEN`。`query` 为空会 400 `INVALID_PARAMS`。
+- `recommend` / `search` **只在那 17 条 skills 里排序**，看不见 83 条 apis。
+  当"拿不准先问一嘴"用可以，**别拿它当全量目录**——全量在 `GET /api/skills` + `GET /api/apis` 两条里。
+- 已下架的能力不会出现在任何发现接口里（列表里没有 ≠ 你搜错了，是真没有）。
 
 ---
 
@@ -303,9 +404,11 @@ console.log(env.data.items);
 
 ### 工作流 B：「这条抖音/小红书链接为什么火？给我可复用的选题角度」
 
-1. **解析作品**：`POST /api/skills/content-parse/invoke` `{ "url": "<分享链接>" }`
+1. **解析作品**：`POST /api/apis/tool/parse-content-detail/call` `{ "url": "<分享链接>" }`
    → 拿标题、作者、互动数据。
-2. **找同题热度**：用标题里的核心词调 `xiaohongshu-viral-notes` / 各平台 `*-ai-feed`，看这个角度是不是赛道级在涨（这一步是**明确按某个词查证据**，与通用选题的无关键词热榜直取不同）。
+2. **找同题热度**：用标题里的核心词调 `POST /api/skills/xiaohongshu-viral-notes/invoke` 或对应平台的日报源
+   （`GET /api/apis` 里搜 `ai-feed`），看这个角度是不是赛道级在涨（这一步是**明确按某个词查证据**，
+   与通用选题的无关键词热榜直取不同）。
 3. **产出**：拆解「它为什么火」（选题角度 / 钩子 / 时机），再给 2-3 个**可复用的同源选题**。
 
 ---
@@ -315,16 +418,27 @@ console.log(env.data.items);
 仓库附带 `scripts/doubaoya.mjs`（Node 18+，无第三方依赖，key 从 `DOUBAOYA_API_KEY` 读）：
 
 ```bash
-# 调一个操作
-node scripts/doubaoya.mjs invoke xiaohongshu-viral-notes '{"keyword":"减脂早餐","page":1}'
+# 运行时发现（两个集合都拉，不需要 key）
+node scripts/doubaoya.mjs list                  # 17 条 skills + 83 条 apis，每行直接给出完整调用路径
+node scripts/doubaoya.mjs list --apis           # 只看平台数据能力
+node scripts/doubaoya.mjs search 小红书 爆款      # 两个集合一起搜
+node scripts/doubaoya.mjs describe trending-hub-keyword
 
-# 运行时发现操作清单
-node scripts/doubaoya.mjs list
-node scripts/doubaoya.mjs describe xiaohongshu-viral-notes
+# 调一条能力：<ref> = <slug> 或 <platform>/<slug>
+node scripts/doubaoya.mjs invoke xiaohongshu-viral-notes '{"keyword":"减脂早餐","page":1}'
+node scripts/doubaoya.mjs invoke trend/trending-hub-keyword '{"platforms":[2,5,8]}'
+
+# 离线自检（不联网、不需要 key）
+node scripts/doubaoya.mjs selfcheck
 ```
 
-它做的事：拼 `Authorization` 头、POST 到 `https://doubaoya.com`、拆信封、`success=false` 时抛出 `code: message`。
-绝不打印整条 key。
+它做的事：**先解析 `<ref>`**（裸 slug 先查 skills 集合，查不到再在 apis 集合里找；跨平台同名会要求你写全
+`<platform>/<slug>`），**拿到该能力的 `execution.target` 再照着发请求**——不自己拼路径，所以两个集合
+都够得着，专用路由的 `PUT`/`GET` 也不会被硬拗成 POST。其余：拼 `Authorization` 头、拆信封、
+把 `notice` / `noResult` 打到 stderr、`success=false` 时以 `code: message` 退出。**绝不打印整条 key。**
+
+> ⚠️ 找不到某条能力时它会明说「两个集合都查过了」并提醒你可能拿的是**技能包目录名**——
+> 别再换着花样重试同一条路由。
 
 ---
 
@@ -333,7 +447,9 @@ node scripts/doubaoya.mjs describe xiaohongshu-viral-notes
 1. **绝不回显 / 打印 / 记录整条 `DOUBAOYA_API_KEY`**——确认身份时只露前缀。
 2. **只通过 `https://doubaoya.com` 的公开 `/api/...` 接口**取数；不要向用户描述、猜测或暴露任何上游数据来源 / 内部服务。对用户而言，能力来自「都爆鸭」。
 3. **先 `success` 后取数**；`false` 时按 §2.3 处理错误码，别把原始 500/502 直接糊给用户。
-4. **slug 不确定就先发现**（§4），不要硬编死清单——平台会上新。
+4. **调用路径以发现接口返回的 `execution.target` 为准**，不要自己拼、不要硬编死清单（§2.1 / §4）。
+   发现面**有两条**（`GET /api/skills` + `GET /api/apis`），只拉一条你会沉默地少看见 83 条能力。
+   技能包目录名 ≠ 调用 slug。
 5. **写脚本以真实数据为素材**，把热点 / 爆款笔记的真实角度落进脚本，别脱离数据空写。
 6. **第二大脑（`mera`）里是用户的私人内容**：只用来回答用户本人，**不得外传到别的服务**；
    写入没拿到 `status=done` 之前**绝不说「已保存」**，任何失败都要明说，不许无声吞掉。

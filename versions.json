@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T09:11:06.822101+00:00",
+  "generatedAt": "2026-08-18T10:02:47.386438+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -10,7 +10,7 @@
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
     "dby-update": "doubaoya-skill/dby-update@53d92b2192de",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
-    "doubaoya": "doubaoya-skill/doubaoya@934637117ed3",
+    "doubaoya": "doubaoya-skill/doubaoya@035c62d0cddb",
     "douyin-comment": "doubaoya-skill/douyin-comment@94cf3e281b04",
     "douyin-realtime-search": "doubaoya-skill/douyin-realtime-search@d861c99e79a8",
     "douyin-search": "doubaoya-skill/douyin-search@154c60c5923a",
@@ -28,7 +28,7 @@
     "optimize-skill-md": "doubaoya-skill/optimize-skill-md@b70db0754ccf",
     "pdf-image-text-extractor": "doubaoya-skill/pdf-image-text-extractor@7100990470e0",
     "playlet-wechat-feed": "doubaoya-skill/playlet-wechat-feed@f315fbf96fcb",
-    "seedream-5-lite": "doubaoya-skill/seedream-5-lite@d72d51a89e4b",
+    "seedream-5-lite": "doubaoya-skill/seedream-5-lite@d4a0fb2d8312",
     "trending-hub": "doubaoya-skill/trending-hub@f5f1f7bde205",
     "trending-hub-top10": "doubaoya-skill/trending-hub-top10@759f77d28df3",
     "wechat-10w-hot": "doubaoya-skill/wechat-10w-hot@b82f2ab8e880",
