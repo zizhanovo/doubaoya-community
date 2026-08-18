@@ -44,6 +44,12 @@
         "user requests saving an article into their own draft box",
         "user asks which step of the writing flywheel comes next"
       ],
+      "target_state_gates": [
+        "The user's stated target state decides how far along this route to travel; ask when it is unstated.",
+        "Target state 'a finished draft text' stops at the writing Skill; nothing downstream runs.",
+        "Target state 'laid-out Official Account HTML' or 'the post sitting in my own draft box' travels to wechat-article-pipeline.",
+        "wechat-article-pipeline and wechat-draft-publish write into the user's own Official Account backend (draft only, never mass send), so they need an explicit target state, not an inferred one."
+      ],
       "auth": {
         "type": "doubaoya-api-key-plus-bound-official-account",
         "requires_doubaoya_api_key": true
@@ -74,10 +80,10 @@
   "precedence": [
     "Evaluate the highest-priority matching route first.",
     "Explicit local QR, article-body, or archive intent selects mp-ark-local-archive even when the request also says Official Account.",
-    "Intent to write, lay out, or deliver the user's own article selects doubaoya-authoring-delivery, whose terminal skill is wechat-article-pipeline (draft box), not the raw article text.",
+    "Intent to write, lay out, or deliver the user's own article selects doubaoya-authoring-delivery; how far along that route to travel is decided by the target state the user stated, not by a fixed number of hops.",
     "Explicit interaction-metric intent selects doubaoya-cloud-public-data because MP Ark does not support those metrics.",
     "When both archive and metric intents are present, split the work across the two routes and state each capability boundary.",
-    "Research routes feed the authoring route: once a topic is chosen, hand the work forward instead of ending at a search result."
+    "Research routes feed the authoring route: once a topic is chosen, hand the work forward rather than treating a search result as the deliverable, unless the user asked only for the research."
   ],
   "forbidden_misroutes": [
     {
@@ -93,12 +99,12 @@
     {
       "from": "doubaoya-authoring-delivery",
       "request_signals": [
-        "stop at the drafted article text",
-        "stop at the banned-word check",
-        "deliver markdown only",
-        "declare the article finished before the draft box"
+        "stop at the drafted article text when the user asked for the draft box",
+        "stop at the banned-word check when the user asked for laid-out HTML",
+        "deliver markdown only when the user asked for a publishable post",
+        "write into the draft box when the user only asked for the article text"
       ],
-      "reason": "Writing and compliance skills must hand the article forward to title, cover, layout and the draft box; the user asked for a publishable post, not a text file."
+      "reason": "Route by the user's target state in both directions: stopping at the text when they asked for a post in their draft box strands the work, and writing into their Official Account when they only asked for the text is an unrequested side effect."
     },
     {
       "from": "doubaoya-cloud-public-data",

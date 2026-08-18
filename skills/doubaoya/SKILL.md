@@ -42,7 +42,10 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 **「帮我写一篇公众号文章」例外**：这不是一个 API 能干完的活，是**一条跨 5 个 Skill 的链**——
 `wechat-hot-write`（拉爆文样本 + 写正文）→ `wechat-title`（标题）/ `wechat-cover`（封面）→
 `wechat-banned-words`（合规）→ `wechat-article-pipeline`（排版 + 封面 + **存进用户自己的公众号草稿箱**）。
-🔴 **正文写完不等于交付完成**：交一段 Markdown 就收尾是本链最常见的断头——用户要的是草稿箱里那篇图文。
+🔴 **先问清用户要的终态，再决定走到链上哪一站**：只要成稿，写完正文就结束；
+要**排版好的公众号 HTML** 或要**文章进自己的草稿箱**，就得一路走到 `wechat-article-pipeline`。
+交一段 Markdown 就默认收尾，是这条链最常见的断头；反过来，用户只要成稿时擅自去写他的公众号后台
+同样不对——`wechat-article-pipeline` 有真实副作用。拿不准就问一句。
 逐跳导航（做完这一步该走哪一步）由 `dby` 负责，它有完整的**任务后导航图**；把交棒说清楚再交过去，
 用户没装 `dby` 时就按上面这条链自己接续。
 
@@ -58,7 +61,7 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 | "帮我把这段文案过一遍，别违规" | 内容安全 | `content-safety-check` |
 | "给我配张图" | 创作助手 | `gpt-image-gen`、`seedream-lite` |
 | "把这条爆款改写成我的文案" | 改写（纯本地，不联网、不要 key） | Skill `wechat-rewrite`（公众号）/ `xiaohongshu-rewrite`（小红书）；没装就用搜来的素材由你合成 |
-| **"帮我写一篇公众号文章 / 写完要排版发草稿"** | **公众号写作交付链**（跨 Skill，不是单个 slug） | Skill `wechat-hot-write` → `wechat-title` / `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（终点=草稿箱）；逐跳导航问 `dby` |
+| **"帮我写一篇公众号文章 / 写完要排版发草稿"** | **公众号写作交付链**（跨 Skill，不是单个 slug；**先问终态**：只要成稿 vs 要进草稿箱） | Skill `wechat-hot-write` → `wechat-title` / `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（要草稿箱才走到这站）；逐跳导航问 `dby` |
 | **"帮我记一下 / 存进笔记 / 我刚想到…"** | **第二大脑写入**（异步，必须轮询到收条） | Skill `mera` → `remember` |
 | **"我之前是不是说过 / 查查我的笔记 / 我对 X 怎么看"** | **第二大脑回忆**：检索 → 读原文 → 自己综合（`ask` 已降级） | Skill `mera` → `search` → `read` |
 | **"我是个什么样的人 / 按我的风格写"** | **人格内核定调**（每段对话取一次就够） | Skill `mera` → `self` |
@@ -288,12 +291,13 @@ console.log(env.data.items);
 5. **保命**：脚本丢进 `POST /api/skills/content-safety-check/invoke`
    `{ "platform": "douyin", "content": "<脚本>" }`，命中风险词按 `suggestions` 替换。
 6. **交付选题**：3–5 个选题（每个：蹭哪条热点 + 我这IP的独家切角 + 为什么现在能爆）+ 各自开场脚本 + 已过违禁词检测。
-7. **选题落地成文章**（用户要的是**公众号文章**而不是短视频脚本时，**别停在第 6 步**）：
+7. **选题落地成文章**（用户要的是**公众号文章**而不是短视频脚本时，第 6 步之后还有路）：
    选定一个选题 → `wechat-hot-write` 拉同主题爆文样本写正文 → `wechat-title` 起标题 /
    `wechat-cover` 定封面套路 → `wechat-banned-words` 出过审版正文 →
    **`wechat-article-pipeline` 排版 + 配封面 + 存进用户自己的公众号草稿箱**（只存草稿、绝不群发）。
-   > 🔴 **这条工作流的终点是草稿箱，不是违禁词检测**。检测只是链上的一环；交一段 Markdown 就收尾，
-   > 用户手上仍然什么都没有。逐跳导航（做完这步走哪步）交给 `dby`。
+   > 🔴 **走到哪一站由用户要的终态决定**：只要选题和脚本，第 6 步就是终点；要成稿，写完正文就结束；
+   > 要**排版好的公众号 HTML** 或要**文章进自己的草稿箱**，才一路走到 `wechat-article-pipeline`
+   > （它会写进用户自己的公众号后台，别在他没提过这个意图时替他跑）。逐跳导航交给 `dby`。
 
 ### 工作流 B：「这条抖音/小红书链接为什么火？给我可复用的选题角度」
 
