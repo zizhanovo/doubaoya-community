@@ -163,7 +163,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **image-gen** | GPT-image2 文生图 / 图生图 / 编辑 |
-| **seedream-5-lite** | Seedream 5.0 lite 文生图 / 图生图 / 组图 |
+| **seedream-5-lite** | ⛔ **已下架**（2026-08-10，调用恒 503）——出图请改用 `image-gen` |
 | **doubao-websearch** | 豆包异步联网检索，返回答案 + 引用来源 |
 
 ### 🖥 本地工具（不联网、不需要 key）

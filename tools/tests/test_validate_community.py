@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
+import unittest.mock
 
 
 VALIDATOR = Path(__file__).resolve().parents[1] / "validate_community.py"
@@ -228,6 +230,98 @@ class CommunityValidatorTests(unittest.TestCase):
             (cache / "state.py").write_text("value = 1\n", encoding="utf-8")
             with self.assertRaisesRegex(validator.ValidationError, "runtime/cache artifact found"):
                 validator.validate_artifacts(root)
+
+
+class CallRouteGateTests(unittest.TestCase):
+    """调用路由闸：文档/脚本里写死的每条路径都必须真的在主仓 catalog 的对应集合里。
+
+    平台有两个不相交的能力集合（skills 走 /api/skills/<slug>/invoke，apis 走
+    /api/apis/<platform>/<slug>/call），互相不回落。写错集合 = 必然 404，而"404 就去查
+    发现接口"的指引又永远查不到那个 slug，agent 原地死循环——本闸防的就是这个。
+    """
+
+    # 一份最小的假 catalog：只要标记齐全，解析规则就该认得出这两个集合。
+    # 用假数据而不是真主仓，测试才能在没有主仓的机器上跑。
+    FAKE_CATALOG = (
+        "const skillDefinitions: SkillDefinition[] = [\n"
+        '  {\n    slug: "real-skill",\n    operationKey: "skill.real",\n  },\n'
+        '  {\n    slug: "retired-skill",\n    operationKey: "skill.retired",\n'
+        '    availability: { status: "hidden" },\n  },\n'
+        "];\n"
+        "export const skills: Skill[] = skillDefinitions.map(applyCreditPricing);\n"
+        "const apiEndpointDefinitions: ApiEndpointDefinition[] = [\n"
+        '  {\n    platform: "trend",\n    slug: "real-endpoint",\n    operationKey: "api.trend.real",\n  },\n'
+        "];\n"
+        "export const apiEndpoints: ApiEndpoint[] = apiEndpointDefinitions.map(applyCreditPricing);\n"
+    )
+
+    def fixture(self, body: str) -> tuple[Path, Path]:
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        root = Path(directory)
+        (root / "skills" / "probe").mkdir(parents=True)
+        (root / "skills" / "probe" / "SKILL.md").write_text(body, encoding="utf-8")
+        catalog = root / "catalog.ts"
+        catalog.write_text(self.FAKE_CATALOG, encoding="utf-8")
+        return root, catalog
+
+    def check(self, body: str, catalog: Path | None = None) -> None:
+        root, default_catalog = self.fixture(body)
+        target = catalog if catalog is not None else default_catalog
+        with unittest.mock.patch.dict(os.environ, {validator.CATALOG_ENV: str(target)}):
+            validator.validate_call_routes(root)
+
+    def test_real_routes_pass(self):
+        self.check("`POST /api/skills/real-skill/invoke` `POST /api/apis/trend/real-endpoint/call`\n")
+
+    def test_rejects_api_slug_on_the_skills_route(self):
+        # 这是 2026-08 那轮的病根形状：83 条数据能力被写成 /api/skills/<slug>/invoke，全数 404。
+        with self.assertRaisesRegex(validator.ValidationError, r"得走 /api/apis/<platform>/real-endpoint/call"):
+            self.check("`POST /api/skills/real-endpoint/invoke`\n")
+
+    def test_rejects_package_directory_name_masquerading_as_slug(self):
+        with self.assertRaisesRegex(validator.ValidationError, "多半把技能包目录名当成了调用 slug"):
+            self.check("`POST /api/skills/content-parse/invoke`\n")
+
+    def test_rejects_skill_slug_on_the_apis_route(self):
+        with self.assertRaisesRegex(validator.ValidationError, r"得走 /api/skills/real-skill/invoke"):
+            self.check("`POST /api/apis/tool/real-skill/call`\n")
+
+    def test_rejects_unknown_endpoint(self):
+        with self.assertRaisesRegex(validator.ValidationError, "这条路径必然 404"):
+            self.check("`POST /api/apis/douyin/no-such-endpoint/call`\n")
+
+    def test_retired_capability_may_still_be_named(self):
+        """已下架的能力允许被点名——seedream-5-lite/SKILL.md 就得写明它不能用了。"""
+        self.check("`POST /api/skills/retired-skill/invoke` 已下架，别调\n")
+
+    def test_placeholders_are_not_call_sites(self):
+        self.check("`/api/skills/<slug>/invoke` `/api/apis/<platform>/<slug>/call` `/api/skills/${s}/invoke`\n")
+
+    def test_pending_route_exemption_clears_itself_once_landed(self):
+        """豁免表不许留成永久的洞：路由一旦上线，闸反过来要求删掉那条豁免。"""
+        with unittest.mock.patch.object(validator, "PENDING_UPSTREAM_ROUTES", {("trend", "real-endpoint")}):
+            with self.assertRaisesRegex(validator.ValidationError, "请把它从 PENDING_UPSTREAM_ROUTES 里删掉"):
+                self.check("`POST /api/apis/trend/real-endpoint/call`\n")
+
+    def test_pending_route_exemption_passes_while_unlanded(self):
+        with unittest.mock.patch.object(validator, "PENDING_UPSTREAM_ROUTES", {("media", "asr")}):
+            self.check("`POST /api/apis/media/asr/call`\n")
+
+    def test_missing_catalog_warns_instead_of_failing(self):
+        """社区仓要能在没有主仓的机器上独立通过校验——跳过并 warn，不硬红。"""
+        root, catalog = self.fixture("`POST /api/skills/whatever-bogus/invoke`\n")
+        catalog.unlink()
+        with unittest.mock.patch.dict(os.environ, {validator.CATALOG_ENV: str(catalog)}):
+            validator.validate_call_routes(root)
+
+    def test_catalog_shape_drift_fails_loudly(self):
+        """闸悄悄退化成「什么都不查」比没有闸更糟：解析标记找不到就打红。"""
+        root, catalog = self.fixture("`POST /api/skills/real-skill/invoke`\n")
+        catalog.write_text("export const nothing = 1;\n", encoding="utf-8")
+        with unittest.mock.patch.dict(os.environ, {validator.CATALOG_ENV: str(catalog)}):
+            with self.assertRaisesRegex(validator.ValidationError, "catalog 结构已变"):
+                validator.validate_call_routes(root)
 
 
 if __name__ == "__main__":
