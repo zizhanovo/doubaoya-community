@@ -114,6 +114,32 @@ def frontmatter_name(path: Path) -> str:
     return names[0]
 
 
+def frontmatter_description(path: Path) -> str:
+    """frontmatter 里 ``description`` 的**完整**正文；折叠式（``>-`` 后跟缩进块）也一并取回。
+
+    只取 description、绝不含正文——中文话术闸只该管选路层那一两句，理由见
+    :func:`validate_banned_word_fields`。
+    """
+    lines = path.read_text(encoding="utf-8").splitlines()
+    require(bool(lines) and lines[0] == "---", f"missing frontmatter: {display_path(path)}")
+    try:
+        end = lines.index("---", 1)
+    except ValueError as exc:
+        raise ValidationError(f"unclosed frontmatter: {display_path(path)}") from exc
+    for index in range(1, end):
+        if not lines[index].startswith("description:"):
+            continue
+        head = lines[index].split(":", 1)[1].strip()
+        # ``>-`` / ``|`` 这类块标量记号本身不是正文，正文在后面的缩进行里。
+        body = [] if head in ("", ">", ">-", "|", "|-") else [head]
+        for follow in lines[index + 1 : end]:
+            if follow[:1] not in (" ", "\t"):  # 回到顶层键 ⇒ description 到此为止
+                break
+            body.append(follow.strip())
+        return " ".join(body)
+    raise ValidationError(f"invalid description frontmatter: {display_path(path)}")
+
+
 def discover_skill_dirs(root: Path = ROOT) -> list[Path]:
     """Single source of truth for the Skill inventory: the ``skills/`` directory.
 
@@ -276,13 +302,36 @@ def validate_banned_word_fields(root: Path = ROOT) -> None:
     ``riskLevel`` / ``matchedWords`` 全仓没有第二个合法出处，任何 SKILL.md 里出现都判红；
     ``suggestions`` 在别的能力上是真字段（``skill.search.doubaoWeb`` 的 ``result.suggestions``），
     所以只在**碰违禁词检测的** SKILL.md 里禁。
+
+    第二道（中文话术层，**只扫 frontmatter 的 description**）：上面那三个禁的是英文字面量，
+    于是同一个谎换成中文说就整个穿过去了——头部话术一度承诺「标好风险等级，再给出每个词的
+    合规替换」，而同一份文件的红线明写着接口不返回这些。为什么只扫 description、不扫正文：
+
+    * description 是**选路层**，agent 就靠这一行决定用不用本 Skill，说错影响面最大；
+    * 它只有一两句推销语，**正当的否定句只出现在讲解正文里**（正文现存 8 处「接口不返回…」
+      都是对的），扫正文必然误伤，扫 description 则没有误伤面。
+
+    禁的是「听起来像接口返回的结构」这类名词。**「风险等级」这个概念压根不存在**——接口不回，
+    本鸭也不许自创（见 multi-banned-words「不要自创风险等级」）。「替换建议」「命中词清单」
+    本鸭确实会产出，但在 description 这种没有主语的推销语里，它们读起来就是字段承诺；
+    要在 description 里讲这个交付物，请改说交付物本身（「合规替换」「标注版正文」），
+    别用听着像字段的名词。
     """
     ghosts = ("riskLevel", "matchedWords", "suggestions")
+    ghost_phrases_cn = ("风险等级", "风险级别", "风险分级", "替换建议", "命中词清单")
     safety_markers = ("check-banned-words", "content-safety-check", "wechat-prohibited-word")
     for directory in discover_skill_dirs(root):
         skill_md = directory / "SKILL.md"
         text = skill_md.read_text(encoding="utf-8")
-        touches_safety = any(marker in text for marker in safety_markers)
+        # 分域判定看**整个技能包**，不只是 SKILL.md：wechat-banned-words 的端点写在
+        # scripts/check_words.py 的 API_URL 里、SKILL.md 一次都没出现过 check-banned-words，
+        # 只读 SKILL.md 会把**最该管的那个 Skill** 判成域外（本闸建起来时就漏了它）。
+        touches_safety = any(
+            marker in candidate.read_text(encoding="utf-8", errors="ignore")
+            for candidate in sorted(directory.rglob("*"))
+            if candidate.is_file()
+            for marker in safety_markers
+        )
         for ghost in ghosts:
             if ghost == "suggestions" and not touches_safety:
                 continue
@@ -290,6 +339,16 @@ def validate_banned_word_fields(root: Path = ROOT) -> None:
                 ghost not in text,
                 f"{directory.name}/SKILL.md still names `{ghost}`: the banned-word API never returns it, "
                 "and reading it makes the agent report every text as compliant",
+            )
+        if not touches_safety:
+            continue
+        description = frontmatter_description(skill_md)
+        for phrase in ghost_phrases_cn:
+            require(
+                phrase not in description,
+                f"{directory.name}/SKILL.md 的 description 里写着「{phrase}」——违禁词接口不返回它，"
+                "而 description 是选路层，agent 就照这一行判断本 Skill 交付什么。"
+                "改成说真实交付物（标注版正文 / 风险类别 / 合规替换），别用听着像接口字段的名词。",
             )
 
 

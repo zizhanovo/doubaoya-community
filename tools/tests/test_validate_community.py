@@ -200,6 +200,79 @@ class CommunityValidatorTests(unittest.TestCase):
             self.assertIn("result.suggestions", search_skill.read_text(encoding="utf-8"))
             validator.validate_banned_word_fields(root)
 
+    def test_banned_word_gate_covers_skills_whose_endpoint_lives_in_scripts(self):
+        # 回归证据：分域判定曾只读 SKILL.md，而 wechat-banned-words 的端点写在
+        # scripts/check_words.py 的 API_URL 里——于是**最该管的那个 Skill** 被判成域外，
+        # `suggestions` 混进去也不报。分域改成扫整个技能包后这条才红。
+        skill_md = (validator.SKILLS / "wechat-banned-words" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("check-banned-words", skill_md, "端点若哪天写进 SKILL.md，本回归证据就失去意义")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "wechat-banned-words" / "SKILL.md"
+            skill.write_text(skill.read_text(encoding="utf-8") + "\n\n读 `data.suggestions` 拿建议。\n", encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, "still names .suggestions."):
+                validator.validate_banned_word_fields(root)
+
+    def test_banned_word_gate_rejects_chinese_ghost_phrases_in_description(self):
+        # 英文字面量禁掉之后，同一个谎换成中文说曾整个穿过去：头部话术承诺「标好风险等级」，
+        # 而同一份文件的红线写着接口不返回它。description 是选路层，说错影响面最大。
+        for skill_name, original, mutated, phrase in (
+            (
+                "wechat-banned-words",
+                "公众号违禁词检测与合规改写。",
+                "公众号违禁词检测与合规改写，标好风险等级。",
+                "风险等级",
+            ),
+            (
+                "multi-banned-words",
+                "多平台违禁词检测——",
+                "多平台违禁词检测，给替换建议——",
+                "替换建议",
+            ),
+        ):
+            with self.subTest(skill=skill_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.repository_fixture(root)
+                skill = root / "skills" / skill_name / "SKILL.md"
+                text = skill.read_text(encoding="utf-8")
+                self.assertIn(original, text)
+                skill.write_text(text.replace(original, mutated, 1), encoding="utf-8")
+                with self.assertRaisesRegex(validator.ValidationError, phrase):
+                    validator.validate_banned_word_fields(root)
+
+    def test_banned_word_gate_leaves_body_negations_alone(self):
+        # 闸只扫 description 的**全部理由**：正文里那些「接口不返回风险等级」是对的，
+        # 一刀切扫正文会把它们打红，逼后来的人删掉正确的指引。
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "wechat-banned-words" / "SKILL.md"
+            skill.write_text(
+                skill.read_text(encoding="utf-8") + "\n\n> 接口不返回风险等级与替换建议，命中词清单也没有。\n",
+                encoding="utf-8",
+            )
+            validator.validate_banned_word_fields(root)
+
+    def test_banned_word_gate_does_not_police_unrelated_skills(self):
+        # 分域禁：违禁词之外的能力谈「风险等级」可能完全正当，闸不该越界。
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "doubao-websearch" / "SKILL.md"
+            skill.write_text(skill.read_text(encoding="utf-8").replace("description:", "description: 风险等级 ", 1), encoding="utf-8")
+            validator.validate_banned_word_fields(root)
+
+    def test_frontmatter_description_reads_folded_blocks(self):
+        # doubaoya 用折叠式 ``>-``，description 正文在后面的缩进行里；
+        # 只取首行会让闸对折叠式 description 视而不见。
+        description = validator.frontmatter_description(validator.SKILLS / "doubaoya" / "SKILL.md")
+        self.assertIn("都爆鸭", description)
+        self.assertNotIn(">-", description)
+        single = validator.frontmatter_description(validator.SKILLS / "multi-banned-words" / "SKILL.md")
+        self.assertTrue(single.startswith("多平台违禁词检测"))
+        self.assertNotIn("version:", single)
+
     def test_readme_rejects_stale_count_and_inventory(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
