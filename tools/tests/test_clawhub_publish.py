@@ -80,5 +80,69 @@ class ClawhubCommandTests(unittest.TestCase):
         self.assertNotIn("--topics", publisher.build_command(manifest, "a"))
 
 
+class RetirementGateTests(unittest.TestCase):
+    """发布闸：挂了「⛔ 已下架」牌的 Skill 不许被发上架。"""
+
+    @staticmethod
+    def _repo(directory: str, skills: dict[str, str]) -> Path:
+        root = Path(directory)
+        for slug, description in skills.items():
+            skill = root / "skills" / slug
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                f"---\nname: {slug}\ndescription: >-\n  {description}\n---\n\n# {slug}\n",
+                encoding="utf-8",
+            )
+        return root
+
+    def test_the_real_seedream_skill_is_refused(self):
+        publishable, refused = publisher.partition_publishable(publisher.discover_slugs())
+        self.assertEqual([slug for slug, _ in refused], ["seedream-5-lite"])
+        self.assertNotIn("seedream-5-lite", publishable)
+        self.assertIn("已下架", refused[0][1])
+
+    def test_every_other_skill_still_publishes(self):
+        # 一条坏的不该阻断全部。
+        slugs = publisher.discover_slugs()
+        publishable, refused = publisher.partition_publishable(slugs)
+        self.assertEqual(len(publishable) + len(refused), len(slugs))
+        self.assertIn("image-gen", publishable)
+
+    def test_marker_is_read_from_the_skill_not_hardcoded_by_slug(self):
+        # 变异验证的自动化版本：同一个 slug，挂牌就拒，摘牌就放行——闸读的是标记不是名字。
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._repo(directory, {"seedream-5-lite": "⛔ 已下架，请勿使用。改用 image-gen。"})
+            self.assertIsNotNone(publisher.retirement_reason("seedream-5-lite", root=root))
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._repo(directory, {"seedream-5-lite": "本鸭帮你一行命令出图。"})
+            self.assertIsNone(publisher.retirement_reason("seedream-5-lite", root=root))
+
+    def test_merely_mentioning_a_retirement_elsewhere_is_not_a_marker(self):
+        # 判据是位置锚定的挂牌，不是关键词匹配：正文里提到下架、或 description 中段提到，都不算。
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._repo(
+                directory,
+                {
+                    "talks-about-it": "查公众号文章。注意 seedream-lite 已下架，⛔ 别再调它。",
+                    "plain-single-line": "正常能力。",
+                },
+            )
+            (root / "skills" / "plain-single-line" / "SKILL.md").write_text(
+                "---\nname: plain-single-line\ndescription: 正常能力，随手提一句 ⛔ 已下架 的旧能力。\n---\n",
+                encoding="utf-8",
+            )
+            self.assertIsNone(publisher.retirement_reason("talks-about-it", root=root))
+            self.assertIsNone(publisher.retirement_reason("plain-single-line", root=root))
+
+    def test_single_line_description_can_also_carry_the_marker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._repo(directory, {"gone": "x"})
+            (root / "skills" / "gone" / "SKILL.md").write_text(
+                "---\nname: gone\ndescription: ⛔ 已下架，请改用别的。\n---\n",
+                encoding="utf-8",
+            )
+            self.assertIn("已下架", publisher.retirement_reason("gone", root=root) or "")
+
+
 if __name__ == "__main__":
     unittest.main()
