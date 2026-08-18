@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T10:36:13.613823+00:00",
+  "generatedAt": "2026-08-18T10:40:47.972249+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -10,7 +10,7 @@
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
     "dby-update": "doubaoya-skill/dby-update@53d92b2192de",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
-    "doubaoya": "doubaoya-skill/doubaoya@7d952dd6a3ae",
+    "doubaoya": "doubaoya-skill/doubaoya@3193cf932cb7",
     "douyin-comment": "doubaoya-skill/douyin-comment@94cf3e281b04",
     "douyin-realtime-search": "doubaoya-skill/douyin-realtime-search@d861c99e79a8",
     "douyin-search": "doubaoya-skill/douyin-search@154c60c5923a",
@@ -34,7 +34,7 @@
     "wechat-10w-hot": "doubaoya-skill/wechat-10w-hot@b82f2ab8e880",
     "wechat-account-analyzer": "doubaoya-skill/wechat-account-analyzer@153389f9602d",
     "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@2ee559010b10",
-    "wechat-banned-words": "doubaoya-skill/wechat-banned-words@2e29d74ce37d",
+    "wechat-banned-words": "doubaoya-skill/wechat-banned-words@80d0c20e8bb1",
     "wechat-channels-ai-feed": "doubaoya-skill/wechat-channels-ai-feed@3958c899a0cc",
     "wechat-cover": "doubaoya-skill/wechat-cover@80f58ab682c1",
     "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@24d35d8ef1cc",
