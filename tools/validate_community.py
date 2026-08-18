@@ -236,6 +236,34 @@ def next_step_section(text: str) -> str | None:
     return body if end == -1 else body[:end]
 
 
+def validate_banned_word_fields(root: Path = ROOT) -> None:
+    """违禁词检测的 Skill 不许再教 agent 去读上游从来没回过的字段。
+
+    上游 ``cozeSkill/sensitiveWordSearch`` 只回 ``source / content / originalContent /
+    prohibitedWordsType / raw``。文档一度写着 ``riskLevel / matchedWords / suggestions``，
+    于是 agent 走进「``matchedWords`` 为空 ⇒ 未检测到违禁词，文案合规 ✅」这条分支——
+    一个恒真的判据把**每一段**文案都放行了。漏报违禁词是安全缺陷，本闸就是防它复发。
+
+    ``riskLevel`` / ``matchedWords`` 全仓没有第二个合法出处，任何 SKILL.md 里出现都判红；
+    ``suggestions`` 在别的能力上是真字段（``skill.search.doubaoWeb`` 的 ``result.suggestions``），
+    所以只在**碰违禁词检测的** SKILL.md 里禁。
+    """
+    ghosts = ("riskLevel", "matchedWords", "suggestions")
+    safety_markers = ("check-banned-words", "content-safety-check", "wechat-prohibited-word")
+    for directory in discover_skill_dirs(root):
+        skill_md = directory / "SKILL.md"
+        text = skill_md.read_text(encoding="utf-8")
+        touches_safety = any(marker in text for marker in safety_markers)
+        for ghost in ghosts:
+            if ghost == "suggestions" and not touches_safety:
+                continue
+            require(
+                ghost not in text,
+                f"{directory.name}/SKILL.md still names `{ghost}`: the banned-word API never returns it, "
+                "and reading it makes the agent report every text as compliant",
+            )
+
+
 def validate_authoring_chain(root: Path = ROOT) -> None:
     """公众号写作链上的每一跳都必须有指向下游 Skill 的前向指针，且引用的 Skill 真实存在。"""
     installed = {path.name for path in discover_skill_dirs(root)}
@@ -424,6 +452,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_clawhub_manifest(root)
     validate_routing(root)
     validate_authoring_chain(root)
+    validate_banned_word_fields(root)
     validate_vendor(root)
     validate_artifacts(root)
 
