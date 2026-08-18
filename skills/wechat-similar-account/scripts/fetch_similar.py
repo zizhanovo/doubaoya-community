@@ -5,7 +5,8 @@
 高阶标杆账号，供主 Agent 搭竞品矩阵 / 找起号参考。
 
 未收录的账号可先用 --sync（需配合 --wechat-id）提交同步受理，
-同步是异步的（约 30 分钟），受理回执返回后脚本会继续发相似账号请求。
+同步是异步的（约 30 分钟）。预同步是**尽力而为**：提交失败（同步接口维护中、网络
+不通等）只在 stderr 打一条 warning，主查询照跑；主查询自身失败仍以退出码 1 结束。
 
 用法:
     python3 fetch_similar.py "<公众号名称>" [--type <账号分类>]
@@ -121,16 +122,22 @@ def main() -> int:
         )
         return 1
 
-    # 可选预同步：提交受理回执（异步，约 30 分钟），不阻塞后续相似账号请求。
+    # 可选预同步：尽力而为。它只是给主查询多一次入库机会，失败（同步接口维护中、
+    # 网络不通、信封异常）一律降级成 warning 继续跑主查询——但绝不静默，用户得知道
+    # 降级发生了。主查询自身失败仍照常非零退出（见下）。
     if args.sync:
         sync_body = {"wechatId": args.wechat_id, "accountName": args.accountName}
-        ok, sync_data, err = post(SYNC_ENDPOINT, sync_body, api_key)
-        if not ok:
-            sys.stderr.write("[error] %s: %s\n" % (err[0], err[1]))
-            return 1
-        sys.stderr.write(
-            "[info] 已提交同步受理（异步，约 30 分钟生效）；继续拉取当前可用的相似账号。\n"
-        )
+        ok, _, err = post(SYNC_ENDPOINT, sync_body, api_key)
+        if ok:
+            sys.stderr.write(
+                "[info] 已提交同步受理（异步，约 30 分钟生效）；继续拉取当前可用的相似账号。\n"
+            )
+        else:
+            sys.stderr.write(
+                "[warn] 预同步没做成（%s: %s）——同步接口可能正在维护，本次没能把该账号"
+                "提交入库。已跳过它继续查相似账号，下面的结果可能不含该账号的最新数据。\n"
+                % (err[0], err[1])
+            )
 
     body = {"accountName": args.accountName}
     if args.account_type:
