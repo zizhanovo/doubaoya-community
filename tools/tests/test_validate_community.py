@@ -180,15 +180,12 @@ class CommunityValidatorTests(unittest.TestCase):
             self.budget_fixture(root, {"doubaoya": "选题"}, {"celebrity-slice": ["明星切片", "字幕烧制"]})
             self.assertEqual(validator.validate_trigger_word_coverage(root), [])
 
-    def test_description_budget_has_no_repo_wide_total_limit(self):
-        # 🔴 故意没有「全库合计上限」：共享预算 8000 的分母是**用户整机所有 skill**，
-        # 不是本仓这 43 个（实测本机 154 个包合计 41674 = 521%，本鸭系贡献 0）。
-        # 曾立过一条 sum<=8000 并真的砍了一轮，已撤回——这条测试防它被"顺手"加回来。
+    def test_description_budget_rejects_blowing_the_shared_pool(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.budget_fixture(root, {f"pkg-{i}": "词" * 500 for i in range(40)})
-            self.assertTrue(all("合计" not in w for w in validator.validate_description_budget(root)))
-        self.assertFalse(hasattr(validator, "SHARED_DESCRIPTION_BUDGET"))
+            self.budget_fixture(root, {f"pkg-{i}": "词" * 500 for i in range(20)})
+            with self.assertRaisesRegex(validator.ValidationError, "共享预算"):
+                validator.validate_description_budget(root)
 
     def test_description_budget_rejects_one_oversized_description(self):
         with tempfile.TemporaryDirectory() as directory:

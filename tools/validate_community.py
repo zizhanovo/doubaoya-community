@@ -863,36 +863,44 @@ def validate_routing_skill_pointers(root: Path = ROOT) -> None:
     require(tables, "路由指针闸一个 routing 表都没扫到，扫描面八成断了")
 
 
-# ── description 单条长度闸 ───────────────────────────────────────────────────
-# description 是**启动时全量常驻**的元数据，不是按需加载的正文。三个口径卡的不是同一件事：
+# ── description 预算闸 ───────────────────────────────────────────────────────
+# description 是**启动时全量常驻**的元数据，不是按需加载的正文。三档口径都是真的，
+# 而且卡的不是同一件事：
 #   1024  Agent Skills 规范上限。是**校验上限、不是截断**（超了直接报错），且参考实现的
 #         len() 作用在 Python str 上 ⇒ **汉字按 1 个字符算**。
-#   1536  宿主（Claude Code v2.1.105+）单条上限。
-#    250  旧版宿主单条上限 ⇒ 超了报黄，把「在旧宿主上会被截断」显性化。
+#   1536  宿主（Claude Code v2.1.105+）单条上限；旧版是 250，所以超 250 报黄——把
+#         「在旧宿主上会被砍」显性化，而不是等它静默发生。
+#   8000  🔴 **共享预算**（ctx 200000 × 4 × 0.01）。超了的处置是**整条 description 被
+#         静默丢掉，且牺牲品是随机的**——已有 issue 复现：给 A 包加长，没被碰过的 B 包
+#         description 消失了。
 #
-# 🔴 **这里故意没有「全库合计上限」那条闸，别加回来。**
-#    共享预算确实存在（ctx 200000 × 4 × 0.01 = 8000 字符），但**它的分母是用户整机装的
-#    所有 skill，不是本仓这 43 个**。实测本机 ~/.claude 装了 154 个包、description 合计
-#    41674 字符 = 预算的 521%，**而本鸭系一个都没装在那儿、贡献 0**。
-#    ⇒ 那台机器早就在截断模式里跑，跟我们一个字符关系都没有；把我们砍掉 1400 字符
-#      （41674 → 40274）只填了溢出的 3.4%，纯属优化错的项。曾据此立过一条 sum<=8000 的
-#      红闸并真的砍了一轮，**已撤回**。
-#    ⇒ 装了任何一套正常插件的用户都已经溢出。**我们能控的不是「溢不溢出」，
-#      而是「溢出时我们这几条活不活得下来」**——所以闸只管单条别过分长，
-#      真正的解法在别处（把关键词放进抗截断的层，见 docs/deleting-a-skill.md）。
-#    ⚠️ 而且溢出时的处置是**整条 description 被静默丢掉、牺牲品随机**（issue 复现：给 A 包
-#      加长，没被碰过的 B 包 description 消失），不是截尾——所以"合计"这个数本身也不
-#      构成可控杠杆。
+# 🔴 **这条闸守的到底是什么，别搞错——这笔账值得留着，它是「数字相同但理由不同」的活样本。**
+#    同一个 8000 被用三个理由立过、撤过、又立回来：
+#      ❌ v1「我们 9440 / 8000 = 118%，我们超支了」——**分母错**。共享预算的分母是用户
+#         整机装的所有 skill，不是本仓这 43 个。实测本机 ~/.claude 装了 154 个包、合计
+#         41674 字符 = 预算的 521%，**而本鸭系一个都没装在那儿、贡献 0**；按这个理由砍
+#         我们 1400 字符（41674 → 40274）只填了溢出的 3.4%，是在优化错的项。
+#      ❌ v2「既然分母是整机、与我们无关，那就别立这条闸」——**这条也错**。它只否掉了
+#         「我们造成别人溢出」，没否掉「我们造成**自己**溢出」。
+#      ✅ v3（现行）**本仓全部 description 合计不得超过 8000——因为一个只装了我们这 43 个包、
+#         别的什么都没装的用户，已经足以被我们自己撑进截断模式，我们的包会开始互相丢描述。**
+#         这条不管别人的溢出，只管**我们不要自成溢出源**：定义清晰、可测量、可执行，
+#         而且是自作自受、我们能控也该控的那一半。
+#    ⚠️ 占满 8000 只是"刚好不自成溢出源"，不是"安全"——预算终究要和用户其他 skill 共享。
 SPEC_DESCRIPTION_LIMIT = 1024
 HOST_DESCRIPTION_LIMIT = 1536
 HOST_LEGACY_SOFT_LIMIT = 250
+SHARED_DESCRIPTION_BUDGET = 8000
 
 
 def validate_description_budget(root: Path = ROOT) -> list[str]:
-    """单条长度闸。返回黄灯列表；硬限直接 raise。**不设全库合计上限**，理由见上。"""
+    """单条长度 + 全库合计。返回黄灯列表；硬限直接 raise。"""
     warnings: list[str] = []
+    total = 0
     for directory in discover_skill_dirs(root):
-        size = len(frontmatter_description(directory / "SKILL.md"))
+        text = frontmatter_description(directory / "SKILL.md")
+        size = len(text)
+        total += size
         require(
             size <= SPEC_DESCRIPTION_LIMIT,
             f"description 超出 Agent Skills 规范上限：{directory.name} 有 {size} 字符 > "
@@ -903,9 +911,17 @@ def validate_description_budget(root: Path = ROOT) -> list[str]:
             f"description 超出宿主单条上限：{directory.name} 有 {size} 字符 > {HOST_DESCRIPTION_LIMIT}",
         )
         if size > HOST_LEGACY_SOFT_LIMIT:
-            warnings.append(
-                f"⚠️ {directory.name} 的 description 有 {size} 字符 > {HOST_LEGACY_SOFT_LIMIT}，在旧版宿主上会被截断"
-            )
+            warnings.append(f"⚠️ {directory.name} 的 description 有 {size} 字符 > {HOST_LEGACY_SOFT_LIMIT}，在旧版宿主上会被砍")
+    require(
+        total <= SHARED_DESCRIPTION_BUDGET,
+        f"🔴 本仓 description 合计 {total} 字符 > 宿主共享预算 {SHARED_DESCRIPTION_BUDGET}。"
+        "这条**不是**在说「我们占了别人的预算」（分母是用户整机所有 skill，实测本机 154 个包 "
+        "41674 字符 = 521%，本鸭贡献 0），而是在说：**一个只装了我们这 43 个包、别的什么都没装的"
+        "用户，已经足以被我们自己撑进截断模式——我们的包会开始互相丢描述。** "
+        "超了不是「尾巴被截断」，是整条 description 被静默丢掉、且牺牲品随机。"
+        "砍字数请从触发面窄的包的**散文**下手：别砍触发词（差集闸会拦），"
+        "别砍 doubaoya（唯一真正靠 description 抢话术的包）。详见 docs/deleting-a-skill.md",
+    )
     return warnings
 
 
