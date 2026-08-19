@@ -291,6 +291,28 @@ class CommunityValidatorTests(unittest.TestCase):
                              encoding="utf-8")
             validator.validate_authoring_chain(root)
 
+    def test_retired_pointer_scan_covers_every_skill_not_just_the_entry_points(self):
+        """扫描面是**全部** Skill 正文与 references，不是 doubaoya / dby 那两份。
+
+        这条测试是 2026-08-19 退役 10 个壳时买回来的：闸只盯 doubaoya，于是
+        wechat-hot-article 正文里的 `gzh-search` 和 image-gen 正文里的 `xiaohongshu-search`
+        全靠人 grep 才发现。闸盯着谁，就只有谁不会烂——所以这里把**普通 Skill**
+        和 **references 目录**各钉一条；少扫任何一处，对应断言就不再抛错。
+        """
+        known = json.loads((validator.ROOT / "known-hashes.json").read_text(encoding="utf-8"))
+        for relative in ("skills/image-gen/SKILL.md", "skills/doubaoya-gateway/references/routing-pitfalls.md"):
+            with self.subTest(relative), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                self.repository_fixture(root)
+                retired = sorted(set(known["skills"])
+                                 - {path.name for path in validator.discover_skill_dirs(root)})
+                self.assertTrue(retired, "历史闭集里没有已下架包，这条测试就没有素材")
+                target = root / relative
+                target.write_text(target.read_text(encoding="utf-8") + f"\n\n取数走 `{retired[0]}`。\n",
+                                  encoding="utf-8")
+                with self.assertRaisesRegex(validator.ValidationError, "还在点名已下架的技能包"):
+                    validator.validate_authoring_chain(root)
+
     def test_authoring_chain_rejects_dead_skill_link(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
