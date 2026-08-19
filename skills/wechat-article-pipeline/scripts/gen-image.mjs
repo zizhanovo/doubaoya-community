@@ -3,7 +3,8 @@
 // -----------------------------------------------------------------------------
 // 把一段 prompt 交给 doubaoya.com 的生图密钥接口（**同步**返回，单张 10–60s），
 // 拿回一张 jpeg 存到本地。密钥只在 doubaoya 服务端，skill 端只需密钥（DOUBAOYA_API_KEY），
-// 每张扣点数（约 ¥0.30 上游成本）。封面（1536x1024）和正文配图（1024x1024）共用它，只是
+// 每张扣点数（生图属高价档，比数据类能力贵一个量级；实时价看详情端点的点数字段，
+// 别照这里的注释算钱）。封面（1536x1024）和正文配图（1024x1024）共用它，只是
 // --size 不同。产出的本地 jpeg 路径可以直接：
 //   * 作为封面喂给 pipeline.mjs 的 --cover（走 thumb 上传）；
 //   * 或以 <img src="本地路径"> 落进 Markdown/HTML 正文，由 preprocess-and-publish.mjs
@@ -274,7 +275,7 @@ const HELP = `gen-image.mjs — 都爆鸭 · 公众号封面/配图生图
                      走密钥调 doubaoya 生图接口、扣点数、无需额外密钥（上游密钥只在服务端）。
   DOUBAOYA_API_BASE  （可选）默认 https://doubaoya.com
 
-约 ¥0.30/张。返回后本地路径可直接喂 pipeline.mjs 的 --cover，或以 <img src=本地路径> 放进正文。
+每张扣点数（属高价档；实时价见详情端点）。返回后本地路径可直接喂 pipeline.mjs 的 --cover，或以 <img src=本地路径> 放进正文。
 `;
 
 async function main() {
