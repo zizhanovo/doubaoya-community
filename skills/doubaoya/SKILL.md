@@ -110,7 +110,8 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 | "追更某个号 / 盯公众号 / 订阅公众号 / 账号发文列表 / 竞品发文复盘 / 某公众号发了什么" | `api.gzh.workList` | 公众号账号发文列表 | `/api/apis/gongzhonghao/gongzhonghao-work-list` |
 | "公众号 10 万+ / 原创爆文 / 原创热文 / 原创热门榜" | `api.gzh.categoryTime` | 公众号10万+/原创榜 | `/api/apis/gongzhonghao/category-time-hot` |
 | "头部账号 / 公众号排行 / 公众号榜单 / 热度指数 / 热门账号" | `api.gzh.indexRank` | 公众号热门账号榜 | `/api/apis/gongzhonghao/gongzhonghao-index-rank` |
-| "公众号阅读增长 / 增长榜 / 增长率排行 / 公众号黑马 / 持续走高" | `api.gzh.raiseRank` | 公众号阅读增长榜 | `/api/apis/gongzhonghao/gongzhonghao-raise-rank` |
+| "公众号阅读增长 / 增长榜 / 增长率排行 / 持续走高"（要**账号级**的增量与名次） | `api.gzh.raiseRank` | 公众号阅读增长榜 | `/api/apis/gongzhonghao/gongzhonghao-raise-rank` |
+| "黑马账号 / 公众号黑马 / 流量风向 / 增长榜里每个号给我一篇代表作"（与上一条同一条上游线，但**是两条能力**：这条按作者去重、每人只出最高阅读那篇，标题可直达原文） | `skill.wechat.fastestGrowing` | 公众号黑马账号推荐 | `/api/skills/wechat-fastest-growing` |
 | "公众号 AI 这块在发什么 / 公众号 AI 日报" | `api.gzh.aiFeed` | 公众号AI日报源 | `/api/apis/gongzhonghao/gongzhonghao-ai-feed` |
 | "公众号文旅 / 短剧这块在发什么 / 每日榜" | `api.gzh.playletFeed` | 公众号文旅/短剧日报源 | `/api/apis/gongzhonghao/gongzhonghao-playlet-feed` |
 | "按名字找公众号 / 这个号叫什么 ID"（三步编排的第一步，见下方 A 股例子） | `api.gzh.searchUser` | 公众号账号搜索 | `/api/apis/gongzhonghao/gongzhonghao-search-user` |
