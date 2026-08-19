@@ -261,13 +261,68 @@ function explainNetError(err, what) {
 
 // ---------------------------------------------------------------- 安装目录
 
-/** 这个 scope 下 skill 会落到的两个安装目录。 */
+/**
+ * 这个 scope 下 skill 会落到的两个安装目录。
+ * `agent` 是 skills CLI 里对应的 agent 名——装和查必须同源，否则会往一个自己从来不查的
+ * 目录里装（装了不查 = 永远查不出漂移，也永远归档不掉）。
+ */
 function installDirs(scope) {
   const base = scope.kind === "global" ? homedir() : scope.dir;
   return [
-    { label: ".claude/skills", path: join(base, ".claude", "skills") },
-    { label: ".agents/skills", path: join(base, ".agents", "skills") },
+    { label: ".claude/skills", path: join(base, ".claude", "skills"), agent: "claude-code" },
+    { label: ".agents/skills", path: join(base, ".agents", "skills"), agent: "universal" },
   ];
+}
+
+/**
+ * 装给谁：只装本机**真的存在那个安装目录**的 agent。
+ *
+ * 🔴 绝不能用 `-a '*'`。`*` 不是「装了的全部」，是**注册表里全部 ~70 个 agent**
+ *    （skills CLI: `options.agent.includes("*") → targetAgents = validAgents`）。其中 eve 的
+ *    安装目录是 `<项目>/agent/skills` 且落的是**真实副本不是软链**，于是每对账一次，就在用户
+ *    仓库根上刨出一个几 MB 的未跟踪 `agent/` 目录——我们既不查它也不清它，纯污染。
+ *
+ * 🔴 也别图省事把 `-a` 整个省掉。CLI 在「一个 agent 都没探测到 + `-y`」时会**回落到全部
+ *    agent**（`installedAgents.length === 0 && options.yes → targetAgents = validAgents`），
+ *    等于换个入口把同一个坑再踩一遍。必须显式给名单。
+ *
+ * 一个目录都不存在 = 本机还没装过：装进通用默认 `.agents/skills`（agent 名就叫 `universal`）。
+ * 各 agent 自己的目录本就是软链指向它，所以回落到它不会漏装。
+ */
+function targetAgents(scope) {
+  const present = installDirs(scope)
+    .filter((d) => existsSync(d.path))
+    .map((d) => d.agent);
+  return present.length ? present : ["universal"];
+}
+
+/**
+ * 旧版遗毒：`-a '*'` 会把包**真实复制**进 `<项目>/agent/skills`（那是 skills CLI 里 eve 的
+ * 安装目录，而且它落的是真副本不是软链）。我们从来不查这个目录，所以它只会一直躺在用户仓库
+ * 根上当未跟踪垃圾。现在装的那一侧已经收窄了，但存量得有人告诉用户。
+ *
+ * 🔴 只报不删。这是用户的磁盘，而且 `agent/` 也可能真是人家自己的目录（eve 用户就是这么用的）——
+ *    所以只有「里面装的确实是我方包」才点名，判据同样是 slug × 内容哈希那把尺子。
+ *    删不删由用户自己定，我们只给一条能直接粘贴的命令。
+ */
+function surveyStrayEveDir(scope, currentHashes, knownHashes) {
+  // 只有项目 scope 有这个目录；global scope 下 eve 根本没有全局安装目录。
+  if (scope.kind === "global" || !scope.dir) return null;
+  const path = join(scope.dir, "agent", "skills");
+  if (!existsSync(path)) return null;
+  const ours = [];
+  const others = [];
+  for (const name of listSkillDirs(path)) {
+    let hash;
+    try {
+      hash = computeSkillHash(join(path, name));
+    } catch {
+      continue; // 读不动就别猜，当作不是我们的
+    }
+    (classify(name, hash, currentHashes, knownHashes) === "foreign" ? others : ours).push(name);
+  }
+  if (!ours.length) return null;
+  return { path, root: join(scope.dir, "agent"), ours, others };
 }
 
 function listSkillDirs(path) {
@@ -573,6 +628,34 @@ function resolveScopes(opts, knownHashes) {
   return picked.length ? picked : [global];
 }
 
+/**
+ * 存量污染点名（只报不删）。故意不并进 printPlan：它说的不是「这次要做什么」，
+ * 是「上一版给你留了什么」，混进计划栏会被当成待办动作。
+ */
+function printStray(stray) {
+  if (!stray) return;
+  console.log(
+    `\n   🧹 发现旧版留下的重复副本：${stray.path}\n` +
+      `      里面有 ${stray.ours.length} 个包是我方发的、且和上面那套是**同一批东西的另一份真实副本**` +
+      `（${stray.ours.join(", ")}）。\n` +
+      `      来历：旧版对账用了 \`-a '*'\`，把包装进了 skills CLI 注册表里**每一个** agent，\n` +
+      `      其中 eve 的目录就是 \`agent/skills\` 且落真副本。我们从不读它，它也不会自己更新——\n` +
+      `      纯占地方，可以安全删掉。现在的版本已经不会再往这儿装了。`
+  );
+  if (stray.others.length) {
+    console.log(
+      `      ⚠️ 但这个目录里还有 ${stray.others.length} 个**不是我们的**东西（${stray.others.join(", ")}）——\n` +
+        `      别整个目录端了，不然会连它们一起删。`
+    );
+  }
+  console.log(`      要删就你自己来（我不代删）：`);
+  console.log(
+    stray.others.length
+      ? `        ${stray.ours.map((n) => `rm -rf ${JSON.stringify(join(stray.path, n))}`).join(" \\\n        ")}`
+      : `        rm -rf ${JSON.stringify(stray.root)}`
+  );
+}
+
 function printPlan(scope, survey, plan, opts, upstreamCount) {
   const counts = survey.reduce((m, s) => ({ ...m, [s.state]: (m[s.state] || 0) + 1 }), {});
   console.log(`\n── ${scope.label}`);
@@ -677,7 +760,8 @@ async function main() {
     // 🔴 归档之前先问 git：受跟踪的包一律摘出来不动（详见 splitGitTracked）。
     //    只对归档候选跑 git，不是对全部已装包——一次对账最多几十次探测，可忽略。
     const plan = splitGitTracked(draft, findGitTracked(draft.archive, survey));
-    report.push({ scope, survey, plan });
+    const stray = surveyStrayEveDir(scope, upstream.currentHashes, upstream.knownHashes);
+    report.push({ scope, survey, plan, stray });
   }
 
   // 🔴 刷新一样是「往用户磁盘上写文件」的动作（`skills add` 会原地覆写），不该比归档少一道门。
@@ -685,7 +769,10 @@ async function main() {
   const totalChanges = report.reduce((n, r) => n + r.plan.archive.length + r.plan.add.length + r.plan.refresh.length, 0);
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
-    for (const { scope, survey, plan } of report) printPlan(scope, survey, plan, opts, upstream.names.length);
+    for (const { scope, survey, plan, stray } of report) {
+      printPlan(scope, survey, plan, opts, upstream.names.length);
+      printStray(stray);
+    }
     if (totalChanges === 0) console.log(`\n结论：无需任何操作——本机已经和上游当前全集完全一致。`);
   }
 
@@ -730,7 +817,9 @@ async function main() {
     const want = [...plan.add, ...plan.refresh].sort();
     if (want.length) {
       say(`\n拉取上游 ${want.length} 个 skill…`);
-      runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", "*", "-y"], cwd);
+      const agentsToo = targetAgents(scope);
+      say(`   装给：${agentsToo.join(", ")}`);
+      runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
     }
   }
 
@@ -983,6 +1072,88 @@ function jsonPurityCheck() {
  * ponytail: 天花板 = 换一套同样能分辨的措辞会误报（关键短语是写死的字面量）；升级路径是
  * 把两句文案抽成具名常量再断言常量不等——但那要为一条自检重排 printPlan 的结构，先不做。
  */
+/**
+ * 🔴 装的目标必须**收窄到本机真有的安装目录**，而且必须落在我们自己会查的那两个目录里。
+ *    这条断言盯的是一个静默事故：一旦回到全量扇出，每次对账都会往用户仓库根上刨一个
+ *    `agent/skills`（skills CLI 里 eve 的目录，落的还是真实副本）。装完照样打印「完成」，
+ *    污染在别处，没有任何一条既有断言会红。
+ */
+function targetAgentsCheck() {
+  const fails = [];
+  const eq = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) {
+      fails.push(`装给谁 · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+    }
+  };
+  const root = mkdtempSync(join(tmpdir(), "dby-agents-selfcheck-"));
+
+  // 一个安装目录都没有 ⇒ 回落通用默认，绝不是「全部 agent」
+  eq("空机器回落 universal", targetAgents({ kind: "project", dir: root }), ["universal"]);
+
+  mkdirSync(join(root, ".claude", "skills"), { recursive: true });
+  eq("只有 .claude/skills", targetAgents({ kind: "project", dir: root }), ["claude-code"]);
+
+  mkdirSync(join(root, ".agents", "skills"), { recursive: true });
+  eq("两个都有", targetAgents({ kind: "project", dir: root }), ["claude-code", "universal"]);
+
+  // 🔴 决不能出现星号：它是「注册表里全部 ~70 个 agent」，不是「装了的」。
+  for (const scope of [{ kind: "project", dir: root }, { kind: "global" }]) {
+    const got = targetAgents(scope);
+    if (got.includes("*")) fails.push(`装给谁 · ${scope.kind} 里出现了星号：${JSON.stringify(got)}`);
+    if (!got.length) fails.push(`装给谁 · ${scope.kind} 返回空名单——省略 -a 会让 CLI 回落到全部 agent`);
+  }
+
+  // 装的目标和查的目录必须同源：装了却不查 = 永远查不出漂移，也永远归档不掉。
+  const surveyed = new Set(installDirs({ kind: "project", dir: root }).map((d) => d.agent));
+  for (const a of targetAgents({ kind: "project", dir: root })) {
+    if (!surveyed.has(a)) fails.push(`装给谁 · 往一个自己不查的目录装：${a}`);
+  }
+
+  rmSync(root, { recursive: true, force: true });
+  return fails;
+}
+
+/**
+ * 存量污染只报不删：造一个「我方包的重复副本」躺在 `agent/skills` 里，
+ * 断言它被点名、给了复原……不，给了**删除**命令，而且目录一个字都没被动过。
+ */
+function strayEveDirCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-stray-selfcheck-"));
+  const pkg = join(root, "agent", "skills", "some-skill");
+  mkdirSync(pkg, { recursive: true });
+  writeFileSync(join(pkg, "SKILL.md"), "---\nname: some-skill\n---\n");
+  const mine = computeSkillHash(pkg);
+  const known = { "some-skill": [mine] };
+
+  const stray = surveyStrayEveDir({ kind: "project", dir: root }, { "some-skill": mine }, known);
+  if (!stray) {
+    fails.push("存量污染 · agent/skills 里躺着我方包的副本，却没被点名");
+    rmSync(root, { recursive: true, force: true });
+    return fails;
+  }
+  if (!stray.ours.includes("some-skill")) fails.push(`存量污染 · 没点到名：${JSON.stringify(stray.ours)}`);
+  // 🔴 只报不删：跑完之后那个目录必须原封不动还在。
+  if (!existsSync(pkg)) fails.push("存量污染 · 目录被删了——这一步只许报告，绝不许代删");
+
+  // global scope 没有这个目录的概念，别误报
+  if (surveyStrayEveDir({ kind: "global" }, { "some-skill": mine }, known) !== null) {
+    fails.push("存量污染 · global scope 不该报 agent/skills");
+  }
+  // 别人的东西不算我们的污染
+  const other = mkdtempSync(join(tmpdir(), "dby-stray-other-"));
+  const otherPkg = join(other, "agent", "skills", "someone-else");
+  mkdirSync(otherPkg, { recursive: true });
+  writeFileSync(join(otherPkg, "SKILL.md"), "---\nname: someone-else\n---\n");
+  if (surveyStrayEveDir({ kind: "project", dir: other }, {}, known) !== null) {
+    fails.push("存量污染 · 把别人的包也算成了我们的重复副本");
+  }
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(other, { recursive: true, force: true });
+  return fails;
+}
+
 function printPlanColumnsCheck() {
   const fails = [];
   const lines = [];
@@ -1193,6 +1364,8 @@ function runSelfCheck() {
   eq("本鸭包计数不含别人的", ourPackageCount([{ state: "foreign" }, { state: "foreign" }]), 0);
   eq("本鸭包计数", ourPackageCount([{ state: "foreign" }, { state: "current" }, { state: "modified" }]), 2);
 
+  fails.push(...targetAgentsCheck());
+  fails.push(...strayEveDirCheck());
   fails.push(...printPlanColumnsCheck());
   fails.push(...gitTrackedFixtureCheck());
   fails.push(...gitProbeFailureCheck());
@@ -1207,7 +1380,9 @@ function runSelfCheck() {
     "selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、"
       + "受跟踪与判不出两栏的文案真能分辨、" +
       "git 探测失败时 fail-closed、归档根自忽略、复原命令真能复原、收敛态零动作且 --force-refresh 能全量重下、" +
-      "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse）"
+      "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse、" +
+      "装的 agent 面收窄到本机真有的安装目录且与查的目录同源（不出现星号）、" +
+      "agent/skills 存量副本只点名不代删）"
   );
   return 0;
 }

@@ -779,6 +779,83 @@ def validate_no_key_material(root: Path = ROOT) -> None:
         )
 
 
+# ── agent 全量扇出闸 ────────────────────────────────────────────────────────
+# 🔴 **装 skill 时不许把 agent 面开成全量。** skills CLI 里星号不是「本机装了的全部 agent」，
+# 是**注册表里全部 ~70 个 agent**；`--all` 又是 `--skill '*' --agent '*' -y` 的简写，同一个坑。
+# 其中 eve 这个 agent 的安装目录是 `<项目>/agent/skills`，而且它落的是**真实副本不是软链**——
+# 于是每装一次，就在用户仓库根上刨出一个几 MB 的未跟踪 `agent/` 目录。我们既不读它也不更新它，
+# 纯污染；已经这么坏过一次（doubaoyahub 仓库根上 2.4MB / 19 个包）。
+#
+# 正确写法是显式点名：`-a claude-code universal`。`universal` 就是通用默认 `.agents/skills`，
+# 各 agent 自己的目录本就是软链指向它。
+#
+# 判据只认**真的调用行**——同一行里既有 skills 又有 add 才算（`runSkills([...])` 也算）。
+# 注释和正文里讨论这个禁令天经地义，不该被闸打回；只有真去调用的那一行才红。
+# ponytail: 天花板 = 把命令拆成多行写（闸按行看，跨行的看不见）。升级路径是接一条真解析器。
+AGENT_FANOUT = re.compile(r"""(?:^|[\s"'])(?:--agent|-a)["']?\s*[=,]?\s*["']\*["']""")
+SKILLS_ADD_LINE = re.compile(r"skills.*\badd\b", re.IGNORECASE)
+
+
+def validate_no_agent_fanout(root: Path = ROOT) -> None:
+    """🔴 装 skill 不许开全量 agent 面。判据与后果见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if not SKILLS_ADD_LINE.search(line):
+                continue
+            fanout = AGENT_FANOUT.search(line) or re.search(r"(?:^|\s)--all\b", line)
+            require(
+                fanout is None,
+                f"agent 面开成了全量：{relative.as_posix()}:{lineno} 里的 `{line.strip()}`——"
+                "星号/`--all` 打到的是注册表里全部 ~70 个 agent，不是本机装了的那些；"
+                "其中 eve 的目录是 `<项目>/agent/skills` 且落真实副本，"
+                "结果是每装一次就往用户仓库根上刨一个几 MB 的未跟踪 `agent/` 目录。"
+                "显式点名要装的 agent（如 `-a claude-code universal`）。",
+            )
+
+
+# ── UA 硬编码闸 ──────────────────────────────────────────────────────────────
+# 🔴 **UA 必须从同包 `.version` 读出来，不许写死。** 发布时 tools/stamp_versions.py 往每个包根
+# 盖一个 `.version`（形如 `doubaoya-skill/<name>@<hash>`），服务端就是靠 UA 里这个包名+哈希
+# 判断「这个包有没有新版本」。
+#
+# 写死字面量的后果不是报错，是**静默失效**：该包永远自报「我是没有版本的旧客户端」，于是
+# **它的更新提示永远不会触发**——用户一直用着旧包，我们这边也收不到任何信号。没有报错、没有
+# 降级、没有日志，只有「更新功能对这个包从来没生效过」。已经这么坏过一次：
+# wechat-article-pipeline / wechat-draft-publish 两个包的 .mjs 都把 UA 写成了 "doubaoya-skill/1.0"。
+#
+# 判据只认**把 UA 定死**这一件事：一个 UA 名字（User-Agent / USER_AGENT / userAgent / UA）
+# 后面直接跟 `:` 或 `=` 再跟 `doubaoya-skill/` 字面量。这正是 tools/migrate_user_agent.py 早就
+# 点名过的两种形态：(a) 模块级常量赋值，(b) headers 字典里内联。
+#
+# 这个判据天然放过两类合法出现，不需要任何白名单：
+#   · 解析函数读不到 `.version` 时那句回退 `return ... "doubaoya-skill/1.0"`（前面没有 UA 名字）；
+#   · 自检 fixture 里造的版本戳 `{"some-skill": "doubaoya-skill/some-skill@…"}`（键不是 UA 名字）。
+# 但它放不过 `"User-Agent": "doubaoya-skill/1.0"`——那才是真事故。
+#
+# 只扫脚本（.py/.mjs/.js）：文档里讲解 `doubaoya-skill/<name>@<hash>` 是正常行文，不是 UA。
+# ponytail: 天花板 = 先把字面量存进一个不叫 UA 的变量再塞进 header，本闸看不见。
+# 升级路径是接一条真数据流分析，而不是继续往正则里堆变量名。
+UA_SCRIPT_SUFFIXES = {".py", ".mjs", ".js"}
+UA_HARDCODE = re.compile(
+    r"""(?:User-Agent|USER_AGENT|user_agent|userAgent|\bUA\b)["']?\s*[:=]\s*["']doubaoya-skill/"""
+)
+
+
+def validate_user_agent_from_version(root: Path = ROOT) -> None:
+    """🔴 UA 不许写死，必须读同包 `.version`。判据与后果见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        if relative.parts[:1] != ("skills",) or relative.suffix.lower() not in UA_SCRIPT_SUFFIXES:
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            require(
+                UA_HARDCODE.search(line) is None,
+                f"UA 写死了：{relative.as_posix()}:{lineno} 里的 `{line.strip()}`——"
+                "UA 必须从同包 .version 读（照 _skill_user_agent() / skillUserAgent() 的写法），"
+                "写死的后果是这个包的**更新提示永远不会触发**，而且完全静默："
+                "不报错、不降级，用户会一直用着旧包。",
+            )
+
+
 def validate_artifacts(root: Path = ROOT) -> None:
     banned_parts ={"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv", "venv", "node_modules", "state", "runtime", "secrets", "profile", "mp-ark-archives"}
     banned_names = {".DS_Store", ".env", ".env.local", "session.json", "cookies.json", "auth-key", "runtime.json", "lock.json"}
@@ -1096,6 +1173,8 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_call_routes(root)
     validate_retired_discoverability(root)
     validate_no_key_material(root)
+    validate_no_agent_fanout(root)
+    validate_user_agent_from_version(root)
     validate_artifacts(root)
     return validate_description_budget(root) + validate_trigger_word_coverage(root)
 
