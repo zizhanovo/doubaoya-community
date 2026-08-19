@@ -4,6 +4,10 @@ description: 从图片或 PDF 文档中识别并提取文字内容，支持多�
 dependency:
   python:
     - pymupdf>=1.23.0
+compatibility: >-
+  纯本地运行：不需要 DOUBAOYA_API_KEY，也不联网。需要 python3 与第三方包
+  pymupdf>=1.23.0（`python3 -m pip install pymupdf>=1.23.0`）——缺它则 PDF 那条路
+  直接不可用；图片路径走智能体自身的识图能力，不吃这个依赖。
 ---
 
 # PDF和图片文字提取

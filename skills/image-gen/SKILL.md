@@ -1,6 +1,11 @@
 ---
 name: image-gen
 description: GPT-image2 AI 图片生成 · 一句提示词文生图，或传入参考图做图生图 / 编辑。当用户需要生成配图、AI 出图、文生图、按参考图改图、做小红书/公众号封面或电商主视觉素材时使用。触发词：生成图片、AI 出图、文生图、图生图、改图、做封面、配图、主视觉。
+compatibility: >-
+  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。
+  脚本用 python3 跑，只用标准库（urllib），无第三方依赖。
+  ⚠️ 单次请求会在服务端同步等约 3 分钟才返回，调用方（含反向代理与 agent 的命令超时）
+  必须容忍这么长的 HTTP 请求，否则会在出图完成前被掐断。
 ---
 
 # GPT-image2 AI 图片生成（都爆鸭）

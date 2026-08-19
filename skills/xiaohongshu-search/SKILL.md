@@ -1,6 +1,9 @@
 ---
 name: xiaohongshu-search
 description: 小红书爆款笔记搜索与选题工具。当用户想找小红书爆款笔记、做小红书搜索、挖小红书选题、看某个赛道近期热门内容、求创作灵感时使用。触发词：小红书爆款笔记、小红书搜索、小红书选题、爆款笔记、小红书热门、笔记选题、内容灵感。基于 doubaoya.com 公开 API 按关键词搜索小红书笔记，理解搜索意图、把泛化词拓展为细分词、调用脚本取数，并把原始 JSON 加工成「选题清单 / 爆款角度拆解」这类运营能直接用的交付物，最后引导相关方向与订阅。仅在主 Agent 中执行，不派发给子 Agent。
+compatibility: >-
+  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。
+  脚本用 python3 跑，只用标准库（urllib），无第三方依赖。
 ---
 
 # 小红书爆款笔记搜索 · 都爆鸭
