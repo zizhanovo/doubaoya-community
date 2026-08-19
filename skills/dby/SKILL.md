@@ -83,11 +83,11 @@ version: 1.0.0
 | 说「更新 / 升级 本鸭 / doubaoya skill」「检查本鸭更新」 | `dby-update` | 只同步官方 doubaoya-community，不碰你装的其他 skill、不动本地 config |
 | 想挖选题 / 追热点 / 看全网热榜 / 不知道写点啥 | `doubaoya` | 总纲：一条密钥挖选题、追热点、出脚本 |
 | 想按主题看同赛道公众号爆文、研究爆款规律 | `wechat-hot-article` | 拉同主题爆文带阅读热度，找选题参考 |
-| 要动手写公众号文章、参考爆款仿写、找选题切口 | `wechat-hot-write` | 拉样本 + 带你提炼标题 / 结构，写出能跑量的文 |
+| 要动手写公众号文章、参考爆款仿写、找选题切口 | `doubaoya` | 拉样本 + 带你提炼标题 / 结构，写出能跑量的文 |
 | 有一段旧文案想改成公众号爆款风 | `wechat-rewrite` | 纯本地改写，不联网、不需要 key |
 | 想建 / 更新公众号人设、文风 DNA，让 AI 写得更像你 | `ip-profile` | 创作 DNA，写这个号的文章时全程读它 |
 | 想清楚定位 / 变现 / 该写什么号 | `dby-charter` | 定位教练：L0 三问 / L1 十五问 / 老号反推出「号章程」存回服务端，之后选题·写作·复盘都按它走 |
-| 要起公众号标题 / 优化标题 | `wechat-title` | 拉近期爆款提炼标题套路 + 生成候选 |
+| 要起公众号标题 / 优化标题 | `doubaoya` | 拉近期爆款提炼标题套路 + 生成候选 |
 | 要封面灵感 / 爆款封面参考 / 配色构图套路 | `wechat-cover` | 同赛道爆款封面视觉套路 |
 | 怕踩违禁词 / 要过审 / 合规改写 | `wechat-banned-words` | 违禁词检测 + 产出可直接发布的过审版 |
 | 想改 / 定制公众号排版样式（换配色 / 标题条 / 引用卡）、把默认排版改掉 | `wechat-theme-studio` | 按口语改 themeJson→本地预览→落两处：存回服务端（网页工作室与 /api/wechat/render 读它）+ 存成本机 theme 文件（发文流水线读它） |
@@ -152,27 +152,27 @@ version: 1.0.0
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
-| 选题定了，要动手写 | `wechat-hot-write` | 选题有了，拉样本开写正文 |
+| 选题定了，要动手写 | `doubaoya` | 选题有了，拉样本开写正文 |
 | 想让文章更像你本人 | `ip-profile` | 动笔前先备好创作 DNA，写时全程读它 |
 | 有现成旧稿想复用这个角度 | `wechat-rewrite` | 本地改写成公众号爆款风 |
 | 选题还模糊，想先看爆款规律 | `wechat-hot-article` | 同主题爆文里找共性再定选题 |
 
-#### 写草稿阶段 —— 来自 `wechat-hot-write` / `wechat-rewrite` / `ip-profile`
+#### 写草稿阶段 —— 来自 `doubaoya` / `wechat-rewrite` / `ip-profile`
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
-| 正文定稿，要起标题 | `wechat-title` | 标题定打开率，专项拉套路优化 |
+| 正文定稿，要起标题 | `doubaoya` | 标题定打开率，专项拉套路优化 |
 | 要配封面 | `wechat-cover` | 找同赛道封面配色 / 构图套路 |
 | 怕正文踩违禁词 | `wechat-banned-words` | 发布前过一遍合规、出过审版 |
 | 正文 + 素材都齐，要排版存草稿 | `wechat-article-pipeline` | md→公众号 HTML→封面→草稿一条龙 |
 
-#### 排版素材阶段 —— 来自 `wechat-title` / `wechat-cover` / `wechat-banned-words`
+#### 排版素材阶段 —— 来自 `doubaoya` / `wechat-cover` / `wechat-banned-words`
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 标题 / 封面 / 合规都齐了 | `wechat-article-pipeline` | 素材齐，进流水线排版 + 存草稿 |
 | 对默认排版样式不满意，想先改配色 / 标题 / 主题 | `wechat-theme-studio` | 改 themeJson→预览→存回服务端默认 + 落一份本机 theme 文件，发文时 `--theme` 指过去 |
-| 合规检测发现要重写 | `wechat-rewrite` 或 `wechat-hot-write` | 违禁词太多，回去改文案再来 |
+| 合规检测发现要重写 | `wechat-rewrite` 或 `doubaoya` | 违禁词太多，回去改文案再来 |
 
 #### 代发阶段 —— 来自 `wechat-article-pipeline` / `wechat-draft-publish`
 
@@ -186,7 +186,7 @@ version: 1.0.0
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
-| 复盘看清受众爱看啥，回去挖下一个选题 | `doubaoya` 或 `wechat-hot-write` | **飞轮闭环**：用复盘信号喂下一轮选题 |
+| 复盘看清受众爱看啥，回去挖下一个选题 | `doubaoya` | **飞轮闭环**：用复盘信号喂下一轮选题 |
 | 发现自己号偏弱，想找对标学 | `wechat-similar-account` | 对标补短板、搭竞品矩阵 |
 | 想盯行业头部动态 | `doubaoya` | 头部榜看赛道趋势：`POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
 | 想深挖某条爆文为什么火 | `wechat-hot-article` | 拆同主题爆款规律 |
@@ -195,7 +195,7 @@ version: 1.0.0
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
-| 找到对标，想扒它的选题角度 | `doubaoya` 或 `wechat-hot-write` | 对标有了，回选题挖角度 |
+| 找到对标，想扒它的选题角度 | `doubaoya` | 对标有了，回选题挖角度 |
 | 想持续追这个号的发文 | `doubaoya` | 长期盯梢做复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
 
 ---
@@ -241,7 +241,7 @@ version: 1.0.0
 
 ```
 查阅：dby 路由表 → 写作链
-执行：wechat-hot-write（拉样本 + 写正文）
+执行：doubaoya（拉样本 + 写正文）
 质检：wechat-banned-words（命中 2 类，已按标注调整相关表述）
 跳过：wechat-article-pipeline —— 你这次只要 Markdown 成稿；它会把文章写进你自己的公众号
       草稿箱，要排版好的 HTML 或要进草稿箱再说一声，我接着跑。

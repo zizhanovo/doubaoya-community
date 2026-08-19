@@ -55,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 43 个）
+## 技能清单（共 39 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -78,15 +78,12 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **gongzhonghao-search** | 按关键词搜公众号文章，做行业 / 竞品 / 选题 |
 | **gzh-search** | 关键词批量爬公众号文章，铺表 + 选题洞察 |
 | **gzh-ai-feed** | AI 方向公众号爆款日报内容源，聚类成每日选题 |
 | **wechat-hot-article** | 按关键词 + 时间区间拉同主题公众号爆文 |
-| **wechat-hot-write** | 拉同主题爆文当样本，辅助写出能跑量的公众号文章 |
 | **wechat-fastest-growing** | 公众号阅读增长榜，挖近期黑马账号 |
 | **wechat-account-analyzer** | 公众号账号诊断 / 体检，支持多号竞品对照 |
 | **wechat-similar-account** | 公众号对标账号推荐，搭竞品矩阵 |
-| **wechat-title** | 公众号爆款标题创作 + 套路化评判 |
 | **wechat-cover** | 同赛道爆款封面参考，提炼可复用视觉套路 |
 | **wechat-banned-words** | 公众号违禁词检测 + 合规改写 |
 | **wechat-rewrite** 🖥 | 把文案改写成公众号爆款风格 |
@@ -109,7 +106,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **xiaohongshu-search** | 搜小红书爆款笔记，挖赛道选题 |
-| **xiaohongshu-hot-notes** | 按赛道发现高互动爆款笔记（搜索 + 互动排序） |
 | **xiaohongshu-crawler** | 按关键词爬热门作品，支持日期 / 排序筛选 |
 | **xiaohongshu-write** | 检索热门笔记 → 复盘爆款结构 → 产出新笔记 |
 | **xiaohongshu-dailytop** | 小红书日榜，看当天哪条笔记在霸榜 |

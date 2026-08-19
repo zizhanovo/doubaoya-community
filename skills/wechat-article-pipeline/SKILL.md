@@ -20,7 +20,7 @@ compatibility: >-
 **只存草稿，绝不群发**。存完给你 `mediaId`，你再去公众号后台亲眼确认、手动群发。
 
 > 📍 **接的是哪一棒**：用户说「帮我写一篇公众号文章」时，正文先由你（agent）写
-> （选题/写作走 `wechat-hot-write`，标题走 `wechat-title`，封面套路走 `wechat-cover`，
+> （选题/写作与起标题走 `doubaoya`，封面套路走 `wechat-cover`，
 > 合规走 `wechat-banned-words`）。**正文落地之后**再看用户要的终态：
 > 只要成稿就到那里为止；要**排版好的公众号 HTML** 或要**文章进自己的草稿箱**，才回到这里。
 > 用户没表达过后一种意图时先问一句——这一步会写进他自己的公众号后台。
@@ -496,7 +496,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 | 攒几天数据后看这个号的发文表现 / 做体检 | `wechat-account-analyzer` |
 | 盯自己或竞品的发文节奏 | `doubaoya`（打公众号发文列表端点） |
 | 把已发布的文章拉正文归档 | `content-parse` |
-| 用复盘信号挖下一轮选题 | `doubaoya`（挖选题 / 追热点）或 `wechat-hot-write`（拉样本开写） |
+| 用复盘信号挖下一轮选题 | `doubaoya`（挖选题 / 追热点，也从这儿拉样本开写） |
 | 说不清要到哪一步 | `dby`（公众号飞轮的逐跳导航） |
 
 ---

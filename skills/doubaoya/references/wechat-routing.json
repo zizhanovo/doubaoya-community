@@ -6,8 +6,7 @@
       "priority": 95,
       "terminal_skill": "wechat-article-pipeline",
       "candidate_skills": [
-        "wechat-hot-write",
-        "wechat-title",
+        "doubaoya",
         "wechat-cover",
         "wechat-banned-words",
         "wechat-theme-studio",
@@ -37,7 +36,6 @@
       "id": "doubaoya-cloud-public-data",
       "priority": 90,
       "candidate_skills": [
-        "gongzhonghao-search",
         "gzh-search",
         "wechat-hot-article",
         "wechat-account-analyzer",

@@ -72,7 +72,10 @@ class CommunityValidatorTests(unittest.TestCase):
             routing = self.routing_fixture(root)
             self.mutate_json(
                 routing,
-                lambda value: self.route(value, "doubaoya-authoring-delivery").update({"terminal_skill": "wechat-hot-write"}),
+                # 换成链上**存在但不是终点**的那一跳：写死一个具体壳名，壳一下架这条测试就跟着烂。
+                lambda value: self.route(value, "doubaoya-authoring-delivery").update(
+                    {"terminal_skill": validator.AUTHORING_CHAIN[0]}
+                ),
             )
             with self.assertRaisesRegex(validator.ValidationError, "authoring route must terminate at wechat-article-pipeline"):
                 validator.validate_routing(root)
@@ -230,7 +233,7 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "wechat-hot-write" / "SKILL.md"
+            skill = root / "skills" / validator.AUTHORING_CHAIN[0] / "SKILL.md"
             text = skill.read_text(encoding="utf-8")
             skill.write_text(text[: text.index(validator.NEXT_STEP_HEADING)], encoding="utf-8")
             with self.assertRaisesRegex(validator.ValidationError, "has no .* section"):
@@ -240,7 +243,7 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "wechat-title" / "SKILL.md"
+            skill = root / "skills" / validator.AUTHORING_CHAIN[1] / "SKILL.md"
             text = skill.read_text(encoding="utf-8")
             start = text.index(validator.NEXT_STEP_HEADING)
             end = text.index("\n## ", start)
@@ -262,6 +265,32 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "dby/SKILL.md routes to Skills"):
                 validator.validate_authoring_chain(root)
 
+    def test_authoring_chain_rejects_pointer_to_a_retired_package(self):
+        """doubaoya 点名一个**已下架的技能包** = 把 agent 导向装不上的包，且全程无报错。
+
+        2026-08-19 合并四个孪生壳时，它正文里两处 `wechat-hot-write` / `wechat-title` 就是这么
+        活下来的——链上 Skill 的「下一步」有闸、dby 全篇有闸，偏偏分发量最大的这一份没有。
+        判据比 dby 那条收窄一档：只报**曾经真的是技能包目录**的名字，所以 doubaoya 正当点名的
+        能力 slug（seedream-lite）、端点名片段（ai-feed）不会误报——下面第二个断言钉住这一点。
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "doubaoya" / "SKILL.md"
+            original = skill.read_text(encoding="utf-8")
+            known = json.loads((validator.ROOT / "known-hashes.json").read_text(encoding="utf-8"))
+            retired = sorted(set(known["skills"])
+                             - {path.name for path in validator.discover_skill_dirs(root)})
+            self.assertTrue(retired, "历史闭集里没有已下架包，这条测试就没有素材")
+            skill.write_text(original + f"\n\n写正文走 `{retired[0]}`。\n", encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, "还在点名已下架的技能包"):
+                validator.validate_authoring_chain(root)
+
+            # 反向：能力 slug / 端点名片段长得像 Skill，但从来不是包，不许误报。
+            skill.write_text(original + "\n\n日报源在 `GET /api/apis` 里搜 `ai-feed`；`seedream-lite` 已下架。\n",
+                             encoding="utf-8")
+            validator.validate_authoring_chain(root)
+
     def test_authoring_chain_rejects_dead_skill_link(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -279,6 +308,8 @@ class CommunityValidatorTests(unittest.TestCase):
     def repository_fixture(self, root: Path) -> None:
         shutil.copytree(validator.SKILLS, root / "skills")
         shutil.copy2(validator.ROOT / "README.md", root / "README.md")
+        # 「doubaoya 不许点名已下架技能包」那道闸拿 known-hashes.json 的历史闭集当取材范围。
+        shutil.copy2(validator.ROOT / "known-hashes.json", root / "known-hashes.json")
 
     def test_banned_word_gate_rejects_ghost_fields(self):
         # 三个字段上游从来没回过。文档教 agent 读 `matchedWords` 的那阵子，「为空 ⇒ 合规 ✅」
