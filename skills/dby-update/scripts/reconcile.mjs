@@ -24,16 +24,20 @@
 //    谁的版本都不命中 → **用户动过手**，跳过并列进报告，一个字都不动
 //
 // 🔴 删除一律做成「移进归档目录」，不做 rm。用户机器我们看不见，多一个目录的成本，
-//    换「删错了还能捞回来」。
+//    换「删错了还能捞回来」。归档后直接打印可复制粘贴的复原命令；归档根自带 .gitignore
+//    对 git 隐形，不污染用户仓库。
+//
+// 🔴 受 git 跟踪的包一个都不归档。「把 skill 版本化进自己仓库」是真实存在的用法，
+//    对这种包做归档 = 从人家 git 工作区里删受跟踪文件。判不出来时按「受跟踪」保守处理。
 //
 // 为什么不能直接用 `npx skills update`：它只更新「已经装了的」，
 // 永远删不掉上游已经砍掉的那些——那些会永久停在被砍前的旧契约上。
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import * as readline from "node:readline/promises";
 
 const REPO = "zizhanovo/doubaoya-community";
@@ -121,6 +125,68 @@ export function planReconcile(installed, upstreamNames) {
     refresh: keep.sort(),
     untouched: untouched.sort((a, b) => a.name.localeCompare(b.name)),
     blocked: [...blocked].sort(),
+    gitTracked: [],
+  };
+}
+
+// ------------------------------------------------- 🔴 受 git 跟踪的包，绝不归档
+
+/**
+ * 从 dir 往上找 .git（linked worktree 里 .git 是文件，不是目录），找不到返回 null。
+ */
+function gitWorktreeRoot(dir) {
+  let cur = resolve(dir);
+  for (;;) {
+    if (existsSync(join(cur, ".git"))) return cur;
+    const up = dirname(cur);
+    if (up === cur) return null;
+    cur = up;
+  }
+}
+
+/**
+ * 🔴 这些目录里有被 git 跟踪的文件吗？归档 = 把目录从原处搬走，对受跟踪的文件来说
+ * 等于「从用户的 git 工作区里删掉文件」。而「把 skill 版本化进仓库」是社区里真实
+ * 存在的用法（`.gitignore` 里 `.claude/*` 之后 `!.claude/skills/` 反选回来），不是孤例。
+ *
+ * 🔴 判不出来一律当成「受跟踪」：git 跑挂了、退出码非 0、命令不存在——宁可少归档一个
+ *    （用户下次还能再跑），也不可能拿别人 git 工作区里的文件赌一把。
+ *    唯一的快路径是「压根不在任何 git 工作树里」，那才是确定安全。
+ */
+export function pathsWithTrackedFiles(paths) {
+  const hit = [];
+  for (const p of paths) {
+    if (!existsSync(p)) continue;
+    if (!gitWorktreeRoot(p)) continue; // 不在 git 工作树里 ⇒ 确定没有受跟踪文件
+    const res = spawnSync("git", ["-C", p, "ls-files", "--", "."], { encoding: "utf-8" });
+    if (res.error || res.status !== 0 || (res.stdout || "").trim()) hit.push(p);
+  }
+  return hit;
+}
+
+/** 归档候选里，哪些包在用户的 git 仓库里是受跟踪的。 */
+function findGitTracked(names, survey) {
+  const out = [];
+  for (const name of names) {
+    const entry = survey.find((s) => s.name === name);
+    const paths = (entry?.dirs || []).map((d) => join(d.path, name));
+    if (pathsWithTrackedFiles(paths).length) out.push(name);
+  }
+  return out.sort();
+}
+
+/** 这个 scope 里到底有几个本鸭包（别人家的不算）。判 scope 有没有落空用它。 */
+export function ourPackageCount(survey) {
+  return survey.filter((s) => s.state !== "foreign").length;
+}
+
+/** 把受 git 跟踪的从归档单里摘出来，单列一栏大声说明。纯函数，好自检。 */
+export function splitGitTracked(plan, trackedNames) {
+  const tracked = new Set(trackedNames);
+  return {
+    ...plan,
+    archive: plan.archive.filter((n) => !tracked.has(n)),
+    gitTracked: plan.archive.filter((n) => tracked.has(n)).sort(),
   };
 }
 
@@ -280,9 +346,42 @@ function timestamp() {
   return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
 }
 
+function doubaoyaHome(scope) {
+  return join(scope.kind === "global" ? homedir() : scope.dir, ".doubaoya");
+}
+
 function archiveRoot(scope) {
-  const base = scope.kind === "global" ? homedir() : scope.dir;
-  return join(base, ".doubaoya", "archive", timestamp());
+  return join(doubaoyaHome(scope), "archive", timestamp());
+}
+
+/**
+ * 🔴 归档根落在用户**自己的项目仓**里，而 `.doubaoya` 默认没人忽略它（实测
+ * `git check-ignore .doubaoya` exit=1）。后果：谁在自己项目里跑完一次对账，`git status`
+ * 就多出几十个 skill 目录树的未跟踪文件，下一次 `git add -A` 直接把归档物提进他的仓库。
+ *
+ * 解法用 git 原生的嵌套 .gitignore：`.doubaoya/.gitignore` 写 `*`，连它自己一起忽略，
+ * 整个目录对 git 隐形。**不去改用户的 .gitignore**——那是别人的文件，越界。
+ * 用户自己写过这个文件就一个字都不动。
+ */
+export function ensureSelfIgnored(home) {
+  const file = join(home, ".gitignore");
+  if (existsSync(file)) return file;
+  mkdirSync(home, { recursive: true });
+  writeFileSync(file, "*\n");
+  return file;
+}
+
+/**
+ * 「怎么把归档捞回来」——可直接复制粘贴的一条命令，读 manifest 逐条移回原处。
+ * ponytail: 用单引号包路径，天花板是归档路径里含单引号时得自己改写；路径 = 用户目录 +
+ * 时间戳，实际不会有。升级路径是改成 `node <脚本> --restore <目录>` 子命令。
+ */
+function restoreCommand(root) {
+  return (
+    `node -e "const p=require('path'),f=require('fs');` +
+    `for(const it of require('${join(root, "manifest.json")}').packages){` +
+    `f.mkdirSync(p.dirname(it.from),{recursive:true});f.renameSync(it.to,it.from)}"`
+  );
 }
 
 /**
@@ -292,6 +391,7 @@ function archiveRoot(scope) {
 function archivePackages(scope, names, survey) {
   if (!names.length) return null;
   const root = archiveRoot(scope);
+  ensureSelfIgnored(doubaoyaHome(scope));
   const moved = [];
   for (const name of names) {
     const entry = survey.find((s) => s.name === name);
@@ -318,7 +418,11 @@ function archivePackages(scope, names, survey) {
   const manifest = {
     archivedAt: new Date().toISOString(),
     reason: "上游已下架，由 dby-update 对账归档；内容哈希命中我们发布过的历史版本",
-    restore: "把下面每条的 to 移回 from 即可复原：mv <to> <from>",
+    restore: "把下面每条的 to 移回 from 即可复原（mv <to> <from>），或整份复原跑 restoreCommand 那条",
+    restoreCommand: restoreCommand(root),
+    restoreNote:
+      "移回原处后 skill 立刻能用（宿主是按目录读的）；但 skills CLI 的安装记录已经清掉了，" +
+      `想让 npx skills list 也认回来，就再跑一次：npx -y skills add ${REPO} -s <包名>`,
     packages: moved,
   };
   writeFileSync(join(root, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
@@ -362,10 +466,12 @@ async function selfTest(scope, wantNames) {
         }
   );
 
+  // 🔴 只报「设没设」，**一个字符的密钥内容都不许进日志**——这份输出会被用户原样贴进
+  //    issue、群里、给 agent 转述。前缀看着人畜无害，但它是密钥的一部分，没有例外。
   const key = process.env.DOUBAOYA_API_KEY;
   checks.push(
     key
-      ? { name: "API 钥匙", ok: true, detail: `DOUBAOYA_API_KEY 已设置（${key.slice(0, 8)}…）。` }
+      ? { name: "API 钥匙", ok: true, detail: "DOUBAOYA_API_KEY 已设置。" }
       : {
           name: "API 钥匙",
           ok: false,
@@ -428,16 +534,34 @@ function resolveScopes(opts, knownHashes) {
   return picked.length ? picked : [global];
 }
 
-function printPlan(scope, survey, plan, opts) {
+function printPlan(scope, survey, plan, opts, upstreamCount) {
   const counts = survey.reduce((m, s) => ({ ...m, [s.state]: (m[s.state] || 0) + 1 }), {});
   console.log(`\n── ${scope.label}`);
   console.log(
     `   已装 ${survey.length} 个：当前版 ${counts.current || 0}、我们的旧版 ${counts.historical || 0}、` +
       `你改过的 ${counts.modified || 0}、别人的 ${counts.foreign || 0}`
   );
+  // 🔴 scope 落空的静默陷阱：`--scope auto` 强依赖 cwd，cwd 选错 ⇒ 目标 scope 一个本鸭包
+  //    都没有 ⇒ 计划静默变成「整仓新增 N、归档 0」，等于凭空多出一整套副本，而真正该清的
+  //    死包一个没清。计划本身长得完全正常，不吼一嗓子没人看得出来。
+  if (ourPackageCount(survey) === 0 && plan.add.length >= upstreamCount && upstreamCount > 0) {
+    console.log(
+      `   ⚠️ 这个 scope 现在一个本鸭 skill 都没有，所以计划变成了「整仓装 ${plan.add.length} 个」。\n` +
+        `      如果你本来是想更新装在**别处**的那套，先确认 --scope / --project-dir 再跑\n` +
+        `      （--scope auto 是按当前目录猜的，cwd 选错就会静默变成这样）。`
+    );
+  }
   if (plan.archive.length) {
     console.log(`   📦 要归档 ${plan.archive.length} 个（上游已下架；移进归档目录，不删）：`);
     for (const n of plan.archive) console.log(`        - ${n}`);
+  }
+  if (plan.gitTracked?.length) {
+    console.log(
+      `   🔒 有 ${plan.gitTracked.length} 个上游已下架、但它们在你的 git 仓库里是**受跟踪的文件**，我不动：`
+    );
+    for (const n of plan.gitTracked) console.log(`        ! ${n}`);
+    console.log(`        （归档=把目录从原处搬走，对受跟踪文件等于从你工作区删文件。要清就你自己来：`);
+    console.log(`         先 git 提交存个档，再 git rm -r <路径>，然后重跑本对账。）`);
   }
   if (plan.add.length) {
     console.log(`   ✨ 要新增 ${plan.add.length} 个：`);
@@ -472,14 +596,17 @@ async function main() {
   const report = [];
   for (const scope of scopes) {
     const survey = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
-    const plan = planReconcile(survey, upstream.names);
+    const draft = planReconcile(survey, upstream.names);
+    // 🔴 归档之前先问 git：受跟踪的包一律摘出来不动（详见 splitGitTracked）。
+    //    只对归档候选跑 git，不是对全部已装包——一次对账最多几十次探测，可忽略。
+    const plan = splitGitTracked(draft, findGitTracked(draft.archive, survey));
     report.push({ scope, survey, plan });
   }
 
   const totalChanges = report.reduce((n, r) => n + r.plan.archive.length + r.plan.add.length, 0);
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
-    for (const { scope, survey, plan } of report) printPlan(scope, survey, plan, opts);
+    for (const { scope, survey, plan } of report) printPlan(scope, survey, plan, opts, upstream.names.length);
     if (totalChanges === 0) console.log(`\n结论：没有要归档的，也没有要新增的——已经和上游一致了。`);
   }
 
@@ -531,7 +658,12 @@ async function main() {
   const results = [];
   for (const { scope, survey, plan } of report) {
     const after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
-    const stillStale = after.filter((s) => s.state === "historical" && !upstream.names.includes(s.name)).map((s) => s.name);
+    // 受 git 跟踪的是**故意**留在原地的，不算「没归档掉」——否则它每次都把退出码顶成 3，
+    // 谁把 skill 版本化进仓库谁就永远看到一次假红。
+    const kept = new Set(plan.gitTracked);
+    const stillStale = after
+      .filter((s) => s.state === "historical" && !upstream.names.includes(s.name) && !kept.has(s.name))
+      .map((s) => s.name);
     const keptModified = plan.untouched
       .filter((u) => u.state === "modified")
       .filter((u) => after.find((a) => a.name === u.name)?.state === "modified").length;
@@ -553,6 +685,11 @@ async function main() {
     const counts = r.after.reduce((m, s) => ({ ...m, [s.state]: (m[s.state] || 0) + 1 }), {});
     console.log(`\n── ${r.scope.label} 对账完成`);
     console.log(`   归档 ${r.plan.archive.length}，新增 ${r.plan.add.length}，刷新 ${r.plan.refresh.length}`);
+    if (r.plan.gitTracked.length) {
+      console.log(
+        `   🔒 另有 ${r.plan.gitTracked.length} 个上游已下架、但在你 git 仓库里受跟踪，没动：${r.plan.gitTracked.join(", ")}`
+      );
+    }
     console.log(`   现在：当前版 ${counts.current || 0}、你改过的 ${counts.modified || 0}（原样保留 ${r.keptModified}）、别人的 ${counts.foreign || 0}（原样保留 ${r.keptForeign}）`);
     if (r.stillStale.length) {
       allOk = false;
@@ -567,8 +704,16 @@ async function main() {
       }
     }
   }
+  // 🔴 归档必须**同时**告诉用户「怎么捞回来」，而且是能直接粘贴的命令。只写「见 manifest」
+  //    等于把复原门槛推给用户自己在终端里翻 JSON——那道门槛高到等于没有复原路径。
   for (const a of archived) {
-    if (a?.count) console.log(`\n归档的 ${a.count} 份原样躺在 ${a.root}，确认没问题后可以自行删掉。`);
+    if (!a?.count) continue;
+    console.log(`\n归档的 ${a.count} 份原样躺在 ${a.root}`);
+    console.log(`   确认没问题 → 整个目录删掉即可。`);
+    console.log(`   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：\n`);
+    console.log(`   ${restoreCommand(a.root)}\n`);
+    console.log(`   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，`);
+    console.log(`   想让 \`npx skills list\` 也认回来，再跑一次：npx -y skills add ${REPO} -s <包名>`);
   }
   console.log(
     allOk
@@ -584,6 +729,74 @@ function stripScope(r) {
 }
 
 // ---------------------------------------------------------------- 离线自检
+
+/**
+ * 🔴 红线的**实证**：造一个真的 git 仓，把一个「命中历史版、上游已下架」的包 git add 进去，
+ * 走完整条真实链路（findGitTracked → splitGitTracked → archivePackages），断言：
+ *   1. 受跟踪那个包**没有被搬走**，文件原地还在；
+ *   2. 没受跟踪的那个正常归档了；
+ *   3. 归档根旁边生成了自忽略的 .doubaoya/.gitignore（`*`）。
+ * 不 mock git、不 mock 文件系统——这条要防的就是「判定看着对、真跑起来还是把文件搬走了」。
+ */
+function gitTrackedFixtureCheck() {
+  const fails = [];
+  const probe = spawnSync("git", ["--version"], { encoding: "utf-8" });
+  if (probe.error || probe.status !== 0) return ["git 跑不起来，受跟踪红线的实证自检没法做（这条不能跳过）"];
+
+  const root = mkdtempSync(join(tmpdir(), "dby-reconcile-selfcheck-"));
+  try {
+    const skillsDir = join(root, ".claude", "skills");
+    for (const name of ["tracked-pkg", "loose-pkg"]) {
+      mkdirSync(join(skillsDir, name), { recursive: true });
+      writeFileSync(join(skillsDir, name, "SKILL.md"), `---\nname: ${name}\n---\n`);
+    }
+    const git = (...args) => spawnSync("git", ["-C", root, ...args], { encoding: "utf-8" });
+    git("init", "-q");
+    git("config", "user.email", "selfcheck@example.com");
+    git("config", "user.name", "selfcheck");
+    // 用户把 skill 版本化进自己仓库——真实存在的用法（`.claude/*` 后面 `!.claude/skills/`）
+    git("add", "-f", ".claude/skills/tracked-pkg");
+    git("commit", "-qm", "track a skill");
+
+    const scope = { kind: "project", dir: root, label: "selfcheck fixture" };
+    const dirs = [{ label: ".claude/skills", path: skillsDir }];
+    const survey = [
+      { name: "loose-pkg", hash: "bbb", state: "historical", dirs },
+      { name: "tracked-pkg", hash: "bbb", state: "historical", dirs },
+    ];
+    const draft = planReconcile(survey, ["dby"]); // 两个包上游都已下架 ⇒ 都是归档候选
+    if (JSON.stringify(draft.archive) !== JSON.stringify(["loose-pkg", "tracked-pkg"])) {
+      fails.push(`fixture 前提不成立：归档候选应是两个，实际 ${JSON.stringify(draft.archive)}`);
+    }
+    const plan = splitGitTracked(draft, findGitTracked(draft.archive, survey));
+    if (JSON.stringify(plan.gitTracked) !== JSON.stringify(["tracked-pkg"])) {
+      fails.push(`受跟踪的包没被识别出来：gitTracked=${JSON.stringify(plan.gitTracked)}`);
+    }
+    const archived = archivePackages(scope, plan.archive, survey);
+
+    // 1. 受跟踪的必须原地还在（这是整条链最薄的一层冰）
+    if (!existsSync(join(skillsDir, "tracked-pkg", "SKILL.md"))) {
+      fails.push("🔴 受 git 跟踪的包被归档搬走了——这条是防数据丢失红线");
+    }
+    // 2. 没受跟踪的正常归档
+    if (existsSync(join(skillsDir, "loose-pkg"))) fails.push("没受跟踪的包没被归档走");
+    // 3. 归档目录对 git 隐形
+    const ignore = join(root, ".doubaoya", ".gitignore");
+    if (!existsSync(ignore)) fails.push("归档根旁边没写 .doubaoya/.gitignore，归档物会污染用户的 git");
+    else if (readFileSync(ignore, "utf-8").trim() !== "*") fails.push(".doubaoya/.gitignore 内容不是 `*`");
+    const status = spawnSync("git", ["-C", root, "status", "--porcelain"], { encoding: "utf-8" });
+    if ((status.stdout || "").includes(".doubaoya")) fails.push(`归档物出现在 git status 里：${status.stdout.trim()}`);
+
+    // 4. 🔴 打给用户的那条复原命令必须**真的能复原**。一条跑不通的复原命令比没有更糟：
+    //    用户以为有退路，真要捞的时候才发现没有。所以这里真跑一遍它。
+    const restore = spawnSync("sh", ["-c", restoreCommand(archived.root)], { encoding: "utf-8" });
+    if (restore.status !== 0) fails.push(`复原命令跑不通（退出码 ${restore.status}）：${(restore.stderr || "").trim().split("\n")[0]}`);
+    if (!existsSync(join(skillsDir, "loose-pkg", "SKILL.md"))) fails.push("🔴 复原命令没把归档的包移回原处");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
 
 function runSelfCheck() {
   const fails = [];
@@ -627,14 +840,25 @@ function runSelfCheck() {
   eq("幂等", [idem.archive, idem.add], [[], []]);
   // 全新安装：全是新增，没有归档
   eq("全新安装", planReconcile([], ["a", "b"]), {
-    archive: [], add: ["a", "b"], refresh: [], untouched: [], blocked: [],
+    archive: [], add: ["a", "b"], refresh: [], untouched: [], blocked: [], gitTracked: [],
   });
+
+  // 🔴 受 git 跟踪的从归档单里摘出来，单列一栏
+  const split = splitGitTracked(planReconcile(installed, ["dby"]), ["retired"]);
+  eq("受跟踪的不进归档单", split.archive, []);
+  eq("受跟踪的单列一栏", split.gitTracked, ["retired"]);
+
+  // scope 落空的判据：别人家的包不算数
+  eq("本鸭包计数不含别人的", ourPackageCount([{ state: "foreign" }, { state: "foreign" }]), 0);
+  eq("本鸭包计数", ourPackageCount([{ state: "foreign" }, { state: "current" }, { state: "modified" }]), 2);
+
+  fails.push(...gitTrackedFixtureCheck());
 
   if (fails.length) {
     for (const f of fails) console.error(`selfcheck FAILED: ${f}`);
     return 1;
   }
-  console.log("selfcheck ok: classify / planReconcile");
+  console.log("selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、归档根自忽略）");
   return 0;
 }
 
