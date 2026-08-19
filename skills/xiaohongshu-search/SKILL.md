@@ -176,7 +176,7 @@ python3 scripts/search_xhs.py "<关键词>" [--page N]
 3.《一个鸡蛋的10种减脂吃法》——单品深挖，好出系列
 4.《吃了不胖的控糖早餐清单》——蹭③的高评论需求
 
-要不要本鸭顺手把其中一条的文案也写了？（可接 xiaohongshu-rewrite / xiaohongshu-title）
+要不要本鸭顺手把其中一条的文案也写了？（可接 xiaohongshu-rewrite）
 ```
 
 **条数策略**：
@@ -205,7 +205,7 @@ python3 scripts/search_xhs.py "<关键词>" [--page N]
 
 拿到选题后，用户往往还想再走一步。**自然地**提一句可接的兄弟技能，别硬塞：
 
-- 选定一条选题 → 接 `xiaohongshu-rewrite`（出文案）/ `xiaohongshu-title`（打磨标题）。
+- 选定一条选题 → 接 `xiaohongshu-rewrite`（出文案）；要标题/封面数据走 `doubaoya` 打 `POST /api/apis/xiaohongshu/xiaohongshu-coze/call`。
 - 想看更全的赛道热度面 → 接 `trending-hub`（全网热榜）。
 - 文案写完发布前 → 接 `multi-banned-words` / `wechat-banned-words` 类（违禁词自检）。
 
