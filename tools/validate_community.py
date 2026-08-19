@@ -111,6 +111,9 @@ FENCED_BLOCK = re.compile(r"^```[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
 JSON_KEY = re.compile(r'"(\$?[A-Za-z_][A-Za-z0-9_-]*)"\s*:')
 # 索引表的一行：正好三列（operationKey / 用途 / 详情端点）。多出一列，装的多半就是入参。
 INDEX_ROW = re.compile(r"\| `([^`|]+)` \| ([^|]*) \| ([^|]*) \|")
+# 一行是不是索引行，看首列是不是一条 operationKey——不能只看「以 `| `` ` 开头」，文档里还有
+# 别的表格首列也是行内代码。
+INDEX_ROW_HEAD = re.compile(r"^\| `([^`|]+)` \|")
 
 # 还没上线的后端路由：契约先行，skill 端已按契约实现并自带 404 降级。
 # 见 skills/celebrity-slice/references/asr-api.md。这是一张**会自动清账的**豁免表——
@@ -569,49 +572,77 @@ def validate_gateway_contract_freedom(root: Path = ROOT) -> None:
     没有闸。升级路径 = 从主仓 catalog 现导一份真实字段名全集，只对**那 58 个词**扫全文；
     但那要求本闸依赖主仓在场（validate_call_routes 那样可跳过），先不加。
     """
-    skill_md = root / "skills" / GATEWAY_SKILL / "SKILL.md"
+    skill_dir = root / "skills" / GATEWAY_SKILL
+    skill_md = skill_dir / "SKILL.md"
     require(skill_md.is_file(), f"网关 Skill 不见了：skills/{GATEWAY_SKILL}/SKILL.md")
-    text = skill_md.read_text(encoding="utf-8")
 
-    scannable = OPERATION_KEY.sub(" ", text)
-    stray = sorted(set(CAMEL_CASE.findall(scannable)) - GATEWAY_PROTOCOL_VOCAB)
-    require(
-        not stray,
-        f"{GATEWAY_SKILL}/SKILL.md 里出现了不属于调用协议的驼峰标识符：{stray}。"
-        "网关只许携带协议、选路索引和选路知识——逐能力的入参字段一律不许写进来，"
-        "调用方必须从详情端点现拉（这正是本 Skill 存在的理由）。",
-    )
+    # 🔴 扫描面是**整个技能包**，不只是 SKILL.md。参数被抄进来时最舒服的落点恰恰是
+    # references/ —— 官方的 claude-api 技能就是把参数细节烤进 references 的，那对一个
+    # 变得慢、还有版本号的 API 成立，对一周就变一次的目录不成立。只扫 SKILL.md 等于把闸
+    # 建在没人会走的那道门上。
+    documents = sorted(path for path in skill_dir.rglob("*.md") if path.is_file())
+    require(bool(documents), f"skills/{GATEWAY_SKILL}/ 下没有任何 Markdown 文档")
 
-    for block in FENCED_BLOCK.findall(text):
-        keys = sorted(set(JSON_KEY.findall(block)) - GATEWAY_PROTOCOL_VOCAB)
+    rows: list[tuple[Path, str]] = []
+    for path in documents:
+        label = f"{GATEWAY_SKILL}/{path.relative_to(skill_dir).as_posix()}"
+        text = path.read_text(encoding="utf-8")
+
+        stray = sorted(set(CAMEL_CASE.findall(OPERATION_KEY.sub(" ", text))) - GATEWAY_PROTOCOL_VOCAB)
         require(
-            not keys,
-            f"{GATEWAY_SKILL}/SKILL.md 的代码块里出现了非协议 JSON 键：{keys}。"
-            "请求体示例一旦带上真实入参字段，本 Skill 就退化成又一份会漂的快照契约。",
+            not stray,
+            f"{label} 里出现了不属于调用协议的驼峰标识符：{stray}。"
+            "网关只许携带协议、选路索引和选路知识——逐能力的入参字段一律不许写进来，"
+            "调用方必须从详情端点现拉（这正是本 Skill 存在的理由）。",
         )
 
-    rows = [line for line in text.splitlines() if line.startswith("| `")]
-    require(bool(rows), f"{GATEWAY_SKILL}/SKILL.md 里找不到能力索引表")
-    for line in rows:
+        for block in FENCED_BLOCK.findall(text):
+            keys = sorted(set(JSON_KEY.findall(block)) - GATEWAY_PROTOCOL_VOCAB)
+            require(
+                not keys,
+                f"{label} 的代码块里出现了非协议 JSON 键：{keys}。"
+                "请求体示例一旦带上真实入参字段，本 Skill 就退化成又一份会漂的快照契约。",
+            )
+
+        # 索引行的判据 = 首列是一条 operationKey。别用「以 `| \`` 开头」认行——文档里还有别的
+        # 表格首列也是行内代码（「绝不能抄进业务 Skill」那张就是），会被误判成索引。
+        rows.extend(
+            (path, line)
+            for line in text.splitlines()
+            if (leading := INDEX_ROW_HEAD.match(line)) and OPERATION_KEY.fullmatch(leading.group(1))
+        )
+
+    require(bool(rows), f"skills/{GATEWAY_SKILL}/ 下找不到能力索引表")
+    for path, line in rows:
+        label = f"{GATEWAY_SKILL}/{path.relative_to(skill_dir).as_posix()}"
         matched = INDEX_ROW.fullmatch(line)
         require(
             matched is not None,
-            f"{GATEWAY_SKILL}/SKILL.md 索引表这一行不是「operationKey | 用途 | 详情端点」三列：{line!r}。"
+            f"{label} 索引表这一行不是「operationKey | 用途 | 详情端点」三列：{line!r}。"
             "索引只回答「有哪些能力、详情端点在哪」——多出来的一列，装的多半就是入参。",
         )
         operation_key, purpose, endpoint = matched.groups()
         require(
-            OPERATION_KEY.fullmatch(operation_key) is not None,
-            f"{GATEWAY_SKILL}/SKILL.md 索引表首列不是一条 operationKey：{operation_key!r}",
-        )
-        require(
             "`" not in purpose,
-            f"{GATEWAY_SKILL}/SKILL.md 索引表「{operation_key}」的用途列里有行内代码：{purpose.strip()!r}。"
+            f"{label} 索引表「{operation_key}」的用途列里有行内代码：{purpose.strip()!r}。"
             "用途是一句中文说明；字段名、枚举值这类东西一律去详情端点现拉。",
         )
         require(
             endpoint.strip().startswith("`/api/") and endpoint.strip().endswith("`"),
-            f"{GATEWAY_SKILL}/SKILL.md 索引表「{operation_key}」的第三列不是详情端点：{endpoint.strip()!r}",
+            f"{label} 索引表「{operation_key}」的第三列不是详情端点：{endpoint.strip()!r}",
+        )
+
+    # references/ 里躺着一份 SKILL.md 从不点名的文档 = 没有 agent 会去加载它。按需加载的前提
+    # 是有人告诉你「什么时候去读哪一份」，孤儿文件只会腐烂在包里，还照样被分发出去。
+    entry = skill_md.read_text(encoding="utf-8")
+    for path in documents:
+        if path == skill_md:
+            continue
+        pointer = path.relative_to(skill_dir).as_posix()
+        require(
+            pointer in entry,
+            f"{GATEWAY_SKILL}/SKILL.md 从没点名 {pointer}：按需加载的前提是入口说清什么时候读哪份，"
+            "没有指针的 references 文件不会被任何 agent 加载。",
         )
 
 

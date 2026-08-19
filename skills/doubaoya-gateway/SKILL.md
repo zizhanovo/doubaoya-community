@@ -33,8 +33,8 @@ compatibility: >-
 |---|---|
 | 鉴权头、基址、两条路由的分工 | 某条能力的入参有哪些字段（→ 运行时现拉，见 §1） |
 | 统一信封、`noResult` / `notice` / `detailUrl`、错误码 | 业务流程该先做哪步（→ `dby`） |
-| 有哪些能力、走哪条路由（选路索引，§4） | 结果怎么加工成文案 / 封面 / 报告（→ 业务 Skill） |
-| 跨能力的选路坑（§5） | 计价与额度（→ doubaoya.com 控制台） |
+| 有哪些能力、走哪条路由（→ `references/capability-index.md`） | 结果怎么加工成文案 / 封面 / 报告（→ 业务 Skill） |
+| 跨能力的选路坑（→ `references/routing-pitfalls.md`） | 计价与额度（→ doubaoya.com 控制台） |
 
 ---
 
@@ -125,7 +125,7 @@ agent 很可能不会跳过去读（把路由知识放在别处、指望 agent �
 | 不许抄 | 为什么 |
 |---|---|
 | 任何能力的**入参字段清单**（名称、类型、必填、枚举值） | 这就是「把契约烤进分发物」，是本轮要根治的病本身 |
-| §4 那份**能力索引**（整表或成片摘录） | 业务 Skill 只该点名它自己用的那一两条，抄全表 = 又造一个会漂的副本 |
+| `references/capability-index.md` 那份**能力索引**（整表或成片摘录） | 业务 Skill 只该点名它自己用的那一两条，抄全表 = 又造一个会漂的副本 |
 | 上游返回的**字段名清单** | 输出结构同样会变；照实际响应读，别照文档读 |
 | 计价、点数、额度的**具体数字** | 会静默重定价，抄进去就是对用户报错价 |
 
@@ -222,242 +222,33 @@ Content-Type: application/json
 
 ---
 
-## 4. 能力索引（**只供选路，不含入参**）
+## 4. `references/` 里有什么（按需加载，别一次全读）
 
-**这张表回答且只回答两个问题**：有哪些能力、每条的详情端点在哪。
-入参一律不在这儿——要拼参数请回 §1 现拉。
+**接口多不是拆技能的理由，是拆 `references/` 的理由。** 网关只有一个，细节按主题分在下面两份里，
+用到哪份读哪份：
 
-表里给的是**详情端点**（`GET`，免鉴权免费），不是调用地址：拿到详情响应后，
-调用地址读它的 `execution` 的 `target`（§3.3）。这样专用路由那三条也不会被推错。
-
-> 2026-08-18 从发现接口实拉生成，共 94 条。**准数与在架状态以你实拉的发现接口为准**——
-> 下架的条目会从发现接口里消失，本表不会自己知道。表里没有你要的能力时，
-> 先拉一遍 `GET /api/skills` 和 `GET /api/apis` 再下结论。
->
-> 标记：⚠️专用 = `execution` 的 `mode` 是 `dedicated`，调用地址与详情端点无关，**必须读 `target`**；
-> ⛔ = 实拉时 `mode` 为 `unavailable`，当前不可调。
-
-<!-- 本表由发现接口生成，勿手改。重新生成：
-     curl -s https://doubaoya.com/api/apis 与 /api/skills，
-     按 operationKey / title / (platform,slug) 三列铺开即可。 -->
-
-### 产品化 Skill 集合 —— 详情端点 `GET /api/skills/<slug>`
-
-| operationKey | 用途 | 详情端点 |
+| 文件 | 什么时候读 | 里面是什么 |
 |---|---|---|
-| `skill.playlet.wechatFeed` | 短剧-公众号信息源 | `/api/skills/playlet-wechat-feed` |
-| `skill.search.doubaoWeb` | 豆包联网搜索 | `/api/skills/doubao-web-search` |
-| `skill.social.last30Days` | Last 30 Days—CN版 | `/api/skills/cn-last30days` |
-| `skill.ai.imageGen` | GPT-image2 | `/api/skills/gpt-image-gen` |
-| `skill.wechatChannels.aiFeed` | AI视频号信息源 | `/api/skills/wechat-channels-ai-feed` |
-| `skill.trend.radar` | 跨平台趋势雷达 | `/api/skills/trend-radar` |
-| `skill.xhs.viralNotes` | 小红书爆款笔记发现 | `/api/skills/xiaohongshu-viral-notes` |
-| `tool.contentSafety.checkWords` | 多平台违禁词检测 | `/api/skills/content-safety-check` |
-| `skill.wechat.draftPublish` | 公众号草稿箱写入 ⚠️专用 | `/api/skills/wechat-draft-publish` |
-| `skill.wechat.render` | 公众号排版渲染 ⚠️专用 | `/api/skills/wechat-render` |
-| `skill.ipProfile.charter` | 定位教练 · 号章程 ⚠️专用 | `/api/skills/dby-charter` |
-| `skill.wechat.similarAccount` | 公众号相似账号推荐 | `/api/skills/wechat-similar-account` |
-| `skill.wechat.accountAnalyzer` | 公众号账号诊断 | `/api/skills/wechat-account-analyzer` |
-| `skill.wechat.fastestGrowing` | 公众号黑马账号推荐 | `/api/skills/wechat-fastest-growing` |
-| `skill.wechat.hotSearch` | 公众号热门文章查询 | `/api/skills/wechat-search` |
-| `skill.wechat.prohibitedWord` | 公众号违禁词检测 | `/api/skills/wechat-prohibited-word` |
-| `skill.wechat.coverDesign` | 公众号封面图制作 | `/api/skills/wechat-cover` |
+| `references/capability-index.md` | 你还不知道该点名哪条能力，或不确定它走哪条路由 | 94 条能力的 operationKey + 一行用途 + 详情端点。**仅供选路** |
+| `references/routing-pitfalls.md` | 选定能力之后、真正打请求之前 | 哪些能力不该混用、什么时候该用哪条、已知的坑（含唯一一处 operationKey 撞名） |
 
-### 平台数据能力集合 —— 详情端点 `GET /api/apis/<platform>/<slug>`
+### 🔴 这两份里放什么、不放什么——一条判据
 
-**全网热榜 / 热点**
+> **本地文档回答「该用哪个、要注意什么」；详情端点回答「它长什么样、怎么填参数」。**
+> 前者随经验积累而更新，后者随目录变化而变化——**混在一起的那部分，一定是先烂的那部分。**
 
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.trend.hotTopics` | 全网热榜聚合查询 | `/api/apis/trend/hot-topics` |
-| `api.trend.hotKeywords` | 全网热搜关键词 | `/api/apis/trend/hot-keywords` |
-| `api.trend.hotSpotPlatform` | 抖音实时热榜 | `/api/apis/trend/douyin-hot-trend` |
-| `api.trend.hotSpotKeyword` | 全网热点(关键词)聚合 | `/api/apis/trend/trending-hub-keyword` |
+所以 `references/` 里**只放选路知识**（能力不该怎么混用、什么场景走哪条、踩过的坑），
+**绝不放参数表 / 字段清单 / 出入参样例**。别的技能库能把参数烤进 references，是因为它们的接口
+变得慢、还有版本号；**本平台的目录一周就变**（光 2026-08-17 那一天就净增 9 个能力），
+烤进去的当天就开始腐烂——本机装的 80 个包里已经有 32 个停在早被砍掉的旧契约上。
 
-**公众号**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.gzh.searchArticle` | 搜索公众号文章 | `/api/apis/gongzhonghao/search-article` |
-| `api.gzh.queryUser` | 查询公众号账号 | `/api/apis/gongzhonghao/query-user` |
-| `api.gzh.queryWork` | 查询公众号作品 | `/api/apis/gongzhonghao/query-work` |
-| `api.gzh.hotArticle` | 公众号爆文搜索 | `/api/apis/gongzhonghao/hot-article` |
-| `api.gzh.categoryTime` | 公众号10万+/原创榜 | `/api/apis/gongzhonghao/category-time-hot` |
-| `api.gzh.dailyPublish` | 公众号每日发文查询 | `/api/apis/gongzhonghao/gongzhonghao-daily-publish` |
-| `api.gzh.workList` | 公众号账号发文列表 | `/api/apis/gongzhonghao/gongzhonghao-work-list` |
-| `api.gzh.searchUser` | 公众号账号搜索 | `/api/apis/gongzhonghao/gongzhonghao-search-user` |
-| `api.gzh.userQuery` | 公众号账号诊断 | `/api/apis/gongzhonghao/gongzhonghao-account-analyzer` |
-| `api.gzh.similarAccounts` | 公众号相似账号推荐 | `/api/apis/gongzhonghao/gongzhonghao-similar-account` |
-| `api.gzh.indexRank` | 公众号热门账号榜 | `/api/apis/gongzhonghao/gongzhonghao-index-rank` |
-| `api.gzh.raiseRank` | 公众号阅读增长榜 | `/api/apis/gongzhonghao/gongzhonghao-raise-rank` |
-| `api.gzh.cozeData` | 公众号爆款封面数据 | `/api/apis/gongzhonghao/gongzhonghao-coze-cover` |
-| `api.gzh.aiFeed` | 公众号AI日报源 | `/api/apis/gongzhonghao/gongzhonghao-ai-feed` |
-| `api.gzh.playletFeed` | 公众号文旅/短剧日报源 | `/api/apis/gongzhonghao/gongzhonghao-playlet-feed` |
-| `api.gzh.syncUserNotes` | 公众号文章同步 | `/api/apis/gongzhonghao/gzh-sync-notes` |
-| `api.gzh.syncAccount` | 公众号账号同步 ⛔ | `/api/apis/gongzhonghao/gzh-sync-account` |
-
-**抖音**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.douyin.queryAccount` | 查询抖音账号 | `/api/apis/douyin/query-account` |
-| `api.douyin.searchUser` | 搜索抖音账号 | `/api/apis/douyin/search-user` |
-| `api.douyin.queryWorkList` | 查询抖音账号作品列表 | `/api/apis/douyin/query-work-list` |
-| `api.douyin.searchWork` | 搜索抖音作品 | `/api/apis/douyin/search-work` |
-| `api.douyin.realtimeSearch` | 抖音实时搜索 | `/api/apis/douyin/realtime-search` |
-| `api.douyin.comments` | 抖音作品评论 | `/api/apis/douyin/comments` |
-| `api.douyin.riseFansRank` | 抖音涨粉榜 | `/api/apis/douyin/douyin-rise-fans-rank` |
-| `api.douyin.topAccount` | 抖音最具影响力账号榜 | `/api/apis/douyin/douyin-top-account` |
-| `api.douyin.userWorks` | 抖音账号作品采集 | `/api/apis/douyin/douyin-user-works` |
-| `api.douyin.accountDiagnosis` | 抖音账号诊断 | `/api/apis/douyin/douyin-account-diagnosis` |
-| `api.douyin.similarAccounts` | 抖音相似账号推荐 | `/api/apis/douyin/douyin-similar-account` |
-| `api.douyin.aiFeed` | 抖音AI日报源 | `/api/apis/douyin/douyin-ai-feed` |
-| `api.douyin.playletFeed` | 抖音文旅/短剧日报源 | `/api/apis/douyin/douyin-playlet-feed` |
-| `api.douyin.syncUserNotes` | 抖音账号作品同步 | `/api/apis/douyin/douyin-sync-notes` |
-| `api.douyin.hotContentRank` | 抖音点赞飙升榜(日/周) | `/api/apis/douyin/douyin-content-surge` |
-| `api.douyin.likesRank` | 抖音每日点赞榜 | `/api/apis/douyin/douyin-likes-rank` |
-| `api.douyin.workList` | 抖音账号作品列表 | `/api/apis/douyin/douyin-work-list` |
-| `api.douyin.queryWork` | 查询抖音作品详情 | `/api/apis/douyin/query-work` |
-
-**小红书**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.xhs.searchNote` | 搜索小红书笔记 | `/api/apis/xiaohongshu/search-note` |
-| `api.xhs.searchUser` | 搜索小红书账号 | `/api/apis/xiaohongshu/search-user` |
-| `api.xhs.queryAccount` | 查询小红书账号 | `/api/apis/xiaohongshu/query-account` |
-| `api.xhs.searchWork` | 搜索小红书作品 | `/api/apis/xiaohongshu/search-work` |
-| `api.xhs.crawlWork` | 小红书作品采集 | `/api/apis/xiaohongshu/crawl-work` |
-| `api.xhs.comments` | 小红书笔记评论 ⛔ | `/api/apis/xiaohongshu/comments` |
-| `api.xhs.topAccount` | 小红书最夯账号榜 | `/api/apis/xiaohongshu/xiaohongshu-top-account` |
-| `api.xhs.accountAnalyzer` | 小红书账号诊断 | `/api/apis/xiaohongshu/xiaohongshu-account-analyzer` |
-| `api.xhs.aiFeed` | 小红书AI日报源 | `/api/apis/xiaohongshu/xiaohongshu-ai-feed` |
-| `api.xhs.playletFeed` | 小红书文旅/短剧日报源 | `/api/apis/xiaohongshu/xiaohongshu-playlet-feed` |
-| `api.xhs.syncUserNotes` | 小红书账号作品同步 | `/api/apis/xiaohongshu/xhs-sync-notes` |
-| `api.xhs.cozeData` | 小红书爆款封面/标题数据 | `/api/apis/xiaohongshu/xiaohongshu-coze` |
-| `api.xhs.cozeDailyTop` | 小红书日榜 | `/api/apis/xiaohongshu/xiaohongshu-daily-top` |
-| `api.xhs.cozeLowFansTop` | 小红书低粉爆款榜 | `/api/apis/xiaohongshu/xiaohongshu-low-fans-top` |
-| `api.xhs.cozeWeeklyTop` | 小红书周榜 | `/api/apis/xiaohongshu/xiaohongshu-weekly-top` |
-
-**视频号**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.sph.aiFeed` | 视频号AI日报源 | `/api/apis/sph/shipinhao-ai-feed` |
-| `api.sph.searchWork` | 搜索视频号作品 | `/api/apis/sph/search-work` |
-| `api.sph.searchUser` | 搜索视频号账号 | `/api/apis/sph/search-user` |
-| `api.sph.queryWork` | 查询视频号作品详情 | `/api/apis/sph/query-work` |
-| `api.sph.userWorks` | 视频号账号作品列表 | `/api/apis/sph/user-works` |
-
-**B 站**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.bilibili.searchWork` | 搜索B站作品 | `/api/apis/bilibili/search-work` |
-| `api.bilibili.searchUser` | 搜索B站账号 | `/api/apis/bilibili/search-user` |
-| `api.bilibili.queryAccount` | 查询B站账号 | `/api/apis/bilibili/query-account` |
-| `api.bilibili.queryWork` | 查询B站作品 | `/api/apis/bilibili/query-work` |
-| `api.bilibili.playletFeed` | B站文旅/短剧日报源 | `/api/apis/bilibili/bilibili-playlet-feed` |
-| `api.bilibili.aiFeed` | B站AI日报源(批量) | `/api/apis/bilibili/bilibili-ai-feed` |
-| `api.bilibili.userWorks` | B站账号下作品集 | `/api/apis/bilibili/bilibili-user-works` |
-
-**快手**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.kuaishou.aiFeed` | 快手AI日报源(批量) | `/api/apis/kuaishou/kuaishou-ai-feed` |
-| `api.kuaishou.searchWork` | 搜索快手作品 | `/api/apis/kuaishou/search-work` |
-| `api.kuaishou.searchUser` | 搜索快手账号 | `/api/apis/kuaishou/search-user` |
-| `api.kuaishou.queryWork` | 查询快手作品详情 | `/api/apis/kuaishou/query-work` |
-| `api.kuaishou.userWorks` | 快手账号作品列表 | `/api/apis/kuaishou/user-works` |
-
-**TikTok**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.tiktok.searchUser` | 搜索TikTok账号 | `/api/apis/tiktok/search-user` |
-
-**跨平台聚合**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `api.multi.contentExportTop` | 全平台内容出海Top榜 | `/api/apis/multi/multi-content-export-top` |
-| `api.multi.workSearch` | 全平台近30天作品聚合 | `/api/apis/multi/cn30-multi-search` |
-| `api.playlet.feed` | 短剧内容订阅Feed | `/api/apis/multi/playlet-feed` |
-
-**通用工具**
-
-| operationKey | 用途 | 详情端点 |
-|---|---|---|
-| `tool.contentSafety.checkWords` | 检测违禁词 | `/api/apis/tool/check-banned-words` |
-| `tool.content.parseDetail` | 解析作品/文章详情 | `/api/apis/tool/parse-content-detail` |
+⚠️ 这不只是纪律，是有闸的：仓库的校验器会扫**整个技能包目录**（`SKILL.md` 与 `references/` 一视同仁），
+逐能力的入参字段一旦出现在任何一份里，当场打红。
 
 ---
 
-## 5. 跨能力选路知识（真正的知识，不是样板）
 
-这一节是**只有踩过才知道**的东西，也是本 Skill 除协议外唯一值得读的部分。
-
-### 5.1 🔴 `operationKey` 有**唯一一处撞名**，点名时必须带上详情端点
-
-`tool.contentSafety.checkWords` **同时存在于两个集合**，是 94 条里唯一的一处：
-
-| 集合 | 详情端点 | 说明 |
-|---|---|---|
-| 平台数据能力 | `/api/apis/tool/check-banned-words` | 通用违禁词检测 |
-| 产品化 Skill | `/api/skills/content-safety-check` | 多平台违禁词检测 |
-
-两条**同价、都在架、路由完全不同**。所以「用 `operationKey` 点名能力」这个约定，
-在这一条上**不足以定位**——业务 Skill 点名时必须**同时给出详情端点**（§2 的模板已经这么要求了）。
-其余 92 条 `operationKey` 全局唯一，点名无歧义。
-
-### 5.2 违禁词检测：空结果**照样收费**，而且**没有「风险等级」这种东西**
-
-- **接口不返回风险分级，也不返回命中词数组**——别去读不存在的字段，更别自创一套等级糊弄用户。
-  照一个不存在的字段判「它是空的 ⇒ 文案合规」，那是个**恒真判据**，会把**每一段**文案都放行；
-  这是安全缺陷，不是体验问题。返回里到底有哪些字段，**照这一次的实际响应读**，别照任何文档读
-  （本文档也不写，理由同 §1）。
-- **「零违禁词」是一个有效答案，照常计费**，不会带 `noResult`。别把它当失败重试。
-
-### 5.3 广域搜索类**永远"有结果"**，所以没有免费兜底
-
-热榜 / 热搜 / 全网聚合这类广域能力，上游几乎不可能返回真正的空集——**扣费照常发生**。
-所以：**别把「换个关键词再试一次」当成免费动作**，每一次重试都是一次真实扣费。
-先把入参拿准（§1 现拉规格，尤其读 `inputUiSchema` 里那段中文说明，很多计费规则写在那儿），
-再打第一枪。
-
-### 5.4 上游对错入参**一律静默返空或给误导性报错**
-
-拿到空结果时，**别急着判定「上游挂了」**——已经因此误判过两次，真因都在入参上
-（一次是时间参数没给对，一次是分类名必须写全称）。正确的顺序是：
-重拉一次规格 → 逐字核对入参（尤其枚举闭集与时间格式）→ 再考虑上游问题。
-
-### 5.5 `notice` 是靠 `User-Agent` 触发的
-
-服务端按请求的 `User-Agent` 判断你装的技能包版本是否过期，过期就在成功信封上挂一句 `notice`。
-本仓每个技能包的 `.version` 文件就是给它用的（形如 `doubaoya-skill/<name>@<hash>`）。
-**不带 `User-Agent` 不会报错，只是永远收不到更新提示。**
-
-### 5.6 搜索 / 推荐接口只看得见一半
-
-`GET /api/skills/search` 和 `POST /api/skills/recommend` **只在产品化 Skill 那 17 条里排序**，
-**看不见另外 77 条平台数据能力**。所以：
-
-- 用它们「找能力」，找不到**不等于**能力不存在。
-- 找数据类能力请直接拉 `GET /api/apis` 自己筛。
-- `recommend` 是 POST，**必须带 `Authorization` 头**，否则 403 `CSRF_FORBIDDEN`（§3.1）。
-
-### 5.7 404 的正确破法
-
-1. **两个集合都拉一遍**：`GET /api/skills` 和 `GET /api/apis`。八成是能力在另一半。
-2. 找到后**照它的 `execution` 的 `target` 打**，不要自己拼路径。
-3. 两个集合都没有 ⇒ 这个能力**不存在或已下架**。如实告诉用户，**别再猜别的 slug**。
-4. 🔴 尤其别把**技能包目录名**（`npx skills add` 装进来的那个文件夹名）当成调用 slug——
-   它们不是同一个东西，打过去必 404。
-
----
-
-## 6. 本文档里的响应片段都是实拉的
+## 5. 本文档里的响应片段都是实拉的
 
 2026-08-18 对 `https://doubaoya.com` 的免费只读端点实拉，原样摘录：
 
@@ -485,7 +276,7 @@ Content-Type: application/json
 
 ---
 
-## 7. 硬规则
+## 6. 硬规则
 
 1. **入参规格调用前现拉**，本地文档只当索引。本文件从头到尾不写任何能力的字段名，就是为了让你没得抄。
 2. **地址只能来自 `execution` 的 `target`**，永远不自己拼。
