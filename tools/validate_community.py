@@ -818,6 +818,51 @@ def validate_artifacts(root: Path = ROOT) -> None:
             require(not pattern.search(text), f"developer path found: {relative}")
 
 
+# ── 路由指针闸 ───────────────────────────────────────────────────────────────
+# 🔴 routing json 里点名 Skill 的那些字段是**机器可读**的：agent 读到 `primary_skill:
+# "mera"` 会去装一个已经不存在的包。删包时最容易漏的就是这种——正文散文里的名字人眼
+# 一看就知道是历史，而结构化字段长得跟活的一模一样。
+#
+# 判据故意做成**结构性**的，不是点名两个文件：任何顶层带 `routes` 数组的 json 都算路由表，
+# 于是将来新增第三份 routing 文件天然进扫描面。这一轮删 16 个包时，跨 skill 指针、路由表、
+# 校验器全是手工清的；下一轮不该再靠人眼。
+ROUTE_SKILL_FIELDS = ("primary_skill", "terminal_skill")
+ROUTE_SKILL_LIST_FIELDS = ("candidate_skills",)
+
+
+def validate_routing_skill_pointers(root: Path = ROOT) -> None:
+    installed = {path.name for path in discover_skill_dirs(root)}
+    tables = 0
+    for path in publishable_files(root):
+        relative = path.relative_to(root)
+        if not in_publish_scan_scope(relative) or path.is_symlink() or path.suffix.lower() != ".json":
+            continue
+        value = load_json(path)
+        if not isinstance(value, dict) or not isinstance(value.get("routes"), list):
+            continue
+        tables += 1
+        for route in value["routes"]:
+            if not isinstance(route, dict):
+                continue
+            named: list[tuple[str, str]] = []
+            for field in ROUTE_SKILL_FIELDS:
+                if isinstance(route.get(field), str):
+                    named.append((field, route[field]))
+            for field in ROUTE_SKILL_LIST_FIELDS:
+                for item in route.get(field) or []:
+                    if isinstance(item, str):
+                        named.append((field, item))
+            for field, name in named:
+                require(
+                    name in installed,
+                    f"路由指向不存在的 Skill：{relative.as_posix()} 的 {route.get('id')}.{field} = "
+                    f"「{name}」，但 skills/{name}/ 不存在。这是机器可读字段，agent 会照着去装一个"
+                    "装不上的包——要么改指存活的 Skill，要么把这个字段整个去掉（历史交给正文散文承载）",
+                )
+    # 🔴 一个路由表都没扫到 = 这道闸在空转。闸绿而没看，长得和真通过一模一样。
+    require(tables, "路由指针闸一个 routing 表都没扫到，扫描面八成断了")
+
+
 def validate_retired_discoverability(root: Path = ROOT) -> None:
     """删包前必须过的闸：已下架包的能力，得在网关的能力索引里仍然找得到。
 
@@ -870,6 +915,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_readme(root)
     validate_clawhub_manifest(root)
     validate_routing(root)
+    validate_routing_skill_pointers(root)
     validate_authoring_chain(root)
     validate_banned_word_fields(root)
     validate_gateway_contract_freedom(root)

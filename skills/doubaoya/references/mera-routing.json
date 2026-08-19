@@ -2,7 +2,7 @@
   "schema_version": 1,
   "retired": {
     "status": "retired",
-    "scope": "Every route whose primary_skill is `mera`. The doubaoya-public-discovery route below is unaffected and still valid.",
+    "scope": "The two second-brain routes below (mera-second-brain-capture, mera-second-brain-recall). They used to point at a `mera` Skill package; that package was removed from this repository on 2026-08-18, so the routes no longer name any Skill to install. The doubaoya-public-discovery route below is unaffected and still valid.",
     "historical_facts": [
       "2026-08-10: the doubaoya production stack migrated to a new host; the Mera second-brain service did not migrate and entered retirement on the old host.",
       "The DNS record for mera.doubaoya.com has been removed; the name resolves to NXDOMAIN on public resolvers."
@@ -25,7 +25,6 @@
       "id": "mera-second-brain-capture",
       "retired": true,
       "priority": 0,
-      "primary_skill": "mera",
       "use_when": [
         "user asks to remember, note down, save, or bookmark something for themselves",
         "user says 帮我记一下 / 记下来 / 存进笔记 / 备忘一下 / 我刚想到",
@@ -47,7 +46,6 @@
       "id": "mera-second-brain-recall",
       "retired": true,
       "priority": 0,
-      "primary_skill": "mera",
       "use_when": [
         "user asks what they themselves previously said, recorded, decided, or collected",
         "user says 查查我的笔记 / 我之前是不是说过 / 我记过什么 / 关于 X 我有哪些素材",

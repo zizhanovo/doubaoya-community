@@ -77,6 +77,61 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "authoring route must terminate at wechat-article-pipeline"):
                 validator.validate_routing(root)
 
+    # ── 路由指针闸：routing json 里点名 Skill 的字段不许指向不存在的目录 ──────────
+    # 判据是**结构性**的（顶层带 routes 数组即算路由表），所以这些 fixture 故意不叫
+    # *-routing.json —— 文件名换了闸还得照扫，否则新增第三份路由表就天然在扫描面之外。
+    def pointer_fixture(self, root: Path, mutate) -> None:
+        for name in ("doubaoya", "wechat-article-pipeline"):
+            (root / "skills" / name).mkdir(parents=True)
+            (root / "skills" / name / "SKILL.md").write_text(
+                f"---\nname: {name}\ndescription: x\n---\n", encoding="utf-8"
+            )
+        references = root / "skills" / "doubaoya" / "references"
+        references.mkdir()
+        table = {
+            "routes": [{
+                "id": "r1",
+                "primary_skill": "doubaoya",
+                "terminal_skill": "wechat-article-pipeline",
+                "candidate_skills": ["doubaoya"],
+            }]
+        }
+        mutate(table)
+        (references / "some-table.json").write_text(json.dumps(table), encoding="utf-8")
+
+    def assert_pointer_rejected(self, mutate) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.pointer_fixture(root, mutate)
+            with self.assertRaisesRegex(validator.ValidationError, "路由指向不存在的 Skill"):
+                validator.validate_routing_skill_pointers(root)
+
+    def test_route_pointers_reject_missing_primary_skill(self):
+        self.assert_pointer_rejected(lambda t: t["routes"][0].update(primary_skill="ghost-pkg"))
+
+    def test_route_pointers_reject_missing_terminal_skill(self):
+        self.assert_pointer_rejected(lambda t: t["routes"][0].update(terminal_skill="ghost-pkg"))
+
+    def test_route_pointers_reject_missing_candidate_skill(self):
+        self.assert_pointer_rejected(lambda t: t["routes"][0]["candidate_skills"].append("ghost-pkg"))
+
+    def test_route_pointers_pass_when_every_target_exists(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.pointer_fixture(root, lambda t: None)
+            validator.validate_routing_skill_pointers(root)
+
+    def test_route_pointer_gate_fails_loudly_when_it_scans_nothing(self):
+        # 🔴 一个路由表都没扫到 = 闸在空转，而空转长得和真通过一模一样。
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "skills" / "doubaoya").mkdir(parents=True)
+            (root / "skills" / "doubaoya" / "SKILL.md").write_text(
+                "---\nname: doubaoya\ndescription: x\n---\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "一个 routing 表都没扫到"):
+                validator.validate_routing_skill_pointers(root)
+
     def test_routing_rejects_cloud_without_api_key(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
