@@ -774,8 +774,76 @@ def publishable_files(root: Path = ROOT) -> list[Path]:
     )
 
 
+TEXT_SUFFIXES = {".md", ".py", ".yaml", ".yml", ".json", ".html", ".lock", ".patch", ".txt", ".mjs"}
+
+
+def in_publish_scan_scope(relative: Path) -> bool:
+    """🔴 扫描面 = 全部 ``skills/`` + 全部 ``tools/`` + 仓库根 README，**从目录现算**。
+
+    单一事实源：密钥闸、开发者路径闸共用这一个判据。从前 :func:`validate_artifacts` 里
+    是一张点名到具体文件的白名单，于是每新建一个 Skill，它天生就在扫描面之外——闸看着
+    是绿的，只是没看那个目录。这种"漏检长得跟通过一模一样"的洞，恰恰是新增内容最需要
+    闸的时候。**新增闸一律复用本函数，别再手写名单。**
+    """
+    return relative == Path("README.md") or relative.parts[:1] in {("skills",), ("tools",)}
+
+
+def scanned_text_files(root: Path = ROOT) -> list[tuple[Path, str]]:
+    """扫描面内的每一个文本文件 → ``(相对路径, 正文)``。``scripts/`` 也在里面，不只是 SKILL.md。"""
+    out: list[tuple[Path, str]] = []
+    for path in publishable_files(root):
+        relative = path.relative_to(root)
+        if not in_publish_scan_scope(relative) or not path.is_file() or path.is_symlink():
+            continue
+        if path.suffix.lower() not in TEXT_SUFFIXES and path.name not in {"LICENSE", ".gitignore"}:
+            continue
+        out.append((relative, path.read_text(encoding="utf-8")))
+    return out
+
+
+# ── 密钥红线闸 ───────────────────────────────────────────────────────────────
+# 🔴 **一个字符的密钥内容都不许进日志。** 这些脚本的输出会被用户原样贴进 issue、贴进群里、
+# 转述给 agent；"只打前 8 位"看着人畜无害，可那 8 位就是密钥本身的一部分。主仓早有一条
+# selfcheck 钉死 `dyh_` 不许出现在日志里，社区仓一直没有——于是同一个毛病在三处各长了一遍
+# （reconcile.mjs 的自检行、doubaoya.mjs 的 401 报错、account-verify.mjs 的 keyRef）。
+#
+# 判据两条，都只认**真会出事的形态**：
+#   1. 仓库里出现真钥匙字面量：dyh_ 后面跟一长串带数字的字母数字串。文档里的占位符是
+#      dyh_… / dyh_... / dyh_xxxxxxxx / dyh_test，纯点或纯字母，天然不命中，不需要白名单。
+#   2. 把名字里带 key/token/secret 的变量按**字面数字**截断——这个写法只有一个用途：打印前缀。
+#      （`key.slice(0, eq)` 那种第二个参数是变量的，是 `--flag=value` 的解析，不是截断展示。）
+#
+# ponytail: 天花板 = 换个变量名（`k.slice(0,8)`）、或先把前缀存进中间变量再打印，本闸看不见。
+# 升级路径是接一条真正的数据流分析 / eslint 规则，而不是往这里继续堆正则。
+KEY_LITERAL = re.compile(r"\bdyh_(?=[A-Za-z0-9]*[0-9])[A-Za-z0-9]{12,}\b")
+SECRET_TRUNCATION = re.compile(
+    # 前后缀都可空：**裸的 `key` 本身就是最常见的那个变量名**（三处泄露里有两处就叫 key）。
+    r"\b[A-Za-z0-9_]*(?:key|token|secret)[A-Za-z0-9_]*\s*"
+    r"(?:\.\s*(?:slice|substring|substr)\s*\(\s*-?\d+\s*(?:,\s*-?\d+\s*)?\)"
+    r"|\[\s*-?\d*\s*:\s*-?\d+\s*\])",
+    re.IGNORECASE,
+)
+
+
+def validate_no_key_material(root: Path = ROOT) -> None:
+    """🔴 密钥内容不许进仓库、更不许进日志。判据与理由见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        match = KEY_LITERAL.search(text)
+        require(
+            match is None,
+            f"疑似真实 API key 字面量：{relative.as_posix()} 里出现 "
+            f"{match.group(0)[:4] + '…' if match else ''}——密钥一个字符都不许进仓库",
+        )
+        match = SECRET_TRUNCATION.search(text)
+        require(
+            match is None,
+            f"密钥被截断展示：{relative.as_posix()} 里的 `{match.group(0) if match else ''}` "
+            "——前缀也是密钥内容，只许报「已设置 / 没设置」",
+        )
+
+
 def validate_artifacts(root: Path = ROOT) -> None:
-    banned_parts = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv", "venv", "node_modules", "state", "runtime", "secrets", "profile", "mp-ark-archives"}
+    banned_parts ={"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv", "venv", "node_modules", "state", "runtime", "secrets", "profile", "mp-ark-archives"}
     banned_names = {".DS_Store", ".env", ".env.local", "session.json", "cookies.json", "auth-key", "runtime.json", "lock.json"}
     secret_patterns = (
         re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"),
@@ -795,22 +863,16 @@ def validate_artifacts(root: Path = ROOT) -> None:
         re.compile("/" + r"home/(?!\.+/)[^/\s]+/"),
         re.compile(r"[A-Za-z]:[\\/]" + r"Users[\\/](?!\.+[\\/])[^\\/:\s]+[\\/]"),
     )
-    text_suffixes = {".md", ".py", ".yaml", ".yml", ".json", ".html", ".lock", ".patch", ".txt", ".mjs"}
-
     for path in publishable_files(root):
         relative = path.relative_to(root)
-        # 🔴 扫描面 = 全部 skills/ + 全部 tools/ + 仓库根 README，**从目录现算**，不许手写名单。
-        # 从前这里是一张点名到具体文件的白名单（README + doubaoya 两份 + mp-exporter + tools），
-        # 于是每新建一个 Skill，它天生就在密钥与开发者路径的扫描面之外——闸看着是绿的，
-        # 只是没看那个目录。这种"漏检长得跟通过一模一样"的洞，恰恰是新增内容最需要闸的时候。
-        in_scope = relative == Path("README.md") or relative.parts[:1] in {("skills",), ("tools",)}
-        if not in_scope:
+        # 扫描面是共用的单一事实源，见 in_publish_scan_scope。
+        if not in_publish_scan_scope(relative):
             continue
         require(not path.is_symlink(), f"symlink is not publishable: {relative}")
         require(not (set(relative.parts) & banned_parts), f"runtime/cache artifact found: {relative}")
         require(path.is_file(), f"publishable path is not a file: {relative}")
         require(path.name not in banned_names and not path.name.startswith(".env."), f"secret/runtime artifact found: {relative}")
-        if path.suffix.lower() not in text_suffixes and path.name not in {"LICENSE", ".gitignore"}:
+        if path.suffix.lower() not in TEXT_SUFFIXES and path.name not in {"LICENSE", ".gitignore"}:
             continue
         text = path.read_text(encoding="utf-8")
         for pattern in secret_patterns:
@@ -877,6 +939,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_call_routes(root)
     validate_retired_discoverability(root)
     validate_vendor(root)
+    validate_no_key_material(root)
     validate_artifacts(root)
 
 
