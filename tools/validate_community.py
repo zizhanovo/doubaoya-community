@@ -15,8 +15,6 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
-MP_ARK = SKILLS / "wechat-mp-exporter"
-PROVENANCE = MP_ARK / "assets" / "vendor-provenance.json"
 ROUTING = SKILLS / "doubaoya" / "references" / "wechat-routing.json"
 
 # 公众号写作链：从"写正文"到"存进草稿箱"的每一跳。链上每个 Skill 都必须在自己的 SKILL.md 里
@@ -115,10 +113,11 @@ INDEX_ROW = re.compile(r"\| `([^`|]+)` \| ([^|]*) \| ([^|]*) \|")
 # 别的表格首列也是行内代码。
 INDEX_ROW_HEAD = re.compile(r"^\| `([^`|]+)` \|")
 
-# 还没上线的后端路由：契约先行，skill 端已按契约实现并自带 404 降级。
-# 见 skills/celebrity-slice/references/asr-api.md。这是一张**会自动清账的**豁免表——
-# 一旦路由真的上线（出现在 catalog 里），下面的断言会反过来要求把它从这里删掉，
-# 免得豁免留成一个永久的洞。
+# 从没上线的后端路由。这是一张**会自动清账的**豁免表——一旦路由真的上线（出现在 catalog
+# 里），下面的断言会反过来要求把它从这里删掉，免得豁免留成一个永久的洞。
+# ("media","asr") 当初是给 celebrity-slice 的契约先行路由；2026-08-18 那个包已下架，
+# 现在唯一还提它的是 docs/superpowers/ 下那两份**当时的设计文档**——历史记录，不是给
+# agent 看的指引，所以留着豁免、不删文档。路由本身仍然没上线，判据没变。
 PENDING_UPSTREAM_ROUTES = {("media", "asr")}
 
 # 已下架包的能力**也**一起下架了的，列在这儿豁免「删包前能力必须仍可发现」那道闸。
@@ -226,7 +225,6 @@ def validate_skill_inventory(root: Path = ROOT) -> None:
         require(name == directory.name, f"Skill folder/name mismatch: {directory.name} != {name}")
         require(name not in names, f"duplicate Skill frontmatter name: {name}")
         names[name] = directory
-    require("wechat-mp-exporter" in names, "wechat-mp-exporter is not discoverable")
 
 
 def validate_routing(root: Path = ROOT) -> None:
@@ -247,7 +245,6 @@ def validate_routing(root: Path = ROOT) -> None:
         priority = route.get("priority")
         require(isinstance(route_id, str) and route_id and route_id not in route_ids, "route IDs must be unique strings")
         expected_keys = {
-            "mp-ark-local-archive": {"id", "priority", "primary_skill", "use_when", "auth", "unsupported"},
             "doubaoya-authoring-delivery": {"id", "priority", "terminal_skill", "candidate_skills", "use_when", "target_state_gates", "auth"},
             "doubaoya-cloud-public-data": {"id", "priority", "candidate_skills", "use_when", "auth"},
         }
@@ -273,18 +270,15 @@ def validate_routing(root: Path = ROOT) -> None:
 
     require(priorities == sorted(priorities, reverse=True) and len(priorities) == len(set(priorities)), "routes must have unique descending priorities")
     require(
-        route_ids == {"mp-ark-local-archive", "doubaoya-authoring-delivery", "doubaoya-cloud-public-data"},
+        route_ids == {"doubaoya-authoring-delivery", "doubaoya-cloud-public-data"},
         "required WeChat routes are missing",
     )
     for skill_name in sorted(referenced_skills):
         require((root / "skills" / skill_name / "SKILL.md").is_file(), f"routing references missing Skill: {skill_name}")
 
     route_by_id = {route["id"]: route for route in routes}
-    local = route_by_id["mp-ark-local-archive"]
     authoring = route_by_id["doubaoya-authoring-delivery"]
     cloud = route_by_id["doubaoya-cloud-public-data"]
-    metrics = {"read_count", "like_count", "recommend_count", "comment_count"}
-    require(local["priority"] > cloud["priority"], "local archive route must precede the general cloud route")
     # 写侧必须压过泛化的云端搜索路由：否则「帮我写一篇公众号文章」又会被导进只管搜索的那条路。
     require(authoring["priority"] > cloud["priority"], "authoring route must precede the general cloud route")
     require(authoring["terminal_skill"] == "wechat-article-pipeline", "authoring route must terminate at wechat-article-pipeline")
@@ -302,14 +296,8 @@ def validate_routing(root: Path = ROOT) -> None:
     gate_text = " ".join(gates).lower()
     for contract in ("target state", "ask when it is unstated", "draft only, never mass send"):
         require(contract in gate_text, f"authoring target-state gates are missing contract: {contract}")
-    require(local["primary_skill"] == "wechat-mp-exporter", "local archive route must select wechat-mp-exporter")
-    require(local["auth"] == {"type": "user-approved-wechat-qr", "requires_doubaoya_api_key": False}, "invalid local auth boundary")
-    require(set(local["unsupported"]) == metrics and len(local["unsupported"]) == len(metrics), "local unsupported metrics are incomplete")
     require(cloud["auth"] == {"type": "doubaoya-api-key", "requires_doubaoya_api_key": True}, "invalid cloud auth boundary")
 
-    local_intents = " ".join(local["use_when"]).lower()
-    for intent in ("qr", "latest", "today", "article body", "archive", "without doubaoya_api_key"):
-        require(intent in local_intents, f"local route is missing intent: {intent}")
     cloud_intents = " ".join(cloud["use_when"]).lower()
     for intent in ("public article", "without qr", "reading", "comment", "analysis"):
         require(intent in cloud_intents, f"cloud route is missing intent: {intent}")
@@ -317,7 +305,7 @@ def validate_routing(root: Path = ROOT) -> None:
     precedence = routing.get("precedence")
     require(isinstance(precedence, list) and all(isinstance(item, str) and item for item in precedence), "invalid precedence rules")
     precedence_text = " ".join(precedence).lower()
-    for contract in ("highest-priority", "interaction-metric", "split the work", "capability boundary"):
+    for contract in ("highest-priority", "interaction-metric"):
         require(contract in precedence_text, f"precedence is missing contract: {contract}")
 
     forbidden = routing.get("forbidden_misroutes")
@@ -333,8 +321,6 @@ def validate_routing(root: Path = ROOT) -> None:
         forbidden_by_route[rule["from"]] = rule
 
     require(set(forbidden_by_route) == route_ids, "each route needs one forbidden-misroute contract")
-    local_metric_signals = {signal.replace(" ", "_") for signal in forbidden_by_route["mp-ark-local-archive"]["request_signals"]}
-    require(local_metric_signals == metrics, "local forbidden-misroute metrics are incomplete")
     authoring_signals = " ".join(forbidden_by_route["doubaoya-authoring-delivery"]["request_signals"]).lower()
     for signal in ("drafted article text", "banned-word check", "markdown only"):
         require(signal in authoring_signals, f"authoring forbidden-misroute signals are missing: {signal}")
@@ -344,7 +330,7 @@ def validate_routing(root: Path = ROOT) -> None:
 
     doubaoya_text = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
     require("references/wechat-routing.json" in doubaoya_text, "doubaoya SKILL.md does not load the routing source")
-    require("MP Ark" in doubaoya_text and "互动指标" in doubaoya_text, "doubaoya SKILL.md does not state the WeChat capability split")
+    require("互动指标" in doubaoya_text, "doubaoya SKILL.md does not state the WeChat capability split")
 
 
 def next_step_section(text: str) -> str | None:
@@ -664,56 +650,6 @@ def validate_gateway_contract_freedom(root: Path = ROOT) -> None:
         )
 
 
-def safe_vendor_path(value: object) -> str:
-    require(isinstance(value, str) and value, "vendor path must be a non-empty string")
-    path = PurePosixPath(value)
-    require(not path.is_absolute() and ".." not in path.parts and "." not in path.parts, f"unsafe vendor path: {value}")
-    require("\\" not in value and "\x00" not in value, f"unsafe vendor path: {value}")
-    return value
-
-
-def validate_vendor(root: Path = ROOT) -> None:
-    skill = root / "skills" / "wechat-mp-exporter"
-    provenance_path = skill / "assets" / "vendor-provenance.json"
-    provenance = load_json(provenance_path)
-    require(isinstance(provenance, dict), "vendor provenance must be an object")
-    require_exact_keys(provenance, {"schema_version", "source_repository", "source_commit", "source_path", "files"}, "vendor provenance")
-    require(type(provenance.get("schema_version")) is int and provenance["schema_version"] == 1, "unsupported provenance schema")
-    require(provenance.get("source_repository") == "https://github.com/zizhanovo/mp-ark.git", "unexpected vendor source")
-    require(provenance.get("source_commit") == "b80fa95350f22059a0937ff4a52a7aed0212c9db", "unexpected vendor commit")
-    require(provenance.get("source_path") == "skills/wechat-mp-exporter", "unexpected vendor source path")
-    files = provenance.get("files")
-    require(isinstance(files, list) and files, "vendor file manifest must be non-empty")
-
-    expected: dict[str, dict[str, object]] = {}
-    for entry in files:
-        require(isinstance(entry, dict), "vendor manifest entries must be objects")
-        require_exact_keys(entry, {"path", "mode", "sha256"}, "vendor manifest entry")
-        relative = safe_vendor_path(entry.get("path"))
-        require(relative not in expected, f"duplicate vendor path: {relative}")
-        require(entry.get("mode") in {"100644", "100755"}, f"invalid vendor mode: {relative}")
-        require(isinstance(entry.get("sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]), f"invalid vendor digest: {relative}")
-        expected[relative] = entry
-
-    provenance_relative = provenance_path.relative_to(skill).as_posix()
-    require(not provenance_path.is_symlink() and provenance_path.is_file(), "vendor provenance must be a regular file")
-    require(stat.S_IMODE(provenance_path.stat().st_mode) == 0o644, "vendor provenance mode mismatch")
-    actual_paths: set[str] = set()
-    for path in skill.rglob("*"):
-        relative = path.relative_to(skill).as_posix()
-        require(not path.is_symlink(), f"symlink is not publishable: {relative}")
-        if path.is_file() and relative != provenance_relative and path.name != ".version":
-            actual_paths.add(relative)
-    require(actual_paths == set(expected), f"vendor file set mismatch: missing={sorted(set(expected) - actual_paths)}, extra={sorted(actual_paths - set(expected))}")
-
-    for relative, entry in expected.items():
-        path = skill / relative
-        actual_mode = f"100{stat.S_IMODE(path.stat().st_mode):o}"
-        require(actual_mode == entry["mode"], f"vendor mode mismatch: {relative}")
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        require(digest == entry["sha256"], f"vendor SHA-256 mismatch: {relative}")
-
-
 def validate_readme(root: Path = ROOT) -> None:
     readme = (root / "README.md").read_text(encoding="utf-8")
     skill_dirs = discover_skill_dirs(root)
@@ -724,11 +660,6 @@ def validate_readme(root: Path = ROOT) -> None:
     listed = set(listed_names)
     actual = {path.name for path in skill_dirs}
     require(listed == actual, f"README Skill inventory mismatch: missing={sorted(actual - listed)}, extra={sorted(listed - actual)}")
-    install = "npx skills add https://github.com/zizhanovo/doubaoya-community --skill wechat-mp-exporter"
-    require(readme.count(install) == 1, "README single-Skill install command is missing or duplicated")
-    rows = re.findall(r"^\| \*\*wechat-mp-exporter\*\*.*$", readme, flags=re.MULTILINE)
-    require(len(rows) == 1, "README must list wechat-mp-exporter exactly once")
-    require("无需 `DOUBAOYA_API_KEY`" in rows[0] and "不支持阅读 / 点赞 / 评论数" in rows[0], "README MP Ark capability boundary is incomplete")
 
 
 def validate_clawhub_manifest(root: Path = ROOT) -> None:
@@ -938,7 +869,6 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_gateway_contract_freedom(root)
     validate_call_routes(root)
     validate_retired_discoverability(root)
-    validate_vendor(root)
     validate_no_key_material(root)
     validate_artifacts(root)
 
@@ -947,7 +877,7 @@ def main() -> int:
     validate_repository()
     print(
         f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, "
-        f"ClawHub manifest, MP Ark vendor, WeChat routing and the {len(AUTHORING_CHAIN)}-hop authoring chain"
+        f"ClawHub manifest, WeChat routing and the {len(AUTHORING_CHAIN)}-hop authoring chain"
     )
     return 0
 

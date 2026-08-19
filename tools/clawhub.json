@@ -12,239 +12,375 @@
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "情报调查员（本地版）",
-      "topics": ["情报调查", "研究", "本地运行"]
-    },
-    "celebrity-slice": {
-      "displayName": "明星直播切片剪辑",
-      "topics": ["视频剪辑", "切片", "种草", "竖版短视频"]
+      "topics": [
+        "情报调查",
+        "研究",
+        "本地运行"
+      ]
     },
     "cn-last30days": {
       "displayName": "全网近 30 天作品聚合",
-      "topics": ["全网数据", "内容聚合", "数据源"]
+      "topics": [
+        "全网数据",
+        "内容聚合",
+        "数据源"
+      ]
     },
     "content-parse": {
       "displayName": "作品链接解析（抖音 / 小红书 / 公众号）",
-      "topics": ["链接解析", "抖音", "小红书", "微信公众号"]
-    },
-    "cultural-tourism-wechat-feed": {
-      "displayName": "公众号文旅文章内容源",
-      "topics": ["微信公众号", "文旅", "内容源", "数据源"]
+      "topics": [
+        "链接解析",
+        "抖音",
+        "小红书",
+        "微信公众号"
+      ]
     },
     "dby": {
       "displayName": "dby · 都爆鸭公众号工具箱",
-      "topics": ["微信公众号", "工具箱", "路由"]
+      "topics": [
+        "微信公众号",
+        "工具箱",
+        "路由"
+      ]
     },
     "dby-charter": {
       "displayName": "公众号定位教练 · 号章程",
-      "topics": ["微信公众号", "账号定位", "内容策略"]
+      "topics": [
+        "微信公众号",
+        "账号定位",
+        "内容策略"
+      ]
     },
     "dby-update": {
       "displayName": "都爆鸭 Skill 自更新",
-      "topics": ["更新", "维护"]
+      "topics": [
+        "更新",
+        "维护"
+      ]
     },
     "doubao-websearch": {
       "displayName": "豆包联网搜索",
-      "topics": ["联网搜索", "豆包", "数据源"]
+      "topics": [
+        "联网搜索",
+        "豆包",
+        "数据源"
+      ]
     },
     "doubaoya": {
       "displayName": "都爆鸭 · 新媒体数据总入口",
-      "topics": ["新媒体", "爆款选题", "热榜", "数据源"]
+      "topics": [
+        "新媒体",
+        "爆款选题",
+        "热榜",
+        "数据源"
+      ]
     },
     "doubaoya-gateway": {
       "displayName": "都爆鸭 · 调用网关",
-      "topics": ["调用协议", "能力索引", "基础设施"]
+      "topics": [
+        "调用协议",
+        "能力索引",
+        "基础设施"
+      ]
     },
     "douyin-comment": {
       "displayName": "抖音评论拉取",
-      "topics": ["抖音", "评论", "舆情", "数据源"]
+      "topics": [
+        "抖音",
+        "评论",
+        "舆情",
+        "数据源"
+      ]
     },
     "douyin-realtime-search": {
       "displayName": "抖音实时综合搜索",
-      "topics": ["抖音", "实时搜索", "数据源"]
+      "topics": [
+        "抖音",
+        "实时搜索",
+        "数据源"
+      ]
     },
     "douyin-search": {
       "displayName": "抖音爆款作品搜索",
-      "topics": ["抖音", "爆款", "选题", "数据源"]
+      "topics": [
+        "抖音",
+        "爆款",
+        "选题",
+        "数据源"
+      ]
     },
     "gongzhonghao-search": {
       "displayName": "公众号文章搜索",
-      "topics": ["微信公众号", "文章搜索", "数据源"]
+      "topics": [
+        "微信公众号",
+        "文章搜索",
+        "数据源"
+      ]
     },
     "gzh-ai-feed": {
       "displayName": "AI 赛道公众号日报内容源",
-      "topics": ["微信公众号", "AI", "日报", "内容源"]
-    },
-    "gzh-astock-top": {
-      "displayName": "A 股公众号大 V 榜",
-      "topics": ["微信公众号", "A股", "榜单", "数据源"]
+      "topics": [
+        "微信公众号",
+        "AI",
+        "日报",
+        "内容源"
+      ]
     },
     "gzh-search": {
       "displayName": "公众号文章批量搜索",
-      "topics": ["微信公众号", "批量取数", "选题", "数据源"]
-    },
-    "gzh-subscribe": {
-      "displayName": "公众号发文订阅（按账号追更）",
-      "topics": ["微信公众号", "账号追更", "订阅", "数据源"]
+      "topics": [
+        "微信公众号",
+        "批量取数",
+        "选题",
+        "数据源"
+      ]
     },
     "image-gen": {
       "displayName": "GPT-image2 文生图 / 图生图",
-      "topics": ["AI 生图", "文生图", "图生图", "封面"]
+      "topics": [
+        "AI 生图",
+        "文生图",
+        "图生图",
+        "封面"
+      ]
     },
     "ip-profile": {
       "displayName": "公众号 IP 档案",
-      "topics": ["微信公众号", "IP 定位", "内容策略"]
-    },
-    "mera": {
-      "displayName": "Mera · 第二大脑",
-      "topics": ["知识库", "第二大脑", "笔记"]
+      "topics": [
+        "微信公众号",
+        "IP 定位",
+        "内容策略"
+      ]
     },
     "multi-banned-words": {
       "displayName": "多平台违禁词检测",
-      "topics": ["违禁词", "合规审核", "多平台", "本地运行"]
-    },
-    "multi-content-feed": {
-      "displayName": "全网内容出海信息源",
-      "topics": ["出海", "全网数据", "内容源", "数据源"]
+      "topics": [
+        "违禁词",
+        "合规审核",
+        "多平台",
+        "本地运行"
+      ]
     },
     "multi-rewrite": {
       "displayName": "一稿多发 · 七平台文案改写",
-      "topics": ["文案改写", "一稿多发", "多平台", "本地运行"]
+      "topics": [
+        "文案改写",
+        "一稿多发",
+        "多平台",
+        "本地运行"
+      ]
     },
     "optimize-skill-md": {
       "displayName": "SKILL.md 优化器",
-      "topics": ["Agent Skill", "文档优化", "本地运行"]
+      "topics": [
+        "Agent Skill",
+        "文档优化",
+        "本地运行"
+      ]
     },
     "pdf-image-text-extractor": {
       "displayName": "PDF / 图片文字提取",
-      "topics": ["OCR", "PDF", "文字提取"]
+      "topics": [
+        "OCR",
+        "PDF",
+        "文字提取"
+      ]
     },
     "playlet-wechat-feed": {
       "displayName": "公众号短剧文章日报内容源",
-      "topics": ["微信公众号", "短剧", "日报", "内容源"]
+      "topics": [
+        "微信公众号",
+        "短剧",
+        "日报",
+        "内容源"
+      ]
     },
     "seedream-5-lite": {
       "displayName": "Seedream 5.0 lite 文生图",
-      "topics": ["AI 生图", "文生图", "封面"]
+      "topics": [
+        "AI 生图",
+        "文生图",
+        "封面"
+      ]
     },
     "trending-hub": {
       "displayName": "全网热点选题（结合个人 IP 匹配）",
-      "topics": ["热榜", "爆款选题", "全网数据", "数据源"]
+      "topics": [
+        "热榜",
+        "爆款选题",
+        "全网数据",
+        "数据源"
+      ]
     },
     "trending-hub-top10": {
       "displayName": "全网聚合热搜 TOP10",
-      "topics": ["热榜", "热搜", "全网数据", "数据源"]
-    },
-    "wechat-10w-hot": {
-      "displayName": "公众号 10 万+ 爆文榜",
-      "topics": ["微信公众号", "爆文榜", "阅读量", "数据源"]
+      "topics": [
+        "热榜",
+        "热搜",
+        "全网数据",
+        "数据源"
+      ]
     },
     "wechat-account-analyzer": {
       "displayName": "公众号账号诊断",
-      "topics": ["微信公众号", "账号分析", "竞品分析", "数据源"]
+      "topics": [
+        "微信公众号",
+        "账号分析",
+        "竞品分析",
+        "数据源"
+      ]
     },
     "wechat-article-pipeline": {
       "displayName": "公众号图文流水线（选题→成稿→排版→草稿箱）",
-      "topics": ["微信公众号", "内容流水线", "排版", "发布"]
+      "topics": [
+        "微信公众号",
+        "内容流水线",
+        "排版",
+        "发布"
+      ]
     },
     "wechat-banned-words": {
       "displayName": "公众号违禁词检测",
-      "topics": ["微信公众号", "违禁词", "合规审核"]
-    },
-    "wechat-channels-ai-feed": {
-      "displayName": "AI 赛道视频号信息源",
-      "topics": ["视频号", "AI", "内容源", "数据源"]
+      "topics": [
+        "微信公众号",
+        "违禁词",
+        "合规审核"
+      ]
     },
     "wechat-cover": {
       "displayName": "公众号爆款封面参考",
-      "topics": ["微信公众号", "封面", "设计参考", "数据源"]
+      "topics": [
+        "微信公众号",
+        "封面",
+        "设计参考",
+        "数据源"
+      ]
     },
     "wechat-draft-publish": {
       "displayName": "公众号草稿箱发布",
-      "topics": ["微信公众号", "发布", "草稿箱", "自动化"]
+      "topics": [
+        "微信公众号",
+        "发布",
+        "草稿箱",
+        "自动化"
+      ]
     },
     "wechat-fastest-growing": {
       "displayName": "公众号阅读增长榜 · 黑马账号",
-      "topics": ["微信公众号", "增长榜", "账号发现", "数据源"]
+      "topics": [
+        "微信公众号",
+        "增长榜",
+        "账号发现",
+        "数据源"
+      ]
     },
     "wechat-hot-article": {
       "displayName": "公众号爆文搜索",
-      "topics": ["微信公众号", "爆文", "选题", "数据源"]
+      "topics": [
+        "微信公众号",
+        "爆文",
+        "选题",
+        "数据源"
+      ]
     },
     "wechat-hot-write": {
       "displayName": "公众号写作助手（对标爆文成稿）",
-      "topics": ["微信公众号", "写作", "爆款仿写", "选题"]
-    },
-    "wechat-mp-exporter": {
-      "displayName": "MP Ark · 公众号本地存档导出",
-      "topics": ["微信公众号", "存档导出", "扫码授权", "本地运行"]
-    },
-    "wechat-original-hot": {
-      "displayName": "公众号原创热门榜",
-      "topics": ["微信公众号", "原创榜", "爆文", "数据源"]
+      "topics": [
+        "微信公众号",
+        "写作",
+        "爆款仿写",
+        "选题"
+      ]
     },
     "wechat-rewrite": {
       "displayName": "公众号爆款文案改写",
-      "topics": ["微信公众号", "文案改写", "爆款", "本地运行"]
+      "topics": [
+        "微信公众号",
+        "文案改写",
+        "爆款",
+        "本地运行"
+      ]
     },
     "wechat-similar-account": {
       "displayName": "公众号对标账号推荐",
-      "topics": ["微信公众号", "对标账号", "竞品分析", "数据源"]
+      "topics": [
+        "微信公众号",
+        "对标账号",
+        "竞品分析",
+        "数据源"
+      ]
     },
     "wechat-theme-studio": {
       "displayName": "公众号排版主题工作室",
-      "topics": ["微信公众号", "排版", "主题", "Markdown"]
+      "topics": [
+        "微信公众号",
+        "排版",
+        "主题",
+        "Markdown"
+      ]
     },
     "wechat-title": {
       "displayName": "公众号爆款标题创作",
-      "topics": ["微信公众号", "标题", "爆款", "数据源"]
-    },
-    "wechat-top-account": {
-      "displayName": "公众号热度指数榜 TOP",
-      "topics": ["微信公众号", "榜单", "账号发现", "数据源"]
-    },
-    "xiaohongshu-cover": {
-      "displayName": "小红书封面选题数据",
-      "topics": ["小红书", "封面", "选题", "数据源"]
+      "topics": [
+        "微信公众号",
+        "标题",
+        "爆款",
+        "数据源"
+      ]
     },
     "xiaohongshu-crawler": {
       "displayName": "小红书笔记爬取",
-      "topics": ["小红书", "批量取数", "爬取", "数据源"]
+      "topics": [
+        "小红书",
+        "批量取数",
+        "爬取",
+        "数据源"
+      ]
     },
     "xiaohongshu-dailytop": {
       "displayName": "小红书日榜",
-      "topics": ["小红书", "榜单", "日榜", "数据源"]
+      "topics": [
+        "小红书",
+        "榜单",
+        "日榜",
+        "数据源"
+      ]
     },
     "xiaohongshu-hot-notes": {
       "displayName": "小红书爆款笔记发现",
-      "topics": ["小红书", "爆款笔记", "选题", "数据源"]
-    },
-    "xiaohongshu-lowtop": {
-      "displayName": "小红书低粉爆款榜",
-      "topics": ["小红书", "低粉爆款", "榜单", "数据源"]
-    },
-    "xiaohongshu-note-analyzer": {
-      "displayName": "小红书笔记选题拆解",
-      "topics": ["小红书", "笔记拆解", "选题", "数据源"]
+      "topics": [
+        "小红书",
+        "爆款笔记",
+        "选题",
+        "数据源"
+      ]
     },
     "xiaohongshu-rewrite": {
       "displayName": "小红书笔记文案改写",
-      "topics": ["小红书", "文案改写", "种草", "本地运行"]
+      "topics": [
+        "小红书",
+        "文案改写",
+        "种草",
+        "本地运行"
+      ]
     },
     "xiaohongshu-search": {
       "displayName": "小红书爆款笔记搜索",
-      "topics": ["小红书", "笔记搜索", "选题", "数据源"]
-    },
-    "xiaohongshu-title": {
-      "displayName": "小红书标题选题数据",
-      "topics": ["小红书", "标题", "选题", "数据源"]
-    },
-    "xiaohongshu-weeklytop": {
-      "displayName": "小红书周榜",
-      "topics": ["小红书", "榜单", "周榜", "数据源"]
+      "topics": [
+        "小红书",
+        "笔记搜索",
+        "选题",
+        "数据源"
+      ]
     },
     "xiaohongshu-write": {
       "displayName": "小红书笔记创作",
-      "topics": ["小红书", "写作", "种草", "选题"]
+      "topics": [
+        "小红书",
+        "写作",
+        "种草",
+        "选题"
+      ]
     }
   }
 }

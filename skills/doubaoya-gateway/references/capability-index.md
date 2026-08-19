@@ -113,7 +113,7 @@
 | `api.xhs.aiFeed` | 小红书AI日报源 | `/api/apis/xiaohongshu/xiaohongshu-ai-feed` |
 | `api.xhs.playletFeed` | 小红书文旅/短剧日报源 | `/api/apis/xiaohongshu/xiaohongshu-playlet-feed` |
 | `api.xhs.syncUserNotes` | 小红书账号作品同步 | `/api/apis/xiaohongshu/xhs-sync-notes` |
-| `api.xhs.cozeData` | 小红书爆款封面/标题数据 | `/api/apis/xiaohongshu/xiaohongshu-coze` |
+| `api.xhs.cozeData` | 小红书爆款封面/标题/笔记分析数据 | `/api/apis/xiaohongshu/xiaohongshu-coze` |
 | `api.xhs.cozeDailyTop` | 小红书日榜 | `/api/apis/xiaohongshu/xiaohongshu-daily-top` |
 | `api.xhs.cozeLowFansTop` | 小红书低粉爆款榜 | `/api/apis/xiaohongshu/xiaohongshu-low-fans-top` |
 | `api.xhs.cozeWeeklyTop` | 小红书周榜 | `/api/apis/xiaohongshu/xiaohongshu-weekly-top` |

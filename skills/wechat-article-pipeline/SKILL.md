@@ -426,8 +426,8 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 | 用户接着想要什么 | 下一步 |
 |---|---|
 | 攒几天数据后看这个号的发文表现 / 做体检 | `wechat-account-analyzer` |
-| 盯自己或竞品的发文节奏 | `gzh-subscribe` |
-| 把已发布的文章拉正文归档 | `wechat-mp-exporter` |
+| 盯自己或竞品的发文节奏 | `doubaoya`（打公众号发文列表端点） |
+| 把已发布的文章拉正文归档 | `content-parse` |
 | 用复盘信号挖下一轮选题 | `doubaoya`（挖选题 / 追热点）或 `wechat-hot-write`（拉样本开写） |
 | 说不清要到哪一步 | `dby`（公众号飞轮的逐跳导航） |
 

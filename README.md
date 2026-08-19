@@ -37,12 +37,6 @@ npx skills add zizhanovo/doubaoya-community
 npx skills add zizhanovo/doubaoya-community/skills/trending-hub
 ```
 
-只安装 MP Ark：
-
-```bash
-npx skills add https://github.com/zizhanovo/doubaoya-community --skill wechat-mp-exporter
-```
-
 > **推荐从主入口开始**：装好后输入 `/dby`（都爆鸭公众号工具箱主入口），它按「选题 → 写草稿 → 排版 → 代发 → 复盘 → 反哺选题」的飞轮，逐步把你路由到该用的技能。第一次用输入 `/dby 新手入门`；干完一步不知道下一步，随时回 `/dby`。
 
 ## 更新
@@ -61,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g --all`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 59 个）
+## 技能清单（共 43 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -79,7 +73,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **mera** | ⛔ **已下架**：Mera 第二大脑的后端随 2026-08-10 的服务器迁移进入退役，域名 DNS 已移除，六条能力一律调不通（点数不会被白扣）。无替代能力，详见 `skills/mera/SKILL.md` 顶部横幅 |
 
 ### 📣 公众号 / 视频号
 
@@ -87,21 +80,14 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 |------|------|
 | **gongzhonghao-search** | 按关键词搜公众号文章，做行业 / 竞品 / 选题 |
 | **gzh-search** | 关键词批量爬公众号文章，铺表 + 选题洞察 |
-| **gzh-subscribe** | 盯单个公众号，拉指定时段历史发文做追更复盘 |
-| **wechat-mp-exporter** | MP Ark：本地扫码登录，查 latest / today、拉正文、可续传归档；无需 `DOUBAOYA_API_KEY`，不支持阅读 / 点赞 / 评论数 |
 | **gzh-ai-feed** | AI 方向公众号爆款日报内容源，聚类成每日选题 |
-| **gzh-astock-top** | A股公众号大V榜：账号发现 → 数据 → 当日发文 |
 | **wechat-hot-article** | 按关键词 + 时间区间拉同主题公众号爆文 |
 | **wechat-hot-write** | 拉同主题爆文当样本，辅助写出能跑量的公众号文章 |
-| **wechat-10w-hot** | 按行业 + 时间拉公众号 10万+ 阅读爆文榜 |
-| **wechat-original-hot** | 公众号原创热门榜（区别于转载 / 洗稿） |
-| **wechat-top-account** | 公众号热度指数日榜，按行业分类看头部格局 |
 | **wechat-fastest-growing** | 公众号阅读增长榜，挖近期黑马账号 |
 | **wechat-account-analyzer** | 公众号账号诊断 / 体检，支持多号竞品对照 |
 | **wechat-similar-account** | 公众号对标账号推荐，搭竞品矩阵 |
 | **wechat-title** | 公众号爆款标题创作 + 套路化评判 |
 | **wechat-cover** | 同赛道爆款封面参考，提炼可复用视觉套路 |
-| **wechat-channels-ai-feed** | AI 视频号爆款信息源，聚类成每日选题日报 |
 | **wechat-banned-words** | 公众号违禁词检测 + 合规改写 |
 | **wechat-rewrite** 🖥 | 把文案改写成公众号爆款风格 |
 | **ip-profile** | 建 / 更新公众号「创作 DNA」（人设 / 赛道 / 文风蒸馏），生成文章时全程读它 |
@@ -127,11 +113,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | **xiaohongshu-crawler** | 按关键词爬热门作品，支持日期 / 排序筛选 |
 | **xiaohongshu-write** | 检索热门笔记 → 复盘爆款结构 → 产出新笔记 |
 | **xiaohongshu-dailytop** | 小红书日榜，看当天哪条笔记在霸榜 |
-| **xiaohongshu-lowtop** | 小红书低粉爆款榜，挖纯内容力出圈的素人打法 |
-| **xiaohongshu-weeklytop** | 小红书周榜，看一周持续走高的中线趋势 |
-| **xiaohongshu-cover** | 按关键词拉爆款数据，提炼可复用封面套路 |
-| **xiaohongshu-title** | 按关键词拆爆款标题钩子，产能跑量的标题 |
-| **xiaohongshu-note-analyzer** | 按关键词做对标拆解，产可落地选题清单 |
 | **xiaohongshu-rewrite** 🖥 | 把文案改写成小红书种草笔记风格 |
 
 ### 🌐 多平台 · 热点
@@ -140,7 +121,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 |------|------|
 | **trending-hub** | 全网热榜聚合，产跨平台选题信号 |
 | **trending-hub-top10** | 全网平台热搜归并，输出综合 TOP10 |
-| **multi-content-feed** | 全平台内容出海 Top 榜爆款一次扫遍 |
 | **cn-last30days** | 一个词捞小红书 + 抖音 + 公众号近30天作品 |
 | **content-parse** | 粘公开链接，返回归一化作品 / 文章详情，拆解「为什么火」 |
 | **multi-banned-words** | 跨平台违禁词对照 + 统一安全改写 |
@@ -150,14 +130,12 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **celebrity-slice** | 直播录像剪 50-70s 竖版高级种草切片：ASR→校对→选段→气口吸附→字幕烧制→双层 QA（ASR 代理待上线，可降级本机 whisper） |
 
 ### 🎬 短剧 · 文旅
 
 | 技能 | 能力 |
 |------|------|
 | **playlet-wechat-feed** | 公众号短剧爆款文章日报内容源 |
-| **cultural-tourism-wechat-feed** | 公众号文旅爆款长文内容源 |
 
 ### 🎨 AI 生成 · 搜索
 

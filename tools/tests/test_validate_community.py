@@ -28,30 +28,6 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "invalid name frontmatter"):
                 validator.frontmatter_name(skill)
 
-    def test_vendor_manifest_rejects_tampering(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            destination = root / "skills" / "wechat-mp-exporter"
-            destination.parent.mkdir(parents=True)
-            shutil.copytree(validator.MP_ARK, destination)
-            with (destination / "SKILL.md").open("a", encoding="utf-8") as handle:
-                handle.write("\nmodified\n")
-            with self.assertRaisesRegex(validator.ValidationError, "SHA-256 mismatch"):
-                validator.validate_vendor(root)
-
-    def test_vendor_manifest_rejects_unknown_schema_fields(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            destination = root / "skills" / "wechat-mp-exporter"
-            destination.parent.mkdir(parents=True)
-            shutil.copytree(validator.MP_ARK, destination)
-            provenance = destination / "assets" / "vendor-provenance.json"
-            value = json.loads(provenance.read_text(encoding="utf-8"))
-            value["source_checkout"] = str(Path("/", "Users", "example", "mp-ark"))
-            provenance.write_text(json.dumps(value), encoding="utf-8")
-            with self.assertRaisesRegex(validator.ValidationError, "unexpected vendor provenance keys"):
-                validator.validate_vendor(root)
-
     def routing_fixture(self, root: Path) -> Path:
         destination = root / "skills" / "doubaoya"
         (destination / "references").mkdir(parents=True)
@@ -83,16 +59,22 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             routing = self.routing_fixture(root)
-            self.mutate_json(routing, lambda value: self.route(value, "mp-ark-local-archive").update({"fallback": "cloud"}))
-            with self.assertRaisesRegex(validator.ValidationError, "unexpected route mp-ark-local-archive keys"):
+            self.mutate_json(routing, lambda value: self.route(value, "doubaoya-cloud-public-data").update({"fallback": "local"}))
+            with self.assertRaisesRegex(validator.ValidationError, "unexpected route doubaoya-cloud-public-data keys"):
                 validator.validate_routing(root)
 
-    def test_routing_rejects_lost_metric_boundary(self):
+    def test_routing_rejects_moved_authoring_terminal(self):
+        # 原先这条守的是 MP Ark 的「不支持互动指标」边界，那条路由随 wechat-mp-exporter
+        # 一起下架了。边界没了不代表这个位置不需要闸：改守写作链的终点——它漂了，
+        # 「写完要进草稿箱」就会停在半路，而计划看着完全正常。
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             routing = self.routing_fixture(root)
-            self.mutate_json(routing, lambda value: self.route(value, "mp-ark-local-archive")["unsupported"].remove("comment_count"))
-            with self.assertRaisesRegex(validator.ValidationError, "unsupported metrics are incomplete"):
+            self.mutate_json(
+                routing,
+                lambda value: self.route(value, "doubaoya-authoring-delivery").update({"terminal_skill": "wechat-hot-write"}),
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "authoring route must terminate at wechat-article-pipeline"):
                 validator.validate_routing(root)
 
     def test_routing_rejects_cloud_without_api_key(self):

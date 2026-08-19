@@ -4,8 +4,11 @@ description: >-
   都爆鸭 (doubaoya) — 新媒体爆款选题 / 追热点 / 写脚本的 AI 工作搭子。当用户要做爆款选题、找选题、追热点、看全网热榜、
   搜抖音 / 小红书 / 公众号内容、解析作品或文章、查达人账号、写开场脚本 / 短视频脚本、检测违禁词，或提到 doubaoya、都爆鸭、
   本鸭、DOUBAOYA_API_KEY 时使用本 Skill。它教 AI agent 用一条 DOUBAOYA_API_KEY 调用 doubaoya.com 的公开 API，
-  把散乱搜索变成可直接用的选题信号和脚本。Trigger words: 爆款选题 / 选题 / 追热点 / 热点 / 全网热榜 / 写脚本 /
-  开场脚本 / 短视频脚本 / 抖音 / 小红书 / 公众号 / 视频号 / 达人账号 / 违禁词 / doubaoya / 都爆鸭 / 本鸭 / DOUBAOYA_API_KEY。
+  把散乱搜索变成可直接用的选题信号和脚本。也覆盖小红书爆款封面 / 标题 / 笔记分析，公众号 10 万+ / 原创热文榜，
+  以及公众号文旅 / 短剧日报源——这些原本各有一个薄壳 Skill，现已统一由本 Skill 按意图路由到对应数据能力。
+  Trigger words: 爆款选题 / 选题 / 追热点 / 热点 / 全网热榜 / 写脚本 /
+  开场脚本 / 短视频脚本 / 抖音 / 小红书 / 公众号 / 视频号 / 达人账号 / 违禁词 / 小红书封面 / 小红书标题 / 笔记分析 /
+  10万+ / 原创热文 / 文旅 / 短剧 / doubaoya / 都爆鸭 / 本鸭 / DOUBAOYA_API_KEY。
 compatibility: >-
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。
   发现类端点（能力清单 / 详情）免鉴权也免费，调用类端点必须带 Bearer 且计费。
@@ -69,6 +72,9 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 | "给我配张图" | 创作助手 | `POST /api/skills/gpt-image-gen/invoke` |
 | "把这条爆款改写成我的文案" | 改写（纯本地，不联网、不要 key） | Skill `wechat-rewrite`（公众号）/ `xiaohongshu-rewrite`（小红书）；没装就用搜来的素材由你合成 |
 | **"帮我写一篇公众号文章 / 写完要排版发草稿"** | **公众号写作交付链**（跨 Skill，不是单个 slug；**先问终态**：只要成稿 vs 要进草稿箱） | Skill `wechat-hot-write` → `wechat-title` / `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（要草稿箱才走到这站）；逐跳导航问 `dby` |
+| "小红书封面怎么做 / 起个小红书标题 / 帮我拆这篇笔记" | 小红书爆款封面 / 标题 / 笔记分析数据 | `POST /api/apis/xiaohongshu/xiaohongshu-coze/call` |
+| "公众号 10 万+ 有啥 / 原创热文榜" | 公众号分类时段热文榜 | `POST /api/apis/gongzhonghao/category-time-hot/call` |
+| "公众号文旅 / 短剧这块在发什么" | 公众号文旅 / 短剧日报源 | `POST /api/apis/gongzhonghao/gongzhonghao-playlet-feed/call` |
 | ~~"帮我记一下 / 存进笔记 / 查查我的笔记 / 我是个什么样的人"~~ | ⛔ **第二大脑（`mera`）已下架** | 无替代能力：如实告知已下架，**别拿公开搜索顶替**（见上方「我自己的东西」例外） |
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：

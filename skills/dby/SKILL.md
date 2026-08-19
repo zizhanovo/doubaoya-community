@@ -96,10 +96,10 @@ version: 1.0.0
 | 文章写好了要排版 + 封面 + 存进自己公众号草稿箱 | `wechat-article-pipeline` | md→公众号 HTML→封面→草稿的确定性流水线（只存草稿、不群发） |
 | 已有排好的图文，只想推进草稿箱 | `wechat-draft-publish` | 只存草稿、绝不群发，需先绑定公众号 |
 | 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `wechat-account-analyzer` | 账号诊断，支持多号并诊做竞品对照 |
-| 想追更某个号 / 复盘竞品最近发了啥 | `gzh-subscribe` | 拉指定时段历史发文做追更复盘 |
+| 想追更某个号 / 复盘竞品最近发了啥 | `doubaoya` | 拉指定时段历史发文做追更复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
 | 想找对标账号 / 起号参考 / 搭竞品矩阵 | `wechat-similar-account` | 同赛道对标 + 高阶标杆账号 |
-| 想看行业头部榜 / 竞品跟踪 | `wechat-top-account` | 日 / 周 / 月热度指数榜 |
-| 要把已发布的公众号文章拉正文 / 归档 | `wechat-mp-exporter` | 本地扫码，查 latest / today、拉正文续传归档 |
+| 想看行业头部榜 / 竞品跟踪 | `doubaoya` | 日 / 周 / 月热度指数榜：`POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
+| 要把已发布的公众号文章拉正文 / 归档 | `content-parse` | 按文章链接拉正文（本地扫码归档的 MP Ark 已下架） |
 
 > 本鸭 skill 库还有抖音 / 小红书选题取数、PDF 提取等能力（见仓库 README）。本入口专注**公众号飞轮**；跨平台取数需求可直接说，我会点到对应 skill，但不在此表逐一铺开。
 
@@ -179,24 +179,24 @@ version: 1.0.0
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 草稿已存，发布后想看表现 | `wechat-account-analyzer` | 攒几天数据给号做体检 / 看发文表现 |
-| 想盯自己或竞品的发文节奏 | `gzh-subscribe` | 拉时段发文做追更复盘 |
-| 已发文想归档正文 | `wechat-mp-exporter` | 本地扫码拉正文、续传归档 |
+| 想盯自己或竞品的发文节奏 | `doubaoya` | 拉时段发文做追更复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
+| 已发文想归档正文 | `content-parse` | 按文章链接拉正文（本地扫码归档的 MP Ark 已下架） |
 
-#### 复盘 → 反哺 —— 来自 `wechat-account-analyzer` / `gzh-subscribe`
+#### 复盘 → 反哺 —— 来自 `wechat-account-analyzer` / `doubaoya`（发文列表）
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 复盘看清受众爱看啥，回去挖下一个选题 | `doubaoya` 或 `wechat-hot-write` | **飞轮闭环**：用复盘信号喂下一轮选题 |
 | 发现自己号偏弱，想找对标学 | `wechat-similar-account` | 对标补短板、搭竞品矩阵 |
-| 想盯行业头部动态 | `wechat-top-account` | 头部榜看赛道趋势 |
+| 想盯行业头部动态 | `doubaoya` | 头部榜看赛道趋势：`POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
 | 想深挖某条爆文为什么火 | `wechat-hot-article` | 拆同主题爆款规律 |
 
-#### 对标 → 反哺 —— 来自 `wechat-similar-account` / `wechat-top-account`
+#### 对标 → 反哺 —— 来自 `wechat-similar-account` / 头部榜
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 找到对标，想扒它的选题角度 | `doubaoya` 或 `wechat-hot-write` | 对标有了，回选题挖角度 |
-| 想持续追这个号的发文 | `gzh-subscribe` | 长期盯梢做复盘 |
+| 想持续追这个号的发文 | `doubaoya` | 长期盯梢做复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
 
 ---
 

@@ -2,28 +2,6 @@
   "schema_version": 1,
   "routes": [
     {
-      "id": "mp-ark-local-archive",
-      "priority": 100,
-      "primary_skill": "wechat-mp-exporter",
-      "use_when": [
-        "user requests local QR login to WeChat Official Accounts",
-        "user requests latest or today's posts from a named account",
-        "user requests article body retrieval or local export",
-        "user requests resumable historical archive",
-        "user requests a local session without DOUBAOYA_API_KEY"
-      ],
-      "auth": {
-        "type": "user-approved-wechat-qr",
-        "requires_doubaoya_api_key": false
-      },
-      "unsupported": [
-        "read_count",
-        "like_count",
-        "recommend_count",
-        "comment_count"
-      ]
-    },
-    {
       "id": "doubaoya-authoring-delivery",
       "priority": 95,
       "terminal_skill": "wechat-article-pipeline",
@@ -61,7 +39,6 @@
       "candidate_skills": [
         "gongzhonghao-search",
         "gzh-search",
-        "gzh-subscribe",
         "wechat-hot-article",
         "wechat-account-analyzer",
         "content-parse"
@@ -79,23 +56,11 @@
   ],
   "precedence": [
     "Evaluate the highest-priority matching route first.",
-    "Explicit local QR, article-body, or archive intent selects mp-ark-local-archive even when the request also says Official Account.",
     "Intent to write, lay out, or deliver the user's own article selects doubaoya-authoring-delivery; how far along that route to travel is decided by the target state the user stated, not by a fixed number of hops.",
-    "Explicit interaction-metric intent selects doubaoya-cloud-public-data because MP Ark does not support those metrics.",
-    "When both archive and metric intents are present, split the work across the two routes and state each capability boundary.",
+    "Explicit interaction-metric intent selects doubaoya-cloud-public-data; those metrics only exist on the cloud data capabilities.",
     "Research routes feed the authoring route: once a topic is chosen, hand the work forward rather than treating a search result as the deliverable, unless the user asked only for the research."
   ],
   "forbidden_misroutes": [
-    {
-      "from": "mp-ark-local-archive",
-      "request_signals": [
-        "read count",
-        "like count",
-        "recommend count",
-        "comment count"
-      ],
-      "reason": "MP Ark must not fabricate or promise unsupported interaction metrics."
-    },
     {
       "from": "doubaoya-authoring-delivery",
       "request_signals": [

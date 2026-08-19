@@ -9,7 +9,7 @@ description: 公众号搜索爬虫 · 一个关键词批量爬取微信公众号
 
 > 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 >
-> 想精确盯**某一个公众号**追更/复盘，用 `gzh-subscribe`（按账号拉发文列表）；想按热度+时间区间挖**爆文**，用 `wechat-hot-article`。本鸭是「关键词 → 一批文章」的扫面工具。
+> 想精确盯**某一个公众号**追更/复盘，走 `doubaoya` 打 `POST /api/apis/gongzhonghao/gongzhonghao-work-list/call`（按账号拉发文列表）；想按热度+时间区间挖**爆文**，用 `wechat-hot-article`。本鸭是「关键词 → 一批文章」的扫面工具。
 
 ---
 
