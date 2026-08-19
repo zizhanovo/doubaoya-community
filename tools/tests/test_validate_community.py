@@ -333,30 +333,59 @@ class CommunityValidatorTests(unittest.TestCase):
         # 「doubaoya 不许点名已下架技能包」那道闸拿 known-hashes.json 的历史闭集当取材范围。
         shutil.copy2(validator.ROOT / "known-hashes.json", root / "known-hashes.json")
 
+    def a_non_safety_skill(self, root: Path) -> Path:
+        """现取一个**不碰违禁词检测**的存活 Skill，用作分域闸的域外样本。
+
+        这里刻意不写死包名。原本三处写的是 `doubao-websearch`，它 2026-08-19 作为
+        零装机纯壳退役，三条测试当场 FileNotFoundError——**写死包名的测试会跟着包一起烂**。
+        分域闸要证的性质是「域外 / 域内」，从来不是「某个特定的包」，所以判据也该这么写。
+        """
+        markers = ("check-banned-words", "content-safety-check", "wechat-prohibited-word")
+        for directory in validator.discover_skill_dirs(root):
+            in_safety_domain = any(
+                marker in candidate.read_text(encoding="utf-8", errors="ignore")
+                for candidate in sorted(directory.rglob("*"))
+                if candidate.is_file()
+                for marker in markers
+            )
+            if not in_safety_domain:
+                return directory
+        self.fail("仓里一个域外 Skill 都没有了，分域闸的这几条测试失去素材")
+
     def test_banned_word_gate_rejects_ghost_fields(self):
         # 三个字段上游从来没回过。文档教 agent 读 `matchedWords` 的那阵子，「为空 ⇒ 合规 ✅」
         # 是个恒真判据，每一段文案都被放行——变异证据分别覆盖「全仓禁」与「只在违禁词 Skill 禁」两类。
         for skill_name, injection, ghost in (
             ("wechat-banned-words", "若 `matchedWords` 为空则合规。", "matchedWords"),
             ("multi-banned-words", "读 `data.suggestions` 拿建议。", "suggestions"),
-            ("doubao-websearch", "整体风险等级看 `riskLevel`。", "riskLevel"),
+            # 第三条是**域外**样本：riskLevel 全仓禁，连不碰违禁词的包也不许写。
+            # 用哪个包无所谓，现取即可（见 a_non_safety_skill 的注释）。
+            (None, "整体风险等级看 `riskLevel`。", "riskLevel"),
         ):
-            with self.subTest(skill=skill_name), tempfile.TemporaryDirectory() as directory:
+            with self.subTest(skill=skill_name or "任一域外 Skill"), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 self.repository_fixture(root)
-                skill = root / "skills" / skill_name / "SKILL.md"
+                skill = (root / "skills" / skill_name / "SKILL.md") if skill_name else (self.a_non_safety_skill(root) / "SKILL.md")
                 skill.write_text(skill.read_text(encoding="utf-8") + f"\n\n{injection}\n", encoding="utf-8")
                 with self.assertRaisesRegex(validator.ValidationError, f"still names .{ghost}."):
                     validator.validate_banned_word_fields(root)
 
     def test_banned_word_gate_keeps_the_real_suggestions_field(self):
-        # `result.suggestions` 是搜索能力的真字段。闸若一刀切禁掉 `suggestions`，
-        # 就会把这份没问题的文档打红，逼着后来的人删掉正确的指引——所以按 Skill 分域禁。
+        # `result.suggestions` 是联网搜索能力的真字段。闸若一刀切禁掉 `suggestions`，
+        # 就会把域外那份没问题的文档打红，逼着后来的人删掉正确的指引——所以按 Skill 分域禁。
+        #
+        # 这条原本断言 doubao-websearch 的正文里**确实写着** result.suggestions；那个壳
+        # 2026-08-19 退役后，全仓不再有任何一份文档提这个字段（字段规格改由详情端点现拉，
+        # 是合并的设计而非回归）。所以判据从「找一份真写了的文档」改成**自己种一份**——
+        # 要证的性质是「域外写 suggestions 不该红」，种出来的样本证得一样硬，且不会再烂。
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            search_skill = root / "skills" / "doubao-websearch" / "SKILL.md"
-            self.assertIn("result.suggestions", search_skill.read_text(encoding="utf-8"))
+            outsider = self.a_non_safety_skill(root) / "SKILL.md"
+            outsider.write_text(
+                outsider.read_text(encoding="utf-8") + "\n\n综合答案与延伸提问在 `result.suggestions` 里。\n",
+                encoding="utf-8",
+            )
             validator.validate_banned_word_fields(root)
 
     def test_banned_word_gate_covers_skills_whose_endpoint_lives_in_scripts(self):
@@ -418,7 +447,7 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "doubao-websearch" / "SKILL.md"
+            skill = self.a_non_safety_skill(root) / "SKILL.md"
             skill.write_text(skill.read_text(encoding="utf-8").replace("description:", "description: 风险等级 ", 1), encoding="utf-8")
             validator.validate_banned_word_fields(root)
 
