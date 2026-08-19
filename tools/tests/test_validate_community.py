@@ -310,18 +310,24 @@ class CommunityValidatorTests(unittest.TestCase):
         从前它是一张点名到具体文件的白名单，于是**任何新建的 Skill 天生就在扫描面之外**——
         闸照常打绿，只是没看那个目录。这里用一个白名单里绝不可能出现的名字建 Skill，
         它必须照样被扫到；这条断言挂掉就说明白名单又长回来了。
+
+        变异在**整包三处**各跑一遍：入口 SKILL.md、references/ 下的按需加载文档、scripts/
+        下的脚本。密钥最可能落在后两处而不是入口——真要泄露，泄露的是作者本机跑通的那份
+        脚本或那份细节文档，而不是他反复誊写的门面。只扫入口 = 把闸建在没人会走的那道门上。
         """
-        for name, payload, expected in (
-            ("secret", "token: " + "ghp_" + "A" * 30 + "\n", "possible secret found"),
-            ("devpath", "cwd: " + str(Path("/", "Users", "example", "private")) + "\n", "developer path found"),
-        ):
-            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                skill = root / "skills" / "brand-new-skill-nobody-listed"
-                skill.mkdir(parents=True)
-                (skill / "SKILL.md").write_text(payload, encoding="utf-8")
-                with self.assertRaisesRegex(validator.ValidationError, expected):
-                    validator.validate_artifacts(root)
+        for location in ("SKILL.md", "references/detail.md", "scripts/run.py"):
+            for name, payload, expected in (
+                ("secret", "token: " + "ghp_" + "A" * 30 + "\n", "possible secret found"),
+                ("devpath", "cwd: " + str(Path("/", "Users", "example", "private")) + "\n", "developer path found"),
+            ):
+                with self.subTest(location=location, name=name), tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    skill = root / "skills" / "brand-new-skill-nobody-listed"
+                    target = skill / location
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(payload, encoding="utf-8")
+                    with self.assertRaisesRegex(validator.ValidationError, expected):
+                        validator.validate_artifacts(root)
 
     def test_artifacts_allow_ellipsis_placeholder_paths(self):
         """省略号占位不是泄露。
