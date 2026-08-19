@@ -50,6 +50,10 @@
       "displayName": "都爆鸭 · 新媒体数据总入口",
       "topics": ["新媒体", "爆款选题", "热榜", "数据源"]
     },
+    "doubaoya-gateway": {
+      "displayName": "都爆鸭 · 调用网关",
+      "topics": ["调用协议", "能力索引", "基础设施"]
+    },
     "douyin-comment": {
       "displayName": "抖音评论拉取",
       "topics": ["抖音", "评论", "舆情", "数据源"]

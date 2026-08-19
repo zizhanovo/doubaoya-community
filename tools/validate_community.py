@@ -51,6 +51,15 @@ SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 SKILL_INVOKE_PATH = re.compile(r"/api/skills/([A-Za-z0-9][A-Za-z0-9._~-]*)/invoke")
 API_CALL_PATH = re.compile(r"/api/apis/([A-Za-z0-9][A-Za-z0-9._~-]*)/([A-Za-z0-9][A-Za-z0-9._~-]*)/call")
 # 占位符写法（`<slug>` / `${slug}` / `%s`）不含上面字符类里的字符，天然不参与匹配。
+#
+# 详情端点（`GET`，免鉴权免费）同样点名 slug，同样会因为 slug 漂移而静默 404。网关 Skill 的
+# 选路索引整整 94 行给的**全是详情端点**（给调用路径会让人照着拼，而专用路由根本拼不出来），
+# 所以这两条不纳入校验，那份索引就等于完全没人看着。末尾的 `(?![\w/-])` 保证只匹配"到此为止"
+# 的详情形态，不会把 `…/call`、`…/invoke` 重复算一遍。
+SKILL_DETAIL_PATH = re.compile(r"/api/skills/([A-Za-z0-9][A-Za-z0-9._~-]*)(?![\w/-])")
+API_DETAIL_PATH = re.compile(r"/api/apis/([A-Za-z0-9][A-Za-z0-9._~-]*)/([A-Za-z0-9][A-Za-z0-9._~-]*)(?![\w/-])")
+# `/api/skills/` 下这几条不是能力详情，是集合级端点，天然不在 catalog 的 slug 集合里。
+SKILL_COLLECTION_ENDPOINTS = frozenset({"search", "recommend", "installs"})
 
 # 主仓 catalog 的单一事实源。**不能写死绝对路径**——本文件自己会被 validate_artifacts 的
 # 「开发者路径」正则扫描。默认按兄弟目录找，可用环境变量覆盖；找不到就跳过并 warn
@@ -61,6 +70,47 @@ CATALOG_MARKERS = (
     ("const skillDefinitions: SkillDefinition[] = [", "export const skills: Skill[] ="),
     ("const apiEndpointDefinitions: ApiEndpointDefinition[] = [", "export const apiEndpoints: ApiEndpoint[] ="),
 )
+
+# ── 网关 Skill：「不许把契约烤进分发物」闸 ───────────────────────────────────────
+# 网关 Skill 的整个存在理由是：**协议内联、契约现拉**。它只许携带三样东西——调用协议、
+# 一份仅供选路的能力索引（operationKey + 一行用途 + 详情端点）、跨能力的选路知识。
+# 一旦有人图省事把某条能力的入参字段抄进来，它就退化成又一份「看起来很确定、其实在骗人」的
+# 快照契约——正是本轮要根治的病。本闸就是钉死这件事。
+GATEWAY_SKILL = "doubaoya-gateway"
+
+# 协议词汇表：**信封 + 发现/详情 DTO + 入参契约 DTO** 的键，外加 JSON Schema 自己的元关键字。
+# 🔴 往这份表里加一个**能力入参字段名**（keyword / limit / thumbMediaId / publishTimeStart …），
+# 就等于亲手把契约烤进了分发物 —— 那是本闸唯一要拦的事，别这么干。这里只该出现
+# 「所有能力共用的协议层键」，判据很简单：换一条能力它还叫这个名字吗？不是就别加。
+GATEWAY_PROTOCOL_VOCAB = frozenset({
+    # 统一信封
+    "success", "requestId", "data", "error", "code", "message", "details",
+    "notice", "detailUrl", "noResult",
+    # 发现 / 详情 DTO
+    "items", "total", "platform", "slug", "operationKey",
+    "execution", "mode", "sideEffect", "target", "method", "path",
+    "availability", "note", "status",
+    # 入参契约 DTO（inputContract）与它指向的两个退路字段
+    "inputContract", "kind", "jsonSchema", "route",
+    "inputUiSchema", "requestSchema", "inputSchema",
+    # JSON Schema 元关键字（描述规格的语言本身，不是任何一条能力的字段）
+    "$schema", "type", "properties", "required", "additionalProperties",
+})
+
+# 一条 operationKey 长这样：`api.trend.hotTopics` / `skill.wechat.draftPublish` /
+# `tool.contentSafety.checkWords`。它的末段天生是驼峰，而索引表里必须逐条列出它们，
+# 所以扫驼峰之前先把整条 operationKey 摘掉 —— 否则索引表自己就会把本闸打红。
+OPERATION_KEY = re.compile(r"\b(?:api|skill|tool)\.[A-Za-z0-9]+\.[A-Za-z0-9]+\b")
+# 驼峰标识符：58 个真实入参字段名里有 37 个长这样（thumbMediaId / publishTimeStart /
+# sortType / accountId …），而且它在中文正文里几乎不可能是别的东西。
+CAMEL_CASE = re.compile(r"\b[a-z][a-z0-9]*(?:[A-Z][A-Za-z0-9]*)+\b")
+# 围栏代码块（```lang … ```）。入参最可能被抄进来的地方就是这里的请求体示例。
+FENCED_BLOCK = re.compile(r"^```[^\n]*\n(.*?)^```", re.MULTILINE | re.DOTALL)
+# JSON 键。剩下 21 个小写单词字段名（keyword / limit / page / cursor …）在正文里跟普通英文
+# 撞车，扫全文必然误报；但它们一旦被当成**入参**抄进来，一定是以 JSON 键的形态出现。
+JSON_KEY = re.compile(r'"(\$?[A-Za-z_][A-Za-z0-9_-]*)"\s*:')
+# 索引表的一行：正好三列（operationKey / 用途 / 详情端点）。多出一列，装的多半就是入参。
+INDEX_ROW = re.compile(r"\| `([^`|]+)` \| ([^|]*) \| ([^|]*) \|")
 
 # 还没上线的后端路由：契约先行，skill 端已按契约实现并自带 404 降级。
 # 见 skills/celebrity-slice/references/asr-api.md。这是一张**会自动清账的**豁免表——
@@ -454,6 +504,32 @@ def validate_call_routes(root: Path = ROOT) -> None:
                 ),
             )
 
+        for slug in sorted(set(SKILL_DETAIL_PATH.findall(text))):
+            if slug in SKILL_COLLECTION_ENDPOINTS:
+                continue
+            require(
+                slug in skill_slugs,
+                f"{relative} 指向详情端点 /api/skills/{slug}，但「{slug}」不在主仓 catalog 的 skills 集合里"
+                + (
+                    f"——它其实是 apis 集合里的能力，详情端点是 /api/apis/<platform>/{slug}"
+                    if any(slug == api_slug for _, api_slug in api_refs)
+                    else "，这条路径必然 404"
+                ),
+            )
+
+        for platform, slug in sorted(set(API_DETAIL_PATH.findall(text))):
+            if (platform, slug) in PENDING_UPSTREAM_ROUTES:
+                continue
+            require(
+                (platform, slug) in api_refs,
+                f"{relative} 指向详情端点 /api/apis/{platform}/{slug}，但主仓 catalog 的 apis 集合里没有这条"
+                + (
+                    f"——「{slug}」是 skills 集合里的能力，详情端点是 /api/skills/{slug}"
+                    if slug in skill_slugs
+                    else "，这条路径必然 404"
+                ),
+            )
+
         for platform, slug in sorted(set(API_CALL_PATH.findall(text))):
             if (platform, slug) in PENDING_UPSTREAM_ROUTES:
                 require(
@@ -470,6 +546,73 @@ def validate_call_routes(root: Path = ROOT) -> None:
                     else "，这条路径必然 404"
                 ),
             )
+
+
+def validate_gateway_contract_freedom(root: Path = ROOT) -> None:
+    """网关 Skill 的正文里不许出现**任何一条能力的入参字段**。
+
+    判据分三条，每条盯一种「把参数抄进来」的真实形态：
+
+    1. **驼峰标识符**（全文，含代码块）必须属于协议词汇表。真实入参字段名里 37/58 是驼峰
+       （``thumbMediaId`` / ``publishTimeStart`` / ``sortType`` …），无论它被抄成 JSON 键、
+       JS 属性、表格单元格还是一句中文里的行内代码，这一条都拦得住。索引表里逐条列出的
+       ``operationKey`` 是唯一的合法驼峰来源，扫描前整条摘掉。
+    2. **围栏代码块里的 JSON 键**必须属于协议词汇表。剩下 21 个字段名是小写单词
+       （``keyword`` / ``limit`` / ``page`` / ``cursor`` …），扫全文会跟普通英文撞车而误报；
+       但把参数抄进来时它们必然以请求体的 JSON 键出现，所以只在代码块里扫，零误报面。
+    3. **索引表的「用途」列**只许是中文说明，不许出现 ASCII 标识符 —— 索引就该只回答
+       「有哪些能力、详情端点在哪」，给它加一列参数说明是最省事也最典型的复发路径。
+
+    ponytail: 天花板 = 有人用**流水中文散文**逐条描述小写单字段名（「这条能力的入参是
+    keyword，选填 limit」）能穿过第 1、3 条。不扫全文里的小写单词是有意的——``limit``
+    / ``type`` / ``content`` 在文档里有大量正当用法，扫它必然把闸变成噪音，而噪音闸等于
+    没有闸。升级路径 = 从主仓 catalog 现导一份真实字段名全集，只对**那 58 个词**扫全文；
+    但那要求本闸依赖主仓在场（validate_call_routes 那样可跳过），先不加。
+    """
+    skill_md = root / "skills" / GATEWAY_SKILL / "SKILL.md"
+    require(skill_md.is_file(), f"网关 Skill 不见了：skills/{GATEWAY_SKILL}/SKILL.md")
+    text = skill_md.read_text(encoding="utf-8")
+
+    scannable = OPERATION_KEY.sub(" ", text)
+    stray = sorted(set(CAMEL_CASE.findall(scannable)) - GATEWAY_PROTOCOL_VOCAB)
+    require(
+        not stray,
+        f"{GATEWAY_SKILL}/SKILL.md 里出现了不属于调用协议的驼峰标识符：{stray}。"
+        "网关只许携带协议、选路索引和选路知识——逐能力的入参字段一律不许写进来，"
+        "调用方必须从详情端点现拉（这正是本 Skill 存在的理由）。",
+    )
+
+    for block in FENCED_BLOCK.findall(text):
+        keys = sorted(set(JSON_KEY.findall(block)) - GATEWAY_PROTOCOL_VOCAB)
+        require(
+            not keys,
+            f"{GATEWAY_SKILL}/SKILL.md 的代码块里出现了非协议 JSON 键：{keys}。"
+            "请求体示例一旦带上真实入参字段，本 Skill 就退化成又一份会漂的快照契约。",
+        )
+
+    rows = [line for line in text.splitlines() if line.startswith("| `")]
+    require(bool(rows), f"{GATEWAY_SKILL}/SKILL.md 里找不到能力索引表")
+    for line in rows:
+        matched = INDEX_ROW.fullmatch(line)
+        require(
+            matched is not None,
+            f"{GATEWAY_SKILL}/SKILL.md 索引表这一行不是「operationKey | 用途 | 详情端点」三列：{line!r}。"
+            "索引只回答「有哪些能力、详情端点在哪」——多出来的一列，装的多半就是入参。",
+        )
+        operation_key, purpose, endpoint = matched.groups()
+        require(
+            OPERATION_KEY.fullmatch(operation_key) is not None,
+            f"{GATEWAY_SKILL}/SKILL.md 索引表首列不是一条 operationKey：{operation_key!r}",
+        )
+        require(
+            "`" not in purpose,
+            f"{GATEWAY_SKILL}/SKILL.md 索引表「{operation_key}」的用途列里有行内代码：{purpose.strip()!r}。"
+            "用途是一句中文说明；字段名、枚举值这类东西一律去详情端点现拉。",
+        )
+        require(
+            endpoint.strip().startswith("`/api/") and endpoint.strip().endswith("`"),
+            f"{GATEWAY_SKILL}/SKILL.md 索引表「{operation_key}」的第三列不是详情端点：{endpoint.strip()!r}",
+        )
 
 
 def safe_vendor_path(value: object) -> str:
@@ -630,6 +773,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_routing(root)
     validate_authoring_chain(root)
     validate_banned_word_fields(root)
+    validate_gateway_contract_freedom(root)
     validate_call_routes(root)
     validate_vendor(root)
     validate_artifacts(root)
