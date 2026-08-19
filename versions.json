@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-08-19T17:23:53.386779+00:00",
+  "generatedAt": "2026-08-19T17:52:22.934943+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "content-parse": "doubaoya-skill/content-parse@363c45af3c3a",
     "dby": "doubaoya-skill/dby@259fd3762f29",
     "dby-charter": "doubaoya-skill/dby-charter@a9eaab1fad23",
     "dby-update": "doubaoya-skill/dby-update@78d16ebe4793",
-    "doubaoya": "doubaoya-skill/doubaoya@4fefd591daaa",
-    "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@bfb8ea8b88d0",
+    "doubaoya": "doubaoya-skill/doubaoya@476ef827075e",
+    "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@80b4f6da2278",
     "image-gen": "doubaoya-skill/image-gen@cf818b734a81",
     "ip-profile": "doubaoya-skill/ip-profile@fbbf493d9e83",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
