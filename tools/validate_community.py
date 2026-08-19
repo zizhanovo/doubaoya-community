@@ -131,6 +131,12 @@ RETIRED_WITH_CAPABILITY = {
     "seedance-video-gen",
     "video-downloader",
     "xiaohongshu-similar-account",  # 只剩 douyin / gongzhonghao 两个同类，小红书这条没了
+    # mera 是**整个平台**退役，不是我们不想要：mera.doubaoya.com 的 DNS 记录已移除
+    # （dig 返回 NXDOMAIN），六条 api.mera.* 在发现接口里被 hidden 过滤，
+    # GET /api/apis/mera/<slug> 与「压根不存在」同为 404。判据与失效条件写在
+    # skills/doubaoya/references/mera-routing.json 的 retired 块里。
+    # 2026-08-18 删掉它的壳，能力侧本就没有可发现的东西可留。
+    "mera",
 }
 
 
