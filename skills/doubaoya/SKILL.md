@@ -117,6 +117,11 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 所有公开能力都挂在 `https://doubaoya.com/api/...` 下，JSON 进 JSON 出。绝大多数是 POST；
 少数专用路由用 `PUT` / `GET`，**方法以能力自己的 `execution.target.method` 为准**（见 §2.1）。
 
+> ⚙️ 本节讲的是够用的约定。**只在协议这一层卡住时**再往下翻一层：两条互不回落的路由到底怎么选、
+> 统一信封怎么解、`SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` / `DEDICATED_ROUTE` / `NO_RESULT`
+> 分别该怎么办、以及「入参规格调用前现拉、别照记忆或本地文档拼」这条纪律——都在 `doubaoya-gateway` 里。
+> 它只回答**怎么把一次调用打出去**，不承接业务意图；要做的事本身该走哪个能力，看 §3 与 `dby`。
+
 ### 2.1 调用一个操作：先发现，再照 `execution.target` 打
 
 平台有**两个能力集合，各管一半，彼此不回落**：
