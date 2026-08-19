@@ -121,6 +121,19 @@ INDEX_ROW_HEAD = re.compile(r"^\| `([^`|]+)` \|")
 # 免得豁免留成一个永久的洞。
 PENDING_UPSTREAM_ROUTES = {("media", "asr")}
 
+# 已下架包的能力**也**一起下架了的，列在这儿豁免「删包前能力必须仍可发现」那道闸。
+# 判据不是「我们不想要了」，而是**发现接口里也确实没有了**：2026-08-18 实拉
+# GET /api/skills（17 条）与 GET /api/apis（77 条），下面三条都不在其中，所以删包不会
+# 让任何还活着的能力失联。反例留个对照——douyin-similar-account 的包同样删了，但那条能力
+# 还在发现接口里、也还在能力索引里，所以它不需要豁免，闸对它天然是绿的。
+# 同样是**会自动清账的**豁免表：哪天它们又出现在能力索引里，下面的断言会反过来要求把
+# 这里删掉，免得豁免留成永久的洞。
+RETIRED_WITH_CAPABILITY = {
+    "seedance-video-gen",
+    "video-downloader",
+    "xiaohongshu-similar-account",  # 只剩 douyin / gongzhonghao 两个同类，小红书这条没了
+}
+
 
 class ValidationError(RuntimeError):
     pass
@@ -494,6 +507,11 @@ def validate_call_routes(root: Path = ROOT) -> None:
         # 测试套件里的坏路径是**变异用例**，不是调用点——扫它等于要求本闸的红测永远为绿。
         if relative.startswith("tools/tests/"):
             continue
+        # known-hashes.json 记的是**已下架包当年调过什么**，是历史账本不是调用点。里面的
+        # 端点本来就该是死的（能力跟着包一起下架了），扫它等于要求历史永远不许下架。
+        # 「这些死端点有没有让还活着的能力失联」由 validate_retired_discoverability 管。
+        if relative == "known-hashes.json":
+            continue
         text = path.read_text(encoding="utf-8")
 
         for slug in sorted(set(SKILL_INVOKE_PATH.findall(text))):
@@ -801,6 +819,53 @@ def validate_artifacts(root: Path = ROOT) -> None:
             require(not pattern.search(text), f"developer path found: {relative}")
 
 
+def validate_retired_discoverability(root: Path = ROOT) -> None:
+    """删包前必须过的闸：已下架包的能力，得在网关的能力索引里仍然找得到。
+
+    删掉的是**壳**，能力的发现面必须先在新家站好；否则「删掉然后同步」会退化成
+    「删掉然后失联」——老用户的包被对账器归档了，而新用户在索引里也找不到这条能力，
+    这条能力就等于从产品上消失了，且没有任何地方会报错。
+
+    输入是 known-hashes.json 里的 retiredEndpoints（由 tools/build_known_hashes.py 从
+    git 历史扒出来），所以这道闸不依赖 git、离线可跑。
+    """
+    known_path = root / "known-hashes.json"
+    require(known_path.is_file(), "known-hashes.json 不见了：先跑 tools/build_known_hashes.py")
+    known = load_json(known_path)
+    require(isinstance(known, dict), "known-hashes.json 顶层不是对象")
+    retired_endpoints = known.get("retiredEndpoints")
+    require(isinstance(retired_endpoints, dict), "known-hashes.json 缺 retiredEndpoints")
+
+    index_path = root / "skills" / GATEWAY_SKILL / "references" / "capability-index.md"
+    require(index_path.is_file(), f"能力索引不见了：{display_path(index_path)}")
+    index_text = index_path.read_text(encoding="utf-8")
+
+    stale_exemptions = RETIRED_WITH_CAPABILITY - set(retired_endpoints)
+    require(
+        not stale_exemptions,
+        f"RETIRED_WITH_CAPABILITY 里有已经不是「已下架包」的条目：{sorted(stale_exemptions)}，"
+        "请删掉——豁免表不该留孤儿",
+    )
+
+    for slug in sorted(retired_endpoints):
+        endpoints = retired_endpoints[slug]
+        missing = [e for e in endpoints if e not in index_text]
+        if slug in RETIRED_WITH_CAPABILITY:
+            require(
+                bool(missing),
+                f"{slug} 的能力已经回到能力索引里了（{endpoints}），"
+                "请把它从 RETIRED_WITH_CAPABILITY 删掉——豁免表要自动清账",
+            )
+            continue
+        require(
+            not missing,
+            f"删包会让能力失联：已下架的 {slug} 当年调的 {missing} 在 "
+            f"{GATEWAY_SKILL}/references/capability-index.md 里找不到。"
+            "删的是壳，能力的发现面必须先在新家站好——要么把这条能力补进索引，"
+            "要么确认它在发现接口里也已下架后加进 RETIRED_WITH_CAPABILITY",
+        )
+
+
 def validate_repository(root: Path = ROOT) -> None:
     validate_skill_inventory(root)
     validate_readme(root)
@@ -810,6 +875,7 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_banned_word_fields(root)
     validate_gateway_contract_freedom(root)
     validate_call_routes(root)
+    validate_retired_discoverability(root)
     validate_vendor(root)
     validate_artifacts(root)
 

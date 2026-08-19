@@ -1,0 +1,691 @@
+{
+  "generatedAt": "2026-08-19T05:20:57.702909+00:00",
+  "skills": {
+    "ai-intelligence-investigator": [
+      "73620ccabced"
+    ],
+    "astock-social-feed": [
+      "14ef0ed7e0e4"
+    ],
+    "bilibili-keyword-accounts": [
+      "46efd4c832c2"
+    ],
+    "bilibili-keyword-search": [
+      "2e9f6065fbbf"
+    ],
+    "bilibili-portfolio-search": [
+      "60019ed605c7"
+    ],
+    "celebrity-slice": [
+      "688c81c38fd2",
+      "84831ef845b4",
+      "8d462e758f28",
+      "8d9c2c08c3a2",
+      "a7e916ec5338",
+      "bca4a6c3da99"
+    ],
+    "cn-last30days": [
+      "0042afabe441",
+      "0f728b2d9358",
+      "21ee642f258d",
+      "35bb42b4a1ca",
+      "8ab1d5dc820b",
+      "9839d4be5523"
+    ],
+    "content-parse": [
+      "4729912b52d1",
+      "52f068c4240e",
+      "ac955d2e1552",
+      "b695377ece3f"
+    ],
+    "cultural-tourism-bilibili-feed": [
+      "0ffca08ba108",
+      "8f7130bf0be6"
+    ],
+    "cultural-tourism-douyin-feed": [
+      "3ce07ddf82ba",
+      "d86877d1066b"
+    ],
+    "cultural-tourism-wechat-feed": [
+      "2771c8f0d37c",
+      "384c55429c17",
+      "400fccb4f563",
+      "69136892c14b",
+      "86dc1f0f16cc"
+    ],
+    "cultural-tourism-xiaohongshu-feed": [
+      "1b1c55502ce4",
+      "a05407096d06"
+    ],
+    "dby": [
+      "2db0a55a86c2",
+      "3012327e9323",
+      "3614ff73a0b8",
+      "39e738fe2c0e",
+      "578b1a067705",
+      "75694e183386",
+      "e0ef82da64ee"
+    ],
+    "dby-charter": [
+      "289a7e8efa11",
+      "a85067a32ed9"
+    ],
+    "dby-update": [
+      "53d92b2192de",
+      "e88f976ec4bb"
+    ],
+    "doubao-websearch": [
+      "2b05ffa5169a",
+      "36cb9bf3a044",
+      "46c629c99268",
+      "55d871bfec4a"
+    ],
+    "doubaoya": [
+      "035c62d0cddb",
+      "22b7c35a85ae",
+      "3193cf932cb7",
+      "3a14e308dcf3",
+      "45222c3bbed9",
+      "4541fde58b19",
+      "5e4285733c9a",
+      "7d952dd6a3ae",
+      "820ffedd8e9a",
+      "934637117ed3",
+      "943416170780",
+      "9db2d38ae564",
+      "9f93465da94f",
+      "af1b56533141",
+      "d671ab439717",
+      "e09552b3db86",
+      "e4c2e8b00436",
+      "e59ca8d2e11c",
+      "e8b2bfb279bc",
+      "fd5c7d045503"
+    ],
+    "doubaoya-gateway": [
+      "7b241df32a12",
+      "d7be4ecd8086"
+    ],
+    "douyin-account-diagnosis": [
+      "724dc2637f7b",
+      "7760f8553ba3"
+    ],
+    "douyin-account-insight": [
+      "24f8a9a2308c",
+      "3307eba3e8ab"
+    ],
+    "douyin-account-works": [
+      "959b66000935",
+      "e93f8ec9aafa"
+    ],
+    "douyin-ai-feed": [
+      "609a6f7c7261",
+      "846de0aae7ee"
+    ],
+    "douyin-comment": [
+      "94cf3e281b04",
+      "962921ed00af",
+      "dc4de794f1ce",
+      "f159b27d2703"
+    ],
+    "douyin-content-surge": [
+      "7a641b8a75d7",
+      "fc425c08e975"
+    ],
+    "douyin-daily-hot": [
+      "0e8953a807ad",
+      "cc7c8113ceb4"
+    ],
+    "douyin-hot-trend": [
+      "48b150ae5477",
+      "87047aa4c13f",
+      "e44863db7f53"
+    ],
+    "douyin-realtime-search": [
+      "aa99390c4734",
+      "bdb6dadc9fe0",
+      "d861c99e79a8",
+      "da2722db8431"
+    ],
+    "douyin-rise-ranking": [
+      "849034333ff5",
+      "b1e84379d223"
+    ],
+    "douyin-search": [
+      "154c60c5923a",
+      "521d1ff1620b",
+      "5d6fe3fcf166",
+      "d0ecf7a7e23c"
+    ],
+    "douyin-similar-account": [
+      "4e0458559153",
+      "c994c7aa5f08"
+    ],
+    "douyin-subscribe": [
+      "8ea32bd21257",
+      "f58e1f15413d"
+    ],
+    "douyin-top-account": [
+      "b307d6a3b11d",
+      "cbfb32befb01"
+    ],
+    "douyin-weekly-surge": [
+      "2d87a4d21504",
+      "bfb8bd09453c"
+    ],
+    "douyin-works-crawler": [
+      "4d9e35baf18d",
+      "a33bf8aa64c1"
+    ],
+    "gongzhonghao-search": [
+      "28e528b8a3b7",
+      "5a9658cc65ba",
+      "ddd991ed7d43",
+      "e19a42437713"
+    ],
+    "gzh-ai-feed": [
+      "17b81ba201c0",
+      "83dda703ed94",
+      "b3d13aba1ebb",
+      "d2b1fa95fe37",
+      "f0c2d4aea208"
+    ],
+    "gzh-astock-top": [
+      "0a630607e3b2",
+      "26995b98b054",
+      "b0397ba4619e",
+      "b05513e55a44",
+      "cb0117854e10",
+      "ee79a58d585c"
+    ],
+    "gzh-search": [
+      "0ce1bf738a5c",
+      "685cb3f07cc3",
+      "70a5e0479c16",
+      "95c7ffa97dcb"
+    ],
+    "gzh-subscribe": [
+      "63eba88a501b",
+      "6a3904b09bb5",
+      "7e5c89cdb151",
+      "86ca8b1384fb",
+      "9b3420dcf641"
+    ],
+    "image-gen": [
+      "1db63fc51834",
+      "21c0a56043e3",
+      "2a98fbcc0dfb",
+      "3c18c3d227c3",
+      "7644508c5b4a",
+      "7b1584092802",
+      "d8aee0025edb",
+      "dbab965c3a57"
+    ],
+    "ip-profile": [
+      "b36db0c86bf5",
+      "ba16b9cb509d",
+      "d05bb83c226b",
+      "dd6c27e2411f",
+      "e1bcf796fd49"
+    ],
+    "ks-ai-feed": [
+      "99d8a5314b6e"
+    ],
+    "mera": [
+      "24c263d1a67e",
+      "2b23f763aa42",
+      "2db4df543c4e",
+      "725991ab4f3e",
+      "80c955d249ac",
+      "cca381f912d6",
+      "ecbb1d97dd44",
+      "eeafb3631fc4"
+    ],
+    "multi-banned-words": [
+      "359ff74d7f2f",
+      "ac0452642139",
+      "c79fa9a6e8a4",
+      "dbfa9d3e6537",
+      "fa04fbf2319c"
+    ],
+    "multi-content-feed": [
+      "258b43f01e0b",
+      "322a15f9a7db",
+      "58c904601859",
+      "6bc770437a20",
+      "961fb9a72617",
+      "e8eafd02c7ba"
+    ],
+    "multi-rewrite": [
+      "8e07dbeed572",
+      "c025bdecf97c"
+    ],
+    "optimize-skill-md": [
+      "b70db0754ccf"
+    ],
+    "pdf-image-text-extractor": [
+      "7100990470e0",
+      "79fe3715dfe0",
+      "dfbc50fee134"
+    ],
+    "playlet-bili-feed": [
+      "54dbfba65fe8",
+      "8170d6371065"
+    ],
+    "playlet-douyin-feed": [
+      "6fd2146a8d5b",
+      "eba898eaa46b"
+    ],
+    "playlet-wechat-feed": [
+      "351ee4f679f2",
+      "3ebe92afaed3",
+      "7c190de3a23b",
+      "7cba97b1e6d5",
+      "f315fbf96fcb"
+    ],
+    "playlet-xiaohongshu-feed": [
+      "2d14e5f59b28",
+      "4024193a834e"
+    ],
+    "seedance-video-gen": [
+      "80f628c3c505"
+    ],
+    "seedream-5-lite": [
+      "01ab2a8b4d38",
+      "6e6cb9e8eb63",
+      "7b4d5857c795",
+      "cbc7525953d6",
+      "d4a0fb2d8312",
+      "d72d51a89e4b"
+    ],
+    "tiktok-account-search": [
+      "0452d7e2c259"
+    ],
+    "trending-hub": [
+      "2fa9c18f9ffc",
+      "3a87f4f60e76",
+      "4c8e42c9cc32",
+      "704ffd48321d",
+      "aa5dfce8c2c1",
+      "aab9d14c6e58",
+      "ce7dcc76fcf8",
+      "ecd0d3e1198a",
+      "f5f1f7bde205"
+    ],
+    "trending-hub-top10": [
+      "0b37ea168359",
+      "39b4df904774",
+      "3ee115e4176b",
+      "4db77fa2e299",
+      "759f77d28df3",
+      "c3f4290d1cdf",
+      "e293119366fd",
+      "f6476256f293"
+    ],
+    "video-downloader": [
+      "22d81b5c253f",
+      "814cbe4a2dc1"
+    ],
+    "wechat-10w-hot": [
+      "6220c344c078",
+      "96210aea2de6",
+      "af3f025e734b",
+      "b82f2ab8e880",
+      "b9e1d16e6ba0",
+      "f5c7a37be938"
+    ],
+    "wechat-account-analyzer": [
+      "153389f9602d",
+      "4df783921870",
+      "4fe64f6efacf",
+      "7073587035e4",
+      "d63f093ef772"
+    ],
+    "wechat-article-pipeline": [
+      "2ee559010b10",
+      "2f42b3dae492",
+      "36d0ec66723c",
+      "567d45855c8f",
+      "5b08b28d0797",
+      "5e454ba990b7",
+      "5f18df66a2d6",
+      "6af7fdbdf97a",
+      "6ee823b7415b",
+      "6fe62bf1b7aa",
+      "88e8c98c695d",
+      "8e51d419df6b",
+      "8fd6a7602be1",
+      "9fd965739ead",
+      "bc543b555f3e",
+      "c2e53f8828fd",
+      "c394ba22e112",
+      "ea71215fb478",
+      "f2b4bed93925",
+      "f501d5f2fbde",
+      "fce1260c3188"
+    ],
+    "wechat-banned-words": [
+      "09fb3174ceac",
+      "2e29d74ce37d",
+      "40f0b53c178e",
+      "80d0c20e8bb1",
+      "9fa04f5e25f2",
+      "a957ba91c49c",
+      "b724729bdbbd",
+      "f9a9954423a8"
+    ],
+    "wechat-channels-ai-feed": [
+      "0a5bf0f34195",
+      "3958c899a0cc",
+      "644928674031",
+      "9fa062721a38",
+      "a11959e67fe5"
+    ],
+    "wechat-cover": [
+      "0a7601331adf",
+      "36ec34ea283d",
+      "489577c65d3c",
+      "54e5caaceb7c",
+      "56eec9d667c4",
+      "80f58ab682c1",
+      "a2c7a69c1d7c",
+      "c79a769e63fd",
+      "ff68f2fabfee"
+    ],
+    "wechat-draft-publish": [
+      "1cff688f3db3",
+      "24d35d8ef1cc",
+      "36d50bb4dd9b",
+      "65dcd550c6fc",
+      "75ef5514352b",
+      "85a1a1eee05b",
+      "a11caf10b3a8",
+      "d33943fee4fe",
+      "d7759ec3a416",
+      "de6addceab4f",
+      "e8992f4bad24"
+    ],
+    "wechat-fastest-growing": [
+      "16c6dcfa0091",
+      "2b861a77792b",
+      "59a5a4c58218",
+      "821be7bcfeaa",
+      "bd45df48a126",
+      "c4fe892097f5",
+      "d17ff3d4de96"
+    ],
+    "wechat-hot-article": [
+      "41f5aef89a1c",
+      "498c02f187b3",
+      "7f8dfcda0b2f",
+      "9112fba1e346",
+      "c8f27c07406b"
+    ],
+    "wechat-hot-write": [
+      "13b11380f9f4",
+      "19701d4bc747",
+      "213f6637e83a",
+      "7f10354e16ed",
+      "93756d698e10",
+      "cc0f1c703ea2",
+      "f9cbfc56eef5"
+    ],
+    "wechat-mp-exporter": [
+      "e432461f663c"
+    ],
+    "wechat-original-hot": [
+      "0d25f6b3396c",
+      "354d1bfacaf9",
+      "8045e81c10ad",
+      "aecd846ed571",
+      "ba1fa176693e",
+      "e0e969f32bec"
+    ],
+    "wechat-rewrite": [
+      "b4dac418f209",
+      "d8ac8745b5c1"
+    ],
+    "wechat-similar-account": [
+      "027e97e50256",
+      "47507a389767",
+      "4ab9090d9962",
+      "86ad74628a17",
+      "bab24f89c48f",
+      "cd3982196ca4",
+      "f71b8c4e15df"
+    ],
+    "wechat-theme-studio": [
+      "103af5d4ea15",
+      "1734829e2263",
+      "1c17b6e5be57",
+      "3dfb22b2d2e8",
+      "4e815a9c4498",
+      "6c300397c349",
+      "81ae208bad6f",
+      "93f89aa0f52a",
+      "a9633c71f829"
+    ],
+    "wechat-title": [
+      "0376b445a8b7",
+      "084421ccadf1",
+      "1f27366b4853",
+      "2b099ca1f4a1",
+      "57026e816596",
+      "7cacd7ea4396",
+      "87c02142ec35",
+      "8a5f08d8eaf9",
+      "cdf09aba567a",
+      "da6364068436"
+    ],
+    "wechat-top-account": [
+      "0a77fafa5268",
+      "5279a0e40e3f",
+      "728023ecefac",
+      "74507cae2329",
+      "80316f00d045",
+      "addc73ba41b4"
+    ],
+    "xiaohongshu-account-analyzer": [
+      "2059a2e2d215",
+      "318fde7bc5ee"
+    ],
+    "xiaohongshu-comment": [
+      "3745e77e379a",
+      "a58044a613e7"
+    ],
+    "xiaohongshu-cover": [
+      "063503aa95fe",
+      "12225edcba7e",
+      "1500f22530d8",
+      "7e88a01f3f82",
+      "b7873c8e198c",
+      "ce8871a8d7da",
+      "ecba653171fd"
+    ],
+    "xiaohongshu-crawler": [
+      "1636d25a1788",
+      "8684329a3d53",
+      "d70b1f681cd2",
+      "ea5374907934"
+    ],
+    "xiaohongshu-dailytop": [
+      "1dbf7b3b2aef",
+      "2dadb13dd316",
+      "4f3ef7ed5138",
+      "56a110223ee4",
+      "d1318e6a9e4a",
+      "fd7e0953156c"
+    ],
+    "xiaohongshu-hot-notes": [
+      "065508851e48",
+      "a23fe0aac988",
+      "a4a17b9add33",
+      "f9cde7079387"
+    ],
+    "xiaohongshu-lowtop": [
+      "73aa4807a1bd",
+      "7cd382ea90a7",
+      "857cb4392079",
+      "899c06785145",
+      "b98c85a7380e",
+      "bdea44486a0a",
+      "d86c80acf6ad"
+    ],
+    "xiaohongshu-note-analyzer": [
+      "0b5400184e52",
+      "c6d9c01a83c1",
+      "d05efd6582c2",
+      "d387bc6dcde4",
+      "d8c8a8ab3ce0",
+      "d94b99c47d3b",
+      "f9ed2cbdfa75"
+    ],
+    "xiaohongshu-rewrite": [
+      "03deba6d22ab",
+      "c8d85a5bd293"
+    ],
+    "xiaohongshu-search": [
+      "1eb05c48ce6c",
+      "1fd3a23ae5b2",
+      "597d187b07d4",
+      "649700e60b74",
+      "824cce3be7cf",
+      "8df96829278c",
+      "a5bbc8195712",
+      "f098334d5130"
+    ],
+    "xiaohongshu-similar-account": [
+      "835a7c719637",
+      "c3bfc6da0931"
+    ],
+    "xiaohongshu-title": [
+      "0f77a1078ba5",
+      "2050c5d8acea",
+      "a12ca537a9aa",
+      "a8e96f0895df",
+      "ac77da8bd6df",
+      "cecd01c0d842",
+      "d1a8a2641f32"
+    ],
+    "xiaohongshu-top-account": [
+      "840cdde287ae"
+    ],
+    "xiaohongshu-weeklytop": [
+      "148f304d84ab",
+      "43c0d97d13fe",
+      "475f712a2ba2",
+      "5f566da69f97",
+      "6a2e8f8d5c8d",
+      "7729d63f3f2d",
+      "b11085757bd5"
+    ],
+    "xiaohongshu-write": [
+      "029a7aa48da1",
+      "591a92eb6ee8",
+      "667c7af62067",
+      "6c4ba8d88c91"
+    ],
+    "zhihu-rewrite": [
+      "a9d730b5c7fb"
+    ]
+  },
+  "retiredEndpoints": {
+    "astock-social-feed": [
+      "/api/apis/multi/cn30-multi-search"
+    ],
+    "bilibili-keyword-accounts": [
+      "/api/apis/bilibili/search-user"
+    ],
+    "bilibili-keyword-search": [
+      "/api/apis/bilibili/search-work"
+    ],
+    "bilibili-portfolio-search": [
+      "/api/apis/bilibili/bilibili-user-works"
+    ],
+    "cultural-tourism-bilibili-feed": [
+      "/api/apis/bilibili/bilibili-playlet-feed"
+    ],
+    "cultural-tourism-douyin-feed": [
+      "/api/apis/douyin/douyin-playlet-feed"
+    ],
+    "cultural-tourism-xiaohongshu-feed": [
+      "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
+    ],
+    "douyin-account-diagnosis": [
+      "/api/apis/douyin/douyin-account-diagnosis",
+      "/api/apis/douyin/douyin-sync-notes"
+    ],
+    "douyin-account-insight": [
+      "/api/apis/douyin/query-account"
+    ],
+    "douyin-account-works": [
+      "/api/apis/douyin/query-account"
+    ],
+    "douyin-ai-feed": [
+      "/api/apis/douyin/douyin-ai-feed"
+    ],
+    "douyin-content-surge": [
+      "/api/apis/douyin/douyin-content-surge"
+    ],
+    "douyin-daily-hot": [
+      "/api/apis/douyin/douyin-likes-rank"
+    ],
+    "douyin-hot-trend": [
+      "/api/apis/trend/douyin-hot-trend"
+    ],
+    "douyin-rise-ranking": [
+      "/api/apis/douyin/douyin-rise-fans-rank"
+    ],
+    "douyin-similar-account": [
+      "/api/apis/douyin/douyin-similar-account",
+      "/api/apis/douyin/douyin-sync-notes"
+    ],
+    "douyin-subscribe": [
+      "/api/apis/douyin/douyin-work-list"
+    ],
+    "douyin-top-account": [
+      "/api/apis/douyin/douyin-top-account"
+    ],
+    "douyin-weekly-surge": [
+      "/api/apis/douyin/douyin-content-surge"
+    ],
+    "douyin-works-crawler": [
+      "/api/apis/douyin/douyin-user-works"
+    ],
+    "ks-ai-feed": [
+      "/api/apis/kuaishou/kuaishou-ai-feed"
+    ],
+    "playlet-bili-feed": [
+      "/api/apis/bilibili/bilibili-playlet-feed"
+    ],
+    "playlet-douyin-feed": [
+      "/api/apis/douyin/douyin-playlet-feed"
+    ],
+    "playlet-xiaohongshu-feed": [
+      "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
+    ],
+    "seedance-video-gen": [
+      "/api/skills/seedance-video-gen"
+    ],
+    "tiktok-account-search": [
+      "/api/apis/tiktok/search-user"
+    ],
+    "video-downloader": [
+      "/api/skills/video-downloader"
+    ],
+    "xiaohongshu-account-analyzer": [
+      "/api/apis/xiaohongshu/xhs-sync-notes",
+      "/api/apis/xiaohongshu/xiaohongshu-account-analyzer"
+    ],
+    "xiaohongshu-comment": [
+      "/api/apis/xiaohongshu/comments"
+    ],
+    "xiaohongshu-similar-account": [
+      "/api/apis/xiaohongshu/xiaohongshu-similar-account"
+    ],
+    "xiaohongshu-top-account": [
+      "/api/apis/xiaohongshu/xiaohongshu-top-account"
+    ],
+    "zhihu-rewrite": []
+  }
+}

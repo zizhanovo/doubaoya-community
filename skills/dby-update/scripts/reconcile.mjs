@@ -10,52 +10,117 @@
 //   node reconcile.mjs --self-check       离线自检（不联网）
 //
 // 它干什么：让本机这套「都爆鸭」skill **等于**上游当前全集——
-//   删掉上游已经没有的、装上新增的、刷新其余的。
+//   上游已下架的归档掉、新增的装上、其余的刷新。
 //
-// 🔴 安全底线：只碰 skills-lock 里 source 明确属于本仓的条目
-//    （新名 zizhanovo/doubaoya-community 与旧名 zizhanovo/redfox-community 都认）。
-//    来源是别人的、或者来源不明的，一个字都不动。
+// 🔴 怎么判「这包是不是我们发的」：**看内容哈希，不看它当初用什么名字装的**。
+//    上游 known-hashes.json 是「我们发布过的每一版 slug × 内容哈希」的闭集
+//    （由 tools/build_known_hashes.py 从 git 历史聚出来）。命中闭集 = 确定是我们发的，
+//    与 source 字段写的是 doubaoya-community 还是早期的 redfox-community 无关，
+//    也不怕别家有同名包。
+//
+// 🔴 三态，不是两态：
+//    命中当前版      → 保留 / 刷新
+//    命中历史版      → 我们的旧包，可归档可替换
+//    谁的版本都不命中 → **用户动过手**，跳过并列进报告，一个字都不动
+//
+// 🔴 删除一律做成「移进归档目录」，不做 rm。用户机器我们看不见，多一个目录的成本，
+//    换「删错了还能捞回来」。
 //
 // 为什么不能直接用 `npx skills update`：它只更新「已经装了的」，
 // 永远删不掉上游已经砍掉的那些——那些会永久停在被砍前的旧契约上。
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import * as readline from "node:readline/promises";
 
 const REPO = "zizhanovo/doubaoya-community";
+// DBY_RAW_BASE 只给验证用：指向本地 checkout 或某个分支，好在改动 push 之前先对着
+// 合成安装态跑一遍。设了它就以版本表为名单（不再问 GitHub 目录列表）。
+const RAW = process.env.DBY_RAW_BASE || `https://raw.githubusercontent.com/${REPO}/main`;
+const RAW_OVERRIDDEN = Boolean(process.env.DBY_RAW_BASE);
+const VERSIONS_URL = `${RAW}/versions.json`;
+const KNOWN_URL = `${RAW}/known-hashes.json`;
 const CONTENTS_API = `https://api.github.com/repos/${REPO}/contents/skills`;
-const VERSIONS_RAW = `https://raw.githubusercontent.com/${REPO}/main/versions.json`;
 const HEALTH_URL = "https://doubaoya.com/api/health";
 
-// ---------------------------------------------------------------- 归属判定
+// ---------------------------------------------------------------- 内容哈希
 
-// 本仓早期叫 redfox-community，后来才 repoint 到 doubaoya-community。
-// 老用户机器上的陈旧条目很可能还带着旧来源字符串——只认新名会把它们整批漏掉。
-const OWNED_REPO_RE =
-  /(?:^|github\.com\/)zizhanovo\/(?:doubaoya|redfox)-community(?:\.git)?(?:[/#?@]|$)/i;
-
-/** 这条 lock 条目是不是本仓装的。只有 true 才允许删。 */
-export function isOurs(entry) {
-  if (!entry || typeof entry !== "object") return false;
-  if (entry.sourceType === "local") return false;
-  for (const raw of [entry.source, entry.sourceUrl]) {
-    if (typeof raw !== "string") continue;
-    if (OWNED_REPO_RE.test(raw.trim().replace(/\/+$/, ""))) return true;
-  }
-  return false;
+// 必须与 tools/stamp_versions.py 的 compute_skill_hash 逐位一致：
+// sha256 依次吃「相对路径(utf8) + 文件内容」，路径排序，取前 12 位十六进制。
+// 排除 .version 与任何点开头的路径段（.version 自身也被这条覆盖），以及 __pycache__。
+export function hashedFiles(dir) {
+  const out = [];
+  const walk = (rel) => {
+    for (const entry of readdirSync(join(dir, rel) || dir)) {
+      if (entry.startsWith(".") || entry === "__pycache__") continue;
+      const r = rel ? `${rel}/${entry}` : entry;
+      let st;
+      try {
+        st = statSync(join(dir, r)); // 跟随符号链接：skills CLI 默认是软链装的
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) walk(r);
+      else if (st.isFile()) out.push(r);
+    }
+  };
+  walk("");
+  // 按 UTF-8 字节序排 —— 与 Python 的码点序等价，中文文件名也不会跟 Python 排岔。
+  return out.sort((a, b) => Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8")));
 }
 
-/** 算出「要删 / 要装 / 要刷新」三张单子。 */
-export function planReconcile(ownedNames, upstreamNames) {
+export function computeSkillHash(dir) {
+  const digest = createHash("sha256");
+  for (const rel of hashedFiles(dir)) {
+    digest.update(Buffer.from(rel, "utf8"));
+    digest.update(readFileSync(join(dir, rel)));
+  }
+  return digest.digest("hex").slice(0, 12);
+}
+
+// ---------------------------------------------------------------- 三态判定
+
+/**
+ * 这个已装的包处于哪一态。
+ *   current    命中上游当前版 —— 保留 / 刷新
+ *   historical 命中我们发布过的某个历史版 —— 我们的旧包，可归档可替换
+ *   modified   slug 是我们的，但哈希谁都不命中 —— **用户动过手，绝不碰**
+ *   foreign    slug 根本不在我们的闭集里 —— 别人的包，绝不碰
+ */
+export function classify(name, hash, currentHashes, knownHashes) {
+  if (!Object.prototype.hasOwnProperty.call(knownHashes, name)) return "foreign";
+  if (currentHashes[name] && currentHashes[name] === hash) return "current";
+  if (knownHashes[name].includes(hash)) return "historical";
+  return "modified";
+}
+
+/**
+ * 三张单子。只有 historical 且上游已下架的才进归档单；
+ * modified 一律进「不碰」单，连刷新都不给——刷新会覆盖掉用户的改动。
+ */
+export function planReconcile(installed, upstreamNames) {
   const upstream = new Set(upstreamNames);
-  const owned = new Set(ownedNames);
+  const archive = [];
+  const keep = [];
+  const untouched = [];
+  for (const { name, state } of installed) {
+    if (state === "foreign" || state === "modified") untouched.push({ name, state });
+    else if (!upstream.has(name)) archive.push(name);
+    else keep.push(name);
+  }
+  const present = new Set(installed.map((i) => i.name));
+  const add = [...upstream].filter((n) => !present.has(n)).sort();
+  // 用户动过手的，连装都不许再装一遍盖掉它
+  const blocked = new Set(untouched.filter((u) => u.state === "modified").map((u) => u.name));
   return {
-    remove: [...owned].filter((n) => !upstream.has(n)).sort(),
-    add: [...upstream].filter((n) => !owned.has(n)).sort(),
-    refresh: [...owned].filter((n) => upstream.has(n)).sort(),
+    archive: archive.sort(),
+    add: add.filter((n) => !blocked.has(n)),
+    refresh: keep.sort(),
+    untouched: untouched.sort((a, b) => a.name.localeCompare(b.name)),
+    blocked: [...blocked].sort(),
   };
 }
 
@@ -75,6 +140,7 @@ function explainFsError(err, what, path) {
       "这个目录不归当前用户所有。检查它的属主，或者换回你平时装 skill 的那个账号再跑一次。"
     );
   }
+  if (err?.code === "ENOSPC") return new Friendly(`磁盘满了，${what}失败：${path}`, "清点空间再跑；这一步没做完，本机没有任何东西被删。");
   return new Friendly(`${what}失败：${path}（${err?.code || err?.message}）`);
 }
 
@@ -92,77 +158,67 @@ function explainNetError(err, what) {
   return new Friendly(`${what}失败：${err?.message || err}`);
 }
 
-// ---------------------------------------------------------------- 读 lock
-
-// 全局那份（skills CLI 写在 ~/.agents/.skill-lock.json，v3）
-function globalLockPath() {
-  const xdg = process.env.XDG_STATE_HOME;
-  return xdg ? join(xdg, "skills", ".skill-lock.json") : join(homedir(), ".agents", ".skill-lock.json");
-}
-
-// 项目那份（<项目根>/skills-lock.json，v1）
-function projectLockPath(dir) {
-  return join(dir, "skills-lock.json");
-}
-
-function readLock(path) {
-  if (!existsSync(path)) return { skills: {} };
-  let text;
-  try {
-    text = readFileSync(path, "utf-8");
-  } catch (err) {
-    throw explainFsError(err, "读取安装记录", path);
-  }
-  try {
-    const parsed = JSON.parse(text);
-    return parsed && typeof parsed.skills === "object" && parsed.skills ? parsed : { skills: {} };
-  } catch {
-    throw new Friendly(
-      `安装记录读不懂（不是合法 JSON）：${path}`,
-      "这个文件坏了。可以把它改名备份掉再跑一次，本工具会当成全新安装重新装齐。"
-    );
-  }
-}
-
-/** 一个 scope 的现状：我们的、别人的、以及哈希（用来判断这轮到底有没有变）。 */
-function readScope(scope) {
-  const path = scope.kind === "global" ? globalLockPath() : projectLockPath(scope.dir);
-  const lock = readLock(path);
-  const ours = [];
-  const foreign = [];
-  const hashes = new Map();
-  for (const [name, entry] of Object.entries(lock.skills)) {
-    if (isOurs(entry)) {
-      ours.push(name);
-      hashes.set(name, entry.computedHash || entry.skillFolderHash || "");
-    } else {
-      foreign.push(name);
-    }
-  }
-  return { path, ours: ours.sort(), foreign: foreign.sort(), hashes };
-}
+// ---------------------------------------------------------------- 安装目录
 
 /** 这个 scope 下 skill 会落到的两个安装目录。 */
 function installDirs(scope) {
-  return scope.kind === "global"
-    ? [join(homedir(), ".claude", "skills"), join(homedir(), ".agents", "skills")]
-    : [join(scope.dir, ".claude", "skills"), join(scope.dir, ".agents", "skills")];
+  const base = scope.kind === "global" ? homedir() : scope.dir;
+  return [
+    { label: ".claude/skills", path: join(base, ".claude", "skills") },
+    { label: ".agents/skills", path: join(base, ".agents", "skills") },
+  ];
 }
 
-function listDirs(path) {
+function listSkillDirs(path) {
   if (!existsSync(path)) return [];
   try {
-    return readdirSync(path, { withFileTypes: true })
-      .filter((e) => e.isDirectory() || e.isSymbolicLink())
-      .map((e) => e.name);
-  } catch {
-    return [];
+    return readdirSync(path).filter((n) => {
+      if (n.startsWith(".")) return false;
+      try {
+        return statSync(join(path, n)).isDirectory();
+      } catch {
+        return false;
+      }
+    });
+  } catch (err) {
+    throw explainFsError(err, "读取安装目录", path);
   }
 }
 
-// ---------------------------------------------------------------- 上游全集
+/** 扫两个安装目录，给每个已装的包定三态。以磁盘为准，不依赖安装记录。 */
+function surveyScope(scope, currentHashes, knownHashes) {
+  const seen = new Map();
+  for (const dir of installDirs(scope)) {
+    for (const name of listSkillDirs(dir.path)) {
+      let hash;
+      try {
+        hash = computeSkillHash(join(dir.path, name));
+      } catch (err) {
+        throw explainFsError(err, "读取已装 skill", join(dir.path, name));
+      }
+      const state = classify(name, hash, currentHashes, knownHashes);
+      const prev = seen.get(name);
+      // 同名出现在两个目录：任一处被动过手，就整体按「动过手」保守处理。
+      if (!prev) seen.set(name, { name, hash, state, dirs: [dir] });
+      else {
+        prev.dirs.push(dir);
+        if (state === "modified") prev.state = "modified";
+      }
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ---------------------------------------------------------------- 上游
 
 async function fetchJson(url, label) {
+  if (!/^https?:/.test(url)) {
+    try {
+      return JSON.parse(readFileSync(url, "utf-8"));
+    } catch (err) {
+      throw new Friendly(`${label}失败：读不了 ${url}（${err.code || err.message}）`);
+    }
+  }
   let res;
   try {
     res = await fetch(url, {
@@ -173,56 +229,100 @@ async function fetchJson(url, label) {
     throw explainNetError(err, label);
   }
   if (res.status === 403 || res.status === 429) {
-    throw new Friendly(`${label}被 GitHub 限流了（HTTP ${res.status}）。`, "等几分钟再跑，或者直接用备用清单源。");
+    throw new Friendly(`${label}被 GitHub 限流了（HTTP ${res.status}）。`, "等几分钟再跑。");
   }
   if (!res.ok) throw new Friendly(`${label}失败：HTTP ${res.status}`);
   try {
     return await res.json();
-  } catch (err) {
+  } catch {
     throw new Friendly(`${label}返回的不是合法 JSON。`);
   }
 }
 
 /**
- * 上游到底有哪些 skill。
- * 主源 = GitHub 目录列表（`skills add --all` 装的就是这些目录，最贴近真相）。
- * 备源 = 仓库里的 versions.json（主源限流时兜底）。
- * versions.json 不随 `skills add` 下发到用户机器，所以只能联网取。
+ * 上游三件套：当前全集名单、当前版哈希、历史闭集。
+ * 名单以 GitHub 目录列表为准（`skills add` 装的就是这些目录），
+ * 哈希以 versions.json 为准；目录列表拉不到时退回 versions.json 的键。
  */
 async function fetchUpstream() {
   const notes = [];
-  let primary = null;
-  try {
-    const items = await fetchJson(CONTENTS_API, "拉取上游 skill 清单");
-    if (Array.isArray(items)) {
-      primary = items.filter((x) => x.type === "dir").map((x) => x.name).sort();
+  const versions = await fetchJson(VERSIONS_URL, "拉取上游版本表");
+  const known = await fetchJson(KNOWN_URL, "拉取历史版本闭集");
+  if (!versions?.skills || !known?.skills) throw new Friendly("上游版本表格式不对，先不动你本机的任何东西。");
+
+  const currentHashes = Object.fromEntries(
+    Object.entries(versions.skills).map(([k, v]) => [k, String(v).split("@").pop()])
+  );
+  const knownHashes = known.skills;
+
+  let names = null;
+  if (RAW_OVERRIDDEN) notes.push(`用的是 DBY_RAW_BASE 指定的上游（${RAW}），名单以版本表为准。`);
+  else {
+    try {
+      const items = await fetchJson(CONTENTS_API, "拉取上游 skill 目录");
+      if (Array.isArray(items)) names = items.filter((x) => x.type === "dir").map((x) => x.name).sort();
+    } catch (err) {
+      notes.push(`目录列表拉不到（${err.message}），改用版本表的名单。`);
     }
-  } catch (err) {
-    notes.push(`主清单源不可用（${err.message}），改用备用源。`);
   }
-
-  let backup = null;
-  try {
-    const v = await fetchJson(VERSIONS_RAW, "拉取备用清单");
-    if (v && typeof v.skills === "object") backup = Object.keys(v.skills).sort();
-  } catch (err) {
-    if (!primary) throw err;
-    notes.push(`备用清单源不可用（${err.message}）。`);
-  }
-
-  if (!primary && !backup) throw new Friendly("两个清单源都拉不到，没法知道上游现在有哪些 skill。");
-
-  const names = primary || backup;
-  const source = primary ? "github-contents" : "versions.json";
-  if (primary && backup) {
-    const only = [
-      ...primary.filter((n) => !backup.includes(n)).map((n) => `+${n}`),
-      ...backup.filter((n) => !primary.includes(n)).map((n) => `-${n}`),
-    ];
-    if (only.length) notes.push(`两个清单源有出入（${only.join(" ")}），以目录列表为准。`);
+  if (!names) names = Object.keys(currentHashes).sort();
+  else {
+    const unstamped = names.filter((n) => !currentHashes[n]);
+    if (unstamped.length) notes.push(`上游有 ${unstamped.length} 个包还没盖版本戳（${unstamped.join(", ")}），它们只会被装上、不参与新旧判定。`);
   }
   if (!names.length) throw new Friendly("上游清单是空的，这不正常，先不动你本机的任何东西。");
-  return { names, source, notes };
+  return { names, currentHashes, knownHashes, notes };
+}
+
+// ---------------------------------------------------------------- 归档
+
+function timestamp() {
+  return new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+}
+
+function archiveRoot(scope) {
+  const base = scope.kind === "global" ? homedir() : scope.dir;
+  return join(base, ".doubaoya", "archive", timestamp());
+}
+
+/**
+ * 把包移进归档目录。**绝不 rm**——用户机器我们看不见，删错了得能捞回来。
+ * 按来源目录分层存放，并写一份 manifest 说明每个包原来在哪、怎么放回去。
+ */
+function archivePackages(scope, names, survey) {
+  if (!names.length) return null;
+  const root = archiveRoot(scope);
+  const moved = [];
+  for (const name of names) {
+    const entry = survey.find((s) => s.name === name);
+    for (const dir of entry?.dirs || []) {
+      const from = join(dir.path, name);
+      if (!existsSync(from)) continue;
+      // 去掉开头的点：归档目录是给人看的，藏成隐藏目录等于 ls 一眼看不见。
+      const to = join(root, dir.label.replace(/^\./, "").replace(/\//g, "_"), name);
+      try {
+        mkdirSync(join(to, ".."), { recursive: true });
+        try {
+          renameSync(from, to);
+        } catch (err) {
+          if (err.code !== "EXDEV") throw err;
+          cpSync(from, to, { recursive: true }); // 跨设备时退回「先拷再删」
+          rmSync(from, { recursive: true, force: true });
+        }
+        moved.push({ skill: name, from, to, hash: entry?.hash });
+      } catch (err) {
+        throw explainFsError(err, "归档 skill", from);
+      }
+    }
+  }
+  const manifest = {
+    archivedAt: new Date().toISOString(),
+    reason: "上游已下架，由 dby-update 对账归档；内容哈希命中我们发布过的历史版本",
+    restore: "把下面每条的 to 移回 from 即可复原：mv <to> <from>",
+    packages: moved,
+  };
+  writeFileSync(join(root, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  return { root, count: moved.length };
 }
 
 // ---------------------------------------------------------------- 执行
@@ -245,25 +345,23 @@ function runSkills(args, cwd) {
 
 // ---------------------------------------------------------------- 自检
 
-async function selfTest(scope, upstreamNames) {
+async function selfTest(scope, wantNames) {
   const checks = [];
 
-  // ① 上游全集是不是真的都躺在盘上了
   const dirs = installDirs(scope);
-  const present = new Set(dirs.flatMap(listDirs));
-  const missing = upstreamNames.filter((n) => !present.has(n));
+  const present = new Set(dirs.flatMap((d) => listSkillDirs(d.path)));
+  const missing = wantNames.filter((n) => !present.has(n));
   checks.push(
     missing.length === 0
-      ? { name: "skill 已就位", ok: true, detail: `${upstreamNames.length} 个 skill 都能在安装目录里找到。` }
+      ? { name: "skill 已就位", ok: true, detail: `${wantNames.length} 个 skill 都能在安装目录里找到。` }
       : {
           name: "skill 已就位",
           ok: false,
           detail: `有 ${missing.length} 个没落盘：${missing.slice(0, 8).join(", ")}${missing.length > 8 ? " …" : ""}`,
-          hint: `检查这两个目录写得进去吗：${dirs.join("  ")}`,
+          hint: `检查这两个目录写得进去吗：${dirs.map((d) => d.path).join("  ")}`,
         }
   );
 
-  // ② 钥匙在不在（不校验有效性，那要调计费接口）
   const key = process.env.DOUBAOYA_API_KEY;
   checks.push(
     key
@@ -276,7 +374,6 @@ async function selfTest(scope, upstreamNames) {
         }
   );
 
-  // ③ 服务连得通吗（免费只读端点，不花钱）
   try {
     const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(15_000) });
     const body = await res.json().catch(() => null);
@@ -315,74 +412,86 @@ function parseArgs(argv) {
   return o;
 }
 
-function resolveScopes(opts) {
+function resolveScopes(opts, knownHashes) {
   const global = { kind: "global", label: "全局（所有项目共用）" };
   const project = { kind: "project", dir: opts.dir, label: `项目（${opts.dir}）` };
   if (opts.scope === "global") return [global];
   if (opts.scope === "project") return [project];
-
-  // auto：哪儿装了本鸭就对哪儿；都没装就当成全新安装，装到全局。
+  // auto：哪儿有我们的包就对哪儿；都没有就当全新安装，装到全局。
   const picked = [];
   for (const s of [global, project]) {
-    if (readScope(s).ours.length > 0) picked.push(s);
+    const has = installDirs(s).some((d) =>
+      listSkillDirs(d.path).some((n) => Object.prototype.hasOwnProperty.call(knownHashes, n))
+    );
+    if (has) picked.push(s);
   }
   return picked.length ? picked : [global];
+}
+
+function printPlan(scope, survey, plan, opts) {
+  const counts = survey.reduce((m, s) => ({ ...m, [s.state]: (m[s.state] || 0) + 1 }), {});
+  console.log(`\n── ${scope.label}`);
+  console.log(
+    `   已装 ${survey.length} 个：当前版 ${counts.current || 0}、我们的旧版 ${counts.historical || 0}、` +
+      `你改过的 ${counts.modified || 0}、别人的 ${counts.foreign || 0}`
+  );
+  if (plan.archive.length) {
+    console.log(`   📦 要归档 ${plan.archive.length} 个（上游已下架；移进归档目录，不删）：`);
+    for (const n of plan.archive) console.log(`        - ${n}`);
+  }
+  if (plan.add.length) {
+    console.log(`   ✨ 要新增 ${plan.add.length} 个：`);
+    for (const n of plan.add) console.log(`        + ${n}`);
+  }
+  console.log(`   ♻️  要刷新 ${plan.refresh.length} 个`);
+  const modified = plan.untouched.filter((u) => u.state === "modified");
+  if (modified.length) {
+    console.log(`   ✋ 你改过的 ${modified.length} 个，一个字都不动（也不会被刷新覆盖）：`);
+    for (const u of modified) console.log(`        ~ ${u.name}`);
+  }
+  const foreign = plan.untouched.filter((u) => u.state === "foreign");
+  if (foreign.length) {
+    console.log(
+      `   🚫 别人家的 ${foreign.length} 个，不碰` + (opts.verbose ? `：${foreign.map((f) => f.name).join(", ")}` : "（加 --verbose 看名字）")
+    );
+  }
 }
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
-    console.log(readFileSync(new URL(import.meta.url), "utf-8").split("\n").slice(2, 20).join("\n").replace(/^\/\/ ?/gm, ""));
+    console.log(readFileSync(new URL(import.meta.url), "utf-8").split("\n").slice(2, 10).join("\n").replace(/^\/\/ ?/gm, ""));
     return 0;
   }
 
-  const scopes = resolveScopes(opts);
   const upstream = await fetchUpstream();
   for (const n of upstream.notes) console.log(`提示：${n}`);
+  const scopes = resolveScopes(opts, upstream.knownHashes);
 
   // ---- 先把清单摊开给人看，一个字都还没改
   const report = [];
   for (const scope of scopes) {
-    const before = readScope(scope);
-    const plan = planReconcile(before.ours, upstream.names);
-    report.push({ scope, before, plan });
+    const survey = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    const plan = planReconcile(survey, upstream.names);
+    report.push({ scope, survey, plan });
   }
 
-  const totalChanges = report.reduce((n, r) => n + r.plan.remove.length + r.plan.add.length, 0);
-
+  const totalChanges = report.reduce((n, r) => n + r.plan.archive.length + r.plan.add.length, 0);
   if (!opts.json) {
-    console.log(`\n上游现有 ${upstream.names.length} 个 skill（清单源：${upstream.source}）`);
-    for (const { scope, before, plan } of report) {
-      console.log(`\n── ${scope.label}`);
-      console.log(`   本机属于本鸭的：${before.ours.length} 个；别的来源：${before.foreign.length} 个（不会碰）`);
-      if (plan.remove.length) {
-        console.log(`   🗑  要删除 ${plan.remove.length} 个（上游已经没有了）：`);
-        for (const n of plan.remove) console.log(`        - ${n}`);
-      }
-      if (plan.add.length) {
-        console.log(`   ✨ 要新增 ${plan.add.length} 个：`);
-        for (const n of plan.add) console.log(`        + ${n}`);
-      }
-      console.log(`   ♻️  要刷新 ${plan.refresh.length} 个（拉到最新版）`);
-      if (opts.verbose && before.foreign.length) {
-        console.log(`   不碰的（来源是别人的）：${before.foreign.join(", ")}`);
-      }
-    }
-    if (totalChanges === 0) console.log(`\n结论：没有要删的，也没有要新增的——已经和上游一致了。`);
+    console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
+    for (const { scope, survey, plan } of report) printPlan(scope, survey, plan, opts);
+    if (totalChanges === 0) console.log(`\n结论：没有要归档的，也没有要新增的——已经和上游一致了。`);
   }
 
   if (opts.dryRun) {
-    if (opts.json) console.log(JSON.stringify({ upstream, report: report.map(stripScope), executed: false }, null, 2));
+    if (opts.json) console.log(JSON.stringify({ names: upstream.names, report: report.map(stripScope), executed: false }, null, 2));
     return 0;
   }
 
-  // ---- 要动手了，先要确认（红线：删除绝不能是默认行为）
+  // ---- 要动手了，先要确认（红线：归档绝不能是默认行为）
   if (totalChanges > 0 && !opts.yes) {
     if (!process.stdin.isTTY) {
-      console.error(
-        "\n停下了：有删除动作，但当前不是交互终端，没法向你确认。\n" +
-          "确认清单没问题后，加 --yes 再跑一次。"
-      );
+      console.error("\n停下了：有归档动作，但当前不是交互终端，没法向你确认。\n确认清单没问题后，加 --yes 再跑一次。");
       return 2;
     }
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -395,63 +504,60 @@ async function main() {
   }
 
   // ---- 执行
-  for (const { scope, plan } of report) {
+  const archived = [];
+  for (const { scope, survey, plan } of report) {
     const cwd = scope.kind === "global" ? undefined : scope.dir;
     const scopeFlag = scope.kind === "global" ? ["-g"] : [];
 
-    if (plan.remove.length) {
-      // 按名字删——CLI 的 remove 完全不看来源，所以「哪些名字能删」这道闸
-      // 只能由上面的 isOurs() 把住。
-      // 不传 -a：remove 省略 -a 时 targetAgents 取全部 agent，.claude/skills 和
-      // .agents/skills 两处都会清干净。（别照 --help 写 -a '*'，remove 不认这个
-      // 星号，会直接报 "Invalid agents: *" 退出 1；只有 add 认。）
-      console.log(`\n删除 ${plan.remove.length} 个上游已下架的 skill…`);
-      runSkills(["remove", ...plan.remove, ...scopeFlag, "-y"], cwd);
+    if (plan.archive.length) {
+      console.log(`\n归档 ${plan.archive.length} 个上游已下架的 skill（移走，不删）…`);
+      const res = archivePackages(scope, plan.archive, survey);
+      archived.push({ scope: scope.label, ...res });
+      console.log(`   已移到 ${res.root}`);
+      // 目录已经移走，这一步只是让 skills CLI 把自己的安装记录也清掉。
+      // 不传 -a：remove 省略 -a 时打到全部 agent；别照 --help 写 -a '*'，remove 不认星号。
+      runSkills(["remove", ...plan.archive, ...scopeFlag, "-y"], cwd);
     }
-    // add --all 一次搞定「新增」和「刷新」，且只从本仓拉，天然不碰别的来源。
-    console.log(`\n拉取上游全集（${upstream.names.length} 个）…`);
-    runSkills(["add", REPO, ...scopeFlag, "--all"], cwd);
+
+    // 只装该装的：用户改过的包被排除在外，免得 --all 一把盖掉人家的改动。
+    const want = [...plan.add, ...plan.refresh].sort();
+    if (want.length) {
+      console.log(`\n拉取上游 ${want.length} 个 skill…`);
+      runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", "*", "-y"], cwd);
+    }
   }
 
   // ---- 复核 + 自检
   const results = [];
-  for (const { scope, before, plan } of report) {
-    const after = readScope(scope);
-    const changed = after.ours.filter((n) => before.hashes.get(n) !== after.hashes.get(n));
-    const stillStale = after.ours.filter((n) => !upstream.names.includes(n));
-    const foreignKept = before.foreign.filter((n) => after.foreign.includes(n));
-    const checks = await selfTest(scope, upstream.names);
-    results.push({ scope, before, after, plan, changed, stillStale, foreignKept, checks });
+  for (const { scope, survey, plan } of report) {
+    const after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    const stillStale = after.filter((s) => s.state === "historical" && !upstream.names.includes(s.name)).map((s) => s.name);
+    const keptModified = plan.untouched
+      .filter((u) => u.state === "modified")
+      .filter((u) => after.find((a) => a.name === u.name)?.state === "modified").length;
+    const keptForeign = plan.untouched
+      .filter((u) => u.state === "foreign")
+      .filter((u) => after.find((a) => a.name === u.name)?.state === "foreign").length;
+    const want = [...plan.add, ...plan.refresh];
+    const checks = await selfTest(scope, want);
+    results.push({ scope, plan, after, stillStale, keptModified, keptForeign, checks });
   }
 
   if (opts.json) {
-    console.log(JSON.stringify({ upstream, results: results.map(stripScope), executed: true }, null, 2));
+    console.log(JSON.stringify({ results: results.map(stripScope), archived, executed: true }, null, 2));
     return results.every((r) => r.checks.every((c) => c.ok)) ? 0 : 3;
   }
 
   let allOk = true;
   for (const r of results) {
+    const counts = r.after.reduce((m, s) => ({ ...m, [s.state]: (m[s.state] || 0) + 1 }), {});
     console.log(`\n── ${r.scope.label} 对账完成`);
-    console.log(`   现在有 ${r.after.ours.length} 个本鸭 skill（上游 ${upstream.names.length} 个）`);
-    console.log(`   删掉 ${r.plan.remove.length}，新增 ${r.plan.add.length}，内容有变化 ${r.changed.length}`);
-    console.log(`   别的来源的 ${r.foreignKept.length} 个 skill 原样没动`);
+    console.log(`   归档 ${r.plan.archive.length}，新增 ${r.plan.add.length}，刷新 ${r.plan.refresh.length}`);
+    console.log(`   现在：当前版 ${counts.current || 0}、你改过的 ${counts.modified || 0}（原样保留 ${r.keptModified}）、别人的 ${counts.foreign || 0}（原样保留 ${r.keptForeign}）`);
     if (r.stillStale.length) {
       allOk = false;
-      console.log(`   ⚠️ 还有 ${r.stillStale.length} 个没清掉：${r.stillStale.join(", ")}`);
+      console.log(`   ⚠️ 还有 ${r.stillStale.length} 个没归档掉：${r.stillStale.join(", ")}`);
     }
-
-    // 另一处安装目录还有没有对不上的（来源不明的一律不删，只如实告知）
-    const known = new Set([...r.after.ours, ...r.after.foreign]);
-    const orphans = [...new Set(installDirs(r.scope).flatMap(listDirs))].filter(
-      (n) => !known.has(n) && !upstream.names.includes(n)
-    );
-    if (orphans.length) {
-      console.log(
-        `   ℹ️ 另有 ${orphans.length} 个 skill 目录没有安装记录、来源不明，本工具不会删它们` +
-          (opts.verbose ? `：${orphans.join(", ")}` : "（加 --verbose 看名字）")
-      );
-    }
-
     console.log(`\n   自检：`);
     for (const c of r.checks) {
       console.log(`   ${c.ok ? "✅" : "❌"} ${c.name}：${c.detail}`);
@@ -461,7 +567,9 @@ async function main() {
       }
     }
   }
-
+  for (const a of archived) {
+    if (a?.count) console.log(`\n归档的 ${a.count} 份原样躺在 ${a.root}，确认没问题后可以自行删掉。`);
+  }
   console.log(
     allOk
       ? `\n全部通过。当前对话如果还没读到新能力，新建一次对话就能用。`
@@ -472,7 +580,7 @@ async function main() {
 
 function stripScope(r) {
   const { scope, ...rest } = r;
-  return { scope: scope.label, ...rest, before: rest.before && { ...rest.before, hashes: undefined } };
+  return { scope: scope.label, ...rest };
 }
 
 // ---------------------------------------------------------------- 离线自检
@@ -485,53 +593,48 @@ function runSelfCheck() {
     if (a !== b) fails.push(`${label}: got ${a}, want ${b}`);
   };
 
-  // 归属判定：新名 / 旧名 / 各种 URL 写法都要认出来
-  for (const src of [
-    "zizhanovo/doubaoya-community",
-    "zizhanovo/redfox-community",
-    "https://github.com/zizhanovo/doubaoya-community",
-    "https://github.com/zizhanovo/redfox-community.git",
-    "github.com/zizhanovo/doubaoya-community/",
-  ]) {
-    eq(`isOurs(${src})`, isOurs({ source: src, sourceType: "github" }), true);
-  }
-  // 只在 sourceUrl 里出现也要认
-  eq(
-    "isOurs(sourceUrl only)",
-    isOurs({ source: "somewhere", sourceType: "github", sourceUrl: "https://github.com/zizhanovo/redfox-community" }),
-    true
-  );
-  // 🔴 别人的、像但不是的、本地的，一律不是我们的
-  for (const src of [
-    "open.feishu.cn",
-    "SpaceZephyr/pm-skills",
-    "someoneelse/doubaoya-community",
-    "zizhanovo/doubaoya-community-fork",
-    "https://github.com/evil/zizhanovo-doubaoya-community",
-    "vercel-labs/agent-skills",
-  ]) {
-    eq(`isOurs(${src})`, isOurs({ source: src, sourceType: "github" }), false);
-  }
-  eq("isOurs(local)", isOurs({ source: "zizhanovo/doubaoya-community", sourceType: "local" }), false);
-  eq("isOurs(null)", isOurs(null), false);
+  const known = { dby: ["aaa", "bbb"], retired: ["ccc"], "cur-only": ["ddd"] };
+  const current = { dby: "aaa", "cur-only": "ddd" };
 
-  // 三张单子
-  eq(
-    "planReconcile",
-    planReconcile(["keep", "gone-a", "gone-b"], ["keep", "brand-new"]),
-    { remove: ["gone-a", "gone-b"], add: ["brand-new"], refresh: ["keep"] }
-  );
-  // 幂等：已经一致时没有增删
-  const idem = planReconcile(["a", "b"], ["a", "b"]);
-  eq("planReconcile idempotent", [idem.remove, idem.add], [[], []]);
-  // 全新安装：全是新增，没有删除
-  eq("planReconcile fresh", planReconcile([], ["a", "b"]), { remove: [], add: ["a", "b"], refresh: [] });
+  // 三态
+  eq("命中当前版", classify("dby", "aaa", current, known), "current");
+  eq("命中历史版", classify("dby", "bbb", current, known), "historical");
+  eq("谁都不命中=用户动过手", classify("dby", "zzz", current, known), "modified");
+  eq("下架包的历史版", classify("retired", "ccc", current, known), "historical");
+  eq("闭集里没有=别人的", classify("lark-base", "aaa", current, known), "foreign");
+  // 🔴 别人的包哪怕哈希凑巧撞上我们某个版本，也仍然是别人的（判据是 slug 在不在闭集里）
+  eq("异源撞哈希仍是 foreign", classify("someone-else", "aaa", current, known), "foreign");
+
+  // 三张单子：下架的旧包归档，新增的装，改过的既不归档也不刷新
+  const installed = [
+    { name: "dby", state: "current" },
+    { name: "retired", state: "historical" },
+    { name: "mine", state: "modified" },
+    { name: "lark-base", state: "foreign" },
+  ];
+  const plan = planReconcile(installed, ["dby", "brand-new", "mine"]);
+  eq("归档单", plan.archive, ["retired"]);
+  eq("新增单", plan.add, ["brand-new"]);
+  eq("刷新单", plan.refresh, ["dby"]);
+  eq("不碰单", plan.untouched.map((u) => u.name), ["lark-base", "mine"]);
+  // 🔴 用户改过的包在上游也存在，但绝不能被重装盖掉
+  eq("改过的不进新增单", plan.add.includes("mine"), false);
+  eq("改过的不进刷新单", plan.refresh.includes("mine"), false);
+  eq("改过的被挡住", plan.blocked, ["mine"]);
+
+  // 幂等：已经一致时不归档不新增
+  const idem = planReconcile([{ name: "dby", state: "current" }], ["dby"]);
+  eq("幂等", [idem.archive, idem.add], [[], []]);
+  // 全新安装：全是新增，没有归档
+  eq("全新安装", planReconcile([], ["a", "b"]), {
+    archive: [], add: ["a", "b"], refresh: [], untouched: [], blocked: [],
+  });
 
   if (fails.length) {
     for (const f of fails) console.error(`selfcheck FAILED: ${f}`);
     return 1;
   }
-  console.log("selfcheck ok: isOurs / planReconcile");
+  console.log("selfcheck ok: classify / planReconcile");
   return 0;
 }
 
