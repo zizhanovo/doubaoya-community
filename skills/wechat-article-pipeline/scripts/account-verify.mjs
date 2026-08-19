@@ -26,15 +26,17 @@ const DEFAULT_BASE_URL = "https://doubaoya.com";
 const WHOAMI_PATH = "/api/agent/whoami";
 
 /**
- * Redact a key for safe display: keep a short human-recognizable prefix only.
- * Never reveals enough to be usable.
+ * Redact a key for display.
+ *
+ * 🔴 **一个字符的密钥内容都不许出现在输出里**，所以这里不做任何截取：只回报「是不是本鸭
+ * 的钥匙形态」。`dyh_` 是所有本鸭 key 的公共前缀，本身不含任何密钥信息；之前那版还会
+ * 取非 dyh 钥匙的前 3 个字符，那 3 个字符就是真的密钥内容。
  * @param {string} key
  * @returns {string}
  */
 function redactKey(key) {
   if (typeof key !== "string" || key.length === 0) return "(empty)";
-  const prefixEnd = key.startsWith("dyh_") ? 4 : Math.min(3, key.length);
-  return `${key.slice(0, prefixEnd)}****`;
+  return key.startsWith("dyh_") ? "dyh_****" : "****";
 }
 
 /**

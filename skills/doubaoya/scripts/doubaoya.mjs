@@ -23,7 +23,7 @@
 //   去 https://doubaoya.com → 登录 → 密钥中心 → 生成密钥
 //   发现接口（list/search/describe）不需要 key；invoke 需要。
 //
-// 本脚本绝不打印整条 key（只在出错时露前缀）。
+// 🔴 本脚本绝不打印 key 的任何一部分——连前缀都不行。报错里只说「已设置 / 没设置」。
 
 const BASE_URL = "https://doubaoya.com";
 
@@ -38,8 +38,10 @@ function getKey({ required = true } = {}) {
   return key;
 }
 
-function maskKey(key) {
-  return key && key.length > 8 ? `${key.slice(0, 8)}…` : "（已隐藏）";
+// 🔴 只说「设没设」，**一个字符的密钥内容都不许进日志**——这些输出会被原样贴进 issue /
+//    群里 / 转述给 agent。前缀看着人畜无害，但它就是密钥的一部分，没有例外。
+function keyPresence() {
+  return process.env.DOUBAOYA_API_KEY ? "已设置" : "没设置";
 }
 
 function fail(message, code = "") {
@@ -113,7 +115,7 @@ async function request(method, path, body, { auth = "required" } = {}) {
     const msg = env?.error?.message ?? "未知错误";
     if (code === "MISSING_API_KEY" || code === "UNAUTHORIZED") {
       fail(
-        `${msg}（当前 key ${maskKey(getKey({ required: false }))}）。请在 doubaoya.com 密钥中心撤销并重新生成，再更新 DOUBAOYA_API_KEY。`,
+        `${msg}（DOUBAOYA_API_KEY ${keyPresence()}）。请在 doubaoya.com 密钥中心撤销并重新生成，再更新 DOUBAOYA_API_KEY。`,
         code
       );
     }
