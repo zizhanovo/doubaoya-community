@@ -101,8 +101,11 @@ class RetirementGateTests(unittest.TestCase):
     def test_the_real_retired_skills_are_refused(self):
         # 这张清单是**账本**，不是断言糖：真仓库里挂了下架牌的就该恰好是这些。
         # 新下架一个能力时这条会打红 —— 那正是它的用途，把清单补上即可。
-        # mera 的壳 2026-08-18 已从仓库删除（平台能力本就已退役），账本随之只剩一条。
-        expected = ["seedream-5-lite"]
+        # mera 的壳 2026-08-18 删除、seedream-5-lite 的墓碑壳 2026-08-19 删除
+        # （两者的**能力**本就已退役），账本随之清空。
+        # 🔴 空账本不等于闸没用：下面 test_marker_is_read_from_the_skill_not_hardcoded_by_slug
+        # 用合成样本证明「挂牌就拒、摘牌就放行」，闸的行为与本账本是否为空无关。
+        expected = []
         publishable, refused = publisher.partition_publishable(publisher.discover_slugs())
         self.assertEqual(sorted(slug for slug, _ in refused), expected)
         for slug, reason in refused:
@@ -114,7 +117,11 @@ class RetirementGateTests(unittest.TestCase):
         slugs = publisher.discover_slugs()
         publishable, refused = publisher.partition_publishable(slugs)
         self.assertEqual(len(publishable) + len(refused), len(slugs))
-        self.assertIn("image-gen", publishable)
+        # 别写死包名（原来写的是 image-gen，随批 3 退役了），也别写成
+        # `assertIn(sorted(publishable)[0], publishable)` 那种恒真句——那比写死更糟，
+        # 它永远绿，等于没有断言。要证的性质是：**没被拒的就该全部在可发布里**。
+        self.assertTrue(publishable, "一个可发布的包都没有，说明闸把全部包都拒了")
+        self.assertEqual(sorted(publishable), sorted(set(slugs) - {slug for slug, _ in refused}))
 
     def test_marker_is_read_from_the_skill_not_hardcoded_by_slug(self):
         # 变异验证的自动化版本：同一个 slug，挂牌就拒，摘牌就放行——闸读的是标记不是名字。

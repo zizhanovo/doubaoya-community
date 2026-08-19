@@ -51,8 +51,8 @@ compatibility: >-
 MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 
 **「帮我写一篇公众号文章」例外**：这不是一个 API 能干完的活，是**一条链**——
-**本 Skill 自己接头两跳**（`api.gzh.hotArticle` 拉爆文样本 + 写正文；`api.gzh.cozeData` 起标题）→
-`wechat-cover`（封面套路）→ `wechat-banned-words`（合规）→
+**本 Skill 自己接前四跳**（`api.gzh.hotArticle` 拉爆文样本 + 写正文；`api.gzh.cozeData` 起标题与
+封面套路，要成品封面方案则用 `skill.wechat.coverDesign`；`skill.wechat.prohibitedWord` 出过审版正文）→
 `wechat-article-pipeline`（排版 + 封面 + **存进用户自己的公众号草稿箱**）。
 🔴 **先问清用户要的终态，再决定走到链上哪一站**：只要成稿，写完正文就结束；
 要**排版好的公众号 HTML** 或要**文章进自己的草稿箱**，就得一路走到 `wechat-article-pipeline`。
@@ -313,7 +313,7 @@ Content-Type: application/json
 
 > ⚠️ 你脑子里 / 本文里记住的 slug 只是**起手线索**；能不能调、怎么调，以发现接口的返回为准。
 > 尤其别把**技能包目录名**（`npx skills add` 装进来的那个文件夹名，如 `trending-hub`、
-> `content-parse`、`image-gen`）当成调用 slug——它们**不是**，打过去必 404。
+> `dby`、`wechat-article-pipeline`）当成调用 slug——它们**不是**，打过去必 404。
 
 ---
 
@@ -499,7 +499,7 @@ console.log(env.data);
 6. **交付选题**：3–5 个选题（每个：蹭哪条热点 + 我这IP的独家切角 + 为什么现在能爆）+ 各自开场脚本 + 已过违禁词检测。
 7. **选题落地成文章**（用户要的是**公众号文章**而不是短视频脚本时，第 6 步之后还有路）：
    选定一个选题 → 用 `api.gzh.hotArticle` 拉同主题爆文样本写正文 → 用 `api.gzh.cozeData` 起标题 /
-   `wechat-cover` 定封面套路 → `wechat-banned-words` 出过审版正文 →
+   定封面套路 → 用 `skill.wechat.prohibitedWord` 出过审版正文 →
    **`wechat-article-pipeline` 排版 + 配封面 + 存进用户自己的公众号草稿箱**（只存草稿、绝不群发）。
    > 🔴 **走到哪一站由用户要的终态决定**：只要选题和脚本，第 6 步就是终点；要成稿，写完正文就结束；
    > 要**排版好的公众号 HTML** 或要**文章进自己的草稿箱**，才一路走到 `wechat-article-pipeline`

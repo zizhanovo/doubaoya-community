@@ -300,7 +300,14 @@ class CommunityValidatorTests(unittest.TestCase):
         和 **references 目录**各钉一条；少扫任何一处，对应断言就不再抛错。
         """
         known = json.loads((validator.ROOT / "known-hashes.json").read_text(encoding="utf-8"))
-        for relative in ("skills/image-gen/SKILL.md", "skills/doubaoya-gateway/references/routing-pitfalls.md"):
+        # ⚠️ 这里原本写死 `skills/image-gen/SKILL.md`——那个包 2026-08-19 随批 3 退役，
+        # 于是**这条测试自己也烂了一次**（它正是为了防这种烂才写的）。改成现取一个普通 Skill：
+        # 判据是「普通 Skill 的正文也在扫描面内」，具体是哪个包无关紧要。
+        ordinary = next(
+            d.name for d in validator.discover_skill_dirs(validator.ROOT)
+            if d.name not in {"doubaoya", "dby", "doubaoya-gateway"}
+        )
+        for relative in (f"skills/{ordinary}/SKILL.md", "skills/doubaoya-gateway/references/routing-pitfalls.md"):
             with self.subTest(relative), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 self.repository_fixture(root)
@@ -317,7 +324,9 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "wechat-banned-words" / "SKILL.md"
+            # 链上第一跳**现取**：写死包名的测试会跟着包一起烂（原来写的是 wechat-banned-words，
+            # 它 2026-08-19 随批 3 退役，这条当场 FileNotFoundError）。
+            skill = root / "skills" / validator.AUTHORING_CHAIN[0] / "SKILL.md"
             text = skill.read_text(encoding="utf-8")
             # `wechat-render` 只是一个 API 端点，不是 Skill——正是幻觉引用最爱的那种名字。
             skill.write_text(
@@ -356,7 +365,7 @@ class CommunityValidatorTests(unittest.TestCase):
         # 三个字段上游从来没回过。文档教 agent 读 `matchedWords` 的那阵子，「为空 ⇒ 合规 ✅」
         # 是个恒真判据，每一段文案都被放行——变异证据分别覆盖「全仓禁」与「只在违禁词 Skill 禁」两类。
         for skill_name, injection, ghost in (
-            ("wechat-banned-words", "若 `matchedWords` 为空则合规。", "matchedWords"),
+            ("multi-banned-words", "若 `matchedWords` 为空则合规。", "matchedWords"),
             ("multi-banned-words", "读 `data.suggestions` 拿建议。", "suggestions"),
             # 第三条是**域外**样本：riskLevel 全仓禁，连不碰违禁词的包也不许写。
             # 用哪个包无所谓，现取即可（见 a_non_safety_skill 的注释）。
@@ -389,16 +398,27 @@ class CommunityValidatorTests(unittest.TestCase):
             validator.validate_banned_word_fields(root)
 
     def test_banned_word_gate_covers_skills_whose_endpoint_lives_in_scripts(self):
-        # 回归证据：分域判定曾只读 SKILL.md，而 wechat-banned-words 的端点写在
+        # 回归证据：分域判定曾只读 SKILL.md，而当时 wechat-banned-words 的端点只写在
         # scripts/check_words.py 的 API_URL 里——于是**最该管的那个 Skill** 被判成域外，
         # `suggestions` 混进去也不报。分域改成扫整个技能包后这条才红。
-        skill_md = (validator.SKILLS / "wechat-banned-words" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertNotIn("check-banned-words", skill_md, "端点若哪天写进 SKILL.md，本回归证据就失去意义")
+        #
+        # 那个包 2026-08-19 退役了，仓里也不再有「标记只出现在脚本里」的真实样本
+        # （multi-banned-words 的标记 SKILL.md 与脚本里都有）。所以**自己种一个**这种形状的包：
+        # 要证的性质是「分域看整个目录、不只看 SKILL.md」，种出来的样本证得一样硬，且不会再烂。
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "wechat-banned-words" / "SKILL.md"
-            skill.write_text(skill.read_text(encoding="utf-8") + "\n\n读 `data.suggestions` 拿建议。\n", encoding="utf-8")
+            planted = root / "skills" / "planted-safety-skill"
+            (planted / "scripts").mkdir(parents=True)
+            # 标记**只**出现在脚本里，SKILL.md 一个字都不提——正是当年漏判的那种形状。
+            (planted / "scripts" / "check.py").write_text(
+                'API_URL = "https://doubaoya.com/api/skills/check-banned-words/invoke"\n', encoding="utf-8"
+            )
+            (planted / "SKILL.md").write_text(
+                "---\nname: planted-safety-skill\ndescription: 违禁词检测样本包。\n---\n\n读 `data.suggestions` 拿建议。\n",
+                encoding="utf-8",
+            )
+            self.assertNotIn("check-banned-words", (planted / "SKILL.md").read_text(encoding="utf-8"))
             with self.assertRaisesRegex(validator.ValidationError, "still names .suggestions."):
                 validator.validate_banned_word_fields(root)
 
@@ -406,12 +426,6 @@ class CommunityValidatorTests(unittest.TestCase):
         # 英文字面量禁掉之后，同一个谎换成中文说曾整个穿过去：头部话术承诺「标好风险等级」，
         # 而同一份文件的红线写着接口不返回它。description 是选路层，说错影响面最大。
         for skill_name, original, mutated, phrase in (
-            (
-                "wechat-banned-words",
-                "公众号违禁词检测与合规改写。",
-                "公众号违禁词检测与合规改写，标好风险等级。",
-                "风险等级",
-            ),
             (
                 "multi-banned-words",
                 "多平台违禁词检测——",
@@ -435,7 +449,7 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "wechat-banned-words" / "SKILL.md"
+            skill = root / "skills" / "multi-banned-words" / "SKILL.md"
             skill.write_text(
                 skill.read_text(encoding="utf-8") + "\n\n> 接口不返回风险等级与替换建议，命中词清单也没有。\n",
                 encoding="utf-8",
@@ -605,8 +619,10 @@ class CallRouteGateTests(unittest.TestCase):
             self.check("`POST /api/skills/real-endpoint/invoke`\n")
 
     def test_rejects_package_directory_name_masquerading_as_slug(self):
+        # 用一个**仍然存在**的技能包目录名（原来写的是 content-parse，它随批 3 退役——
+        # 那之后这条仍然绿，但走的是「历史闭集里的旧包名」那条分支，证的已经不是同一件事了）。
         with self.assertRaisesRegex(validator.ValidationError, "多半把技能包目录名当成了调用 slug"):
-            self.check("`POST /api/skills/content-parse/invoke`\n")
+            self.check("`POST /api/skills/wechat-article-pipeline/invoke`\n")
 
     def test_rejects_skill_slug_on_the_apis_route(self):
         with self.assertRaisesRegex(validator.ValidationError, r"得走 /api/skills/real-skill/invoke"):
@@ -617,7 +633,11 @@ class CallRouteGateTests(unittest.TestCase):
             self.check("`POST /api/apis/douyin/no-such-endpoint/call`\n")
 
     def test_retired_capability_may_still_be_named(self):
-        """已下架的能力允许被点名——seedream-5-lite/SKILL.md 就得写明它不能用了。"""
+        """已下架的能力允许被点名——文档本来就得写明某条能力不能用了。
+
+        （原注举的例子是 seedream-5-lite 的墓碑 SKILL.md，那具墓碑 2026-08-19 也删了；
+        判据与例子无关，用的是合成的 retired-skill。）
+        """
         self.check("`POST /api/skills/retired-skill/invoke` 已下架，别调\n")
 
     def test_placeholders_are_not_call_sites(self):

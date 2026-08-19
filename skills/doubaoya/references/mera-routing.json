@@ -71,8 +71,7 @@
       "priority": 80,
       "candidate_skills": [
         "doubaoya",
-        "trending-hub",
-        "content-parse"
+        "trending-hub"
       ],
       "use_when": [
         "user asks what is trending, viral, or popular on public platforms",
