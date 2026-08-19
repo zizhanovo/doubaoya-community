@@ -432,7 +432,9 @@ function archivePackages(scope, names, survey) {
 // ---------------------------------------------------------------- 执行
 
 function runSkills(args, cwd) {
-  const res = spawnSync("npx", ["-y", "skills", ...args], { stdio: "inherit", cwd });
+  // --json 下把子进程的 stdout 也拨到 stderr（fd 2）：npx 的进度条同样会毁掉那份 JSON。
+  const stdio = jsonMode ? ["inherit", 2, "inherit"] : "inherit";
+  const res = spawnSync("npx", ["-y", "skills", ...args], { stdio, cwd });
   if (res.error) {
     if (res.error.code === "ENOENT") {
       throw new Friendly("找不到 npx。", "先装 Node.js（https://nodejs.org），装完重开终端再跑。");
@@ -581,6 +583,13 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
   }
 }
 
+// `--json` 下 stdout 归 JSON 独占，人看的字一律走 stderr。
+let jsonMode = false;
+function say(...args) {
+  if (jsonMode) console.error(...args);
+  else console.log(...args);
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
@@ -588,8 +597,13 @@ async function main() {
     return 0;
   }
 
+  // 🔴 `--json` 时 stdout **只许是一份纯 JSON**，否则下游 `| jq .` 当场炸
+  //    （SyntaxError: Unexpected token '提'）。提示、进度、以及 npx 自己的输出一律改走
+  //    stderr，提示本身并进 JSON 里——不是丢掉，是换个出口。
+  jsonMode = opts.json;
+
   const upstream = await fetchUpstream();
-  for (const n of upstream.notes) console.log(`提示：${n}`);
+  for (const n of upstream.notes) say(`提示：${n}`);
   const scopes = resolveScopes(opts, upstream.knownHashes);
 
   // ---- 先把清单摊开给人看，一个字都还没改
@@ -611,7 +625,8 @@ async function main() {
   }
 
   if (opts.dryRun) {
-    if (opts.json) console.log(JSON.stringify({ names: upstream.names, report: report.map(stripScope), executed: false }, null, 2));
+    // notes 并进 JSON（不是丢掉）：它是「上游名单从哪来」的唯一线索，机器也该读得到。
+    if (opts.json) console.log(JSON.stringify({ notes: upstream.notes, names: upstream.names, report: report.map(stripScope), executed: false }, null, 2));
     return 0;
   }
 
@@ -637,10 +652,10 @@ async function main() {
     const scopeFlag = scope.kind === "global" ? ["-g"] : [];
 
     if (plan.archive.length) {
-      console.log(`\n归档 ${plan.archive.length} 个上游已下架的 skill（移走，不删）…`);
+      say(`\n归档 ${plan.archive.length} 个上游已下架的 skill（移走，不删）…`);
       const res = archivePackages(scope, plan.archive, survey);
       archived.push({ scope: scope.label, ...res });
-      console.log(`   已移到 ${res.root}`);
+      say(`   已移到 ${res.root}`);
       // 目录已经移走，这一步只是让 skills CLI 把自己的安装记录也清掉。
       // 不传 -a：remove 省略 -a 时打到全部 agent；别照 --help 写 -a '*'，remove 不认星号。
       runSkills(["remove", ...plan.archive, ...scopeFlag, "-y"], cwd);
@@ -649,7 +664,7 @@ async function main() {
     // 只装该装的：用户改过的包被排除在外，免得 --all 一把盖掉人家的改动。
     const want = [...plan.add, ...plan.refresh].sort();
     if (want.length) {
-      console.log(`\n拉取上游 ${want.length} 个 skill…`);
+      say(`\n拉取上游 ${want.length} 个 skill…`);
       runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", "*", "-y"], cwd);
     }
   }
@@ -676,7 +691,7 @@ async function main() {
   }
 
   if (opts.json) {
-    console.log(JSON.stringify({ results: results.map(stripScope), archived, executed: true }, null, 2));
+    console.log(JSON.stringify({ notes: upstream.notes, results: results.map(stripScope), archived, executed: true }, null, 2));
     return results.every((r) => r.checks.every((c) => c.ok)) ? 0 : 3;
   }
 
@@ -798,6 +813,44 @@ function gitTrackedFixtureCheck() {
   return fails;
 }
 
+/**
+ * 🔴 `--json` 的 stdout 必须是**一份能被 JSON.parse 整个吃下去的纯 JSON**。
+ * 判据只认这一个：真起一个子进程跑 `--dry-run --json`，把它的 stdout 原样喂给
+ * JSON.parse。不用「以 { 开头」这种弱断言——弱断言正是被绕过的那种闸。
+ *
+ * 完全离线：DBY_RAW_BASE 指向一个临时 fixture 目录（非 http 时 fetchJson 直接读文件），
+ * 目标 scope 也指到临时目录，所以既不联网、也碰不到本机任何真实安装目录。
+ * 顺带这条 fixture 必然触发那句「用的是 DBY_RAW_BASE 指定的上游」提示——正是当初污染
+ * stdout 的那一句，所以这个自检天然踩在缺陷现场上。
+ */
+function jsonPurityCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-json-selfcheck-"));
+  try {
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "some-skill": "doubaoya-skill/some-skill@aaaaaaaaaaaa" } }));
+    writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: { "some-skill": ["aaaaaaaaaaaa"] } }));
+    const res = spawnSync(
+      process.execPath,
+      [new URL(import.meta.url).pathname, "--dry-run", "--json", "--scope", "project", "--project-dir", root],
+      { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root } }
+    );
+    if (res.status !== 0) return [`--json 跑挂了（退出码 ${res.status}）：${(res.stderr || "").trim().split("\n").pop()}`];
+    let parsed;
+    try {
+      parsed = JSON.parse(res.stdout);
+    } catch (err) {
+      return [`🔴 --json 的 stdout 不是合法 JSON（${err.message}）；头 40 字：${JSON.stringify(res.stdout.slice(0, 40))}`];
+    }
+    if (parsed.executed !== false) fails.push(`--json --dry-run 的 executed 应为 false，实际 ${JSON.stringify(parsed.executed)}`);
+    // 提示不是被丢掉，是换了出口：JSON 里要有，stderr 上也要有。
+    if (!Array.isArray(parsed.notes) || !parsed.notes.length) fails.push("提示没并进 JSON 的 notes 里（丢信息也不行）");
+    if (!(res.stderr || "").includes("提示：")) fails.push("提示没走 stderr");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
 function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
@@ -853,12 +906,13 @@ function runSelfCheck() {
   eq("本鸭包计数", ourPackageCount([{ state: "foreign" }, { state: "current" }, { state: "modified" }]), 2);
 
   fails.push(...gitTrackedFixtureCheck());
+  fails.push(...jsonPurityCheck());
 
   if (fails.length) {
     for (const f of fails) console.error(`selfcheck FAILED: ${f}`);
     return 1;
   }
-  console.log("selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、归档根自忽略）");
+  console.log("selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、归档根自忽略、复原命令真能复原、--json 的 stdout 真能被 JSON.parse）");
   return 0;
 }
 
