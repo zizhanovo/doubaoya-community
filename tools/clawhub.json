@@ -18,14 +18,6 @@
         "本地运行"
       ]
     },
-    "cn-last30days": {
-      "displayName": "全网近 30 天作品聚合",
-      "topics": [
-        "全网数据",
-        "内容聚合",
-        "数据源"
-      ]
-    },
     "content-parse": {
       "displayName": "作品链接解析（抖音 / 小红书 / 公众号）",
       "topics": [
@@ -56,14 +48,6 @@
       "topics": [
         "更新",
         "维护"
-      ]
-    },
-    "doubao-websearch": {
-      "displayName": "豆包联网搜索",
-      "topics": [
-        "联网搜索",
-        "豆包",
-        "数据源"
       ]
     },
     "doubaoya": {
@@ -202,15 +186,6 @@
         "发布",
         "草稿箱",
         "自动化"
-      ]
-    },
-    "wechat-fastest-growing": {
-      "displayName": "公众号阅读增长榜 · 黑马账号",
-      "topics": [
-        "微信公众号",
-        "增长榜",
-        "账号发现",
-        "数据源"
       ]
     },
     "wechat-hot-article": {

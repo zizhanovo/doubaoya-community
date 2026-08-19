@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T17:21:53.801918+00:00",
+  "generatedAt": "2026-08-19T17:23:55.516155+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -105,6 +105,7 @@
       "45222c3bbed9",
       "4541fde58b19",
       "4ec537de8a0f",
+      "4fefd591daaa",
       "5c9b0784c4c9",
       "5e4285733c9a",
       "6b67e50a9d2a",
@@ -669,6 +670,9 @@
       "/api/apis/bilibili/bilibili-user-works"
     ],
     "celebrity-slice": [],
+    "cn-last30days": [
+      "/api/apis/multi/cn30-multi-search"
+    ],
     "cultural-tourism-bilibili-feed": [
       "/api/apis/bilibili/bilibili-playlet-feed"
     ],
@@ -680,6 +684,9 @@
     ],
     "cultural-tourism-xiaohongshu-feed": [
       "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
+    ],
+    "doubao-websearch": [
+      "/api/skills/doubao-web-search"
     ],
     "douyin-account-diagnosis": [
       "/api/apis/douyin/douyin-account-diagnosis",
@@ -785,6 +792,9 @@
     ],
     "wechat-channels-ai-feed": [
       "/api/apis/sph/shipinhao-ai-feed"
+    ],
+    "wechat-fastest-growing": [
+      "/api/apis/gongzhonghao/gongzhonghao-raise-rank"
     ],
     "wechat-hot-write": [
       "/api/apis/gongzhonghao/hot-article"
@@ -896,6 +906,23 @@
       "直播高光",
       "竖版短视频",
       "高级种草"
+    ],
+    "cn-last30days": [
+      "小红书抖音公众号",
+      "社媒舆情",
+      "舆情监测",
+      "话题研究",
+      "跨平台分析",
+      "跨平台选题",
+      "近30天作品"
+    ],
+    "doubao-websearch": [
+      "事实核查",
+      "引用来源",
+      "查出处",
+      "联网搜索",
+      "联网查证",
+      "豆包搜索"
     ],
     "douyin-comment": [
       "扒评论区",
@@ -1037,6 +1064,14 @@
       "视频号日报",
       "视频号爆款",
       "视频号选题"
+    ],
+    "wechat-fastest-growing": [
+      "公众号黑马",
+      "增长榜",
+      "增长率排行",
+      "流量风向",
+      "阅读增长",
+      "黑马账号"
     ],
     "wechat-hot-write": [
       "公众号写作",

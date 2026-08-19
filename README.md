@@ -55,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 29 个）
+## 技能清单（共 26 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -79,7 +79,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **wechat-hot-article** | 按关键词 + 时间区间拉同主题公众号爆文 |
-| **wechat-fastest-growing** | 公众号阅读增长榜，挖近期黑马账号 |
 | **wechat-account-analyzer** | 公众号账号诊断 / 体检，支持多号竞品对照 |
 | **wechat-similar-account** | 公众号对标账号推荐，搭竞品矩阵 |
 | **wechat-cover** | 同赛道爆款封面参考，提炼可复用视觉套路 |
@@ -102,7 +101,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **trending-hub** | 全网热榜聚合，产跨平台选题信号 |
-| **cn-last30days** | 一个词捞小红书 + 抖音 + 公众号近30天作品 |
 | **content-parse** | 粘公开链接，返回归一化作品 / 文章详情，拆解「为什么火」 |
 | **multi-banned-words** | 跨平台违禁词对照 + 统一安全改写 |
 | **multi-rewrite** 🖥 | 一稿多发：按各平台规则改写成多平台版本 |
@@ -124,7 +122,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 |------|------|
 | **image-gen** | GPT-image2 文生图 / 图生图 / 编辑 |
 | **seedream-5-lite** | ⛔ **已下架**（2026-08-10，调用恒 503）——出图请改用 `image-gen` |
-| **doubao-websearch** | 豆包异步联网检索，返回答案 + 引用来源 |
 
 ### 🖥 本地工具（不联网、不需要 key）
 
