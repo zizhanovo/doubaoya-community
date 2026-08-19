@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T14:15:35.773950+00:00",
+  "generatedAt": "2026-08-19T14:30:09.023853+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -116,6 +116,7 @@
       "e09552b3db86",
       "e2ad60e60db9",
       "e4c2e8b00436",
+      "e51b09417fb3",
       "e59ca8d2e11c",
       "e8b2bfb279bc",
       "ee3213835010",
@@ -124,6 +125,7 @@
       "fd5c7d045503"
     ],
     "doubaoya-gateway": [
+      "08201331442c",
       "153805c138d1",
       "1b9f82882898",
       "2d4cf93eb151",
@@ -373,6 +375,7 @@
     ],
     "wechat-article-pipeline": [
       "05469f1c1d54",
+      "123ef577ab86",
       "14320b25d931",
       "1b1d0072d93f",
       "2278788bbdfd",
@@ -431,6 +434,7 @@
     "wechat-draft-publish": [
       "1cff688f3db3",
       "24d35d8ef1cc",
+      "2bc61f8b2f21",
       "36d50bb4dd9b",
       "65dcd550c6fc",
       "75ef5514352b",
