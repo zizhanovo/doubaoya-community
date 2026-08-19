@@ -5,22 +5,24 @@
 //   node reconcile.mjs                    看清单（不改任何东西），然后问你要不要执行
 //   node reconcile.mjs --yes              直接执行，不问
 //   node reconcile.mjs --dry-run          只看清单，绝不执行
+//   node reconcile.mjs --force-refresh    连「已经是当前版」的包也重下一遍（包坏了想重装用它）
 //   node reconcile.mjs --scope global     只对账全局那份（默认 auto：哪儿装了对哪儿）
 //   node reconcile.mjs --json             机器可读输出
 //   node reconcile.mjs --self-check       离线自检（不联网）
 //
 // 它干什么：让本机这套「都爆鸭」skill **等于**上游当前全集——
-//   上游已下架的归档掉、新增的装上、其余的刷新。
+//   上游已下架的归档掉、新增的装上、落后当前版的刷新；已经是当前版的一个都不动。
 //
-// 🔴 怎么判「这包是不是我们发的」：**看内容哈希，不看它当初用什么名字装的**。
-//    上游 known-hashes.json 是「我们发布过的每一版 slug × 内容哈希」的闭集
-//    （由 tools/build_known_hashes.py 从 git 历史聚出来）。命中闭集 = 确定是我们发的，
-//    与 source 字段写的是 doubaoya-community 还是早期的 redfox-community 无关，
-//    也不怕别家有同名包。
+// 🔴 怎么判「这包是不是我们发的」：**判据是 slug × 内容哈希这一对**——先拿目录名（slug）
+//    去闭集里索到那一栏，再比内容哈希，两把尺子都命中才算数。上游 known-hashes.json 就是
+//    这张「我们发布过的每一版 slug × 内容哈希」的闭集（由 tools/build_known_hashes.py 从
+//    git 历史聚出来）。它**不看安装记录里的 source 字段**，所以那里写的是 doubaoya-community
+//    还是早期的 redfox-community 都照样认；别家有同名包也不怕——slug 撞上但哈希不命中，
+//    会落进「用户动过手」那一态，同样一个字都不动。
 //
 // 🔴 三态，不是两态：
-//    命中当前版      → 保留 / 刷新
-//    命中历史版      → 我们的旧包，可归档可替换
+//    命中当前版      → 已经是最新的，保留不动（除非 --force-refresh）
+//    命中历史版      → 我们的旧包，可刷新可归档可替换
 //    谁的版本都不命中 → **用户动过手**，跳过并列进报告，一个字都不动
 //
 // 🔴 删除一律做成「移进归档目录」，不做 rm。用户机器我们看不见，多一个目录的成本，
@@ -104,8 +106,14 @@ export function classify(name, hash, currentHashes, knownHashes) {
 /**
  * 三张单子。只有 historical 且上游已下架的才进归档单；
  * modified 一律进「不碰」单，连刷新都不给——刷新会覆盖掉用户的改动。
+ *
+ * 🔴 刷新单只收「内容哈希 ≠ 上游当前版」的包，命中当前版的进 upToDate 一个都不动。
+ *    之前是「还在上游的全进刷新单」，后果是**收敛态永远不收敛**：本机已经和上游一模一样了，
+ *    计划仍然是「重下 43 个」，用户每跑一次都看见一大串动作，于是分不清「真有更新」和
+ *    「跑了个空转」——而这正是对账器唯一要回答的问题。
+ * opts.forceRefresh 恢复「全量重下」的老语义，留给「我这个包坏了想重下一遍」。
  */
-export function planReconcile(installed, upstreamNames) {
+export function planReconcile(installed, upstreamNames, opts = {}) {
   const upstream = new Set(upstreamNames);
   const archive = [];
   const keep = [];
@@ -113,19 +121,22 @@ export function planReconcile(installed, upstreamNames) {
   for (const { name, state } of installed) {
     if (state === "foreign" || state === "modified") untouched.push({ name, state });
     else if (!upstream.has(name)) archive.push(name);
-    else keep.push(name);
+    else keep.push({ name, state });
   }
   const present = new Set(installed.map((i) => i.name));
   const add = [...upstream].filter((n) => !present.has(n)).sort();
   // 用户动过手的，连装都不许再装一遍盖掉它
   const blocked = new Set(untouched.filter((u) => u.state === "modified").map((u) => u.name));
+  const stale = (k) => Boolean(opts.forceRefresh) || k.state !== "current";
   return {
     archive: archive.sort(),
     add: add.filter((n) => !blocked.has(n)),
-    refresh: keep.sort(),
+    refresh: keep.filter(stale).map((k) => k.name).sort(),
+    upToDate: keep.filter((k) => !stale(k)).map((k) => k.name).sort(),
     untouched: untouched.sort((a, b) => a.name.localeCompare(b.name)),
     blocked: [...blocked].sort(),
     gitTracked: [],
+    gitUnknown: [],
   };
 }
 
@@ -152,6 +163,10 @@ function gitWorktreeRoot(dir) {
  * 🔴 判不出来一律当成「受跟踪」：git 跑挂了、退出码非 0、命令不存在——宁可少归档一个
  *    （用户下次还能再跑），也不可能拿别人 git 工作区里的文件赌一把。
  *    唯一的快路径是「压根不在任何 git 工作树里」，那才是确定安全。
+ *
+ * 🔴 结论一样是「跳过」，但**原因必须带出来**，因为用户的正确处置完全不同：
+ *    tracked 是「这是你自己版本化的包，你想清就自己 git rm」，unknown 是「你的 git 坏了，
+ *    先去修 git」。只说一句「跳过了」，两拨人都不知道下一步该干什么。
  */
 export function pathsWithTrackedFiles(paths) {
   const hit = [];
@@ -159,20 +174,26 @@ export function pathsWithTrackedFiles(paths) {
     if (!existsSync(p)) continue;
     if (!gitWorktreeRoot(p)) continue; // 不在 git 工作树里 ⇒ 确定没有受跟踪文件
     const res = spawnSync("git", ["-C", p, "ls-files", "--", "."], { encoding: "utf-8" });
-    if (res.error || res.status !== 0 || (res.stdout || "").trim()) hit.push(p);
+    if (res.error || res.status !== 0) hit.push({ path: p, reason: "unknown" });
+    else if ((res.stdout || "").trim()) hit.push({ path: p, reason: "tracked" });
   }
   return hit;
 }
 
-/** 归档候选里，哪些包在用户的 git 仓库里是受跟踪的。 */
+/** 归档候选里，哪些真受 git 跟踪（tracked），哪些是 git 判不出来的（unknown）。两者都不归档。 */
 function findGitTracked(names, survey) {
-  const out = [];
+  const tracked = [];
+  const unknown = [];
   for (const name of names) {
     const entry = survey.find((s) => s.name === name);
     const paths = (entry?.dirs || []).map((d) => join(d.path, name));
-    if (pathsWithTrackedFiles(paths).length) out.push(name);
+    const hits = pathsWithTrackedFiles(paths);
+    if (!hits.length) continue;
+    // 同一个包装在两个目录、两处原因不一样：按「真受跟踪」这条更明确的说。
+    if (hits.some((h) => h.reason === "tracked")) tracked.push(name);
+    else unknown.push(name);
   }
-  return out.sort();
+  return { tracked: tracked.sort(), unknown: unknown.sort() };
 }
 
 /** 这个 scope 里到底有几个本鸭包（别人家的不算）。判 scope 有没有落空用它。 */
@@ -193,12 +214,14 @@ export function ourPackageCount(survey) {
  * 升级路径：真要连刷新一起挡，就在执行前对「受跟踪且在刷新单里」的包做一次二次确认
  * （列出名字问 y/N），别默默跳过——默默跳过会让用户以为已经更新到最新版了。
  */
-export function splitGitTracked(plan, trackedNames) {
-  const tracked = new Set(trackedNames);
+export function splitGitTracked(plan, held) {
+  const tracked = new Set(held?.tracked || []);
+  const unknown = new Set(held?.unknown || []);
   return {
     ...plan,
-    archive: plan.archive.filter((n) => !tracked.has(n)),
+    archive: plan.archive.filter((n) => !tracked.has(n) && !unknown.has(n)),
     gitTracked: plan.archive.filter((n) => tracked.has(n)).sort(),
+    gitUnknown: plan.archive.filter((n) => unknown.has(n)).sort(),
   };
 }
 
@@ -514,11 +537,13 @@ async function selfTest(scope, wantNames) {
 // ---------------------------------------------------------------- 主流程
 
 function parseArgs(argv) {
-  const o = { yes: false, dryRun: false, json: false, verbose: false, scope: "auto", dir: process.cwd() };
+  const o = { yes: false, dryRun: false, json: false, verbose: false, forceRefresh: false, scope: "auto", dir: process.cwd() };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--yes" || a === "-y") o.yes = true;
     else if (a === "--dry-run") o.dryRun = true;
+    else if (a === "--force-refresh") o.forceRefresh = true;
+    else if (a === "--self-check") continue; // 入口那儿已经拦掉了，这里只是别把它报成不认识的参数
     else if (a === "--json") o.json = true;
     else if (a === "--verbose") o.verbose = true;
     else if (a === "--scope") o.scope = argv[++i];
@@ -569,19 +594,34 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     console.log(`   📦 要归档 ${plan.archive.length} 个（上游已下架；移进归档目录，不删）：`);
     for (const n of plan.archive) console.log(`        - ${n}`);
   }
+  // 🔴 两栏分开说。结论都是「没动」，可原因不同、用户该做的事也完全不同：
+  //    上面那栏是「这是你自己版本化的包」，下面那栏是「我判不出来，你的 git 得先修」。
   if (plan.gitTracked?.length) {
     console.log(
-      `   🔒 有 ${plan.gitTracked.length} 个上游已下架、但它们在你的 git 仓库里是**受跟踪的文件**，我不动：`
+      `   🔒 有 ${plan.gitTracked.length} 个上游已下架、但它们在你的 git 仓库里是**受跟踪的文件**——` +
+        `这是你自己版本化进仓库的包，我不动：`
     );
     for (const n of plan.gitTracked) console.log(`        ! ${n}`);
     console.log(`        （归档=把目录从原处搬走，对受跟踪文件等于从你工作区删文件。要清就你自己来：`);
     console.log(`         先 git 提交存个档，再 git rm -r <路径>，然后重跑本对账。）`);
   }
+  if (plan.gitUnknown?.length) {
+    console.log(
+      `   ❔ 有 ${plan.gitUnknown.length} 个上游已下架，但**我没法判断它们是不是受 git 跟踪**（git 没跑成），` +
+        `保守起见跳过、没动：`
+    );
+    for (const n of plan.gitUnknown) console.log(`        ? ${n}`);
+    console.log(`        （不是你版本化了它们，是这台机器上的 git 没能回答我。先确认 git 装了、能跑：`);
+    console.log(`         git -C <包所在目录> ls-files —— 修好再重跑本对账，它们就会正常归档。）`);
+  }
   if (plan.add.length) {
     console.log(`   ✨ 要新增 ${plan.add.length} 个：`);
     for (const n of plan.add) console.log(`        + ${n}`);
   }
-  console.log(`   ♻️  要刷新 ${plan.refresh.length} 个`);
+  if (plan.refresh.length) console.log(`   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版）`);
+  if (plan.upToDate?.length) {
+    console.log(`   ✅ 已经是当前版的 ${plan.upToDate.length} 个，不动（真想全部重下一遍：加 --force-refresh）`);
+  }
   const modified = plan.untouched.filter((u) => u.state === "modified");
   if (modified.length) {
     console.log(`   ✋ 你改过的 ${modified.length} 个，一个字都不动（也不会被刷新覆盖）：`);
@@ -605,7 +645,12 @@ function say(...args) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
-    console.log(readFileSync(new URL(import.meta.url), "utf-8").split("\n").slice(2, 10).join("\n").replace(/^\/\/ ?/gm, ""));
+    // 用法块就是文件头那几行，按「用法:」到第一行非缩进注释为界取，别写死行号——
+    // 写死行号的下场是加一个参数就把 --help 悄悄截断，而没人会为 --help 写测试。
+    const lines = readFileSync(new URL(import.meta.url), "utf-8").split("\n");
+    const start = lines.findIndex((l) => l.startsWith("// 用法:"));
+    const end = lines.findIndex((l, i) => i > start && !l.startsWith("//   "));
+    console.log(lines.slice(start, end).join("\n").replace(/^\/\/ ?/gm, ""));
     return 0;
   }
 
@@ -622,18 +667,20 @@ async function main() {
   const report = [];
   for (const scope of scopes) {
     const survey = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
-    const draft = planReconcile(survey, upstream.names);
+    const draft = planReconcile(survey, upstream.names, { forceRefresh: opts.forceRefresh });
     // 🔴 归档之前先问 git：受跟踪的包一律摘出来不动（详见 splitGitTracked）。
     //    只对归档候选跑 git，不是对全部已装包——一次对账最多几十次探测，可忽略。
     const plan = splitGitTracked(draft, findGitTracked(draft.archive, survey));
     report.push({ scope, survey, plan });
   }
 
-  const totalChanges = report.reduce((n, r) => n + r.plan.archive.length + r.plan.add.length, 0);
+  // 🔴 刷新一样是「往用户磁盘上写文件」的动作（`skills add` 会原地覆写），不该比归档少一道门。
+  //    它也是这个计数唯一的真相来源：totalChanges === 0 必须真的等于「一个动作都没有」。
+  const totalChanges = report.reduce((n, r) => n + r.plan.archive.length + r.plan.add.length + r.plan.refresh.length, 0);
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
     for (const { scope, survey, plan } of report) printPlan(scope, survey, plan, opts, upstream.names.length);
-    if (totalChanges === 0) console.log(`\n结论：没有要归档的，也没有要新增的——已经和上游一致了。`);
+    if (totalChanges === 0) console.log(`\n结论：无需任何操作——本机已经和上游当前全集完全一致。`);
   }
 
   if (opts.dryRun) {
@@ -645,7 +692,7 @@ async function main() {
   // ---- 要动手了，先要确认（红线：归档绝不能是默认行为）
   if (totalChanges > 0 && !opts.yes) {
     if (!process.stdin.isTTY) {
-      console.error("\n停下了：有归档动作，但当前不是交互终端，没法向你确认。\n确认清单没问题后，加 --yes 再跑一次。");
+      console.error("\n停下了：这份清单有要写你磁盘的动作（归档 / 新增 / 刷新），但当前不是交互终端，没法向你确认。\n确认清单没问题后，加 --yes 再跑一次。");
       return 2;
     }
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -687,7 +734,7 @@ async function main() {
     const after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
     // 受 git 跟踪的是**故意**留在原地的，不算「没归档掉」——否则它每次都把退出码顶成 3，
     // 谁把 skill 版本化进仓库谁就永远看到一次假红。
-    const kept = new Set(plan.gitTracked);
+    const kept = new Set([...plan.gitTracked, ...plan.gitUnknown]);
     const stillStale = after
       .filter((s) => s.state === "historical" && !upstream.names.includes(s.name) && !kept.has(s.name))
       .map((s) => s.name);
@@ -697,8 +744,11 @@ async function main() {
     const keptForeign = plan.untouched
       .filter((u) => u.state === "foreign")
       .filter((u) => after.find((a) => a.name === u.name)?.state === "foreign").length;
-    const want = [...plan.add, ...plan.refresh];
-    const checks = await selfTest(scope, want);
+    // 🔴 自检问的是「该在的都在吗」，不是「这次动过的都在吗」。刷新单收窄之后，收敛态下
+    //    add / refresh 都是空的，只拿它们去查等于一个包都没查、还打印「都能找到」——
+    //    正好在最该确认「东西真的还在」的那一跑上变成空转。已经是当前版的那些同样该在场。
+    const expect = [...plan.add, ...plan.refresh, ...(plan.upToDate || [])];
+    const checks = await selfTest(scope, expect);
     results.push({ scope, plan, after, stillStale, keptModified, keptForeign, checks });
   }
 
@@ -711,10 +761,18 @@ async function main() {
   for (const r of results) {
     const counts = r.after.reduce((m, s) => ({ ...m, [s.state]: (m[s.state] || 0) + 1 }), {});
     console.log(`\n── ${r.scope.label} 对账完成`);
-    console.log(`   归档 ${r.plan.archive.length}，新增 ${r.plan.add.length}，刷新 ${r.plan.refresh.length}`);
+    console.log(
+      `   归档 ${r.plan.archive.length}，新增 ${r.plan.add.length}，刷新 ${r.plan.refresh.length}，` +
+        `本来就是当前版没动 ${r.plan.upToDate.length}`
+    );
     if (r.plan.gitTracked.length) {
       console.log(
-        `   🔒 另有 ${r.plan.gitTracked.length} 个上游已下架、但在你 git 仓库里受跟踪，没动：${r.plan.gitTracked.join(", ")}`
+        `   🔒 另有 ${r.plan.gitTracked.length} 个上游已下架、但在你 git 仓库里受跟踪（你自己版本化的包），没动：${r.plan.gitTracked.join(", ")}`
+      );
+    }
+    if (r.plan.gitUnknown.length) {
+      console.log(
+        `   ❔ 另有 ${r.plan.gitUnknown.length} 个上游已下架，但 git 没跑成、判不出是否受跟踪，保守跳过：${r.plan.gitUnknown.join(", ")}`
       );
     }
     console.log(`   现在：当前版 ${counts.current || 0}、你改过的 ${counts.modified || 0}（原样保留 ${r.keptModified}）、别人的 ${counts.foreign || 0}（原样保留 ${r.keptForeign}）`);
@@ -799,6 +857,10 @@ function gitTrackedFixtureCheck() {
     if (JSON.stringify(plan.gitTracked) !== JSON.stringify(["tracked-pkg"])) {
       fails.push(`受跟踪的包没被识别出来：gitTracked=${JSON.stringify(plan.gitTracked)}`);
     }
+    // git 在这个 fixture 里是好的，所以「判不出来」那栏必须是空的——不然两种原因就串了栏。
+    if (JSON.stringify(plan.gitUnknown) !== JSON.stringify([])) {
+      fails.push(`git 明明跑得通，却把包记进了「判不出来」栏：gitUnknown=${JSON.stringify(plan.gitUnknown)}`);
+    }
     const archived = archivePackages(scope, plan.archive, survey);
 
     // 1. 受跟踪的必须原地还在（这是整条链最薄的一层冰）
@@ -819,6 +881,44 @@ function gitTrackedFixtureCheck() {
     const restore = spawnSync("sh", ["-c", restoreCommand(archived.root)], { encoding: "utf-8" });
     if (restore.status !== 0) fails.push(`复原命令跑不通（退出码 ${restore.status}）：${(restore.stderr || "").trim().split("\n")[0]}`);
     if (!existsSync(join(skillsDir, "loose-pkg", "SKILL.md"))) fails.push("🔴 复原命令没把归档的包移回原处");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 fail-closed 的**实证**：git 探测失败时，包必须照样被判成「不许归档」。
+ * 之前那条真 git 仓的自检里 git 是好的，所以它只证得了「tracked 认得出来」，
+ * 把 `res.error || res.status !== 0` 那半句删掉它一样全绿——而删掉的后果是：
+ * 谁的 git 坏了、或者根本没装 git，他受跟踪的 skill 目录就会被真的搬走。
+ *
+ * 造法不 mock：写一个内容是垃圾的 `.git` 文件。gitWorktreeRoot 认得出「在工作树里」，
+ * 而 `git ls-files` 读到非法 gitfile 会 fatal 退出非 0 —— 正是要防的那个现场。
+ */
+function gitProbeFailureCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-gitprobe-selfcheck-"));
+  try {
+    writeFileSync(join(root, ".git"), "这不是合法的 gitfile\n");
+    const pkg = join(root, "some-pkg");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "SKILL.md"), "---\nname: some-pkg\n---\n");
+
+    const hits = pathsWithTrackedFiles([pkg]);
+    if (hits.length !== 1) {
+      fails.push(`🔴 git 探测失败时没有 fail-closed：这个包被放行了（hits=${JSON.stringify(hits)}）`);
+    } else if (hits[0].reason !== "unknown") {
+      fails.push(`git 探测失败应记成 unknown（好让用户知道该去修 git），实际 reason=${hits[0].reason}`);
+    }
+
+    // 走完整条链：判不出来的同样一个都不许进归档单。
+    const survey = [{ name: "some-pkg", hash: "bbb", state: "historical", dirs: [{ label: ".claude/skills", path: root }] }];
+    const plan = splitGitTracked(planReconcile(survey, ["dby"]), findGitTracked(["some-pkg"], survey));
+    if (plan.archive.length) fails.push(`🔴 git 判不出来的包进了归档单：${JSON.stringify(plan.archive)}`);
+    if (JSON.stringify(plan.gitUnknown) !== JSON.stringify(["some-pkg"])) {
+      fails.push(`git 判不出来的包没单列进 gitUnknown：${JSON.stringify(plan.gitUnknown)}`);
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -863,6 +963,106 @@ function jsonPurityCheck() {
   return fails;
 }
 
+/**
+ * 造一份「只装了一个包、上游也只有这一个包」的离线 fixture。
+ *   converged 上游当前版 = 本机这份内容哈希 ⇒ 三态是 current
+ *   stale     上游当前版是另一个哈希，本机这份只是历史版 ⇒ 三态是 historical
+ * 哈希是真算出来的（computeSkillHash），不是编的，所以判定链路整条都在场。
+ */
+function buildScopeFixture(mode) {
+  const root = mkdtempSync(join(tmpdir(), `dby-${mode}-selfcheck-`));
+  const pkg = join(root, ".claude", "skills", "some-skill");
+  mkdirSync(pkg, { recursive: true });
+  writeFileSync(join(pkg, "SKILL.md"), "---\nname: some-skill\n---\n");
+  const mine = computeSkillHash(pkg);
+  const other = mine === "0".repeat(12) ? "1".repeat(12) : "0".repeat(12);
+  const current = mode === "converged" ? mine : other;
+  writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "some-skill": `doubaoya-skill/some-skill@${current}` } }));
+  writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: { "some-skill": [mine, other] } }));
+  return root;
+}
+
+/** PATH 上放一个假 npx：真被调用了就留下痕迹，且绝不联网、绝不动真东西。 */
+function stubNpxDir() {
+  const bin = mkdtempSync(join(tmpdir(), "dby-stub-npx-"));
+  const marker = join(bin, "called.log");
+  writeFileSync(join(bin, "npx"), `#!/bin/sh\necho "$@" >> '${marker}'\nexit 0\n`, { mode: 0o755 });
+  return { bin, marker };
+}
+
+/**
+ * 🔴 收敛态必须真的收敛。这条自检钉三件事，每一件都对应一个真出过事的形态：
+ *   ① 本机已经和上游一致 ⇒ 计划是**零动作**（不是「照样重下 43 个」）；
+ *   ② `--force-refresh` 仍然能把全量重下要回来（收窄不许把「包坏了想重下」这个能力砍掉）；
+ *   ③ 只有刷新、没有归档也没有新增时，非交互跑**必须停在确认门**（退出码 2）——
+ *      刷新同样是往用户磁盘写文件，门要是不计刷新，这一跑就会静默重下。
+ * 全程离线：DBY_RAW_BASE 指向 fixture 目录，npx 是 PATH 上的假的。
+ */
+function refreshScopeCheck() {
+  const fails = [];
+  const script = new URL(import.meta.url).pathname;
+  const { bin, marker } = stubNpxDir();
+  const run = (root, args) =>
+    spawnSync(process.execPath, [script, "--scope", "project", "--project-dir", root, ...args], {
+      encoding: "utf-8",
+      env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` },
+    });
+  const planOf = (res, label) => {
+    if (res.status !== 0) {
+      fails.push(`${label}: 跑挂了（退出码 ${res.status}）：${(res.stderr || "").trim().split("\n").pop()}`);
+      return null;
+    }
+    try {
+      return JSON.parse(res.stdout).report[0].plan;
+    } catch (err) {
+      fails.push(`${label}: 读不出计划（${err.message}）`);
+      return null;
+    }
+  };
+  const eqList = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  };
+
+  const converged = buildScopeFixture("converged");
+  const stale = buildScopeFixture("stale");
+  try {
+    // ① 收敛态 = 零动作
+    const plan = planOf(run(converged, ["--dry-run", "--json"]), "收敛态");
+    if (plan) {
+      eqList("🔴 收敛态还要刷新（等于每跑一次都全量重下）", plan.refresh, []);
+      eqList("收敛态不该有新增", plan.add, []);
+      eqList("收敛态不该有归档", plan.archive, []);
+      eqList("收敛态该把包记进「已是当前版」", plan.upToDate, ["some-skill"]);
+    }
+    // ② --force-refresh 把全量重下要回来
+    const forced = planOf(run(converged, ["--dry-run", "--json", "--force-refresh"]), "--force-refresh");
+    if (forced) {
+      eqList("🔴 --force-refresh 没能恢复全量刷新（「包坏了想重下」这条路断了）", forced.refresh, ["some-skill"]);
+      eqList("--force-refresh 下不该再有「已是当前版」", forced.upToDate, []);
+    }
+    // ③ 只有刷新时也必须过确认门
+    const stalePlan = planOf(run(stale, ["--dry-run", "--json"]), "落后态");
+    if (stalePlan) {
+      eqList("落后态该进刷新单", stalePlan.refresh, ["some-skill"]);
+      eqList("落后态 fixture 前提：不该有归档", stalePlan.archive, []);
+      eqList("落后态 fixture 前提：不该有新增", stalePlan.add, []);
+    }
+    const gated = run(stale, []); // 不给 --yes，且 stdin 是管道不是 TTY
+    if (gated.status !== 2) {
+      fails.push(
+        `🔴 只有刷新动作时没停在确认门：退出码应为 2（需要确认但非交互终端），实际 ${gated.status}。` +
+          `刷新也是往用户磁盘写文件，不该无门。`
+      );
+    }
+    if (existsSync(marker)) {
+      fails.push(`🔴 确认门之前就调了 npx：${readFileSync(marker, "utf-8").trim()}`);
+    }
+  } finally {
+    for (const d of [converged, stale, bin]) rmSync(d, { recursive: true, force: true });
+  }
+  return fails;
+}
+
 function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
@@ -893,38 +1093,61 @@ function runSelfCheck() {
   const plan = planReconcile(installed, ["dby", "brand-new", "mine"]);
   eq("归档单", plan.archive, ["retired"]);
   eq("新增单", plan.add, ["brand-new"]);
-  eq("刷新单", plan.refresh, ["dby"]);
+  // dby 已经是当前版 ⇒ 不进刷新单，进「已是当前版」单
+  eq("刷新单只收落后的", plan.refresh, []);
+  eq("已是当前版的单列", plan.upToDate, ["dby"]);
   eq("不碰单", plan.untouched.map((u) => u.name), ["lark-base", "mine"]);
   // 🔴 用户改过的包在上游也存在，但绝不能被重装盖掉
   eq("改过的不进新增单", plan.add.includes("mine"), false);
   eq("改过的不进刷新单", plan.refresh.includes("mine"), false);
   eq("改过的被挡住", plan.blocked, ["mine"]);
 
-  // 幂等：已经一致时不归档不新增
+  // 🔴 幂等要的是**零动作**，不只是「不归档不新增」：刷新也算动作。
+  //    收敛态还刷新，用户每跑一次都看见一大串重下，就分不清「真有更新」和「空转」了。
   const idem = planReconcile([{ name: "dby", state: "current" }], ["dby"]);
-  eq("幂等", [idem.archive, idem.add], [[], []]);
+  eq("幂等=零动作", [idem.archive, idem.add, idem.refresh], [[], [], []]);
+  // 落后一版的才刷新
+  const behind = planReconcile([{ name: "dby", state: "historical" }], ["dby"]);
+  eq("落后版进刷新单", behind.refresh, ["dby"]);
+  eq("落后版不算当前版", behind.upToDate, []);
+  // 🔴 --force-refresh：全量重下的老语义必须还能要回来（「我这个包坏了想重装」）
+  const forced = planReconcile([{ name: "dby", state: "current" }], ["dby"], { forceRefresh: true });
+  eq("强制刷新收当前版", forced.refresh, ["dby"]);
+  eq("强制刷新下没有「已是当前版」", forced.upToDate, []);
+  // 强制刷新也不许碰用户改过的包——它绕开的是「新旧判定」，不是那条红线
+  eq("强制刷新仍不碰改过的", planReconcile([{ name: "mine", state: "modified" }], ["mine"], { forceRefresh: true }).refresh, []);
+
   // 全新安装：全是新增，没有归档
   eq("全新安装", planReconcile([], ["a", "b"]), {
-    archive: [], add: ["a", "b"], refresh: [], untouched: [], blocked: [], gitTracked: [],
+    archive: [], add: ["a", "b"], refresh: [], upToDate: [], untouched: [], blocked: [], gitTracked: [], gitUnknown: [],
   });
 
-  // 🔴 受 git 跟踪的从归档单里摘出来，单列一栏
-  const split = splitGitTracked(planReconcile(installed, ["dby"]), ["retired"]);
+  // 🔴 受 git 跟踪的从归档单里摘出来，单列一栏；git 判不出来的另起一栏（原因不同、处置不同）
+  const split = splitGitTracked(planReconcile(installed, ["dby"]), { tracked: ["retired"], unknown: [] });
   eq("受跟踪的不进归档单", split.archive, []);
   eq("受跟踪的单列一栏", split.gitTracked, ["retired"]);
+  const unk = splitGitTracked(planReconcile(installed, ["dby"]), { tracked: [], unknown: ["retired"] });
+  eq("判不出来的也不进归档单", unk.archive, []);
+  eq("判不出来的另起一栏", [unk.gitUnknown, unk.gitTracked], [["retired"], []]);
 
   // scope 落空的判据：别人家的包不算数
   eq("本鸭包计数不含别人的", ourPackageCount([{ state: "foreign" }, { state: "foreign" }]), 0);
   eq("本鸭包计数", ourPackageCount([{ state: "foreign" }, { state: "current" }, { state: "modified" }]), 2);
 
   fails.push(...gitTrackedFixtureCheck());
+  fails.push(...gitProbeFailureCheck());
+  fails.push(...refreshScopeCheck());
   fails.push(...jsonPurityCheck());
 
   if (fails.length) {
     for (const f of fails) console.error(`selfcheck FAILED: ${f}`);
     return 1;
   }
-  console.log("selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、归档根自忽略、复原命令真能复原、--json 的 stdout 真能被 JSON.parse）");
+  console.log(
+    "selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、" +
+      "git 探测失败时 fail-closed、归档根自忽略、复原命令真能复原、收敛态零动作且 --force-refresh 能全量重下、" +
+      "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse）"
+  );
   return 0;
 }
 
