@@ -28,12 +28,25 @@ ROUTING = SKILLS / "doubaoya" / "references" / "wechat-routing.json"
 #   * 本元组只留**下架后仍存在**的那几跳（前向指针闸只能对真实目录成立）；
 #   * 「链头必须在场」这条不变量改由下面 must_route 里的 `doubaoya` 守——它现在既是入口也是第 1 跳。
 # 换句话说，缩短的是元组，不是这条链：写正文、起标题两件事仍然必须有人接，只是接的人换了。
+# 🔴 2026-08-19 第二次缩短：`wechat-banned-words`（合规）与 `wechat-cover`（封面）也退役了，
+# 两件事同样并进 `doubaoya` 按意图路由。元组再次只留**下架后仍存在**的那几跳；
+# 「合规环与封面环必须有人接」这两条不变量改由下面 CHAIN_CAPABILITIES 守（判据从"点名某个包"
+# 换成"那条能力在总入口的意图路由表里在场"）。链没变短，接的人换了——这一点每次都要写清楚，
+# 否则下一个读到 2 跳元组的人会以为写作链只剩两步。
 AUTHORING_CHAIN = (
-    "wechat-banned-words",
-    "wechat-cover",
     "wechat-theme-studio",
     "wechat-article-pipeline",
 )
+# 写作链上**已经没有独立技能包**的那几跳，各自的落点能力。少了任一条，对应那一跳就重新变成
+# 「没人接的活」，而且不会有任何地方报错——这正是本表存在的理由。
+# 每条都必须出现在 doubaoya 的 SKILL.md（§0.5 意图速查表）里。
+CHAIN_CAPABILITIES = {
+    "api.gzh.hotArticle": "第 1 跳：拉同主题爆文样本再写正文（原 wechat-hot-write / wechat-hot-article）",
+    "api.gzh.cozeData": "封面与标题环：同赛道爆款封面/标题素材（原 wechat-title / wechat-cover）",
+    "skill.wechat.coverDesign": "封面环：直接产出封面设计方案（原 wechat-cover 的 skill 侧孪生）",
+    "skill.wechat.prohibitedWord": "合规环：公众号口径违禁词检测（原 wechat-banned-words）",
+    "tool.contentSafety.checkWords": "合规环：多平台口径违禁词检测（一稿多发时才用，按平台扇出）",
+}
 NEXT_STEP_HEADING = "## 下一步"
 # 一个 Skill 名长这样：小写、带连字符。反引号里符合这个形状的 token 必须真的是 skills/ 下的一个
 # 目录——`wechat-render` 那类"听起来很像但不存在"的引用就是这么混进文档的。
@@ -49,7 +62,7 @@ SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 #   产品化 Skill  → POST /api/skills/<slug>/invoke          （catalog 的 skillDefinitions）
 #   平台数据能力  → POST /api/apis/<platform>/<slug>/call    （catalog 的 apiEndpointDefinitions）
 # 拿错集合的 slug 去打另一条，返回 404，且**没有任何回落**。本仓文档一度把技能包的**目录名**
-# （trending-hub / content-parse / image-gen）当成调用 slug 写进 /api/skills/<slug>/invoke，
+# （trending-hub / dby / wechat-article-pipeline）当成调用 slug 写进 /api/skills/<slug>/invoke，
 # 于是那几条示例注定 404——而 §「404 就回去查发现接口」的指引又永远查不到它们，agent 原地死循环。
 # 本闸就是钉死这件事：文档/脚本里出现的每一条调用路径，都必须真的在主仓目录里。
 SKILL_INVOKE_PATH = re.compile(r"/api/skills/([A-Za-z0-9][A-Za-z0-9._~-]*)/invoke")
@@ -155,6 +168,12 @@ RETIRED_WITH_CAPABILITY = {
     # skills/doubaoya/references/mera-routing.json 的 retired 块里。
     # 2026-08-18 删掉它的壳，能力侧本就没有可发现的东西可留。
     "mera",
+    # seedream-lite 的能力 2026-08-10 就下架了（成功率 0%，出图通道迁走时它被留在原地），
+    # catalog 条目挂着 availability、发现接口把它过滤掉，能力索引里也没有它——所以 2026-08-19
+    # 删掉这具墓碑壳时，能力侧本就没有可留的发现面。豁免的是「删包前能力必须仍可发现」那道闸，
+    # 不是绕过它：**能力真的没了**才是判据。哪天它重新上线并回到能力索引，下面的断言会
+    # 反过来要求把这一条删掉。
+    "seedream-5-lite",
 }
 
 
@@ -485,13 +504,14 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
     # 所以「点名起点」改由**它的意图路由表里必须有拉爆文样本那一行**来守：api.gzh.hotArticle
     # 在 §0.5 在场，等价于原来那条「必须点名 wechat-hot-write」。
     doubaoya_text = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
-    require(
-        "api.gzh.hotArticle" in doubaoya_text,
-        "doubaoya SKILL.md 里找不到 api.gzh.hotArticle：写作链的第 1 跳（拉同主题爆文样本再写正文）"
-        "原来由 wechat-hot-write 承接，那个壳合并进来之后，这一跳的落点就是这条能力。"
-        "它从意图路由表里消失 = 「帮我写一篇公众号文章」重新变成没人接的活。",
-    )
-    must_route = ("wechat-banned-words", "wechat-article-pipeline", "dby")
+    for capability, why in sorted(CHAIN_CAPABILITIES.items()):
+        require(
+            capability in doubaoya_text,
+            f"doubaoya SKILL.md 里找不到 {capability}（{why}）。这一跳已经没有独立技能包了，"
+            "总入口的意图路由表就是它唯一的落点；从表里消失 = 这一跳重新变成没人接的活，"
+            "而且不会有任何地方报错。",
+        )
+    must_route = ("wechat-article-pipeline", "dby")
     missing = sorted(name for name in must_route if f"`{name}`" not in doubaoya_text)
     require(not missing, f"doubaoya SKILL.md does not route to the authoring chain: {missing}")
 

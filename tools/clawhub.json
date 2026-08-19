@@ -18,15 +18,6 @@
         "本地运行"
       ]
     },
-    "content-parse": {
-      "displayName": "作品链接解析（抖音 / 小红书 / 公众号）",
-      "topics": [
-        "链接解析",
-        "抖音",
-        "小红书",
-        "微信公众号"
-      ]
-    },
     "dby": {
       "displayName": "dby · 都爆鸭公众号工具箱",
       "topics": [
@@ -65,15 +56,6 @@
         "调用协议",
         "能力索引",
         "基础设施"
-      ]
-    },
-    "image-gen": {
-      "displayName": "GPT-image2 文生图 / 图生图",
-      "topics": [
-        "AI 生图",
-        "文生图",
-        "图生图",
-        "封面"
       ]
     },
     "ip-profile": {
@@ -127,14 +109,6 @@
         "内容源"
       ]
     },
-    "seedream-5-lite": {
-      "displayName": "Seedream 5.0 lite 文生图",
-      "topics": [
-        "AI 生图",
-        "文生图",
-        "封面"
-      ]
-    },
     "trending-hub": {
       "displayName": "全网热点选题（结合个人 IP 匹配）",
       "topics": [
@@ -162,23 +136,6 @@
         "发布"
       ]
     },
-    "wechat-banned-words": {
-      "displayName": "公众号违禁词检测",
-      "topics": [
-        "微信公众号",
-        "违禁词",
-        "合规审核"
-      ]
-    },
-    "wechat-cover": {
-      "displayName": "公众号爆款封面参考",
-      "topics": [
-        "微信公众号",
-        "封面",
-        "设计参考",
-        "数据源"
-      ]
-    },
     "wechat-draft-publish": {
       "displayName": "公众号草稿箱发布",
       "topics": [
@@ -186,15 +143,6 @@
         "发布",
         "草稿箱",
         "自动化"
-      ]
-    },
-    "wechat-hot-article": {
-      "displayName": "公众号爆文搜索",
-      "topics": [
-        "微信公众号",
-        "爆文",
-        "选题",
-        "数据源"
       ]
     },
     "wechat-rewrite": {
