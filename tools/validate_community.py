@@ -767,21 +767,25 @@ def validate_artifacts(root: Path = ROOT) -> None:
         re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b"),
         re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{16,}\b"),
     )
+    # 泄露的开发者路径 = 家目录后面跟着一个**真实用户名**。而文档里教人认路径形态时用的是
+    # 省略号占位（形如 Users 后面直接跟 `...` 再跟文件名），那一段纯由点组成——它不可能是
+    # 真实用户名，放它过去不放宽任何真实判据。所以这里收窄判据（排除纯点段），
+    # 而不是登记豁免：豁免要按路径记账、还得定期清，而"占位符不是泄露"本就是这条规则的定义。
+    # ⚠️ 下面的正则用字符串拼接写，是为了让本文件自己不被自己的判据命中——已经踩过一次。
     developer_paths = (
-        re.compile("/" + r"Users/[^/\s]+/"),
-        re.compile("/" + r"home/[^/\s]+/"),
-        re.compile(r"[A-Za-z]:[\\/]" + r"Users[\\/][^\\/:\s]+[\\/]"),
+        re.compile("/" + r"Users/(?!\.+/)[^/\s]+/"),
+        re.compile("/" + r"home/(?!\.+/)[^/\s]+/"),
+        re.compile(r"[A-Za-z]:[\\/]" + r"Users[\\/](?!\.+[\\/])[^\\/:\s]+[\\/]"),
     )
     text_suffixes = {".md", ".py", ".yaml", ".yml", ".json", ".html", ".lock", ".patch", ".txt", ".mjs"}
-    exact_scope = {
-        Path("README.md"),
-        Path("skills/doubaoya/SKILL.md"),
-        Path("skills/doubaoya/references/wechat-routing.json"),
-    }
 
     for path in publishable_files(root):
         relative = path.relative_to(root)
-        in_scope = relative in exact_scope or relative.parts[:2] == ("skills", "wechat-mp-exporter") or relative.parts[:1] == ("tools",)
+        # 🔴 扫描面 = 全部 skills/ + 全部 tools/ + 仓库根 README，**从目录现算**，不许手写名单。
+        # 从前这里是一张点名到具体文件的白名单（README + doubaoya 两份 + mp-exporter + tools），
+        # 于是每新建一个 Skill，它天生就在密钥与开发者路径的扫描面之外——闸看着是绿的，
+        # 只是没看那个目录。这种"漏检长得跟通过一模一样"的洞，恰恰是新增内容最需要闸的时候。
+        in_scope = relative == Path("README.md") or relative.parts[:1] in {("skills",), ("tools",)}
         if not in_scope:
             continue
         require(not path.is_symlink(), f"symlink is not publishable: {relative}")
