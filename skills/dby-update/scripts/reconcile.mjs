@@ -618,7 +618,13 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     console.log(`   ✨ 要新增 ${plan.add.length} 个：`);
     for (const n of plan.add) console.log(`        + ${n}`);
   }
-  if (plan.refresh.length) console.log(`   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版）`);
+  if (plan.refresh.length) {
+    console.log(
+      opts.forceRefresh
+        ? `   ♻️  要刷新 ${plan.refresh.length} 个（--force-refresh：不分新旧，全部重下一遍）`
+        : `   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版）`
+    );
+  }
   if (plan.upToDate?.length) {
     console.log(`   ✅ 已经是当前版的 ${plan.upToDate.length} 个，不动（真想全部重下一遍：加 --force-refresh）`);
   }
