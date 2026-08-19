@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T05:22:12.301229+00:00",
+  "generatedAt": "2026-08-19T06:13:58.759009+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -58,6 +58,7 @@
       "a05407096d06"
     ],
     "dby": [
+      "02380dfa3f98",
       "2db0a55a86c2",
       "3012327e9323",
       "3614ff73a0b8",
@@ -68,10 +69,13 @@
     ],
     "dby-charter": [
       "289a7e8efa11",
-      "a85067a32ed9"
+      "a85067a32ed9",
+      "a9eaab1fad23"
     ],
     "dby-update": [
       "53d92b2192de",
+      "89126d451b03",
+      "9a2708863bc4",
       "c8fc00825fa8",
       "e88f976ec4bb"
     ],
@@ -98,15 +102,18 @@
       "af1b56533141",
       "d671ab439717",
       "e09552b3db86",
+      "e2ad60e60db9",
       "e4c2e8b00436",
       "e59ca8d2e11c",
       "e8b2bfb279bc",
+      "f918bc7c1258",
       "fd5c7d045503"
     ],
     "doubaoya-gateway": [
       "1b9f82882898",
       "7b241df32a12",
-      "d7be4ecd8086"
+      "d7be4ecd8086",
+      "f4b4d82e21d0"
     ],
     "douyin-account-diagnosis": [
       "724dc2637f7b",
@@ -204,7 +211,8 @@
       "0ce1bf738a5c",
       "685cb3f07cc3",
       "70a5e0479c16",
-      "95c7ffa97dcb"
+      "95c7ffa97dcb",
+      "9b6a69a3ddfa"
     ],
     "gzh-subscribe": [
       "63eba88a501b",
@@ -218,6 +226,7 @@
       "21c0a56043e3",
       "2a98fbcc0dfb",
       "3c18c3d227c3",
+      "4c8276708177",
       "7644508c5b4a",
       "7b1584092802",
       "d8aee0025edb",
@@ -344,6 +353,7 @@
       "d63f093ef772"
     ],
     "wechat-article-pipeline": [
+      "2278788bbdfd",
       "2ee559010b10",
       "2f42b3dae492",
       "36d0ec66723c",
@@ -364,7 +374,8 @@
       "ea71215fb478",
       "f2b4bed93925",
       "f501d5f2fbde",
-      "fce1260c3188"
+      "fce1260c3188",
+      "ffd28948cca2"
     ],
     "wechat-banned-words": [
       "09fb3174ceac",
@@ -554,6 +565,7 @@
       "824cce3be7cf",
       "8df96829278c",
       "a5bbc8195712",
+      "a6c934422bbc",
       "f098334d5130"
     ],
     "xiaohongshu-similar-account": [
@@ -604,11 +616,15 @@
     "bilibili-portfolio-search": [
       "/api/apis/bilibili/bilibili-user-works"
     ],
+    "celebrity-slice": [],
     "cultural-tourism-bilibili-feed": [
       "/api/apis/bilibili/bilibili-playlet-feed"
     ],
     "cultural-tourism-douyin-feed": [
       "/api/apis/douyin/douyin-playlet-feed"
+    ],
+    "cultural-tourism-wechat-feed": [
+      "/api/apis/gongzhonghao/gongzhonghao-playlet-feed"
     ],
     "cultural-tourism-xiaohongshu-feed": [
       "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
@@ -654,8 +670,23 @@
     "douyin-works-crawler": [
       "/api/apis/douyin/douyin-user-works"
     ],
+    "gzh-astock-top": [
+      "/api/apis/gongzhonghao/gongzhonghao-account-analyzer",
+      "/api/apis/gongzhonghao/gongzhonghao-daily-publish",
+      "/api/apis/gongzhonghao/gongzhonghao-search-user",
+      "/api/apis/gongzhonghao/hot-article"
+    ],
+    "gzh-subscribe": [
+      "/api/apis/gongzhonghao/gongzhonghao-work-list"
+    ],
     "ks-ai-feed": [
       "/api/apis/kuaishou/kuaishou-ai-feed"
+    ],
+    "mera": [
+      "/api/apis/mera/self"
+    ],
+    "multi-content-feed": [
+      "/api/apis/multi/multi-content-export-top"
     ],
     "playlet-bili-feed": [
       "/api/apis/bilibili/bilibili-playlet-feed"
@@ -675,6 +706,19 @@
     "video-downloader": [
       "/api/skills/video-downloader"
     ],
+    "wechat-10w-hot": [
+      "/api/apis/gongzhonghao/category-time-hot"
+    ],
+    "wechat-channels-ai-feed": [
+      "/api/apis/sph/shipinhao-ai-feed"
+    ],
+    "wechat-mp-exporter": [],
+    "wechat-original-hot": [
+      "/api/apis/gongzhonghao/category-time-hot"
+    ],
+    "wechat-top-account": [
+      "/api/apis/gongzhonghao/gongzhonghao-index-rank"
+    ],
     "xiaohongshu-account-analyzer": [
       "/api/apis/xiaohongshu/xhs-sync-notes",
       "/api/apis/xiaohongshu/xiaohongshu-account-analyzer"
@@ -682,11 +726,26 @@
     "xiaohongshu-comment": [
       "/api/apis/xiaohongshu/comments"
     ],
+    "xiaohongshu-cover": [
+      "/api/apis/xiaohongshu/xiaohongshu-coze"
+    ],
+    "xiaohongshu-lowtop": [
+      "/api/apis/xiaohongshu/xiaohongshu-low-fans-top"
+    ],
+    "xiaohongshu-note-analyzer": [
+      "/api/apis/xiaohongshu/xiaohongshu-coze"
+    ],
     "xiaohongshu-similar-account": [
       "/api/apis/xiaohongshu/xiaohongshu-similar-account"
     ],
+    "xiaohongshu-title": [
+      "/api/apis/xiaohongshu/xiaohongshu-coze"
+    ],
     "xiaohongshu-top-account": [
       "/api/apis/xiaohongshu/xiaohongshu-top-account"
+    ],
+    "xiaohongshu-weeklytop": [
+      "/api/apis/xiaohongshu/xiaohongshu-weekly-top"
     ],
     "zhihu-rewrite": []
   }
