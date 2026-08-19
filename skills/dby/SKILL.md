@@ -1,10 +1,12 @@
 ---
 name: dby
-description: >-
-  都爆鸭（doubaoya / 本鸭）公众号工具箱主入口：三种模式（新手引导 / 任务前路由 / 任务后导航），
+description: |
+  都爆鸭（doubaoya / 本鸭）公众号工具箱主入口。三种模式：新手引导、任务前路由、任务后导航，
   按「选题 → 写草稿 → 排版 → 代发 → 复盘 →（反哺）下一个选题」的公众号飞轮，逐跳把你路由到正确的 skill。
   触发方式：/dby、/dby 新手入门、本鸭、都爆鸭、「帮我看看下一步」「接下来做什么」「先干哪个」「公众号从哪开始」。
-  Trigger: /dby, what's next, where do I start.
+  Main entry for the doubaoya (本鸭) WeChat Official Account toolkit. Three modes: onboarding, pre-task routing,
+  and post-task navigation along the topic → draft → layout → publish → review flywheel.
+  Trigger: /dby, /dby 新手入门, 本鸭, 都爆鸭, "help me with my WeChat account", "what's next", "where do I start".
 version: 1.0.0
 ---
 
