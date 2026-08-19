@@ -1,12 +1,8 @@
 ---
 name: doubaoya-gateway
 description: >-
-  都爆鸭平台的**调用网关**（基础设施 Skill，不承接业务意图）：鉴权头怎么带、两条互不回落的调用路由怎么选、
-  统一信封与错误码怎么解、以及最要紧的一条纪律——**入参规格调用前现拉，别照记忆或本地文档拼**。
-  另附一份**只供选路**的能力索引（operationKey + 一行用途 + 详情端点，不含任何入参字段）。
-  当你已经决定要调 doubaoya.com 的某条能力，却不确定该打哪条路径 / 入参从哪儿取 / 返回怎么解 /
-  报错（404、DEDICATED_ROUTE、NO_RESULT）怎么办时读本 Skill；也供其他都爆鸭业务 Skill 引用与内联。
-  ⚠️ 它**不**负责「帮我写文章 / 挖选题 / 做封面 / 查违禁词」这类活——那些请走对应业务 Skill（总入口 `dby`）。
+  都爆鸭平台的**调用网关**（基础设施 Skill，**不承接业务意图**）：鉴权怎么带、两条互不回落的路由怎么选、
+  统一信封与错误码怎么解，以及一条纪律——**入参规格调用前现拉**。不负责写文章 / 挖选题 / 做封面 / 查违禁词，那些走 `dby`。
   Trigger words: doubaoya 调用协议 / 调用网关 / DOUBAOYA_API_KEY / operationKey / execution.target /
   inputContract / 入参规格 / 统一信封 / SKILL_NOT_FOUND / ENDPOINT_NOT_FOUND / DEDICATED_ROUTE /
   NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由。
