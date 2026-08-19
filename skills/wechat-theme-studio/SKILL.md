@@ -1,10 +1,15 @@
 ---
 name: wechat-theme-studio
 description: >-
-  公众号排版主题工作室 · 按你的口语改公众号文章的**默认排版样式**（配色 / 标题 / 引用 / 图注），本地即时预览，
-  最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
-  触发方式：/wechat-theme-studio、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
-  Trigger: customize WeChat article theme, change layout / palette / heading style.
+  公众号排版主题工作室 · 按你的口语描述改公众号文章的**默认排版样式**（配色 / 标题 / 引用 / 图注等），
+  本地即时预览,最后同时落到两处:**存回服务端**(网页排版工作室与 /api/wechat/render 读它)+
+  **落成本机 theme 文件**(本机发文流水线读它)。闭环:读当前主题 →
+  改 themeJson → 本地校验 + 预览 → POST/PUT 存回服务端默认 + 存一份本机 theme.json。走 doubaoya.com,鉴权用你自己的
+  DOUBAOYA_API_KEY(Bearer)。当用户要改公众号排版、定制主题样式、换配色 / 换标题样式 / 调排版、
+  「排版长得像 XX」、把默认排版改掉时使用。
+  触发方式:/wechat-theme-studio、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
+  Trigger: customize WeChat article theme, change layout/palette/heading style, restyle 公众号 typography,
+  edit and save the default theme, /wechat-theme-studio.
 version: 1.1.0
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，

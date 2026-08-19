@@ -1,8 +1,9 @@
 ---
 name: seedream-5-lite
 description: >-
-  ⛔ 已下架，请勿使用。都爆鸭能力 seedream-lite 已于 2026-08-10 下架，调用一律返回 503 CAPABILITY_UNAVAILABLE。
-  **需要 AI 出图 / 生成配图 / 做组图 / 出封面素材，请改用 `image-gen` Skill**。本 Skill 仅作历史契约保留。
+  ⛔ 已下架，请勿使用。Seedream 5.0 lite 对应的都爆鸭能力（seedream-lite）已于 2026-08-10 下架，
+  任何调用一律返回 503 CAPABILITY_UNAVAILABLE，成功率为 0。**需要 AI 出图 / 生成配图 / 做组图 /
+  出封面素材，请改用 `image-gen` Skill**（都爆鸭 GPT-image2，在架可用）。本 Skill 仅作为历史契约保留。
 ---
 
 # ⛔ Seedream 5.0 lite（**已下架 · 请勿使用**）
