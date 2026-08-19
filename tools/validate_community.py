@@ -451,25 +451,34 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
     dead_in_dby = sorted(set(SKILL_TOKEN.findall(dby_text)) - installed)
     require(not dead_in_dby, f"dby/SKILL.md routes to Skills that do not exist: {dead_in_dby}")
 
-    # 🔴 doubaoya 是**另一个**导航单一事实源，此前却没人扫它的死链——2026-08-19 合并四个孪生壳时，
-    # 它正文里两处 `wechat-hot-write` / `wechat-title` 就是这么活下来的：链上 Skill 的 `## 下一步`
-    # 有闸、dby 全篇有闸，偏偏分发量最大的这一份没有。本闸补上这个洞。
+    # 🔴 「删了壳却没改指针」这一种错，扫描面必须是**全部 Skill 正文**，不是某几份。
+    # 2026-08-19 合并四个孪生壳时，doubaoya 正文里两处 `wechat-hot-write` / `wechat-title`
+    # 活了下来——因为当时只有链上 Skill 的 `## 下一步` 和 dby 全篇有闸。补 doubaoya 那一份
+    # 之后同一天又退役 10 个壳，`gzh-search`（wechat-hot-article 正文）与 `xiaohongshu-search`
+    # （image-gen 正文）照样是靠人 grep 才发现的：**闸盯着谁，就只有谁不会烂。**
     #
-    # 判据比 dby 那条**收窄一档**，因为 doubaoya 会正当地点名一堆「不是 Skill」的东西：能力 slug
+    # 判据比 dby 那条**收窄一档**，因为 Skill 正文会正当地点名一堆「不是技能包」的东西：能力 slug
     # （`seedream-lite`）、端点名片段（`ai-feed`）、已下架平台的能力（`note-write` / `source-read`）。
-    # 拿 dby 的朴素判据扫它会当场误报 6 条，而噪音闸等于没有闸。所以只报**曾经真的是一个技能包
-    # 目录、现在没了**的名字——那正好就是「删了壳却没改指针」这一种错，零误报面。
+    # 拿 dby 的朴素判据扫 doubaoya 会当场误报 6 条，而噪音闸等于没有闸。所以只报**曾经真的是一个
+    # 技能包目录、现在没了**的名字——那正好就是这一种错，零误报面（实测：全部 43 份正文 0 命中）。
     # 取材是 known-hashes.json 的历史闭集（91 个 slug），离线可跑、不依赖 git。
+    #
+    # ⚠️ 扫描面**只含 skills/**，不含 docs/。docs/deleting-a-skill.md 与 superpowers 计划书正当地
+    # 点名已下架的包（退役记录的主题就是那些包），把它们纳进来只会逼人去改历史记录。
     known = load_json(root / "known-hashes.json")
     ever_a_skill = set(known.get("skills", {}))
-    doubaoya_md = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
-    retired_pointers = sorted((set(SKILL_TOKEN.findall(doubaoya_md)) - installed) & ever_a_skill)
-    require(
-        not retired_pointers,
-        f"doubaoya/SKILL.md 还在点名已下架的技能包：{retired_pointers}。"
-        "壳没了、指针还在 = 把 agent 导向一个装不上的包，且用户看不到任何报错。"
-        "改指合并后承接它的能力（给 operationKey），或指向仍然存在的 Skill。",
-    )
+    navigational = sorted(root.glob("skills/*/SKILL.md")) + sorted(root.glob("skills/*/references/*.md"))
+    require(navigational, "扫描面为空：skills/ 下一份 SKILL.md 都没找到，闸缩成了零")
+    for path in navigational:
+        relative = path.relative_to(root)
+        text = path.read_text(encoding="utf-8")
+        retired_pointers = sorted((set(SKILL_TOKEN.findall(text)) - installed) & ever_a_skill)
+        require(
+            not retired_pointers,
+            f"{relative} 还在点名已下架的技能包：{retired_pointers}。"
+            "壳没了、指针还在 = 把 agent 导向一个装不上的包，且用户看不到任何报错。"
+            "改指合并后承接它的能力（给 operationKey），或指向仍然存在的 Skill。",
+        )
 
     # 总入口必须知道这条链存在（否则"帮我写一篇公众号文章"又只会命中单个搜索类能力），
     # 至少要点名合规环与终点。🔴 起点那一跳现在就是 doubaoya 自己（`wechat-hot-write` 已合并进来），
