@@ -55,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 39 个）
+## 技能清单（共 29 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -78,8 +78,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **gzh-search** | 关键词批量爬公众号文章，铺表 + 选题洞察 |
-| **gzh-ai-feed** | AI 方向公众号爆款日报内容源，聚类成每日选题 |
 | **wechat-hot-article** | 按关键词 + 时间区间拉同主题公众号爆文 |
 | **wechat-fastest-growing** | 公众号阅读增长榜，挖近期黑马账号 |
 | **wechat-account-analyzer** | 公众号账号诊断 / 体检，支持多号竞品对照 |
@@ -93,22 +91,10 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | **wechat-draft-publish** | 把写好的图文存进你自己公众号草稿箱（只存草稿、不群发，需先绑定公众号） |
 | **wechat-theme-studio** | 按口语描述改公众号**默认排版主题**（配色 / 标题 / 引用 / 图注），本地预览后存回服务端 |
 
-### 🎵 抖音（跨平台选题取数用）
-
-| 技能 | 能力 |
-|------|------|
-| **douyin-search** | 关键词批量搜抖音爆款作品，铺表 + 选题洞察 |
-| **douyin-realtime-search** | 实时综合搜抖音，可切综合 / 最新 / 最多点赞 |
-| **douyin-comment** | 按作品 ID 翻页拉一级评论，做舆情洞察 |
-
 ### 📕 小红书
 
 | 技能 | 能力 |
 |------|------|
-| **xiaohongshu-search** | 搜小红书爆款笔记，挖赛道选题 |
-| **xiaohongshu-crawler** | 按关键词爬热门作品，支持日期 / 排序筛选 |
-| **xiaohongshu-write** | 检索热门笔记 → 复盘爆款结构 → 产出新笔记 |
-| **xiaohongshu-dailytop** | 小红书日榜，看当天哪条笔记在霸榜 |
 | **xiaohongshu-rewrite** 🖥 | 把文案改写成小红书种草笔记风格 |
 
 ### 🌐 多平台 · 热点
@@ -116,7 +102,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **trending-hub** | 全网热榜聚合，产跨平台选题信号 |
-| **trending-hub-top10** | 全网平台热搜归并，输出综合 TOP10 |
 | **cn-last30days** | 一个词捞小红书 + 抖音 + 公众号近30天作品 |
 | **content-parse** | 粘公开链接，返回归一化作品 / 文章详情，拆解「为什么火」 |
 | **multi-banned-words** | 跨平台违禁词对照 + 统一安全改写 |

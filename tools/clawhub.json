@@ -3,7 +3,7 @@
   "_readme": [
     "ClawHub 上架清单：每个 skills/<slug>/ 目录在这里有且只有一条元数据。",
     "为什么需要它：clawhub CLI 不读 SKILL.md 的 frontmatter，displayName 由 slug 机械 title-case 而来",
-    "（gzh-search -> 'Gzh Search'），必须用 --name 显式覆盖，否则商店卡片上是一串没人搜得到的英文。",
+    "（wechat-cover -> 'Wechat Cover'），必须用 --name 显式覆盖，否则商店卡片上是一串没人搜得到的英文。",
     "owner 是发布者 handle：ClawHub 的 slug 按 owner 分命名空间（canonical URL = /<owner>/skills/<slug>），",
     "带 --owner 发布可以避开已被他人占用的裸 slug。",
     "改这个文件后跑 tools/clawhub_publish.py 预览，跑 tools/validate_community.py 校验清单没漂移。"
@@ -83,50 +83,6 @@
         "基础设施"
       ]
     },
-    "douyin-comment": {
-      "displayName": "抖音评论拉取",
-      "topics": [
-        "抖音",
-        "评论",
-        "舆情",
-        "数据源"
-      ]
-    },
-    "douyin-realtime-search": {
-      "displayName": "抖音实时综合搜索",
-      "topics": [
-        "抖音",
-        "实时搜索",
-        "数据源"
-      ]
-    },
-    "douyin-search": {
-      "displayName": "抖音爆款作品搜索",
-      "topics": [
-        "抖音",
-        "爆款",
-        "选题",
-        "数据源"
-      ]
-    },
-    "gzh-ai-feed": {
-      "displayName": "AI 赛道公众号日报内容源",
-      "topics": [
-        "微信公众号",
-        "AI",
-        "日报",
-        "内容源"
-      ]
-    },
-    "gzh-search": {
-      "displayName": "公众号文章批量搜索",
-      "topics": [
-        "微信公众号",
-        "批量取数",
-        "选题",
-        "数据源"
-      ]
-    },
     "image-gen": {
       "displayName": "GPT-image2 文生图 / 图生图",
       "topics": [
@@ -200,15 +156,6 @@
       "topics": [
         "热榜",
         "爆款选题",
-        "全网数据",
-        "数据源"
-      ]
-    },
-    "trending-hub-top10": {
-      "displayName": "全网聚合热搜 TOP10",
-      "topics": [
-        "热榜",
-        "热搜",
         "全网数据",
         "数据源"
       ]
@@ -302,24 +249,6 @@
         "Markdown"
       ]
     },
-    "xiaohongshu-crawler": {
-      "displayName": "小红书笔记爬取",
-      "topics": [
-        "小红书",
-        "批量取数",
-        "爬取",
-        "数据源"
-      ]
-    },
-    "xiaohongshu-dailytop": {
-      "displayName": "小红书日榜",
-      "topics": [
-        "小红书",
-        "榜单",
-        "日榜",
-        "数据源"
-      ]
-    },
     "xiaohongshu-rewrite": {
       "displayName": "小红书笔记文案改写",
       "topics": [
@@ -327,24 +256,6 @@
         "文案改写",
         "种草",
         "本地运行"
-      ]
-    },
-    "xiaohongshu-search": {
-      "displayName": "小红书爆款笔记搜索",
-      "topics": [
-        "小红书",
-        "笔记搜索",
-        "选题",
-        "数据源"
-      ]
-    },
-    "xiaohongshu-write": {
-      "displayName": "小红书笔记创作",
-      "topics": [
-        "小红书",
-        "写作",
-        "种草",
-        "选题"
       ]
     }
   }

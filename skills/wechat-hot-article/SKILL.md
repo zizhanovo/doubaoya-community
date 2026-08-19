@@ -9,7 +9,7 @@ description: 公众号爆文搜索 · 按关键词 + 时间区间拉同主题的
 
 > 数据走 **doubaoya.com** 一条线，鉴权用你自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 >
-> 只想扫一批文章不看热度，用 `gzh-search`；想拿这批爆文直接辅助写作、起标题，用 `doubaoya`
+> 只想扫一批文章不看热度、或想拿这批爆文直接辅助写作、起标题，用 `doubaoya`
 > （它按意图路由到同一条 api.gzh.hotArticle，再接着往写作链走）。
 
 ---

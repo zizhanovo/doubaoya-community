@@ -179,7 +179,7 @@ async function resolveCapability(ref) {
   }
   fail(
     `两个集合都查过了，没有「${parsed.slug}」这条能力。\n` +
-      "  · 它可能是**技能包目录名**而不是调用 slug（如 trending-hub / content-parse / douyin-search 都不是）\n" +
+      "  · 它可能是**技能包目录名**而不是调用 slug（如 trending-hub / content-parse / image-gen 都不是）\n" +
       "  · 跑 `node doubaoya.mjs search <关键词>` 按意图找，或 `list` 看全部\n" +
       "  · 也可能它已经下架了",
     "NOT_FOUND"

@@ -2,7 +2,7 @@
 """把 skills/ 下的每个 Skill 发到 ClawHub（clawhub.ai）。
 
 为什么不是一句 `clawhub sync`：
-  - `sync` 不接受 `--name`，displayName 会由 slug 机械 title-case（`gzh-search` -> `Gzh Search`），
+  - `sync` 不接受 `--name`，displayName 会由 slug 机械 title-case（`wechat-cover` -> `Wechat Cover`），
     商店卡片上就是一串没人搜得到的英文；本仓的 Skill 名是中文的，必须逐个 `--name` 显式给。
   - ClawHub **不读** SKILL.md 的 frontmatter（displayName 只来自 `--name`，version 只来自
     `--version` 或自动递补），所以元数据必须外置——就是 tools/clawhub.json 这份清单。
@@ -21,7 +21,7 @@
     python3 tools/clawhub_publish.py --dry-run       # 交给 clawhub 自己做 --dry-run 预检（联网、只读）
     python3 tools/clawhub_publish.py --execute       # 真发布（需要先 clawhub login）
     python3 tools/clawhub_publish.py --self-check    # 不碰网络的自检
-    python3 tools/clawhub_publish.py --only gzh-search --only doubaoya   # 只发指定几个
+    python3 tools/clawhub_publish.py --only wechat-cover --only doubaoya   # 只发指定几个
 
 前置（人工，一次性）：
     clawhub login                    # 设备流，浏览器里用 GitHub 账号授权

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T16:48:19.441489+00:00",
+  "generatedAt": "2026-08-19T16:53:16.757174+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "cn-last30days": "doubaoya-skill/cn-last30days@35bb42b4a1ca",
@@ -8,14 +8,9 @@
     "dby-charter": "doubaoya-skill/dby-charter@a9eaab1fad23",
     "dby-update": "doubaoya-skill/dby-update@78d16ebe4793",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@636d6c4034b1",
-    "doubaoya": "doubaoya-skill/doubaoya@f770e22a5fb4",
+    "doubaoya": "doubaoya-skill/doubaoya@5c9b0784c4c9",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@bfb8ea8b88d0",
-    "douyin-comment": "doubaoya-skill/douyin-comment@94cf3e281b04",
-    "douyin-realtime-search": "doubaoya-skill/douyin-realtime-search@d861c99e79a8",
-    "douyin-search": "doubaoya-skill/douyin-search@154c60c5923a",
-    "gzh-ai-feed": "doubaoya-skill/gzh-ai-feed@be7e953fc6dd",
-    "gzh-search": "doubaoya-skill/gzh-search@9b6a69a3ddfa",
-    "image-gen": "doubaoya-skill/image-gen@4c8276708177",
+    "image-gen": "doubaoya-skill/image-gen@5f925cccefc8",
     "ip-profile": "doubaoya-skill/ip-profile@fbbf493d9e83",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
     "multi-rewrite": "doubaoya-skill/multi-rewrite@8e07dbeed572",
@@ -24,21 +19,16 @@
     "playlet-wechat-feed": "doubaoya-skill/playlet-wechat-feed@f029374f0b3a",
     "seedream-5-lite": "doubaoya-skill/seedream-5-lite@507d3cd35ece",
     "trending-hub": "doubaoya-skill/trending-hub@f5f1f7bde205",
-    "trending-hub-top10": "doubaoya-skill/trending-hub-top10@e293119366fd",
     "wechat-account-analyzer": "doubaoya-skill/wechat-account-analyzer@153389f9602d",
     "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@91db95749649",
     "wechat-banned-words": "doubaoya-skill/wechat-banned-words@6ef94867d6ed",
     "wechat-cover": "doubaoya-skill/wechat-cover@71089bbf7faf",
     "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@2bc61f8b2f21",
     "wechat-fastest-growing": "doubaoya-skill/wechat-fastest-growing@821be7bcfeaa",
-    "wechat-hot-article": "doubaoya-skill/wechat-hot-article@a49573626979",
+    "wechat-hot-article": "doubaoya-skill/wechat-hot-article@e5b1ad96a846",
     "wechat-rewrite": "doubaoya-skill/wechat-rewrite@b4dac418f209",
     "wechat-similar-account": "doubaoya-skill/wechat-similar-account@cd3982196ca4",
     "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@714cba6d35e3",
-    "xiaohongshu-crawler": "doubaoya-skill/xiaohongshu-crawler@d70b1f681cd2",
-    "xiaohongshu-dailytop": "doubaoya-skill/xiaohongshu-dailytop@2dadb13dd316",
-    "xiaohongshu-rewrite": "doubaoya-skill/xiaohongshu-rewrite@03deba6d22ab",
-    "xiaohongshu-search": "doubaoya-skill/xiaohongshu-search@a6c934422bbc",
-    "xiaohongshu-write": "doubaoya-skill/xiaohongshu-write@667c7af62067"
+    "xiaohongshu-rewrite": "doubaoya-skill/xiaohongshu-rewrite@03deba6d22ab"
   }
 }

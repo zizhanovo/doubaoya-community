@@ -36,7 +36,7 @@
       "id": "doubaoya-cloud-public-data",
       "priority": 90,
       "candidate_skills": [
-        "gzh-search",
+        "doubaoya",
         "wechat-hot-article",
         "wechat-account-analyzer",
         "content-parse"

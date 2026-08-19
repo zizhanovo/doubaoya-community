@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T16:48:21.540139+00:00",
+  "generatedAt": "2026-08-19T16:53:07.380255+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -126,6 +126,7 @@
       "e8b2bfb279bc",
       "ee3213835010",
       "f4a3b5eb3fd6",
+      "f770e22a5fb4",
       "f918bc7c1258",
       "fd5c7d045503"
     ],
@@ -137,6 +138,7 @@
       "2d577dc98f2b",
       "6d6420eaf6ff",
       "7b241df32a12",
+      "bfb8ea8b88d0",
       "d7be4ecd8086",
       "f4b4d82e21d0"
     ],
@@ -688,6 +690,9 @@
     "douyin-ai-feed": [
       "/api/apis/douyin/douyin-ai-feed"
     ],
+    "douyin-comment": [
+      "/api/apis/douyin/comments"
+    ],
     "douyin-content-surge": [
       "/api/apis/douyin/douyin-content-surge"
     ],
@@ -697,8 +702,14 @@
     "douyin-hot-trend": [
       "/api/apis/trend/douyin-hot-trend"
     ],
+    "douyin-realtime-search": [
+      "/api/apis/douyin/realtime-search"
+    ],
     "douyin-rise-ranking": [
       "/api/apis/douyin/douyin-rise-fans-rank"
+    ],
+    "douyin-search": [
+      "/api/apis/douyin/search-work"
     ],
     "douyin-similar-account": [
       "/api/apis/douyin/douyin-similar-account",
@@ -719,11 +730,18 @@
     "gongzhonghao-search": [
       "/api/apis/gongzhonghao/search-article"
     ],
+    "gzh-ai-feed": [
+      "/api/apis/gongzhonghao/gongzhonghao-ai-feed"
+    ],
     "gzh-astock-top": [
       "/api/apis/gongzhonghao/gongzhonghao-account-analyzer",
       "/api/apis/gongzhonghao/gongzhonghao-daily-publish",
       "/api/apis/gongzhonghao/gongzhonghao-search-user",
       "/api/apis/gongzhonghao/hot-article"
+    ],
+    "gzh-search": [
+      "/api/apis/gongzhonghao/gongzhonghao-work-list",
+      "/api/apis/gongzhonghao/search-article"
     ],
     "gzh-subscribe": [
       "/api/apis/gongzhonghao/gongzhonghao-work-list"
@@ -751,6 +769,9 @@
     ],
     "tiktok-account-search": [
       "/api/apis/tiktok/search-user"
+    ],
+    "trending-hub-top10": [
+      "/api/apis/trend/hot-keywords"
     ],
     "video-downloader": [
       "/api/skills/video-downloader"
@@ -784,6 +805,12 @@
     "xiaohongshu-cover": [
       "/api/apis/xiaohongshu/xiaohongshu-coze"
     ],
+    "xiaohongshu-crawler": [
+      "/api/apis/xiaohongshu/crawl-work"
+    ],
+    "xiaohongshu-dailytop": [
+      "/api/apis/xiaohongshu/xiaohongshu-daily-top"
+    ],
     "xiaohongshu-hot-notes": [
       "/api/apis/xiaohongshu/search-note"
     ],
@@ -791,6 +818,10 @@
       "/api/apis/xiaohongshu/xiaohongshu-low-fans-top"
     ],
     "xiaohongshu-note-analyzer": [
+      "/api/apis/xiaohongshu/xiaohongshu-coze"
+    ],
+    "xiaohongshu-search": [
+      "/api/apis/xiaohongshu/search-note",
       "/api/apis/xiaohongshu/xiaohongshu-coze"
     ],
     "xiaohongshu-similar-account": [
@@ -804,6 +835,9 @@
     ],
     "xiaohongshu-weeklytop": [
       "/api/apis/xiaohongshu/xiaohongshu-weekly-top"
+    ],
+    "xiaohongshu-write": [
+      "/api/apis/xiaohongshu/search-work"
     ],
     "zhihu-rewrite": []
   },
@@ -859,6 +893,14 @@
       "竖版短视频",
       "高级种草"
     ],
+    "douyin-comment": [
+      "扒评论区",
+      "抖音评论",
+      "用户需求",
+      "舆情",
+      "评论分析",
+      "评论风向"
+    ],
     "douyin-content-surge": [
       "上升榜",
       "抖音飙升榜",
@@ -883,6 +925,14 @@
       "抖音趋势",
       "抖音风向"
     ],
+    "douyin-realtime-search": [
+      "实时取数",
+      "抖音实时搜索",
+      "抖音综合搜索",
+      "最多点赞",
+      "最新发布",
+      "追流量"
+    ],
     "douyin-rise-ranking": [
       "抖音涨粉榜",
       "抖音粉丝增长",
@@ -890,6 +940,14 @@
       "抖音黑马",
       "涨粉排行",
       "粉丝增量"
+    ],
+    "douyin-search": [
+      "对标作品",
+      "扒抖音作品",
+      "抖音取数",
+      "抖音搜索",
+      "搜抖音爆款",
+      "短视频选题"
     ],
     "douyin-subscribe": [
       "对标监控",
@@ -922,6 +980,20 @@
       "抖音账号画像",
       "抖音达人资料"
     ],
+    "gzh-ai-feed": [
+      "公众号爆文",
+      "内容灵感",
+      "每日榜",
+      "热点扫描"
+    ],
+    "gzh-search": [
+      "公众号取数",
+      "公众号爬虫",
+      "扒文章",
+      "批量爬公众号",
+      "热点扫描",
+      "选题素材"
+    ],
     "gzh-subscribe": [
       "某公众号发了什么",
       "盯公众号",
@@ -945,6 +1017,15 @@
       "TikTok 达人",
       "搜 TikTok 账号",
       "海外抖音账号"
+    ],
+    "trending-hub-top10": [
+      "今日热点",
+      "全网热搜",
+      "热搜关键词",
+      "热榜TOP10",
+      "热点榜",
+      "聚合热榜",
+      "跨平台热搜"
     ],
     "wechat-channels-ai-feed": [
       "AI 视频号",
@@ -1003,6 +1084,22 @@
       "爆款封面",
       "首图灵感"
     ],
+    "xiaohongshu-crawler": [
+      "小红书作品",
+      "小红书搜索",
+      "小红书热门",
+      "小红书爆款",
+      "小红书爬取",
+      "小红书笔记查询"
+    ],
+    "xiaohongshu-dailytop": [
+      "今日爆款",
+      "小红书 TOP",
+      "小红书排行",
+      "小红书日榜",
+      "每日榜",
+      "热门笔记"
+    ],
     "xiaohongshu-hot-notes": [
       "小红书榜单",
       "小红书热榜",
@@ -1028,6 +1125,15 @@
       "笔记对标",
       "笔记拆解",
       "选题拆解"
+    ],
+    "xiaohongshu-search": [
+      "内容灵感",
+      "小红书搜索",
+      "小红书热门",
+      "小红书爆款笔记",
+      "小红书选题",
+      "爆款笔记",
+      "笔记选题"
     ],
     "xiaohongshu-similar-account": [
       "KOL对标",
@@ -1061,6 +1167,14 @@
       "小红书周排行",
       "小红书周榜",
       "持续走高"
+    ],
+    "xiaohongshu-write": [
+      "写小红书",
+      "小红书创作",
+      "小红书文案",
+      "小红书笔记",
+      "爆款文案",
+      "笔记生成"
     ]
   }
 }
