@@ -970,6 +970,59 @@ function jsonPurityCheck() {
 }
 
 /**
+ * 🔴 M4：`gitTracked` 与 `gitUnknown` 两栏的**文案必须能分辨**。
+ *
+ * 两栏的结论都是「没动」，可原因不同、用户该做的事**完全相反**：
+ *   🔒 受跟踪  ⇒ 是你自己版本化进仓库的包，工具不该动它，要清是**你自己 git rm**；
+ *   ❔ 判不出  ⇒ 是这台机器上的 git 没能回答我，**修好 git 重跑**它们就会正常归档。
+ * 数据层早就分成两个数组了（上面 splitGitTracked 那几条自检钉死了），但**用户只看得见文案**——
+ * 两栏要是印出同一句话，分栏就等于没分：用户按「你自己 git rm」去删一个其实只是 git 没跑成的包，
+ * 是真的会丢文件的。数据分了、文案没分，这种退化长得和通过一模一样，所以单独钉一条。
+ *
+ * 判据三条：两句各自带着**自己那条处置建议**的关键短语、且这两行**逐字不同**。
+ * ponytail: 天花板 = 换一套同样能分辨的措辞会误报（关键短语是写死的字面量）；升级路径是
+ * 把两句文案抽成具名常量再断言常量不等——但那要为一条自检重排 printPlan 的结构，先不做。
+ */
+function printPlanColumnsCheck() {
+  const fails = [];
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => lines.push(args.join(" "));
+  try {
+    printPlan(
+      { label: "自检 scope" },
+      [],
+      {
+        archive: [], add: [], refresh: [], upToDate: [], untouched: [], blocked: [],
+        gitTracked: ["tracked-pkg"],
+        gitUnknown: ["unknown-pkg"],
+      },
+      {},
+      0 // upstreamCount=0：让「scope 落空」那条告警不参与本次断言
+    );
+  } finally {
+    console.log = original;
+  }
+
+  const tracked = lines.filter((l) => l.includes("🔒"));
+  const unknown = lines.filter((l) => l.includes("❔"));
+  if (tracked.length !== 1) fails.push(`受跟踪那一栏的抬头应当只有一行，实际 ${tracked.length} 行`);
+  if (unknown.length !== 1) fails.push(`判不出那一栏的抬头应当只有一行，实际 ${unknown.length} 行`);
+  if (fails.length) return fails;
+
+  // 各自带着自己那条处置建议的关键短语
+  if (!tracked[0].includes("受跟踪")) fails.push(`🔒 那栏没说清这是「受跟踪」的包：${JSON.stringify(tracked[0])}`);
+  if (!unknown[0].includes("没法判断")) fails.push(`❔ 那栏没说清这是「没法判断」：${JSON.stringify(unknown[0])}`);
+  // 🔴 最要命的那一种：正文被复制成同一句，只有开头那个图标不一样——分栏就等于没分。
+  //    所以比的是**去掉图标之后的正文**：只比整行的话，图标不同就永远不相等，这条断言等于没写。
+  const body = (line) => line.replace(/[🔒❔]/g, "").trim();
+  if (body(tracked[0]) === body(unknown[0])) {
+    fails.push(`两栏正文是同一句，用户分不出该自己 git rm 还是该去修 git：${JSON.stringify(tracked[0])}`);
+  }
+  return fails;
+}
+
+/**
  * 造一份「只装了一个包、上游也只有这一个包」的离线 fixture。
  *   converged 上游当前版 = 本机这份内容哈希 ⇒ 三态是 current
  *   stale     上游当前版是另一个哈希，本机这份只是历史版 ⇒ 三态是 historical
@@ -1140,6 +1193,7 @@ function runSelfCheck() {
   eq("本鸭包计数不含别人的", ourPackageCount([{ state: "foreign" }, { state: "foreign" }]), 0);
   eq("本鸭包计数", ourPackageCount([{ state: "foreign" }, { state: "current" }, { state: "modified" }]), 2);
 
+  fails.push(...printPlanColumnsCheck());
   fails.push(...gitTrackedFixtureCheck());
   fails.push(...gitProbeFailureCheck());
   fails.push(...refreshScopeCheck());
@@ -1150,7 +1204,8 @@ function runSelfCheck() {
     return 1;
   }
   console.log(
-    "selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、" +
+    "selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、"
+      + "受跟踪与判不出两栏的文案真能分辨、" +
       "git 探测失败时 fail-closed、归档根自忽略、复原命令真能复原、收敛态零动作且 --force-refresh 能全量重下、" +
       "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse）"
   );
