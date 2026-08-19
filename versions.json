@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T17:11:15.290954+00:00",
+  "generatedAt": "2026-08-19T17:21:51.694018+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "cn-last30days": "doubaoya-skill/cn-last30days@35bb42b4a1ca",
@@ -8,7 +8,7 @@
     "dby-charter": "doubaoya-skill/dby-charter@a9eaab1fad23",
     "dby-update": "doubaoya-skill/dby-update@78d16ebe4793",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@636d6c4034b1",
-    "doubaoya": "doubaoya-skill/doubaoya@5c9b0784c4c9",
+    "doubaoya": "doubaoya-skill/doubaoya@4fefd591daaa",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@bfb8ea8b88d0",
     "image-gen": "doubaoya-skill/image-gen@cf818b734a81",
     "ip-profile": "doubaoya-skill/ip-profile@fbbf493d9e83",
