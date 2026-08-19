@@ -110,8 +110,57 @@ def read_blobs(shas: set[str]) -> dict[str, bytes]:
 # capability-index.md 里那一列直接比。
 ENDPOINT = re.compile(r"/api/(?:skills/[A-Za-z0-9._~-]+|apis/[A-Za-z0-9._~-]+/[A-Za-z0-9._~-]+)")
 
+# 已下架包当年声明的**触发词**。删包会顺手删掉一整片话术面，而 description 是 agent 选
+# skill 那一刻唯一在场的东西——词没了，能力还在架也没人够得着。差集闸要拿它当 T_old。
+#
+# 🔴 只解析**显式结构**（`触发词：A、B、C` / `Trigger words: A / B / C`），**不做中文分词**。
+#    分词不可靠，靠它取材等于让闸的判据自己漂——解析不到就当「该包没声明过触发词」，
+#    由校验器报黄，而不是猜一个出来当真值。
+# 🔴 标记有四种写法（`触发词` / `触发方式` / `Trigger words:` / 光秃秃的 `Trigger:`），
+#    而且 description 是折叠式 YAML，列表会**跨行**——只认一种写法、或按行匹配，都会让
+#    T_old 静默少收词，闸看着绿其实没看全。这正是本轮反复栽的形状，所以在**拼好的整段
+#    description** 上匹配，并认全四种标记。
+TRIGGER_LINE = re.compile(r"(?:触发词|触发方式|Trigger\s+words?|Trigger)\s*[:：]\s*(.+?)(?:。|\.\s*$|$)", re.S)
+TRIGGER_SPLIT = re.compile(r"[、,，/]")
 
-def build() -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+
+def _description(skill_md: str) -> str:
+    """SKILL.md frontmatter 里 description 的完整正文（折叠块也拼回一行）。"""
+    lines = skill_md.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return ""
+    try:
+        end = lines.index("---", 1)
+    except ValueError:
+        return ""
+    body, inside = [], False
+    for line in lines[1:end]:
+        if line.startswith("description:"):
+            inside = True
+            head = line.split(":", 1)[1].strip()
+            if head not in ("", ">", ">-", "|", "|-"):
+                body.append(head)
+            continue
+        if inside:
+            if line[:1] not in (" ", "\t"):
+                break
+            body.append(line.strip())
+    return " ".join(body)
+
+
+def trigger_words(skill_md: str) -> list[str]:
+    """从一份 SKILL.md 的 description 里取显式声明的触发词。"""
+    found: set[str] = set()
+    for match in TRIGGER_LINE.finditer(_description(skill_md)):
+        for token in TRIGGER_SPLIT.split(match.group(1)):
+            word = token.strip().strip("「」\"'").rstrip("。.").strip()
+            # 一个触发词不会长过 20 字，也不会是整句英文说明
+            if word and len(word) <= 20 and not word.startswith("http") and word.count(" ") <= 3:
+                found.add(word)
+    return sorted(found)
+
+
+def build() -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
     filesets, latest_skill_md = collect_filesets()
     wanted = {sha for sets in filesets.values() for fs in sets for _, sha in fs}
     blobs = read_blobs(wanted | set(latest_skill_md.values()))
@@ -133,15 +182,22 @@ def build() -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         for slug in sorted(set(known) - current)
         if slug in latest_skill_md
     }
-    return dict(sorted(known.items())), endpoints
+    triggers = {
+        slug: words
+        for slug in sorted(set(known) - current)
+        if slug in latest_skill_md
+        and (words := trigger_words(blobs[latest_skill_md[slug]].decode("utf-8", "replace")))
+    }
+    return dict(sorted(known.items())), endpoints, triggers
 
 
 def main() -> int:
-    known, endpoints = build()
+    known, endpoints, triggers = build()
     payload = {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "skills": known,
         "retiredEndpoints": endpoints,
+        "retiredTriggerWords": triggers,
     }
     (ROOT / "known-hashes.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"

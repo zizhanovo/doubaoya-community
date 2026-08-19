@@ -132,6 +132,75 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "一个 routing 表都没扫到"):
                 validator.validate_routing_skill_pointers(root)
 
+    # ── 差集闸 + description 预算闸 ────────────────────────────────────────
+    def budget_fixture(self, root: Path, descriptions: dict[str, str], retired: dict | None = None) -> None:
+        for name, text in descriptions.items():
+            (root / "skills" / name).mkdir(parents=True)
+            (root / "skills" / name / "SKILL.md").write_text(
+                f"---\nname: {name}\ndescription: {text}\n---\n", encoding="utf-8"
+            )
+        (root / "known-hashes.json").write_text(
+            json.dumps({"skills": {}, "retiredEndpoints": {}, "retiredTriggerWords": retired or {}}),
+            encoding="utf-8",
+        )
+
+    def test_trigger_gate_rejects_rescuing_one_word_and_dropping_the_rest(self):
+        # 🔴 这是它唯一要防的形状：同一条能力上抢回一个词、漏掉其余几个。
+        # 「全删」那种一眼可见的失败不是重点，「补了一点点所以看着像做过了」才是。
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(
+                root,
+                {"doubaoya": "小红书笔记分析数据"},
+                {"xiaohongshu-note-analyzer": ["笔记分析", "笔记拆解", "对标分析", "选题拆解", "爆款结构"]},
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "删包/改词弄丢了话术"):
+                validator.validate_trigger_word_coverage(root)
+
+    def test_trigger_gate_passes_when_every_word_survives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(
+                root,
+                {"doubaoya": "小红书 笔记分析 笔记拆解 对标分析"},
+                {"xiaohongshu-note-analyzer": ["笔记分析", "笔记拆解", "对标分析"]},
+            )
+            self.assertEqual(validator.validate_trigger_word_coverage(root), [])
+
+    def test_trigger_gate_ignores_whitespace_differences(self):
+        # 「AI 视频号」与「AI视频号」是同一个词，不该因为一个空格判成丢词
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"doubaoya": "AI视频号日报"}, {"wechat-channels-ai-feed": ["AI 视频号"]})
+            self.assertEqual(validator.validate_trigger_word_coverage(root), [])
+
+    def test_trigger_gate_skips_capabilities_deleted_for_real(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"doubaoya": "选题"}, {"celebrity-slice": ["明星切片", "字幕烧制"]})
+            self.assertEqual(validator.validate_trigger_word_coverage(root), [])
+
+    def test_description_budget_rejects_blowing_the_shared_pool(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {f"pkg-{i}": "词" * 500 for i in range(20)})
+            with self.assertRaisesRegex(validator.ValidationError, "共享预算"):
+                validator.validate_description_budget(root)
+
+    def test_description_budget_rejects_one_oversized_description(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"fat": "词" * (validator.SPEC_DESCRIPTION_LIMIT + 1)})
+            with self.assertRaisesRegex(validator.ValidationError, "规范上限"):
+                validator.validate_description_budget(root)
+
+    def test_description_budget_warns_at_the_legacy_host_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"chatty": "词" * (validator.HOST_LEGACY_SOFT_LIMIT + 1)})
+            warnings = validator.validate_description_budget(root)
+            self.assertTrue(any("旧版宿主" in w for w in warnings))
+
     def test_routing_rejects_cloud_without_api_key(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
