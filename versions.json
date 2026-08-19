@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T03:48:56.667395+00:00",
+  "generatedAt": "2026-08-19T05:01:10.394784+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -8,7 +8,7 @@
     "cultural-tourism-wechat-feed": "doubaoya-skill/cultural-tourism-wechat-feed@86dc1f0f16cc",
     "dby": "doubaoya-skill/dby@39e738fe2c0e",
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
-    "dby-update": "doubaoya-skill/dby-update@53d92b2192de",
+    "dby-update": "doubaoya-skill/dby-update@e88f976ec4bb",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
     "doubaoya": "doubaoya-skill/doubaoya@9db2d38ae564",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@7b241df32a12",
