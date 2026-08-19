@@ -59,7 +59,7 @@
 如需查看本鸭遵循的完整改写规则 prompt，可运行本地脚本（无任何网络请求、无第三方依赖）：
 
 ```bash
-python scripts/rewrite.py prompt
+python3 scripts/rewrite.py prompt
 ```
 
 ### 输出示例

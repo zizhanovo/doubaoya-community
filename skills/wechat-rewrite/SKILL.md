@@ -65,7 +65,7 @@ cp -r wechat-rewrite ~/.claude/skills/wechat-rewrite
 本鸭参考 `assets/platform-rules.md` 中的规则（可用脚本提取），并严格遵循以下创作规范输出结果：
 
 ```bash
-python scripts/rewrite.py prompt
+python3 scripts/rewrite.py prompt
 ```
 
 ### 行文原则（10项必守）
@@ -146,7 +146,7 @@ python scripts/rewrite.py prompt
 
 | 命令 | 说明 |
 |------|------|
-| `python scripts/rewrite.py prompt` | 输出公众号改写规则 prompt |
+| `python3 scripts/rewrite.py prompt` | 输出公众号改写规则 prompt |
 
 ## 使用场景
 

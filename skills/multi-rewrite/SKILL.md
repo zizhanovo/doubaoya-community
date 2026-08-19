@@ -94,13 +94,13 @@ description: 多平台文案改写能力；当用户需要多平台改写/文案
 
 ```bash
 # 多平台（逗号分隔）
-python scripts/rewrite.py 抖音,小红书 "文案内容"
+python3 scripts/rewrite.py 抖音,小红书 "文案内容"
 
 # 多平台（空格分隔）
-python scripts/rewrite.py 抖音 小红书 知乎 "文案内容"
+python3 scripts/rewrite.py 抖音 小红书 知乎 "文案内容"
 
 # 全平台
-python scripts/rewrite.py all "文案内容"
+python3 scripts/rewrite.py all "文案内容"
 ```
 
 #### 第3步：获取改写结果
@@ -144,11 +144,11 @@ Agent 读取 `assets/platform-rules.md` 中各平台的完整规则，严格按�
 
 | 命令 | 说明 |
 |------|------|
-| `python scripts/rewrite.py list` | 列出所有支持平台及别名 |
-| `python scripts/rewrite.py <平台>` | 输出单平台改写规则 prompt |
-| `python scripts/rewrite.py <平台1,平台2> [文案]` | 多平台规则提取（逗号分隔） |
-| `python scripts/rewrite.py 抖音 小红书 知乎 [文案]` | 多平台规则提取（空格分隔） |
-| `python scripts/rewrite.py all [文案]` | 全平台规则提取 |
+| `python3 scripts/rewrite.py list` | 列出所有支持平台及别名 |
+| `python3 scripts/rewrite.py <平台>` | 输出单平台改写规则 prompt |
+| `python3 scripts/rewrite.py <平台1,平台2> [文案]` | 多平台规则提取（逗号分隔） |
+| `python3 scripts/rewrite.py 抖音 小红书 知乎 [文案]` | 多平台规则提取（空格分隔） |
+| `python3 scripts/rewrite.py all [文案]` | 全平台规则提取 |
 
 ## 使用场景
 
