@@ -205,10 +205,28 @@ function compressWithSips(buf, srcPath) {
 // ---------------------------------------------------------------------------
 // HTTP 封套：统一鉴权头 + 结构化信封解析
 // ---------------------------------------------------------------------------
+/**
+ * 发布时 tools/stamp_versions.py 会往包根写 `.version`，内容形如
+ * `doubaoya-skill/<包名>@<内容哈希>`。UA 必须读它。
+ *
+ * 🔴 别写死 `doubaoya-skill/1.0`：服务端就是靠 UA 里的包名+哈希判断「这个包有没有新版本」，
+ *    写死等于每次都报「我是个没有版本的旧客户端」，于是**该包的更新提示永远不会触发**——
+ *    而且这个失效是完全静默的：不报错、不降级、用户和我们都不会收到任何信号，
+ *    只会一直用着旧包。与 Python 侧 `_skill_user_agent()` 同语义，两边必须一致。
+ */
+function skillUserAgent() {
+  try {
+    const versionPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".version");
+    return fs.readFileSync(versionPath, "utf-8").trim() || "doubaoya-skill/1.0";
+  } catch {
+    return "doubaoya-skill/1.0";
+  }
+}
+
 async function apiRequest(url, apiKey, method, payload) {
   const headers = {
     Authorization: "Bearer " + apiKey,
-    "User-Agent": "doubaoya-skill/1.0",
+    "User-Agent": skillUserAgent(),
   };
   const init = { method, headers };
   if (payload !== undefined) {

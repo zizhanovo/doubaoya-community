@@ -72,7 +72,7 @@ version: 3.1.0
 **找不到**说明本机装的是旧版 dby-update（还没有对账能力）。先跑一次下面这条把自己升级上来，然后**重新找一遍**：
 
 ```bash
-npx -y skills add zizhanovo/doubaoya-community -g --all
+npx -y skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y
 ```
 
 ### 2. 先看清单（🔴 显式给 scope，别靠 auto 猜）

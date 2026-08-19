@@ -53,7 +53,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 例：公众号排版默认已升级为「本鸭 · 知识清爽（benya-clean）」，已装旧版的用户需 `update` 后新默认才生效。
 
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
-> （`npx skills add zizhanovo/doubaoya-community -g --all`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
+> （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
 ## 技能清单（共 43 个）
 
