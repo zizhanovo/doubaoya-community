@@ -61,7 +61,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g --all`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 58 个）
+## 技能清单（共 59 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -73,6 +73,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | **dby** ⭐ | 公众号工具箱**主入口**：新手引导 + 任务前路由 + 任务后导航，按飞轮逐跳把你路由到该用的技能（`/dby`） |
 | **dby-update** | 本鸭更新入口：按仓库精确同步官方 doubaoya-community，不碰你装的其他技能、不动本地配置（`/dby-update`） |
 | **doubaoya** | 总纲技能：教 agent 用一条密钥调 doubaoya.com 公开 API，挖选题 / 追热点 / 写脚本 |
+| **doubaoya-gateway** | 调用网关（基础设施）：鉴权、两条互不回落的路由、统一信封与错误码，以及「入参规格调用前现拉」的纪律；附一份只供选路的能力索引。给其他技能引用，不承接业务意图 |
 
 ### 🧠 第二大脑（你自己的内容）
 

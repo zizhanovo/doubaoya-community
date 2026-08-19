@@ -347,6 +347,30 @@ class CallRouteGateTests(unittest.TestCase):
     def test_real_routes_pass(self):
         self.check("`POST /api/skills/real-skill/invoke` `POST /api/apis/trend/real-endpoint/call`\n")
 
+    def test_detail_endpoints_pass(self):
+        """网关的选路索引给的是详情端点，不是调用路径——这两条形态也必须被认出来。"""
+        self.check("`GET /api/skills/real-skill` `GET /api/apis/trend/real-endpoint`\n")
+
+    def test_rejects_api_slug_on_the_skill_detail_endpoint(self):
+        with self.assertRaisesRegex(validator.ValidationError, r"详情端点是 /api/apis/<platform>/real-endpoint"):
+            self.check("`GET /api/skills/real-endpoint`\n")
+
+    def test_rejects_skill_slug_on_the_api_detail_endpoint(self):
+        with self.assertRaisesRegex(validator.ValidationError, r"详情端点是 /api/skills/real-skill"):
+            self.check("`GET /api/apis/tool/real-skill`\n")
+
+    def test_rejects_unknown_detail_endpoint(self):
+        with self.assertRaisesRegex(validator.ValidationError, "指向详情端点 /api/skills/ghost"):
+            self.check("`GET /api/skills/ghost`\n")
+
+    def test_collection_endpoints_are_not_capability_details(self):
+        """/api/skills/search|recommend|installs 是集合级端点，本来就不在 slug 集合里。"""
+        self.check("`GET /api/skills/search` `POST /api/skills/recommend` `GET /api/skills/installs`\n")
+
+    def test_invoke_path_is_not_double_counted_as_a_detail_path(self):
+        """`…/invoke` 已由调用路径那条规则管；详情规则不许再把它的前缀当成一条详情端点。"""
+        self.check("`POST /api/skills/real-skill/invoke`\n")
+
     def test_rejects_api_slug_on_the_skills_route(self):
         # 这是 2026-08 那轮的病根形状：83 条数据能力被写成 /api/skills/<slug>/invoke，全数 404。
         with self.assertRaisesRegex(validator.ValidationError, r"得走 /api/apis/<platform>/real-endpoint/call"):
@@ -395,6 +419,82 @@ class CallRouteGateTests(unittest.TestCase):
         with unittest.mock.patch.dict(os.environ, {validator.CATALOG_ENV: str(catalog)}):
             with self.assertRaisesRegex(validator.ValidationError, "catalog 结构已变"):
                 validator.validate_call_routes(root)
+
+
+class GatewayContractFreedomTests(unittest.TestCase):
+    """网关 Skill 不许把逐能力的入参烤进正文。
+
+    每个用例都是一次变异：拿仓库里真实的网关 SKILL.md，只做一处「有人图省事把参数抄进来」
+    的改动，断言闸当场打红。控制组（未改动的真文件）必须绿——否则这些红只能证明闸很吵。
+    """
+
+    def fixture(self, mutate=None) -> Path:
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        root = Path(directory)
+        destination = root / "skills" / validator.GATEWAY_SKILL
+        destination.mkdir(parents=True)
+        source = validator.SKILLS / validator.GATEWAY_SKILL / "SKILL.md"
+        text = source.read_text(encoding="utf-8")
+        (destination / "SKILL.md").write_text(mutate(text) if mutate else text, encoding="utf-8")
+        return root
+
+    def test_unmodified_gateway_is_green(self):
+        validator.validate_gateway_contract_freedom(self.fixture())
+
+    def test_rejects_camel_case_field_name_anywhere(self):
+        """驼峰入参字段（真实字段名里 37/58 是这个形状）无论抄在哪里都拦得住。"""
+        for smuggled in (
+            "\n入参：`thumbMediaId` 选填。\n",                       # 中文散文里
+            "\n| 字段 | 说明 |\n|---|---|\n| publishTimeStart | 起始时间 |\n",  # 表格里
+            "\n```js\nconst body = { sortType: 1 };\n```\n",          # 代码块里的 JS 属性
+        ):
+            with self.subTest(smuggled=smuggled.strip()):
+                with self.assertRaisesRegex(validator.ValidationError, "不属于调用协议的驼峰标识符"):
+                    validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + smuggled))
+
+    def test_rejects_request_body_example_with_real_fields(self):
+        """小写单词字段名（keyword / limit …）抄进来时必然是请求体的 JSON 键。"""
+        body = '\n```json\n{ "keyword": "AI 工具", "limit": 10 }\n```\n'
+        with self.assertRaisesRegex(validator.ValidationError, r"非协议 JSON 键：\['keyword', 'limit'\]"):
+            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + body))
+
+    def test_rejects_extra_column_on_the_index_table(self):
+        """给索引加一列，装的多半就是入参——三列是结构约束，不是排版偏好。"""
+        row = "\n| `api.trend.hotTopics` | 全网热榜 | `/api/apis/trend/hot-topics` | 必填一个关键词 |\n"
+        with self.assertRaisesRegex(validator.ValidationError, "不是「operationKey \\| 用途 \\| 详情端点」三列"):
+            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + row))
+
+    def test_rejects_inline_code_in_the_purpose_column(self):
+        row = "\n| `api.trend.hotTopics` | 全网热榜，传 `platforms` | `/api/apis/trend/hot-topics` |\n"
+        with self.assertRaisesRegex(validator.ValidationError, "用途列里有行内代码"):
+            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + row))
+
+    def test_rejects_index_row_without_a_detail_endpoint(self):
+        row = "\n| `api.trend.hotTopics` | 全网热榜 | 见上游文档 |\n"
+        with self.assertRaisesRegex(validator.ValidationError, "第三列不是详情端点"):
+            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + row))
+
+    def test_protocol_vocabulary_holds_no_capability_field_name(self):
+        """反向断言：词汇表里不许混进已知的能力入参字段名。
+
+        闸的强度全靠这份词汇表守得住——往里加一个 `keyword`，第 1、2 条判据就同时失效了。
+        这里钉住几个**确定是入参、不可能是协议键**的名字（它们出现在真实的
+        inputContract / inputUiSchema 里），作为改词汇表时的绊线。
+        """
+        capability_fields = {
+            "keyword", "keywords", "limit", "page", "offset", "cursor", "pageSize", "pageNum",
+            "sortType", "accountId", "accountName", "thumbMediaId", "publishTimeStart",
+            "publishTimeEnd", "authorizerAppid", "contentHtml", "noteId", "secUid", "prompt",
+        }
+        leaked = sorted(capability_fields & validator.GATEWAY_PROTOCOL_VOCAB)
+        self.assertEqual(leaked, [], f"协议词汇表里混进了能力入参字段：{leaked}")
+
+    def test_missing_gateway_skill_fails_loudly(self):
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        with self.assertRaisesRegex(validator.ValidationError, "网关 Skill 不见了"):
+            validator.validate_gateway_contract_freedom(Path(directory))
 
 
 if __name__ == "__main__":
