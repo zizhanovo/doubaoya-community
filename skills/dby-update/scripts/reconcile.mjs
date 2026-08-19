@@ -180,7 +180,19 @@ export function ourPackageCount(survey) {
   return survey.filter((s) => s.state !== "foreign").length;
 }
 
-/** 把受 git 跟踪的从归档单里摘出来，单列一栏大声说明。纯函数，好自检。 */
+/**
+ * 把受 git 跟踪的从归档单里摘出来，单列一栏大声说明。纯函数，好自检。
+ *
+ * ponytail: 天花板 = **只挡归档，不挡刷新**。受跟踪的包如果还在上游，仍会被 `skills add`
+ * 覆写。这是有意停在这里的：
+ *   - 刷新只作用于**内容哈希命中我们发布版**的包，也就是用户一个字没改过的；用户改过的
+ *     早在三态判定里被摘进 `modified`，连刷新都不给（见 planReconcile）。所以「覆写一个
+ *     未经修改的受跟踪文件」正是用户说「更新都爆鸭」时要的结果。
+ *   - 而且刷新对 git 是**可见**的：status 里看得到、能 diff、能 revert。归档是把目录整个
+ *     搬走，对受跟踪文件等于不可见的丢失——两者量级不同，所以只有后者配得上一条红线。
+ * 升级路径：真要连刷新一起挡，就在执行前对「受跟踪且在刷新单里」的包做一次二次确认
+ * （列出名字问 y/N），别默默跳过——默默跳过会让用户以为已经更新到最新版了。
+ */
 export function splitGitTracked(plan, trackedNames) {
   const tracked = new Set(trackedNames);
   return {
