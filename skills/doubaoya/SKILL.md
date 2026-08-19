@@ -81,7 +81,7 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 | "小红书封面怎么做 / 首图套路 / 封面选题 / 起个小红书标题 / 帮我拆这篇笔记 / 笔记拆解 / 笔记对标 / 对标分析 / 选题拆解 / 爆款结构" | 小红书爆款封面（首图）/ 标题 / 笔记分析 · 对标数据 | `POST /api/apis/xiaohongshu/xiaohongshu-coze/call` |
 | "公众号 10 万+ 有啥 / 原创爆文 / 原创热门榜 / 原创热文榜" | 公众号分类时段热文榜（10万+ / 原创） | `POST /api/apis/gongzhonghao/category-time-hot/call` |
 | "公众号文旅 / 短剧这块在发什么" | 公众号文旅 / 短剧日报源 | `POST /api/apis/gongzhonghao/gongzhonghao-playlet-feed/call` |
-| 🔴 **"视频号最近什么在爆 / 视频号日报 / 视频号选题 / AI 视频号"** | **视频号 AI 日报源**（高热作品聚类） | `POST /api/apis/sph/shipinhao-ai-feed/call`；搜作品 / 账号走 `/api/apis/sph/search-work`、`/api/apis/sph/search-user` |
+| 🔴 **"视频号最近什么在爆 / 视频号上 AI（或 XX）这块在火什么 / 视频号日报 / 视频号选题"** | **视频号 AI 日报源**（高热作品聚类） | `POST /api/apis/sph/shipinhao-ai-feed/call`；搜作品 / 账号走 `/api/apis/sph/search-work`、`/api/apis/sph/search-user` |
 | "低粉爆款 / 素人爆款 / 黑马笔记 / 低粉高赞 / 小号打法 / 冷启动对标" | 小红书低粉爆款榜（小号也能起量的选题） | `POST /api/apis/xiaohongshu/xiaohongshu-low-fans-top/call` |
 | "小红书周榜 / 一周爆款 / 周度趋势 / 中线选题" | 小红书周榜（比日榜更适合定中线选题） | `POST /api/apis/xiaohongshu/xiaohongshu-weekly-top/call` |
 | "内容出海 / 出海爆款 / 出海日报 / 出海选题" | 全平台内容出海 Top 榜 | `POST /api/apis/multi/multi-content-export-top/call` |

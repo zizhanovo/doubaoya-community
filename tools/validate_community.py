@@ -872,6 +872,10 @@ def validate_retired_discoverability(root: Path = ROOT) -> None:
 
     输入是 known-hashes.json 里的 retiredEndpoints（由 tools/build_known_hashes.py 从
     git 历史扒出来），所以这道闸不依赖 git、离线可跑。
+
+    🔴 **本闸只守得住"索引里还在"这一半。** 另一半——「用户的话术还够不够得着」——
+    机器暂时守不住（倒排闸的前置是先合并同名能力），靠 docs/deleting-a-skill.md 那份
+    五步 checklist 人工走。本闸绿 ≠ 删包安全，别把它当成删包许可证。
     """
     known_path = root / "known-hashes.json"
     require(known_path.is_file(), "known-hashes.json 不见了：先跑 tools/build_known_hashes.py")
@@ -906,7 +910,9 @@ def validate_retired_discoverability(root: Path = ROOT) -> None:
             f"删包会让能力失联：已下架的 {slug} 当年调的 {missing} 在 "
             f"{GATEWAY_SKILL}/references/capability-index.md 里找不到。"
             "删的是壳，能力的发现面必须先在新家站好——要么把这条能力补进索引，"
-            "要么确认它在发现接口里也已下架后加进 RETIRED_WITH_CAPABILITY",
+            "要么确认它在发现接口里也已下架后加进 RETIRED_WITH_CAPABILITY。"
+            "⚠️ 索引在场只是**必要条件**：选 skill 那一刻只有 description 在场，"
+            "索引是 references、要 agent 主动取。完整判据见 docs/deleting-a-skill.md",
         )
 
 
