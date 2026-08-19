@@ -1,9 +1,6 @@
 ---
 name: image-gen
 description: GPT-image2 AI 图片生成 · 一句提示词文生图，或传入参考图做图生图 / 编辑。当用户需要生成配图、AI 出图、文生图、按参考图改图、做小红书/公众号封面或电商主视觉素材时使用。触发词：生成图片、AI 出图、文生图、图生图、改图、做封面、配图、主视觉。
-dependency:
-  python: []
-  system:
 ---
 
 # GPT-image2 AI 图片生成（都爆鸭）
