@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T15:45:41.331259+00:00",
+  "generatedAt": "2026-08-19T16:48:21.540139+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -33,6 +33,7 @@
       "9839d4be5523"
     ],
     "content-parse": [
+      "363c45af3c3a",
       "4729912b52d1",
       "52f068c4240e",
       "ac955d2e1552",
@@ -59,6 +60,7 @@
     ],
     "dby": [
       "02380dfa3f98",
+      "259fd3762f29",
       "2db0a55a86c2",
       "3012327e9323",
       "3614ff73a0b8",
@@ -91,7 +93,8 @@
       "2b05ffa5169a",
       "36cb9bf3a044",
       "46c629c99268",
-      "55d871bfec4a"
+      "55d871bfec4a",
+      "636d6c4034b1"
     ],
     "doubaoya": [
       "035c62d0cddb",
@@ -104,6 +107,7 @@
       "4ec537de8a0f",
       "5e4285733c9a",
       "6b67e50a9d2a",
+      "7d4cbaac2727",
       "7d952dd6a3ae",
       "820ffedd8e9a",
       "88b0d75ddcc1",
@@ -215,8 +219,10 @@
     ],
     "gzh-ai-feed": [
       "17b81ba201c0",
+      "4e2d2e3763f3",
       "83dda703ed94",
       "b3d13aba1ebb",
+      "be7e953fc6dd",
       "d2b1fa95fe37",
       "f0c2d4aea208"
     ],
@@ -314,6 +320,8 @@
       "3ebe92afaed3",
       "7c190de3a23b",
       "7cba97b1e6d5",
+      "e7eee90e5a0f",
+      "f029374f0b3a",
       "f315fbf96fcb"
     ],
     "playlet-xiaohongshu-feed": [
@@ -325,6 +333,7 @@
     ],
     "seedream-5-lite": [
       "01ab2a8b4d38",
+      "507d3cd35ece",
       "6e6cb9e8eb63",
       "7b4d5857c795",
       "7ec746a1de61",
@@ -395,6 +404,7 @@
       "88e8c98c695d",
       "8e51d419df6b",
       "8fd6a7602be1",
+      "91db95749649",
       "9fd965739ead",
       "bc543b555f3e",
       "c2e53f8828fd",
@@ -409,6 +419,7 @@
       "09fb3174ceac",
       "2e29d74ce37d",
       "40f0b53c178e",
+      "6ef94867d6ed",
       "80d0c20e8bb1",
       "9fa04f5e25f2",
       "a957ba91c49c",
@@ -428,6 +439,8 @@
       "489577c65d3c",
       "54e5caaceb7c",
       "56eec9d667c4",
+      "71089bbf7faf",
+      "760ac5584bd9",
       "80f58ab682c1",
       "a2c7a69c1d7c",
       "c79a769e63fd",
@@ -462,6 +475,7 @@
       "498c02f187b3",
       "7f8dfcda0b2f",
       "9112fba1e346",
+      "a49573626979",
       "c8f27c07406b"
     ],
     "wechat-hot-write": [
@@ -504,6 +518,7 @@
       "3dfb22b2d2e8",
       "4e815a9c4498",
       "6c300397c349",
+      "714cba6d35e3",
       "81ae208bad6f",
       "926fd8f6a52b",
       "93f89aa0f52a",
