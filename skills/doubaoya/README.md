@@ -44,10 +44,13 @@ agent 会把 key 存进环境变量 `DOUBAOYA_API_KEY`，之后自己调接口�
 ```bash
 export DOUBAOYA_API_KEY=dyh_你的密钥
 
-node scripts/doubaoya.mjs list
-node scripts/doubaoya.mjs invoke trend-radar '{"keyword":"美食","platforms":["douyin","xiaohongshu"]}'
-node scripts/doubaoya.mjs describe xiaohongshu-viral-notes
+node scripts/doubaoya.mjs list                              # 两个集合一起拉，不需要 key
+node scripts/doubaoya.mjs describe xiaohongshu-viral-notes  # 这一条的入参规格长什么样
+node scripts/doubaoya.mjs invoke xiaohongshu-viral-notes '<照 describe 拉到的入参规格填>'
 ```
+
+> `describe` 先拉、`invoke` 再打，是有意的顺序：入参规格**以详情端点这一刻返回的为准**，
+> 本文档不抄任何一条能力的字段名（抄了就会漂，而漂了没有任何地方会报错）。
 
 ## 怎么调（给好奇的人）
 

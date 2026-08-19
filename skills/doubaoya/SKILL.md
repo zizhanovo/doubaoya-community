@@ -45,8 +45,13 @@ compatibility: >-
 
 ## 0.5 用户该用哪个能力？（按"我想做什么"选）
 
-本 Skill 是**总入口 / 上手向导**：一条 key 通到都爆鸭全部能力。用户通常不知道有哪些 slug，
-你（agent）的活是**听懂用户想干嘛 → 选对能力 → 调 → 把结果讲成人话**。按下面这张"运营意图 → 能力"表对号入座：
+本 Skill 是**总入口 / 上手向导**：一条 key 通到都爆鸭全部能力。用户通常不知道有哪些能力，
+你（agent）的活是**听懂用户想干嘛 → 选对能力 → 调 → 把结果讲成人话**。
+
+> 🔑 **这张速查表只回答「该调哪一条」，不回答「怎么填参数」。**
+> 每行给三样东西：能力的 `operationKey`、一句用途、**详情端点**（`GET`，免鉴权免费）。
+> 要发请求，先 `GET` 那个详情端点，从返回里读入参规格和 `execution` 的 `target`（§2.1）——
+> **入参一律现拉，本文档一个字段名都不抄**。抄进来的字段会漂，而漂了没有任何地方会报错。
 
 **公众号请求例外**：只要请求涉及公众号，先读
 [`references/wechat-routing.json`](references/wechat-routing.json)，再按其优先级选 Skill。极简原则：
@@ -69,43 +74,113 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 **如实告诉用户这个能力下架了**，别拿公开平台搜索去顶替——公开搜索看不见用户自己的笔记，
 只会拿陌生人的内容糊弄他，那比直说「没有这个能力」更糟。
 
-| 用户这么说（运营白话） | 该走哪类能力 | 典型起手（**完整路径**，别当它是 slug 去拼） |
-|------------------------|--------------|---------------|
-| "最近全网在火什么？给我点选题" | 综合热点选题（无关键词直取 + 结合IP匹配） | `POST /api/apis/trend/trending-hub-keyword/call` |
-| "我这个赛道（如减脂早餐）在涨啥？" | 平台爆款搜索 | `POST /api/skills/xiaohongshu-viral-notes/invoke`、各平台日报源（`GET /api/apis` 里搜 `ai-feed`） |
-| "这条链接为什么火？拆给我看" | 作品解析 | `POST /api/apis/tool/parse-content-detail/call` |
-| "帮我把这段文案过一遍，别违规" | 内容安全 | `POST /api/skills/content-safety-check/invoke` |
-| "给我配张图" | 创作助手 | `POST /api/skills/gpt-image-gen/invoke` |
-| "把这条爆款改写成我的文案" | 改写（纯本地，不联网、不要 key） | Skill `wechat-rewrite`（公众号）/ `xiaohongshu-rewrite`（小红书）；没装就用搜来的素材由你合成 |
-| **"帮我写一篇公众号文章 / 写完要排版发草稿"** | **公众号写作交付链**（跨 Skill，不是单个 slug；**先问终态**：只要成稿 vs 要进草稿箱） | Skill `wechat-hot-write` → `wechat-title` / `wechat-cover` → `wechat-banned-words` → `wechat-article-pipeline`（要草稿箱才走到这站）；逐跳导航问 `dby` |
-| "小红书封面怎么做 / 首图套路 / 封面选题 / 起个小红书标题 / 帮我拆这篇笔记 / 笔记拆解 / 笔记对标 / 对标分析 / 选题拆解 / 爆款结构" | 小红书爆款封面（首图）/ 标题 / 笔记分析 · 对标数据 | `POST /api/apis/xiaohongshu/xiaohongshu-coze/call` |
-| "公众号 10 万+ 有啥 / 原创爆文 / 原创热门榜 / 原创热文榜" | 公众号分类时段热文榜（10万+ / 原创） | `POST /api/apis/gongzhonghao/category-time-hot/call` |
-| "公众号文旅 / 短剧这块在发什么" | 公众号文旅 / 短剧日报源 | `POST /api/apis/gongzhonghao/gongzhonghao-playlet-feed/call` |
-| 🔴 **"视频号最近什么在爆 / 视频号上 AI（或 XX）这块在火什么 / 视频号日报 / 视频号选题"** | **视频号 AI 日报源**（高热作品聚类） | `POST /api/apis/sph/shipinhao-ai-feed/call`；搜作品 / 账号走 `/api/apis/sph/search-work`、`/api/apis/sph/search-user` |
-| "低粉爆款 / 素人爆款 / 黑马笔记 / 低粉高赞 / 小号打法 / 冷启动对标" | 小红书低粉爆款榜（小号也能起量的选题） | `POST /api/apis/xiaohongshu/xiaohongshu-low-fans-top/call` |
-| "小红书周榜 / 一周爆款 / 周度趋势 / 中线选题" | 小红书周榜（比日榜更适合定中线选题） | `POST /api/apis/xiaohongshu/xiaohongshu-weekly-top/call` |
-| "内容出海 / 出海爆款 / 出海日报 / 出海选题" | 全平台内容出海 Top 榜 | `POST /api/apis/multi/multi-content-export-top/call` |
-| "追更某个号 / 盯公众号 / 订阅公众号 / 账号发文列表 / 竞品发文复盘" | 公众号账号发文列表（按号拉时段发文） | `POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
-| "头部账号 / 公众号排行 / 公众号榜单 / 热度指数" | 公众号热门账号榜 | `POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
-| "A股公众号 / 股市大V / 股票公众号榜单" | 没有单条能力，**三步编排**：搜号 → 拉发文 → 找爆文 | `POST /api/apis/gongzhonghao/gongzhonghao-search-user/call` → `.../gongzhonghao-work-list/call`（或 `gongzhonghao-daily-publish`）→ `.../hot-article/call` |
-| ~~"帮我记一下 / 存进笔记 / 查查我的笔记 / 我是个什么样的人"~~ | ⛔ **第二大脑（`mera`）已下架** | 无替代能力：如实告知已下架，**别拿公开搜索顶替**（见上方「我自己的东西」例外） |
+---
+
+**选题 / 热点 —— 通用选题从这一档起手**
+
+| 用户这么说（运营白话） | 该调哪条 | 一句话用途 | 详情端点（`GET`，免鉴权免费） |
+|---|---|---|---|
+| "最近全网在火什么？给我点选题" —— 🔴 **不带关键词直取**，通用选题的正确起手 | `api.trend.hotSpotKeyword` | 全网热点聚合直取，通用选题首选 | `/api/apis/trend/trending-hub-keyword` |
+| "全网热搜 / 热搜关键词 / 热榜TOP10 / 出一批热词当选题种子" | `api.trend.hotKeywords` | 全网热搜关键词 | `/api/apis/trend/hot-keywords` |
+| "某个词近 30 天在各平台被讨论成什么样 / 近30天作品 / 社媒舆情 / 舆情监测" | `api.multi.workSearch` | 全平台近30天作品聚合 | `/api/apis/multi/cn30-multi-search` |
+| "这个词的跨平台讨论量趋势"（CN 版近 30 天，与上一条是两条能力） | `skill.social.last30Days` | Last 30 Days—CN版 | `/api/skills/cn-last30days` |
+| "内容出海 / 出海爆款 / 出海日报 / 出海选题 / 出海流量风口 / 全平台爆款" | `api.multi.contentExportTop` | 全平台内容出海Top榜 | `/api/apis/multi/multi-content-export-top` |
+
+**小红书**
+
+| 用户这么说（运营白话） | 该调哪条 | 一句话用途 | 详情端点（`GET`，免鉴权免费） |
+|---|---|---|---|
+| "我这个赛道在涨啥 / 爆款笔记发现 / 小红书热门笔记 / 找对标笔记" | `skill.xhs.viralNotes` | 小红书爆款笔记发现 | `/api/skills/xiaohongshu-viral-notes` |
+| "搜小红书笔记 / 小红书搜索 / 小红书笔记查询 / 小红书爬取" | `api.xhs.searchNote` | 搜索小红书笔记 | `/api/apis/xiaohongshu/search-note` |
+| "搜小红书作品 / 照着写小红书 / 对标后再写（先取数再动笔）" | `api.xhs.searchWork` | 搜索小红书作品 | `/api/apis/xiaohongshu/search-work` |
+| "批量爬小红书作品 / 小红书爬虫 / 小红书作品采集" | `api.xhs.crawlWork` | 小红书作品采集 | `/api/apis/xiaohongshu/crawl-work` |
+| "小红书封面怎么做 / 首图套路 / 封面选题 / 起个小红书标题 / 笔记拆解 / 笔记对标 / 对标分析 / 选题拆解 / 爆款结构" | `api.xhs.cozeData` | 小红书爆款封面/标题/笔记分析数据 | `/api/apis/xiaohongshu/xiaohongshu-coze` |
+| "小红书日榜 / 小红书 TOP / 今日爆款笔记" | `api.xhs.cozeDailyTop` | 小红书日榜 | `/api/apis/xiaohongshu/xiaohongshu-daily-top` |
+| "小红书周榜 / 小红书周排行 / 一周爆款 / 周度趋势 / 中线选题" | `api.xhs.cozeWeeklyTop` | 小红书周榜 | `/api/apis/xiaohongshu/xiaohongshu-weekly-top` |
+| "低粉爆款 / 素人爆款 / 黑马笔记 / 低粉高赞 / 小号打法 / 冷启动对标" | `api.xhs.cozeLowFansTop` | 小红书低粉爆款榜 | `/api/apis/xiaohongshu/xiaohongshu-low-fans-top` |
+
+**抖音**
+
+| 用户这么说（运营白话） | 该调哪条 | 一句话用途 | 详情端点（`GET`，免鉴权免费） |
+|---|---|---|---|
+| "搜抖音作品 / 抖音搜索 / 抖音综合搜索 / 扒抖音作品 / 短视频选题" | `api.douyin.searchWork` | 搜索抖音作品 | `/api/apis/douyin/search-work` |
+| "抖音实时搜索 / 抖音最新发布 / 刚发出来的那批" | `api.douyin.realtimeSearch` | 抖音实时搜索 | `/api/apis/douyin/realtime-search` |
+| "扒评论区 / 抖音评论 / 评论分析 / 评论风向 / 用户需求" | `api.douyin.comments` | 抖音作品评论 | `/api/apis/douyin/comments` |
+
+**公众号**
+
+| 用户这么说（运营白话） | 该调哪条 | 一句话用途 | 详情端点（`GET`，免鉴权免费） |
+|---|---|---|---|
+| "搜公众号文章 / 公众号取数 / 热门文章 / 扒文章" | `api.gzh.searchArticle` | 搜索公众号文章 | `/api/apis/gongzhonghao/search-article` |
+| "公众号爆文 / 爆款文章 / 爆款仿写 / 写公众号先拉样本" | `api.gzh.hotArticle` | 公众号爆文搜索 | `/api/apis/gongzhonghao/hot-article` |
+| "公众号封面怎么做 / 爆款封面 / 起个公众号标题 / 标题套路" | `api.gzh.cozeData` | 公众号爆款封面数据 | `/api/apis/gongzhonghao/gongzhonghao-coze-cover` |
+| "追更某个号 / 盯公众号 / 订阅公众号 / 账号发文列表 / 竞品发文复盘 / 某公众号发了什么" | `api.gzh.workList` | 公众号账号发文列表 | `/api/apis/gongzhonghao/gongzhonghao-work-list` |
+| "公众号 10 万+ / 原创爆文 / 原创热文 / 原创热门榜" | `api.gzh.categoryTime` | 公众号10万+/原创榜 | `/api/apis/gongzhonghao/category-time-hot` |
+| "头部账号 / 公众号排行 / 公众号榜单 / 热度指数 / 热门账号" | `api.gzh.indexRank` | 公众号热门账号榜 | `/api/apis/gongzhonghao/gongzhonghao-index-rank` |
+| "公众号阅读增长 / 增长榜 / 增长率排行 / 公众号黑马 / 持续走高" | `api.gzh.raiseRank` | 公众号阅读增长榜 | `/api/apis/gongzhonghao/gongzhonghao-raise-rank` |
+| "公众号 AI 这块在发什么 / 公众号 AI 日报" | `api.gzh.aiFeed` | 公众号AI日报源 | `/api/apis/gongzhonghao/gongzhonghao-ai-feed` |
+| "公众号文旅 / 短剧这块在发什么 / 每日榜" | `api.gzh.playletFeed` | 公众号文旅/短剧日报源 | `/api/apis/gongzhonghao/gongzhonghao-playlet-feed` |
+| "按名字找公众号 / 这个号叫什么 ID"（三步编排的第一步，见下方 A 股例子） | `api.gzh.searchUser` | 公众号账号搜索 | `/api/apis/gongzhonghao/gongzhonghao-search-user` |
+| "某天各号发了什么 / 每日发文查询" | `api.gzh.dailyPublish` | 公众号每日发文查询 | `/api/apis/gongzhonghao/gongzhonghao-daily-publish` |
+| "短剧赛道的公众号热门文章日报"（产品化 Skill 侧，与上面的日报源是两条） | `skill.playlet.wechatFeed` | 短剧-公众号信息源 | `/api/skills/playlet-wechat-feed` |
+
+**视频号**
+
+| 用户这么说（运营白话） | 该调哪条 | 一句话用途 | 详情端点（`GET`，免鉴权免费） |
+|---|---|---|---|
+| "视频号最近什么在爆 / 视频号上 AI 这块在火什么 / 视频号日报 / 视频号选题" | `api.sph.aiFeed` | 视频号AI日报源 | `/api/apis/sph/shipinhao-ai-feed` |
+| "搜视频号作品 / 视频号爆款" | `api.sph.searchWork` | 搜索视频号作品 | `/api/apis/sph/search-work` |
+| "找视频号账号" | `api.sph.searchUser` | 搜索视频号账号 | `/api/apis/sph/search-user` |
+| "AI 视频号信息源"（产品化 Skill 侧，与 api.sph.aiFeed 是两条） | `skill.wechatChannels.aiFeed` | AI视频号信息源 | `/api/skills/wechat-channels-ai-feed` |
+
+**解析 / 合规 / 素材 / 查证**
+
+| 用户这么说（运营白话） | 该调哪条 | 一句话用途 | 详情端点（`GET`，免鉴权免费） |
+|---|---|---|---|
+| "这条链接为什么火 / 解析链接 / 链接解析 / 作品详情 / 拆给我看" | `tool.content.parseDetail` | 解析作品/文章详情 | `/api/apis/tool/parse-content-detail` |
+| "帮我把这段文案过一遍别违规 / 违禁词 / 合规检测 / 过审 / 极限词 / 广告法"（多平台口径） | `tool.contentSafety.checkWords` | 多平台违禁词检测 | `/api/skills/content-safety-check` |
+| "公众号这篇能不能发 / 公众号违禁词"（公众号口径，与上一条是两条） | `skill.wechat.prohibitedWord` | 公众号违禁词检测 | `/api/skills/wechat-prohibited-word` |
+| "给我配张图 / AI 出图 / 文生图 / 图生图 / 改图 / 生成图片 / 主视觉" | `skill.ai.imageGen` | AI 生图 / 改图（慢操作，单请求内等结果） | `/api/skills/gpt-image-gen` |
+| "这事儿是真的吗 / 联网搜索 / 联网查证 / 事实核查 / 查出处 / 引用来源 / 豆包搜索" | `skill.search.doubaoWeb` | 豆包联网搜索 | `/api/skills/doubao-web-search` |
+
+**不是一条能力、得自己编排的**（表里查不到是正常的，别硬凑一条）：
+
+- **"A股公众号 / 股市大V / 股票公众号榜单"** —— 三步：`api.gzh.searchUser` 搜号 →
+  `api.gzh.workList`（或 `api.gzh.dailyPublish`）拉发文 → `api.gzh.hotArticle` 找爆文。
+- **"把这条爆款改写成我的文案"** —— 不调接口：Skill `wechat-rewrite`（公众号）/
+  `xiaohongshu-rewrite`（小红书）/ `multi-rewrite`（一稿多发），纯本地、不要 key。
+  没装就用搜来的素材由你合成。
+- ~~**"帮我记一下 / 查查我的笔记 / 我是个什么样的人"**~~ —— ⛔ **第二大脑（`mera`）已下架**，
+  无替代能力：如实告知，**别拿公开搜索顶替**（见上方「我自己的东西」例外）。
+- ⛔ **`seedream-lite`（Seedream 5.0 lite）已于 2026-08-10 下架**，调用一律 503，
+  所以它不在上表里。要出图走 `skill.ai.imageGen`，要公众号封面走 `api.gzh.cozeData`。
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：
 1. 先确认有没有 key（没有就带他走 §1 拿 key，一次就好）。
 2. 问一句"你现在想做选题、追热点、还是查账号？"——把模糊需求收敛到上面某一类。
 3. 选一个能力先跑一次出结果，**让用户看到真东西**，再顺势引导下一步 / 订阅。
 
-> 别一上来甩一长串 slug 清单给用户看——用户要的是"帮我做事"，不是 API 目录。slug 是你内部选路用的。
+> 别一上来甩一长串能力清单给用户看——用户要的是"帮我做事"，不是 API 目录。
+> `operationKey` 是你内部选路用的。
 
-> ⚠️ **上面这一列是路径，不是 slug。** 平台有两个不相交的能力集合，走两条不同的路由（见 §2.1）；
-> 拿路径尾巴上那截当 slug 去拼另一条路由，必然 404。拿不准就先跑发现接口（§4）。
+> ⚠️ **第四列是详情端点，不是调用地址。** 平台有两个不相交的能力集合、两条互不回落的路由，
+> 而且有三条走专用路由（方法未必是 POST），照详情端点拼调用地址必然出错。
+> **调用地址只有一个来源：详情响应里的 `execution` 的 `target`**（§2.1）。
+> 表里没有你要的能力时，先跑一遍发现接口（§4）再下结论——本表是起手线索，不是全量清单。
+
+> 📖 **想看全量、或者撞上选路的坑**：装了 `doubaoya-gateway` 的话，
+> [`doubaoya-gateway/references/capability-index.md`](../doubaoya-gateway/references/capability-index.md)
+> 是从发现接口生成的**全量索引**（本表只列最常用的那批）；
+> [`doubaoya-gateway/references/routing-pitfalls.md`](../doubaoya-gateway/references/routing-pitfalls.md)
+> 装的是**只有踩过才知道**的选路知识（哪条 `operationKey` 撞名、哪两条能力不该混用）。
+> 没装网关也不影响本节使用——那两份是补充，不是前置。
 
 > ❌ **选题铁律：不要拿用户的账号名 / IP 名当关键词去搜。**
 > 用户的公众号/账号名（如「菜籽油」）是**他是谁**（领域/人设/受众），不是搜索词——搜它只会搜到字面同名内容。
-> **综合热点用无关键词的热榜接口直取（`POST /api/apis/trend/trending-hub-keyword/call`），IP 名字只用于匹配筛选。**
-> 做通用选题**别用**跨平台趋势雷达（`/api/skills/trend-radar/invoke`）或全网热榜聚合
-> （`/api/apis/trend/hot-topics/call`）——它们是关键词搜索的搬运号 feed，热度常为空、多「未命名内容」；
-> 通用综合热点一律走 trending-hub-keyword（无关键词直取）。
+> **综合热点用无关键词的 `api.trend.hotSpotKeyword` 直取，IP 名字只用于匹配筛选。**
+> 做通用选题**别用**跨平台趋势雷达（`skill.trend.radar`）或全网热榜聚合（`api.trend.hotTopics`）
+> ——它们是关键词搜索的搬运号 feed，热度常为空、多「未命名内容」；
+> 通用综合热点一律走 `api.trend.hotSpotKeyword`（无关键词直取）。
 
 ---
 
@@ -140,7 +215,7 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 > ⚙️ 本节讲的是够用的约定。**只在协议这一层卡住时**再往下翻一层：两条互不回落的路由到底怎么选、
 > 统一信封怎么解、`SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` / `DEDICATED_ROUTE` / `NO_RESULT`
 > 分别该怎么办、以及「入参规格调用前现拉、别照记忆或本地文档拼」这条纪律——都在 `doubaoya-gateway` 里。
-> 它只回答**怎么把一次调用打出去**，不承接业务意图；要做的事本身该走哪个能力，看 §3 与 `dby`。
+> 它只回答**怎么把一次调用打出去**，不承接业务意图；要做的事本身该走哪个能力，看 §0.5 与 `dby`。
 
 ### 2.1 调用一个操作：先发现，再照 `execution.target` 打
 
@@ -241,47 +316,33 @@ Content-Type: application/json
 
 ---
 
-## 3. 常用能力起手表（**路径已核对，slug 不是目录名**）
+## 3. 选路知识（哪条不该用、哪条已下架）
 
-下面这张表给的是**完整调用路径**，不是"slug"——因为一条能力走哪条路由，取决于它在哪个集合里（§2.1）。
-表里每条都已对着平台目录核过，可以直接打。
+**该调哪一条在 §0.5**，那张表按用户话术铺开，每行给 `operationKey` + 用途 + 详情端点。
+本节不重复它，只装两样 §0.5 装不下的东西：**已知的选路坑**，和**已下架的能力**。
 
-> 🔴 **这张表只是起手线索，不是清单。** 平台现有 **100** 条能力（17 skills + 83 apis），
-> 这里只列最常用的十来条。要全量、要最新、要准确入参，**运行时用发现接口拉**（§4）。
+> 🔴 **本文档里所有能力清单都是起手线索，不是全量。** 平台会上新、也会下架，
+> **准数永远以你这一次实拉发现接口的 `total` 为准**——别把任何一个数字抄进你的判断里（§4）。
+> 小红书 / 抖音 / 公众号 / 视频号 / B站 / 快手 / TikTok 的搜索、账号、榜单、日报源加起来是
+> 数量上的大头，全在 `GET /api/apis` 里。**要找某个平台的某种数据，先去那儿翻，
+> 别在 §0.5 那张短表里找不到就放弃。**
 
-### 综合热点选题（无关键词直取 + 结合IP匹配）
+### 已知的选路坑
 
-做选题的**正确起手**：先无关键词直取综合热点，再结合用户IP定位智能匹配。**别用账号名/IP名当关键词。**
-
-| 能力 | 怎么调（完整路径） | 关键入参 |
-|------|-------------------|---------|
-| **综合热点直取**（首选）：**不带关键词**拉当下全网最热的一批（微博/抖音/B站） | `POST /api/apis/trend/trending-hub-keyword/call` | `{ "platforms": [2,5,8] }`（**不传 keywords**） |
-| **全网热搜关键词**（seed，可选）：出一批热词 + 所属平台，用作选题名的种子 | `POST /api/apis/trend/hot-keywords/call` | `{}`（**别带日期**：上游只供最新一批，带日期区间必返 0 条） |
-| **近 30 天中文社媒讨论**：某个词的跨平台舆情趋势（这是「查某词」，不是通用选题） | `POST /api/skills/cn-last30days/invoke` | `{ "keyword", "days": 30, "platforms": ["xiaohongshu","douyin"] }` |
-
-> ⚠️ 通用综合热点**别用**跨平台趋势雷达（`POST /api/skills/trend-radar/invoke`）或全网热榜聚合
-> （`POST /api/apis/trend/hot-topics/call`）——它们是关键词搜索的搬运号 feed（热度常为 `null`、
-> 多「未命名内容」），只在明确要「按某个词搜同名内容 feed」的窄场景才考虑。
-
-### 搜内容（各平台）
-
-| 能力 | 怎么调（完整路径） | 关键入参 |
-|------|-------------------|---------|
-| **小红书爆款笔记发现**：高互动笔记 | `POST /api/skills/xiaohongshu-viral-notes/invoke` | `{ "keyword", "page"? }` |
-| **抖音作品搜索**：关键词批量搜抖音作品，铺表选题 | `POST /api/apis/douyin/search-work/call` | `{ "keyword", "page"? }` |
-| **公众号信息源**（短剧赛道示例）：热门文章日报 | `POST /api/skills/playlet-wechat-feed/invoke` | `{ "keyword", "dateRange"?, "minReadCount"? }` |
-| **视频号信息源**：高热作品聚类日报 | `POST /api/skills/wechat-channels-ai-feed/invoke` | `{ "keyword", "limit"?, "minLikeCount"? }` |
-
-> 小红书 / 抖音 / 公众号 / 视频号 / B站 / 快手 / TikTok 的搜索、账号、榜单、日报源加起来有 80 多条，
-> 全在 `GET /api/apis` 里。**要找某个平台的某种数据，先去那儿翻，别在这张短表里找不到就放弃。**
-
-### 解析 / 合规 / 素材
-
-| 能力 | 怎么调（完整路径） | 关键入参 |
-|------|-------------------|---------|
-| **多平台违禁词检测**：命中标注 + 风险类别 | `POST /api/skills/content-safety-check/invoke` | `{ "platform", "content" }` |
-| **作品 / 文章解析**：粘公开链接，返回归一化详情，拆「为什么火」 | `POST /api/apis/tool/parse-content-detail/call` | `{ "url" }` |
-| **AI 生图 / 改图**：出配图、素材、封面图 | `POST /api/skills/gpt-image-gen/invoke` | `{ "prompt", "size"? }`（慢操作，单请求内等结果） |
+- ⚠️ **通用综合热点别用趋势雷达 / 热榜聚合**：`skill.trend.radar` 与 `api.trend.hotTopics`
+  是**关键词搜索的搬运号 feed**（热度常为空、多「未命名内容」），只在明确要
+  「按某个词搜同名内容 feed」的窄场景才考虑。通用选题一律走 `api.trend.hotSpotKeyword`
+  的**无关键词直取**（§0.5 首行）。
+- ⚠️ **`api.trend.hotKeywords` 别带日期**：上游只供最新一批，带日期区间必返 0 条。
+  ——这类「参数对了才有结果」的坑，正是**入参规格必须调用前现拉**的理由：
+  详情端点会告诉你哪些字段可选、取值什么形状，凭记忆拼必踩。
+- ⚠️ **上游对错入参一律静默返空或给误导性报错**，别据此判「接口挂了」。
+  先回详情端点核一遍入参规格，再看是不是真的没数据（`noResult`，§2.2）。
+- 🔴 **有一条 `operationKey` 全局撞名**（多平台违禁词检测在两个集合里各有一条，
+  §0.5 已分成两行、各带各的详情端点）。**点名能力时连详情端点一起给**，
+  只报 `operationKey` 在这一条上不足以定位。装了网关的话，
+  [`doubaoya-gateway/references/routing-pitfalls.md`](../doubaoya-gateway/references/routing-pitfalls.md)
+  有这条的完整来龙去脉和其余踩过的坑。
 
 ### ⛔ 第二大脑（`mera` · **已下架，别调**）
 
@@ -322,10 +383,9 @@ Content-Type: application/json
 # ① 产品化 Skill
 GET  https://doubaoya.com/api/skills                    → data: { items, total }
 GET  https://doubaoya.com/api/skills/<slug>             → data: 单条详情（不存在 / 已下架同为 404）
-GET  https://doubaoya.com/api/skills/search?query=选题&category=数据查询&limit=12
-                                                        → data: { items, total, categories, query, category }
-POST https://doubaoya.com/api/skills/recommend          body: { "query": "帮我找选题", "category"?: "全部", "limit"?: 6 }
-                                                        → data: { primary, candidates, decisionSummary, signals }
+GET  https://doubaoya.com/api/skills/search              → 按意图搜（查询串 / 分类 / 条数三个查询参数）
+POST https://doubaoya.com/api/skills/recommend          → 按意图推荐（body 带一句自然语言查询）
+                                                        → data: 首选一条 + 候选若干 + 判定依据
 
 # ② 平台数据能力（数量上的大头，别漏）
 GET  https://doubaoya.com/api/apis                      → data: { items, total }
@@ -360,32 +420,31 @@ GET  https://doubaoya.com/api/apis/<platform>/<slug>    → data: 单条详情
 
 ---
 
-## 5. 真实调用示例（参数化，无密钥）
+## 5. 一次调用长什么样（**两步：先拉规格，再发请求**）
+
+示例里**没有任何一条能力的字段名**，这是有意的：入参规格以你这一刻从详情端点拉到的为准。
 
 ### curl
 
 ```bash
-# 综合热点直取：不带关键词，把当下全网最热的一批拉下来
-curl -sS https://doubaoya.com/api/apis/trend/trending-hub-keyword/call \
+# ① 先拉详情：免鉴权、免费，返回里带入参规格和 execution 的 target
+curl --silent --show-error https://doubaoya.com/api/apis/trend/trending-hub-keyword
+
+# ② 再照 execution 的 target 发请求；body 就是①里那份入参规格
+curl --silent --show-error https://doubaoya.com<第①步读到的 target 的 path> \
   -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{ "platforms": [2, 5, 8] }'
+  -d '<照第①步的入参规格填>'
 ```
 
-成功返回（信封已省略部分字段；条目常分组在 `wbList`/`dyList`/`bzList`）：
+返回永远是同一层信封（§2.2），先看 `success`，`true` 就取 `data`：
 
 ```jsonc
-{
-  "success": true,
-  "requestId": "req_abc123",
-  "data": {
-    "wbList": [ { "title": "样例热点", "hotCount": 98231, "index": 1, "url": "https://…" } ],
-    "dyList": [ /* … */ ],
-    "bzList": [ /* … */ ]
-  },
-  "error": null
-}
+{ "success": true, "requestId": "req_abc123", "data": { /* 这条能力自己的结果结构 */ }, "error": null }
 ```
+
+> `data` 里面长什么样**因能力而异**，本文档不抄——第①步的出参示例（`outputExample` /
+> `responseExample`）就是用来对齐「我要读哪几个字段」的，读它，别猜。
 
 ### Node（zero-dep，key 从环境变量读）
 
@@ -393,17 +452,24 @@ curl -sS https://doubaoya.com/api/apis/trend/trending-hub-keyword/call \
 const key = process.env.DOUBAOYA_API_KEY;
 if (!key) throw new Error("先设好 DOUBAOYA_API_KEY：doubaoya.com → 登录 → 密钥中心 → 生成密钥");
 
-const res = await fetch("https://doubaoya.com/api/skills/xiaohongshu-viral-notes/invoke", {
-  method: "POST",
+// ① 详情端点：拿 execution 的 target 和入参规格（不需要 key）
+const detail = await fetch("https://doubaoya.com/api/skills/xiaohongshu-viral-notes").then(r => r.json());
+if (!detail.success) throw new Error(`${detail.error.code}: ${detail.error.message}`);
+const { method, path } = detail.data.execution.target;
+
+// ② 照 target 发请求。body 照 detail.data 里的入参示例填，别照记忆拼。
+const res = await fetch(`https://doubaoya.com${path}`, {
+  method,
   headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-  body: JSON.stringify({ keyword: "减脂早餐", page: 1 })
+  body: JSON.stringify(/* 照 ① 的入参规格填 */ {})
 });
 const env = await res.json();
 if (!env.success) throw new Error(`${env.error.code}: ${env.error.message}`);
-console.log(env.data.items);
+console.log(env.data);
 ```
 
-> 仓库里附了一个零依赖封装：`scripts/doubaoya.mjs`，见 §7。
+> 🔴 第②步用的是 `method`，不是写死的 `"POST"`——**有三条能力走专用路由，方法未必是 POST**（§2.1）。
+> 仓库里附了一个把这两步封好的零依赖脚本：`scripts/doubaoya.mjs`，见 §7。
 
 ---
 
@@ -414,17 +480,21 @@ console.log(env.data.items);
 > 核心：**综合热点无关键词直取 → 结合这个IP定位智能匹配 → 产选题**。
 > ❌ **绝不**把用户的账号名/IP名当关键词去搜（那只会搜到字面同名内容）。
 
-1. **直取综合热点（无关键词）**：`POST /api/apis/trend/trending-hub-keyword/call`
-   `{ "platforms": [2,5,8] }`（**不传 keywords**）→ 拿当下全网最热的一批（`wbList`/`dyList`/`bzList`，看 `hotCount`/`index`/`url`）。
+1. **直取综合热点（无关键词）**：`api.trend.hotSpotKeyword`（详情端点
+   `/api/apis/trend/trending-hub-keyword`）→ 拿当下全网最热的一批。
+   🔴 **这一步的要害是「不带关键词」**——具体哪个字段控制平台范围、怎么表示「不搜词」，
+   照详情端点这一刻返回的入参规格填（§5 的两步）。
 2. **明确IP定位**：用户的账号名/IP名是**他是谁**（领域/人设/角度/受众），不是搜索词。
    从用户或其身份资料拿到这份定位；**不清楚就问用户**。
-3. **智能匹配**：扫综合热榜，挑出这个IP能**可信借势**的 2–3 条热点（`hotCount` 高 + 跨平台撞榜 + IP契合），
-   每条给出这个IP的**独家切角**；必要时用 `xiaohongshu-viral-notes` / `*-ai-feed` 验证「真的在爆」。
+3. **智能匹配**：扫综合热榜，挑出这个IP能**可信借势**的 2–3 条热点（热度高 + 跨平台撞榜 + IP契合），
+   每条给出这个IP的**独家切角**；必要时用 `skill.xhs.viralNotes` 或对应平台的日报源验证「真的在爆」。
 4. **写开场脚本**：基于选中的热点 + IP独家切角，给每个选题写 **3 秒开场钩子 + 一段开场脚本**（别脱离数据空写）。
-5. **保命**：脚本丢进 `POST /api/skills/content-safety-check/invoke`
-   `{ "platform": "douyin", "content": "<脚本>" }`——返回 `content`（标注版）/ `originalContent`（原文）/
-   `prohibitedWordsType`（风险类别）；命中词从 `content` 的标注定位，替换建议由你结合上下文给。
-   🔴 这三个字段都读不到时如实说「没拿到检测结果」，别当成合规放行。
+5. **保命**：脚本丢进违禁词检测（`tool.contentSafety.checkWords`，详情端点
+   `/api/skills/content-safety-check`）。它回三样东西：**一份标注版正文**（命中处被标出来）、
+   **一份未标注原文**、**一个风险类别数组**——命中词从标注版与原文的差异定位，
+   替换建议由你结合上下文给。
+   🔴 **接口不回风险等级、不回评分、不回命中词清单**，别编一个出来。
+   这三样都读不到时如实说「没拿到检测结果」，**别当成合规放行**。
 6. **交付选题**：3–5 个选题（每个：蹭哪条热点 + 我这IP的独家切角 + 为什么现在能爆）+ 各自开场脚本 + 已过违禁词检测。
 7. **选题落地成文章**（用户要的是**公众号文章**而不是短视频脚本时，第 6 步之后还有路）：
    选定一个选题 → `wechat-hot-write` 拉同主题爆文样本写正文 → `wechat-title` 起标题 /
@@ -436,9 +506,9 @@ console.log(env.data.items);
 
 ### 工作流 B：「这条抖音/小红书链接为什么火？给我可复用的选题角度」
 
-1. **解析作品**：`POST /api/apis/tool/parse-content-detail/call` `{ "url": "<分享链接>" }`
-   → 拿标题、作者、互动数据。
-2. **找同题热度**：用标题里的核心词调 `POST /api/skills/xiaohongshu-viral-notes/invoke` 或对应平台的日报源
+1. **解析作品**：`tool.content.parseDetail`（详情端点 `/api/apis/tool/parse-content-detail`），
+   把用户给的公开分享链接丢进去 → 拿归一化的标题、作者、互动数据。
+2. **找同题热度**：用标题里的核心词调 `skill.xhs.viralNotes` 或对应平台的日报源
    （`GET /api/apis` 里搜 `ai-feed`），看这个角度是不是赛道级在涨（这一步是**明确按某个词查证据**，
    与通用选题的无关键词热榜直取不同）。
 3. **产出**：拆解「它为什么火」（选题角度 / 钩子 / 时机），再给 2-3 个**可复用的同源选题**。
@@ -454,11 +524,13 @@ console.log(env.data.items);
 node scripts/doubaoya.mjs list                  # 两个集合一起拉，每行直接给出完整调用路径
 node scripts/doubaoya.mjs list --apis           # 只看平台数据能力
 node scripts/doubaoya.mjs search 小红书 爆款      # 两个集合一起搜
+
+# 🔴 先 describe 再 invoke：describe 打的就是详情端点，入参规格从它的返回里读
 node scripts/doubaoya.mjs describe trending-hub-keyword
 
 # 调一条能力：<ref> = <slug> 或 <platform>/<slug>
-node scripts/doubaoya.mjs invoke xiaohongshu-viral-notes '{"keyword":"减脂早餐","page":1}'
-node scripts/doubaoya.mjs invoke trend/trending-hub-keyword '{"platforms":[2,5,8]}'
+node scripts/doubaoya.mjs invoke xiaohongshu-viral-notes '<照 describe 拉到的入参规格填>'
+node scripts/doubaoya.mjs invoke trend/trending-hub-keyword '<照 describe 拉到的入参规格填>'
 
 # 离线自检（不联网、不需要 key）
 node scripts/doubaoya.mjs selfcheck
@@ -507,9 +579,10 @@ node scripts/doubaoya.mjs selfcheck
   带副作用的尤其不能省（`wechat-article-pipeline` / `wechat-draft-publish` 会写进用户自己的公众号后台）；
   ⛔ 已下架的能力（如 `mera`，见 §3）如果用户的需求点到了它，也写进「跳过」并说明已下架。
 - **如实**：跑了但失败的写在「执行」并注明失败，不许挪进「跳过」粉饰；没做质检就写「无」。
-- **回执里只许写能证明的量。** 括号里的结论必须回指某个**真实返回的字段**（如违禁词检测的
-  `prohibitedWordsType` 是个类别数组，「命中 N 类」可证；接口**不回**风险等级 / 评分 / 命中词清单，
-  「0 高危」「低风险」这类就是编的）。拿不准是不是真字段，就别在回执里写这个量。
+- **回执里只许写能证明的量。** 括号里的结论必须回指这一次**真实返回里确实有的东西**
+  （违禁词检测就是个现成例子：它回的是一个风险**类别**数组，所以「命中 N 类」可证；
+  它**不回**风险等级 / 评分 / 命中词清单，所以「0 高危」「低风险」这类就是编的）。
+  拿不准接口到底回没回这个量，就**回详情端点看一眼出参示例**，别凭印象写。
 - **简短**：这是交付的一部分，不是另一份报告。四行以内，别展开成段落。
 
 ---

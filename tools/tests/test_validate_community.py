@@ -568,37 +568,53 @@ class CallRouteGateTests(unittest.TestCase):
 
 
 class GatewayContractFreedomTests(unittest.TestCase):
-    """网关 Skill 不许把逐能力的入参烤进正文。
+    """选路层 Skill 不许把逐能力的入参烤进正文。
 
-    每个用例都是一次变异：拿仓库里真实的网关 SKILL.md，只做一处「有人图省事把参数抄进来」
+    每个用例都是一次变异：拿仓库里真实的文档，只做一处「有人图省事把参数抄进来」
     的改动，断言闸当场打红。控制组（未改动的真文件）必须绿——否则这些红只能证明闸很吵。
     """
 
-    #: 参数被抄进来时最舒服的落点是 references/ —— 每个变异都在两处各跑一遍，钉住闸的
-    #: 扫描面是整个技能包而不只是入口文件。
-    DOCUMENTS = ("SKILL.md", "references/routing-pitfalls.md")
+    #: 每个变异都在这四处各跑一遍，钉住两件事：
+    #: ① 扫描面是**整个技能包**（references/ 是参数最舒服的落点，README 是最容易被忘的那份）；
+    #: ② 扫描面是**两个包**——doubaoya 的分发量比网关大，它烤进去的参数一样会漂。
+    DOCUMENTS = (
+        (validator.GATEWAY_SKILL, "SKILL.md"),
+        (validator.GATEWAY_SKILL, "references/routing-pitfalls.md"),
+        ("doubaoya", "SKILL.md"),
+        ("doubaoya", "README.md"),
+    )
 
-    def fixture(self, mutate=None, target: str = "SKILL.md") -> Path:
+    def fixture(self, mutate=None, target: tuple[str, str] | None = None) -> Path:
         directory = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, directory, True)
         root = Path(directory)
-        destination = root / "skills" / validator.GATEWAY_SKILL
-        destination.parent.mkdir(parents=True)
-        shutil.copytree(validator.SKILLS / validator.GATEWAY_SKILL, destination)
+        (root / "skills").mkdir(parents=True)
+        for name in validator.CONTRACT_FREE_SKILLS:
+            shutil.copytree(validator.SKILLS / name, root / "skills" / name)
         if mutate is not None:
-            document = destination / target
+            skill, relative = target or (validator.GATEWAY_SKILL, "SKILL.md")
+            document = root / "skills" / skill / relative
             document.write_text(mutate(document.read_text(encoding="utf-8")), encoding="utf-8")
         return root
 
     def assert_red(self, pattern: str, mutate) -> None:
-        """同一处变异抄进 SKILL.md 和 references/，两处都必须打红。"""
+        """同一处变异抄进两个包的入口和非入口文档，四处都必须打红。"""
         for target in self.DOCUMENTS:
-            with self.subTest(target=target):
+            with self.subTest(target="/".join(target)):
                 with self.assertRaisesRegex(validator.ValidationError, pattern):
                     validator.validate_gateway_contract_freedom(self.fixture(mutate, target))
 
-    def test_unmodified_gateway_is_green(self):
+    def test_unmodified_skills_are_green(self):
         validator.validate_gateway_contract_freedom(self.fixture())
+
+    def test_scan_covers_the_business_entry_skill(self):
+        """扫描面必须含 doubaoya——它是分发量最大的那个包，也是参数曾经真被烤进去的那个。
+
+        没有这条断言，把 CONTRACT_FREE_SKILLS 悄悄改回只剩网关，上面所有 subTest 会
+        「少跑两处」而不是「失败」，闸缩了一半却全绿。
+        """
+        self.assertIn("doubaoya", validator.CONTRACT_FREE_SKILLS)
+        self.assertIn(validator.GATEWAY_SKILL, validator.CONTRACT_FREE_SKILLS)
 
     def test_rejects_camel_case_field_name_anywhere(self):
         """驼峰入参字段（真实字段名里 37/58 是这个形状）无论抄在哪里都拦得住。"""
@@ -631,7 +647,11 @@ class GatewayContractFreedomTests(unittest.TestCase):
     def test_other_tables_are_not_mistaken_for_the_index(self):
         """首列是行内代码的表格不止索引一张；只有首列是 operationKey 的才按索引校验。"""
         table = "\n| `references/whatever.md` | 两列，不是索引 |\n"
-        validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + table))
+        for target in self.DOCUMENTS:
+            with self.subTest(target="/".join(target)):
+                validator.validate_gateway_contract_freedom(
+                    self.fixture(lambda text: text + table, target)
+                )
 
     def test_rejects_orphan_reference_document(self):
         """SKILL.md 从不点名的 references 文件 = 没有 agent 会加载它，只会腐烂在包里。"""
@@ -644,6 +664,16 @@ class GatewayContractFreedomTests(unittest.TestCase):
         add_orphan(root)
         with self.assertRaisesRegex(validator.ValidationError, "从没点名 references/orphan.md"):
             validator.validate_gateway_contract_freedom(root)
+
+    def test_package_readme_is_not_treated_as_an_orphan(self):
+        """README.md 是给人看的包门面，不是 agent 按需加载的 references——SKILL.md 没理由点名它。
+
+        它照样受契约自由扫描（见 DOCUMENTS 里那一项），只是不受「必须被点名」那一条约束。
+        """
+        root = self.fixture()
+        readme = root / "skills" / validator.GATEWAY_SKILL / "README.md"
+        readme.write_text("# 门面\n谁都没点名我。\n", encoding="utf-8")
+        validator.validate_gateway_contract_freedom(root)
 
     def test_protocol_vocabulary_holds_no_capability_field_name(self):
         """反向断言：词汇表里不许混进已知的能力入参字段名。
@@ -660,11 +690,16 @@ class GatewayContractFreedomTests(unittest.TestCase):
         leaked = sorted(capability_fields & validator.GATEWAY_PROTOCOL_VOCAB)
         self.assertEqual(leaked, [], f"协议词汇表里混进了能力入参字段：{leaked}")
 
-    def test_missing_gateway_skill_fails_loudly(self):
-        directory = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, directory, True)
-        with self.assertRaisesRegex(validator.ValidationError, "网关 Skill 不见了"):
-            validator.validate_gateway_contract_freedom(Path(directory))
+    def test_missing_skill_fails_loudly(self):
+        """扫描面里任何一个包不见了都要当场炸——闸不许因为「文件没了」而静默变绿。"""
+        for name in validator.CONTRACT_FREE_SKILLS:
+            with self.subTest(missing=name):
+                root = self.fixture()
+                shutil.rmtree(root / "skills" / name)
+                with self.assertRaisesRegex(
+                    validator.ValidationError, f"选路层 Skill 不见了：skills/{name}/SKILL.md"
+                ):
+                    validator.validate_gateway_contract_freedom(root)
 
 
 if __name__ == "__main__":
