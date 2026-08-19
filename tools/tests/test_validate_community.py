@@ -304,6 +304,40 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "runtime/cache artifact found"):
                 validator.validate_artifacts(root)
 
+    def test_artifacts_scan_every_skill_not_a_named_list(self):
+        """扫描面必须从 skills/ 现算。
+
+        从前它是一张点名到具体文件的白名单，于是**任何新建的 Skill 天生就在扫描面之外**——
+        闸照常打绿，只是没看那个目录。这里用一个白名单里绝不可能出现的名字建 Skill，
+        它必须照样被扫到；这条断言挂掉就说明白名单又长回来了。
+        """
+        for name, payload, expected in (
+            ("secret", "token: " + "ghp_" + "A" * 30 + "\n", "possible secret found"),
+            ("devpath", "cwd: " + str(Path("/", "Users", "example", "private")) + "\n", "developer path found"),
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                skill = root / "skills" / "brand-new-skill-nobody-listed"
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text(payload, encoding="utf-8")
+                with self.assertRaisesRegex(validator.ValidationError, expected):
+                    validator.validate_artifacts(root)
+
+    def test_artifacts_allow_ellipsis_placeholder_paths(self):
+        """省略号占位不是泄露。
+
+        文档教用户认「本地绝对路径」这种形态时，写的是家目录后面直接跟 `...`。那一段纯由点
+        组成，不可能是真实用户名——判据本就该把它排除在外。要是靠登记豁免来放行，豁免表会
+        随文档增长，而每条豁免都是一个真泄露可以藏进去的位置。
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "skills" / "placeholder-doc-skill"
+            skill.mkdir(parents=True)
+            placeholder = "/" + "Users/.../cover.png"
+            (skill / "SKILL.md").write_text(f'本地图片（`<img src="{placeholder}">`）服务端读不到。\n', encoding="utf-8")
+            validator.validate_artifacts(root)
+
 
 class CallRouteGateTests(unittest.TestCase):
     """调用路由闸：文档/脚本里写死的每条路径都必须真的在主仓 catalog 的对应集合里。
