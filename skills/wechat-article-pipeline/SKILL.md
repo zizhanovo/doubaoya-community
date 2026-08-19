@@ -14,6 +14,10 @@ description: >-
   转公众号排版 / 推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 /
   公众号图文流水线 / wechat-article-pipeline。
 version: 1.2.0
+compatibility: >-
+  需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包。
+  存草稿这条路还需要 需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求，并且用户已在 doubaoya.com 绑定自己的公众号；
+  只做本地排版渲染 / 换主题 / 看预览时不需要密钥也不需要绑号。
 ---
 
 # 公众号图文流水线（都爆鸭）

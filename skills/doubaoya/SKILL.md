@@ -6,6 +6,11 @@ description: >-
   本鸭、DOUBAOYA_API_KEY 时使用本 Skill。它教 AI agent 用一条 DOUBAOYA_API_KEY 调用 doubaoya.com 的公开 API，
   把散乱搜索变成可直接用的选题信号和脚本。Trigger words: 爆款选题 / 选题 / 追热点 / 热点 / 全网热榜 / 写脚本 /
   开场脚本 / 短视频脚本 / 抖音 / 小红书 / 公众号 / 视频号 / 达人账号 / 违禁词 / doubaoya / 都爆鸭 / 本鸭 / DOUBAOYA_API_KEY。
+compatibility: >-
+  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。
+  发现类端点（能力清单 / 详情）免鉴权也免费，调用类端点必须带 Bearer 且计费。
+  正文里的 curl 示例只要 curl；可选的零依赖封装脚本 scripts/doubaoya.mjs 需要
+  Node ≥ 18（用全局 fetch），不装任何 npm 包。
 ---
 
 # 都爆鸭 · doubaoya

@@ -11,6 +11,10 @@ description: >-
   Trigger: customize WeChat article theme, change layout/palette/heading style, restyle 公众号 typography,
   edit and save the default theme, /wechat-theme-studio.
 version: 1.1.0
+compatibility: >-
+  需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
+  不想装 jq 也可以手写 JSON。不装任何 npm 包。
+  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。
 ---
 
 # 公众号排版主题工作室（都爆鸭）
