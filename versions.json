@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T05:01:10.394784+00:00",
+  "generatedAt": "2026-08-19T05:20:56.762855+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "celebrity-slice": "doubaoya-skill/celebrity-slice@8d462e758f28",
@@ -8,10 +8,10 @@
     "cultural-tourism-wechat-feed": "doubaoya-skill/cultural-tourism-wechat-feed@86dc1f0f16cc",
     "dby": "doubaoya-skill/dby@39e738fe2c0e",
     "dby-charter": "doubaoya-skill/dby-charter@a85067a32ed9",
-    "dby-update": "doubaoya-skill/dby-update@e88f976ec4bb",
+    "dby-update": "doubaoya-skill/dby-update@c8fc00825fa8",
     "doubao-websearch": "doubaoya-skill/doubao-websearch@36cb9bf3a044",
     "doubaoya": "doubaoya-skill/doubaoya@9db2d38ae564",
-    "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@7b241df32a12",
+    "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@1b9f82882898",
     "douyin-comment": "doubaoya-skill/douyin-comment@94cf3e281b04",
     "douyin-realtime-search": "doubaoya-skill/douyin-realtime-search@d861c99e79a8",
     "douyin-search": "doubaoya-skill/douyin-search@154c60c5923a",
