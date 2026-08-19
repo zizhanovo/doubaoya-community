@@ -428,16 +428,28 @@ class GatewayContractFreedomTests(unittest.TestCase):
     的改动，断言闸当场打红。控制组（未改动的真文件）必须绿——否则这些红只能证明闸很吵。
     """
 
-    def fixture(self, mutate=None) -> Path:
+    #: 参数被抄进来时最舒服的落点是 references/ —— 每个变异都在两处各跑一遍，钉住闸的
+    #: 扫描面是整个技能包而不只是入口文件。
+    DOCUMENTS = ("SKILL.md", "references/routing-pitfalls.md")
+
+    def fixture(self, mutate=None, target: str = "SKILL.md") -> Path:
         directory = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, directory, True)
         root = Path(directory)
         destination = root / "skills" / validator.GATEWAY_SKILL
-        destination.mkdir(parents=True)
-        source = validator.SKILLS / validator.GATEWAY_SKILL / "SKILL.md"
-        text = source.read_text(encoding="utf-8")
-        (destination / "SKILL.md").write_text(mutate(text) if mutate else text, encoding="utf-8")
+        destination.parent.mkdir(parents=True)
+        shutil.copytree(validator.SKILLS / validator.GATEWAY_SKILL, destination)
+        if mutate is not None:
+            document = destination / target
+            document.write_text(mutate(document.read_text(encoding="utf-8")), encoding="utf-8")
         return root
+
+    def assert_red(self, pattern: str, mutate) -> None:
+        """同一处变异抄进 SKILL.md 和 references/，两处都必须打红。"""
+        for target in self.DOCUMENTS:
+            with self.subTest(target=target):
+                with self.assertRaisesRegex(validator.ValidationError, pattern):
+                    validator.validate_gateway_contract_freedom(self.fixture(mutate, target))
 
     def test_unmodified_gateway_is_green(self):
         validator.validate_gateway_contract_freedom(self.fixture())
@@ -450,30 +462,42 @@ class GatewayContractFreedomTests(unittest.TestCase):
             "\n```js\nconst body = { sortType: 1 };\n```\n",          # 代码块里的 JS 属性
         ):
             with self.subTest(smuggled=smuggled.strip()):
-                with self.assertRaisesRegex(validator.ValidationError, "不属于调用协议的驼峰标识符"):
-                    validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + smuggled))
+                self.assert_red("不属于调用协议的驼峰标识符", lambda text, s=smuggled: text + s)
 
     def test_rejects_request_body_example_with_real_fields(self):
         """小写单词字段名（keyword / limit …）抄进来时必然是请求体的 JSON 键。"""
         body = '\n```json\n{ "keyword": "AI 工具", "limit": 10 }\n```\n'
-        with self.assertRaisesRegex(validator.ValidationError, r"非协议 JSON 键：\['keyword', 'limit'\]"):
-            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + body))
+        self.assert_red(r"非协议 JSON 键：\['keyword', 'limit'\]", lambda text: text + body)
 
     def test_rejects_extra_column_on_the_index_table(self):
         """给索引加一列，装的多半就是入参——三列是结构约束，不是排版偏好。"""
         row = "\n| `api.trend.hotTopics` | 全网热榜 | `/api/apis/trend/hot-topics` | 必填一个关键词 |\n"
-        with self.assertRaisesRegex(validator.ValidationError, "不是「operationKey \\| 用途 \\| 详情端点」三列"):
-            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + row))
+        self.assert_red("不是「operationKey \\| 用途 \\| 详情端点」三列", lambda text: text + row)
 
     def test_rejects_inline_code_in_the_purpose_column(self):
         row = "\n| `api.trend.hotTopics` | 全网热榜，传 `platforms` | `/api/apis/trend/hot-topics` |\n"
-        with self.assertRaisesRegex(validator.ValidationError, "用途列里有行内代码"):
-            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + row))
+        self.assert_red("用途列里有行内代码", lambda text: text + row)
 
     def test_rejects_index_row_without_a_detail_endpoint(self):
         row = "\n| `api.trend.hotTopics` | 全网热榜 | 见上游文档 |\n"
-        with self.assertRaisesRegex(validator.ValidationError, "第三列不是详情端点"):
-            validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + row))
+        self.assert_red("第三列不是详情端点", lambda text: text + row)
+
+    def test_other_tables_are_not_mistaken_for_the_index(self):
+        """首列是行内代码的表格不止索引一张；只有首列是 operationKey 的才按索引校验。"""
+        table = "\n| `references/whatever.md` | 两列，不是索引 |\n"
+        validator.validate_gateway_contract_freedom(self.fixture(lambda text: text + table))
+
+    def test_rejects_orphan_reference_document(self):
+        """SKILL.md 从不点名的 references 文件 = 没有 agent 会加载它，只会腐烂在包里。"""
+        def add_orphan(root: Path) -> None:
+            (root / "skills" / validator.GATEWAY_SKILL / "references" / "orphan.md").write_text(
+                "# 没人引用的文档\n", encoding="utf-8"
+            )
+
+        root = self.fixture()
+        add_orphan(root)
+        with self.assertRaisesRegex(validator.ValidationError, "从没点名 references/orphan.md"):
+            validator.validate_gateway_contract_freedom(root)
 
     def test_protocol_vocabulary_holds_no_capability_field_name(self):
         """反向断言：词汇表里不许混进已知的能力入参字段名。
