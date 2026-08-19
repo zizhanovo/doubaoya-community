@@ -49,7 +49,7 @@ SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 #   产品化 Skill  → POST /api/skills/<slug>/invoke          （catalog 的 skillDefinitions）
 #   平台数据能力  → POST /api/apis/<platform>/<slug>/call    （catalog 的 apiEndpointDefinitions）
 # 拿错集合的 slug 去打另一条，返回 404，且**没有任何回落**。本仓文档一度把技能包的**目录名**
-# （trending-hub / content-parse / douyin-search）当成调用 slug 写进 /api/skills/<slug>/invoke，
+# （trending-hub / content-parse / image-gen）当成调用 slug 写进 /api/skills/<slug>/invoke，
 # 于是那几条示例注定 404——而 §「404 就回去查发现接口」的指引又永远查不到它们，agent 原地死循环。
 # 本闸就是钉死这件事：文档/脚本里出现的每一条调用路径，都必须真的在主仓目录里。
 SKILL_INVOKE_PATH = re.compile(r"/api/skills/([A-Za-z0-9][A-Za-z0-9._~-]*)/invoke")

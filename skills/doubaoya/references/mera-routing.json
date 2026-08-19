@@ -70,9 +70,8 @@
       "id": "doubaoya-public-discovery",
       "priority": 80,
       "candidate_skills": [
+        "doubaoya",
         "trending-hub",
-        "xiaohongshu-search",
-        "douyin-search",
         "content-parse"
       ],
       "use_when": [

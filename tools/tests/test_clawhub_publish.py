@@ -52,26 +52,29 @@ class ClawhubManifestTests(unittest.TestCase):
 
 
 class ClawhubCommandTests(unittest.TestCase):
+    # slug 用**虚构**的 demo-skill，不用仓里真实存在的包名：build_command 只做字符串拼装、
+    # 不碰磁盘，用真名换不来任何覆盖度，却会跟着那个包一起退役
+    # （这份 fixture 原本写的是 gzh-search，两批合并之后那个包就没了）。
     MANIFEST = {
         "schema_version": 1,
         "owner": "doubaoya",
-        "skills": {"gzh-search": {"displayName": "公众号文章批量搜索", "topics": ["微信公众号", "选题"]}},
+        "skills": {"demo-skill": {"displayName": "公众号文章批量搜索", "topics": ["微信公众号", "选题"]}},
     }
 
     def test_command_carries_the_chinese_display_name(self):
-        # ClawHub 不读 SKILL.md frontmatter，displayName 只能从 --name 来；漏了就变成 "Gzh Search"。
-        command = publisher.build_command(self.MANIFEST, "gzh-search", root=Path("/repo"))
+        # ClawHub 不读 SKILL.md frontmatter，displayName 只能从 --name 来；漏了就变成 "Demo Skill"。
+        command = publisher.build_command(self.MANIFEST, "demo-skill", root=Path("/repo"))
         self.assertEqual(command[command.index("--name") + 1], "公众号文章批量搜索")
         self.assertEqual(command[command.index("--owner") + 1], "doubaoya")
-        self.assertEqual(command[command.index("--slug") + 1], "gzh-search")
+        self.assertEqual(command[command.index("--slug") + 1], "demo-skill")
         self.assertEqual(command[command.index("--topics") + 1], "微信公众号,选题")
-        self.assertEqual(command[3], str(Path("/repo") / "skills" / "gzh-search"))
+        self.assertEqual(command[3], str(Path("/repo") / "skills" / "demo-skill"))
 
     def test_dry_run_and_commit_are_opt_in(self):
-        plain = publisher.build_command(self.MANIFEST, "gzh-search")
+        plain = publisher.build_command(self.MANIFEST, "demo-skill")
         self.assertNotIn("--dry-run", plain)
         self.assertNotIn("--source-commit", plain)
-        stamped = publisher.build_command(self.MANIFEST, "gzh-search", commit="deadbeef", dry_run=True)
+        stamped = publisher.build_command(self.MANIFEST, "demo-skill", commit="deadbeef", dry_run=True)
         self.assertEqual(stamped[stamped.index("--source-commit") + 1], "deadbeef")
         self.assertEqual(stamped[-1], "--dry-run")
 

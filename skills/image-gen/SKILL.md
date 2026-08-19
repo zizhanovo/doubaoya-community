@@ -108,7 +108,7 @@ python3 "$SKILL_PATH/scripts/generate_image.py" "把背景换成赛博朋克霓�
 
 ## 进化点：和兄弟技能串起来
 
-- 用 `xiaohongshu-search` / `trending-hub` 选好选题 → 写好标题 → **接本技能出配套封面**，一条龙到能发的素材。
+- 用 `doubaoya` / `trending-hub` 选好选题 → 写好标题 → **接本技能出配套封面**，一条龙到能发的素材。
 - 要的是**真人感封面文字排版**而非纯图 → 本技能出底图，封面文字交 `wechat-cover` 类技能或人工精修。
 
 > 不强推，按用户当前在做的事自然提一句即可。
