@@ -56,7 +56,7 @@ description: 小红书文案改写能力——把任意文案改写成小红书�
 脚本从本地规则文件提取小红书 System Prompt（纯本地，不联网）：
 
 ```bash
-python scripts/rewrite.py prompt
+python3 scripts/rewrite.py prompt
 ```
 
 #### 第3步：获取改写结果
@@ -73,7 +73,7 @@ Agent 读取 `assets/platform-rules.md` 中的完整规则，严格按照小红�
 
 | 命令 | 说明 |
 |------|------|
-| `python scripts/rewrite.py prompt` | 输出小红书改写规则 prompt（本地提取，不联网） |
+| `python3 scripts/rewrite.py prompt` | 输出小红书改写规则 prompt（本地提取，不联网） |
 
 ## 使用场景
 

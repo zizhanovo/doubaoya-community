@@ -53,7 +53,7 @@
 脚本仅用于本地提取改写规则 prompt，**不发起任何网络请求、无需 API Key**：
 
 ```bash
-python scripts/rewrite.py prompt    # 输出小红书改写规则 prompt
+python3 scripts/rewrite.py prompt    # 输出小红书改写规则 prompt
 ```
 
 ### 输出示例

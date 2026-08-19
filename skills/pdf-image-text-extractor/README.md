@@ -55,7 +55,7 @@
 ### 直接运行脚本
 
 ```bash
-python scripts/pdf_text_extractor.py <pdf_file_path>
+python3 scripts/pdf_text_extractor.py <pdf_file_path>
 ```
 
 脚本返回 JSON：`success` / `text`（Markdown 文本） / `page_count` / `error`。

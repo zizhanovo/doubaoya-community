@@ -48,7 +48,7 @@ dependency:
 
 | 依赖              | 说明                 | 安装命令                      |
 | ----------------- | -------------------- | ----------------------------- |
-| `pymupdf>=1.23.0` | PDF 文字提取核心引擎 | `pip install pymupdf>=1.23.0` |
+| `pymupdf>=1.23.0` | PDF 文字提取核心引擎 | `python3 -m pip install pymupdf>=1.23.0` |
 
 > **注意**：图片文字提取功能直接使用 AI 内置的 `read_image` 工具，无需安装任何额外依赖。`pymupdf` 仅在需要提取 PDF 文字时才需安装。
 
@@ -84,7 +84,7 @@ dependency:
 2. **执行提取脚本**：
 
 ```bash
-python scripts/pdf_text_extractor.py <pdf_file_path>
+python3 scripts/pdf_text_extractor.py <pdf_file_path>
 ```
 
 3. **查看提取结果** — 脚本返回 JSON 格式结果，包含：
@@ -122,10 +122,10 @@ python scripts/pdf_text_extractor.py <pdf_file_path>
 | 场景          | 命令 / 操作                                   |
 | ------------- | --------------------------------------------- |
 | 提取图片文字  | 上传图片，直接让智能体识别                    |
-| 提取 PDF 文字 | `python scripts/pdf_text_extractor.py <路径>` |
+| 提取 PDF 文字 | `python3 scripts/pdf_text_extractor.py <路径>` |
 | 仅查看不保存  | 提取后直接输出文本即可                        |
 | 保存为文件    | 提取后要求智能体生成 `.md` 文件               |
-| 安装依赖      | `pip install pymupdf>=1.23.0`                 |
+| 安装依赖      | `python3 -m pip install pymupdf>=1.23.0`                 |
 
 ---
 
