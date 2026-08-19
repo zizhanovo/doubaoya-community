@@ -863,6 +863,164 @@ def validate_routing_skill_pointers(root: Path = ROOT) -> None:
     require(tables, "路由指针闸一个 routing 表都没扫到，扫描面八成断了")
 
 
+# ── description 预算闸 ───────────────────────────────────────────────────────
+# description 是**启动时全量常驻**的元数据，不是按需加载的正文。三档口径都是真的，
+# 而且卡的不是同一件事：
+#   1024  Agent Skills 规范上限。是**校验上限、不是截断**（超了直接报错），且参考实现的
+#         len() 作用在 Python str 上 ⇒ **汉字按 1 个字符算**。
+#   1536  宿主（Claude Code v2.1.105+）单条上限；旧版是 250，所以超 250 报黄——把
+#         「在旧宿主上会被砍」显性化，而不是等它静默发生。
+#   8000  🔴 **共享预算**（ctx 200000 × 4 × 0.01）。超了的处置是**整条 description 被
+#         静默丢掉，且牺牲品是随机的**——已有 issue 复现：给 A 包加长，没被碰过的 B 包
+#         description 消失了。
+#
+# 🔴 **这份预算的分母是「用户整机装的所有 skill」，不是本仓这 43 个。** 已实测：本机
+#    ~/.claude/skills 有 66 个包、合计 16425 字符 = 预算的 205%，而本鸭系一个都没装在
+#    那儿、贡献 0。所以本闸不是在说「我们超支了」，而是在守一件更具体的事：
+#    **我们全量装上去时，不该一家就把这份共享预算吃光**——8271 字符意味着用户只要装了
+#    我们全家桶，预算当场耗尽，他其余的 skill 和我们自己都会开始随机掉描述。
+SPEC_DESCRIPTION_LIMIT = 1024
+HOST_DESCRIPTION_LIMIT = 1536
+HOST_LEGACY_SOFT_LIMIT = 250
+SHARED_DESCRIPTION_BUDGET = 8000
+
+
+def validate_description_budget(root: Path = ROOT) -> list[str]:
+    """单条长度 + 全库合计。返回黄灯列表；硬限直接 raise。"""
+    warnings: list[str] = []
+    total = 0
+    for directory in discover_skill_dirs(root):
+        text = frontmatter_description(directory / "SKILL.md")
+        size = len(text)
+        total += size
+        require(
+            size <= SPEC_DESCRIPTION_LIMIT,
+            f"description 超出 Agent Skills 规范上限：{directory.name} 有 {size} 字符 > "
+            f"{SPEC_DESCRIPTION_LIMIT}（规范是校验上限、会直接报错，不是截断；汉字按 1 个字符算）",
+        )
+        require(
+            size <= HOST_DESCRIPTION_LIMIT,
+            f"description 超出宿主单条上限：{directory.name} 有 {size} 字符 > {HOST_DESCRIPTION_LIMIT}",
+        )
+        if size > HOST_LEGACY_SOFT_LIMIT:
+            warnings.append(f"⚠️ {directory.name} 的 description 有 {size} 字符 > {HOST_LEGACY_SOFT_LIMIT}，在旧版宿主上会被砍")
+    require(
+        total <= SHARED_DESCRIPTION_BUDGET,
+        f"🔴 全库 description 合计 {total} 字符 > 共享预算 {SHARED_DESCRIPTION_BUDGET}。"
+        "这份预算是**和用户整机其他所有 skill 共享**的，超了不是「尾巴被截断」，是"
+        "**整条 description 被静默丢掉、且牺牲品随机**。装了我们全家桶的用户会当场耗尽预算。"
+        "砍字数请从触发面窄的包下手，**别砍 doubaoya**——它是唯一真正靠 description 抢话术的包；"
+        "更别砍触发词，差集闸会拦。详见 docs/deleting-a-skill.md",
+    )
+    return warnings
+
+
+# ── 差集闸：删包不许弄丢话术 ──────────────────────────────────────────────────
+# 🔴 判据：`T_old ⊆ T_new`。T_old = 已下架包当年**显式声明**的触发词（build_known_hashes.py
+# 从 git 历史扒进 known-hashes.json，离线可跑）；T_new = 当下全仓 description 的正文。
+# 差集非空就打红并逐词点名。
+#
+# 为什么用差集、不用「每个端点至少 N 个词」：N 是任意常数，而且**会逼着我们往 description
+# 里灌「AI 内容发现」这种没人会说的填充词——而 description 正是已经稀缺的资源**。差集零常数、
+# 精确命中已经发生过的那次失败（同一条 api.xhs.cozeData 上抢回「笔记分析」一个词、漏掉五个，
+# 差集正好是那五个，「抢回一个」骗不过它），且只要求「别弄丢」，不要求「凑够数」。
+#
+# ⚠️ 边界：本闸只看**已下架**的包。改一个**存活**包的 description 时它守不住——那种情况
+#    请拿改动前的版本自己做一次差集（见 docs/deleting-a-skill.md）。
+TRIGGER_DEBT_NOTE = "docs/deleting-a-skill.md"
+
+
+def _normalize(text: str) -> str:
+    """比较前抹掉空白：「AI 视频号」与「AI视频号」是同一个词，不该因为一个空格判成丢词。"""
+    return re.sub(r"\s+", "", text)
+
+
+# 能力**本身**也一起没了的包，触发词不该迁——迁了等于承诺一个不存在的能力。
+TRIGGER_REAL_DELETION = {
+    "celebrity-slice",     # /api/apis/media/asr 生产上根本不存在，从建站起就是死壳
+    "wechat-mp-exporter",  # 本地扫码归档，vendored 第三方 + Snyk Critical，能力随包一起没
+    "mera",                # 整个平台退役（DNS NXDOMAIN、发现接口 hidden 过滤）
+}
+
+# 🔴 **历史欠账，不是豁免。** 2026-07「剪向公众号」砍掉的那批平台垂类（抖音 / B站 / TikTok /
+# 小红书榜单等）当年没走迁词流程，欠下 97 个词。本闸 2026-08-19 才建起来，不倒追——但也
+# **不许把这笔账抹掉**，逐个 slug 记在这儿，可 grep、可清点。
+# 这张表**只减不增**：新删的包天生不在表里，闸对它们当场生效。
+# 而且**会自动清账**：某个 slug 的词哪天全被覆盖了，下面的断言会反过来要求把它删掉。
+TRIGGER_WORD_DEBT = {
+    "astock-social-feed", "bilibili-keyword-accounts", "bilibili-keyword-search",
+    "bilibili-portfolio-search", "douyin-content-surge", "douyin-daily-hot",
+    "douyin-hot-trend", "douyin-rise-ranking", "douyin-subscribe", "douyin-top-account",
+    "douyin-weekly-surge", "douyin-works-crawler", "tiktok-account-search",
+    "xiaohongshu-account-analyzer", "xiaohongshu-comment", "xiaohongshu-similar-account",
+    "xiaohongshu-top-account",
+}
+
+
+def validate_trigger_word_coverage(root: Path = ROOT) -> list[str]:
+    """已下架包当年声明的触发词，必须仍能在某个存活包的 description 里找到。"""
+    known = load_json(root / "known-hashes.json")
+    require(isinstance(known, dict), "known-hashes.json 顶层不是对象")
+    retired_words = known.get("retiredTriggerWords")
+    require(
+        isinstance(retired_words, dict),
+        "known-hashes.json 缺 retiredTriggerWords：先跑 tools/build_known_hashes.py",
+    )
+
+    directories = discover_skill_dirs(root)
+    haystack = _normalize(" ".join(frontmatter_description(d / "SKILL.md") for d in directories))
+    current = {d.name for d in directories}
+    warnings: list[str] = []
+
+    # 已下架、但**从没显式声明过触发词**的包 ⇒ 报黄。闸的取材范围必须是确定的：
+    # 解析不到就说「没声明」，绝不靠中文分词猜一个出来当真值。
+    silent = sorted(set(known.get("skills", {})) - current - set(retired_words) - TRIGGER_REAL_DELETION)
+    if silent:
+        warnings.append(
+            f"⚠️ {len(silent)} 个已下架包从未显式声明触发词，本闸看不住它们：{silent[:6]}{' …' if len(silent) > 6 else ''}"
+        )
+
+    for slug in sorted(retired_words):
+        if slug in TRIGGER_REAL_DELETION:
+            continue
+        missing = [w for w in retired_words[slug] if _normalize(w) not in haystack]
+        if slug in TRIGGER_WORD_DEBT:
+            require(
+                bool(missing),
+                f"{slug} 的触发词已经全部被覆盖了，请把它从 TRIGGER_WORD_DEBT 里删掉——欠账表要自动清账",
+            )
+            warnings.append(f"⚠️ 历史欠账：{slug} 仍有 {len(missing)} 个触发词无人覆盖")
+            continue
+        require(
+            not missing,
+            f"删包/改词弄丢了话术：已下架的 {slug} 当年声明的触发词 {missing} "
+            "在现存 description 里一个都找不到。description 是 agent 选 skill 那一刻唯一在场的东西——"
+            "词没了，能力还在架也没人够得着。把词迁进意图对得上的存活包（通常是 doubaoya），"
+            "并在它正文的意图路由表里补一行完整调用路径；确属能力一起删除的，"
+            f"登记进 TRIGGER_REAL_DELETION。详见 {TRIGGER_DEBT_NOTE}",
+        )
+
+    # 健康度 lint（只报黄）：一条在架能力若全仓只有 1 个词能命中，它是单点故障。
+    # 取 1 不取更高：阈值一高就会逼着灌填充词，而那正是差集闸要避开的病。
+    index_path = root / "skills" / GATEWAY_SKILL / "references" / "capability-index.md"
+    if index_path.is_file():
+        thin = []
+        for row in INDEX_ROW.finditer(index_path.read_text(encoding="utf-8")):
+            purpose = row.group(2).strip()
+            hits = sum(
+                1 for part in re.split(r"[/、]", purpose)
+                if part.strip() and _normalize(part.strip()) in haystack
+            )
+            if hits == 1:
+                thin.append(row.group(1))
+        if thin:
+            warnings.append(
+                f"⚠️ {len(thin)} 条能力在 description 里只有 1 个词能命中（单点故障）："
+                f"{thin[:5]}{' …' if len(thin) > 5 else ''}"
+            )
+    return warnings
+
+
 def validate_retired_discoverability(root: Path = ROOT) -> None:
     """删包前必须过的闸：已下架包的能力，得在网关的能力索引里仍然找得到。
 
@@ -916,7 +1074,7 @@ def validate_retired_discoverability(root: Path = ROOT) -> None:
         )
 
 
-def validate_repository(root: Path = ROOT) -> None:
+def validate_repository(root: Path = ROOT) -> list[str]:
     validate_skill_inventory(root)
     validate_readme(root)
     validate_clawhub_manifest(root)
@@ -929,10 +1087,13 @@ def validate_repository(root: Path = ROOT) -> None:
     validate_retired_discoverability(root)
     validate_no_key_material(root)
     validate_artifacts(root)
+    return validate_description_budget(root) + validate_trigger_word_coverage(root)
 
 
 def main() -> int:
-    validate_repository()
+    warnings = validate_repository()
+    for warning in warnings:
+        print(warning, file=sys.stderr)
     print(
         f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, "
         f"ClawHub manifest, WeChat routing and the {len(AUTHORING_CHAIN)}-hop authoring chain"

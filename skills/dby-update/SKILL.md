@@ -1,15 +1,10 @@
 ---
 name: dby-update
-description: |
-  都爆鸭（doubaoya / 本鸭）skill 对账更新器。用户说「更新本鸭」「更新都爆鸭」「升级 doubaoya skill」
-  「把本鸭更新到最新版」「检查本鸭更新」或输入 /dby-update 时使用。
-  把本机这套本鸭 skill 对账成官方仓库 zizhanovo/doubaoya-community 的当前全集——
-  归档上游已下架的、装上新增的、刷新其余的，并在结束后自检能不能正常用。
-  按内容哈希认包：只碰本鸭发布过的，别人家的、以及你自己改过的都一个字不动；
-  下架的是移进归档目录而不是删除。也不动你本地的 config.json / 创作 DNA / 产出文件。
-  Reconciles the locally installed doubaoya (本鸭) skills to the upstream set: archives retired ones,
-  installs new ones, refreshes the rest, then self-checks. Use when the user asks to update or upgrade doubaoya skills.
-  Trigger: /dby-update, 更新本鸭, 更新都爆鸭, 升级 doubaoya skill, 检查本鸭更新.
+description: >-
+  都爆鸭（doubaoya / 本鸭）skill 对账更新器：把本机这套本鸭 skill 对账成官方仓库的当前全集——归档上游已下架的、
+  装上新增的、刷新其余的，最后自检。按内容哈希认包，别人家的和你自己改过的一个字不动；下架的移进归档目录而不是删除。
+  Reconciles the installed doubaoya skills to the upstream set, then self-checks.
+  触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
 version: 3.1.0
 ---
 
