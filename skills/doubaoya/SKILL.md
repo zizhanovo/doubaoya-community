@@ -341,7 +341,7 @@ GET  https://doubaoya.com/api/apis/<platform>/<slug>    → data: 单条详情
 |------|--------|------|------|
 | `slug` | ✓ | ✓ | apis 还多一个 `platform`，两个一起才定位一条 |
 | `title` / `summary` / `tags` | ✓ | ✓ | 判断该不该用 |
-| `unitPrice` | ✓ | ✓ | 本次调用要扣的点数（¥1 = 100 点） |
+| `unitPrice` | ✓ | ✓ | 本次调用要扣的点数。**以这个字段的实时值为准**，别照记忆或文档里的数字算钱——计价口径改过不止一次 |
 | 入参示例 | `inputSchema` | `requestSchema` | ⚠️ **是一份示例值，不是 JSON Schema**——照着它的键名和值的形状传 |
 | 出参示例 | `outputExample` | `responseExample` | 同上，用来对齐你要读哪些字段 |
 | `execution` | ✓ | ✓ | 🔑 **`execution.target.path` 就是这条能力的完整调用路径**（见 §2.1） |
@@ -516,7 +516,8 @@ node scripts/doubaoya.mjs selfcheck
 
 ## 8. 硬规则（务必遵守）
 
-1. **绝不回显 / 打印 / 记录整条 `DOUBAOYA_API_KEY`**——确认身份时只露前缀。
+1. **绝不回显 / 打印 / 记录 `DOUBAOYA_API_KEY` 的任何一部分**——前缀也是密钥内容，
+   要报状态只许说「已设置 / 没设置」。
 2. **只通过 `https://doubaoya.com` 的公开 `/api/...` 接口**取数；不要向用户描述、猜测或暴露任何上游数据来源 / 内部服务。对用户而言，能力来自「都爆鸭」。
 3. **先 `success` 后取数**；`false` 时按 §2.3 处理错误码，别把原始 500/502 直接糊给用户。
 4. **调用路径以发现接口返回的 `execution.target` 为准**，不要自己拼、不要硬编死清单（§2.1 / §4）。

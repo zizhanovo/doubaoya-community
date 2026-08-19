@@ -63,9 +63,11 @@ compatibility: >-
 3. **`requestSchema`** / `inputSchema` —— **示例值，不是规格**。只有前两级都没有时才拿它起手，
    并且要准备好读 `VALIDATION_ERROR` 的 `message` 逐轮修正。
 
-> ⚠️ **`inputContract` 是新字段，不是所有部署都已经在发它。** 2026-08-18 实拉
-> `https://doubaoya.com` 的详情端点，响应里还没有这个字段——服务端实现已就绪但尚未上生产。
-> 所以上面的顺序必须**按字段是否存在**判断，不能假定它一定在。
+> ✅ **`inputContract` 已上生产，就按上面的顺序优先用它。** 2026-08-19 实拉
+> `https://doubaoya.com` 的详情端点核过：详情响应里带 `inputContract`（`kind` 为 `json-schema`）。
+> 🔴 但它**只在单条详情端点上**（`GET /api/skills/<slug>`、`GET /api/apis/<platform>/<slug>`）；
+> 两份**列表**端点一条都不带（实拉 0/77），所以要按规格拼参数就必须先拉一次详情。
+> 仍然**按字段是否存在**判断——这条降为兼容兜底（老部署、私有部署可能还没有），不再是常态。
 
 ---
 
@@ -206,7 +208,7 @@ Content-Type: application/json
 
 ### 3.4 `inputContract` 长什么样
 
-服务端已实现、**尚未上生产**（见 §1 的告警）。形状是一个带 `kind` 的可辨识联合：
+已上生产，**只在单条详情端点上**（见 §1）。形状是一个带 `kind` 的可辨识联合：
 
 ```jsonc
 // kind 为 json-schema：有真规格

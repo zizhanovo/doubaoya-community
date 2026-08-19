@@ -779,6 +779,96 @@ def validate_no_key_material(root: Path = ROOT) -> None:
         )
 
 
+# ── 「教 agent 露前缀」闸 ────────────────────────────────────────────────────
+# 🔴 **不许有任何一句话教 agent 把密钥前缀说出来。** 唯一正确的表述是「只报『已设置 / 没设置』」。
+#
+# 这道闸补的是一个**渠道盲区**，不是重复既有的密钥闸：`validate_no_key_material` 扫的是
+# 「文件里有没有密钥字面量」，而这里的事故走的是另一条路——**文档里的一句指令，让 agent 在
+# 运行时把真钥匙打进日志**。仓库里一个密钥字符都没有，闸照样全绿，钥匙照样漏。
+# 网关协议原文就曾有「确认身份时只露前缀」这句，真 agent 照做，把真钥匙前 6 个字符写进了日志。
+#
+# 判据两条**同时**成立才算：
+#   1. 出现「露/说/打印/显示/回显/报/留 + 前缀（或前 N 位 / 前几个字符）」——两者必须**紧邻**；
+#   2. 同一段里提到密钥。
+# 紧邻这条是关键：正确表述「一个字符都不许回显、打印或写进日志——前缀也是密钥内容」里
+# 「打印」与「前缀」隔着七个字，判不成违规；而「只露前缀」是零间隔，当场判红。
+# 「取前 12 位十六进制」这类**取值**动词不在列——那是算哈希，不是给用户看。
+#
+# ponytail: 天花板 = 换个说法绕开这批动词（「把开头几个字告诉我」）。升级路径是语义检查，
+# 不是继续往正则里堆同义词。
+KEY_PREFIX_REVEAL = re.compile(
+    r"(?:露|说|讲|打印|显示|回显|输出|展示|报|留)[^一-鿿\n]{0,2}"
+    r"(?:前缀|前几位|前几个字符|前\s*\d+\s*(?:位|个字符|字符))"
+)
+KEY_MENTION = re.compile(r"DOUBAOYA_API_KEY|API\s*[Kk]ey|密钥|钥匙")
+
+
+def validate_no_key_prefix_instruction(root: Path = ROOT) -> None:
+    """🔴 不许有任何一句话教 agent 露密钥前缀。判据与盲区见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        if relative.parts[:1] != ("skills",):
+            continue
+        # 按空行切段：判「同段共现」，而不是同一行——那句指令和 KEY 常常分在相邻两行。
+        offset = 1
+        for block in text.split("\n\n"):
+            match = KEY_PREFIX_REVEAL.search(block)
+            if match and KEY_MENTION.search(block):
+                lineno = offset + block[: match.start()].count("\n")
+                require(
+                    False,
+                    f"教 agent 露密钥前缀：{relative.as_posix()}:{lineno} 里的 `{match.group(0)}`——"
+                    "前缀也是密钥内容。这类指令会让 agent 在运行时把真钥匙打进日志／聊天／issue，"
+                    "而仓库里一个密钥字符都没有，密钥字面量闸全绿也拦不住。"
+                    "唯一正确的表述是只报「已设置 / 没设置」。",
+                )
+            offset += block.count("\n") + 2
+
+
+# ── 价格字面量闸 ────────────────────────────────────────────────────────────
+# 🔴 **分发物里不许写死价格 / 点数。** 价格和入参一样是**会漂的服务端事实**，抄进 skill 包
+# 当天就开始腐烂。而且它比字段名更危险：字段名写错了有 `VALIDATION_ERROR` 兜底，用户当场看得见；
+# **价格写错了完全静默**——agent 照着过期数字给用户算成本、做取舍，没有任何一层会报错。
+#
+# 要么删，要么改成「实时价见详情端点的 `credits` 字段」。**允许定性不定量**：
+# 「属高价档」「比数据类贵一个量级」这种照写不误——本闸只认数字，定性说法天然放过。
+#
+# 判据只打**我方计费**，不打行业知识：
+#   · `¥` / `￥` 后面跟数字 —— 本仓里这个符号只用于我方报价，一律红；
+#   · 数字 + 元／点，且**同段**出现我方计费词（扣点 / 点数 / 计费 / credits / 充值 / 上游成本）。
+# 所以 dby-charter 里的「金融 5–8 元点击单价」、multi-rewrite 文案示例里的「10元带回家」
+# 都不受影响——那是行业知识和写作素材，不是我们的价目表。
+PRICE_YUAN_SYMBOL = re.compile(r"[¥￥]\s*\d")
+PRICE_AMOUNT = re.compile(r"\d+(?:\.\d+)?\s*(?:元|点(?![击数赞评]))")
+# 🔴 只收**不可能属于行业知识**的词。曾把「单价」「收费」也算进来，当场误伤 dby-charter 的
+#    「点击单价分行业：金融 5–8 元」——那是广告投放常识，不是我们的价目表。判据宁窄勿宽：
+#    我方定价真写死时，几乎总会同时出现「扣点 / 点数 / credits」，够用了。
+OUR_BILLING_VOCAB = re.compile(r"扣点|扣\s*\d|点数|计费|credits|充值|上游成本")
+
+
+def validate_no_price_literals(root: Path = ROOT) -> None:
+    """🔴 分发物里不许写死价格 / 点数。判据与理由见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        if relative.parts[:1] != ("skills",):
+            continue
+        offset = 1
+        for block in text.split("\n\n"):
+            match = PRICE_YUAN_SYMBOL.search(block)
+            if not match and OUR_BILLING_VOCAB.search(block):
+                match = PRICE_AMOUNT.search(block)
+            if match:
+                lineno = offset + block[: match.start()].count("\n")
+                require(
+                    False,
+                    f"写死了价格 / 点数：{relative.as_posix()}:{lineno} 里的 `{match.group(0).strip()}`——"
+                    "价格是会漂的服务端事实，抄进分发物当天就开始腐烂，"
+                    "而且**错了完全静默**（字段名错还有 VALIDATION_ERROR 兜底，价格错没有任何一层会报）："
+                    "agent 会照着过期数字替用户算成本、做取舍。"
+                    "要么删，要么改成「实时价见详情端点的 credits 字段」；"
+                    "定性不定量（如「属高价档」）是允许的。",
+                )
+            offset += block.count("\n") + 2
+
+
 # ── agent 全量扇出闸 ────────────────────────────────────────────────────────
 # 🔴 **装 skill 时不许把 agent 面开成全量。** skills CLI 里星号不是「本机装了的全部 agent」，
 # 是**注册表里全部 ~70 个 agent**；`--all` 又是 `--skill '*' --agent '*' -y` 的简写，同一个坑。
@@ -1173,6 +1263,8 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_call_routes(root)
     validate_retired_discoverability(root)
     validate_no_key_material(root)
+    validate_no_key_prefix_instruction(root)
+    validate_no_price_literals(root)
     validate_no_agent_fanout(root)
     validate_user_agent_from_version(root)
     validate_artifacts(root)
