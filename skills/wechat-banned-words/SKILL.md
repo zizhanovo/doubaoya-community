@@ -182,9 +182,9 @@ wechat-banned-words/
 | 只要知道有没有违禁词 / 只要一版能用的合规文案 | ✅ 够了，**到这里就结束** | — |
 | 还要**排版好的公众号 HTML**，或要**存进自己公众号草稿箱** | 不够 | `wechat-article-pipeline` |
 | 已有排好版的图文，只想让它进草稿箱 | 不够 | `wechat-draft-publish` |
-| 标题还没起 / 想再优化标题 | 不够 | `wechat-title` |
+| 标题还没起 / 想再优化标题 | 不够 | `doubaoya`（起标题走它路由到的 api.gzh.cozeData） |
 | 还要封面 | 不够 | `wechat-cover` |
-| 违禁词太多，整段要回炉重写 | 不够 | `wechat-rewrite` 或 `wechat-hot-write` |
+| 违禁词太多，整段要回炉重写 | 不够 | `wechat-rewrite`，或回 `doubaoya` 重新拉样本写 |
 | 说不清要到哪一步 | — | `dby`（公众号飞轮的逐跳导航） |
 
 > `wechat-article-pipeline` / `wechat-draft-publish` 会**写进用户自己的公众号后台**（只存草稿、绝不群发），

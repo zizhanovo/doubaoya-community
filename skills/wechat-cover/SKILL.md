@@ -135,8 +135,8 @@ wechat-cover/
 | 还要**一张真的封面图文件** | 不够 | `wechat-article-pipeline` 的 `scripts/gen-image.mjs`（AI 生图，扣点数；封面务必加 `--cover-guard` 防公众号裁切） |
 | 还要**排版好的公众号 HTML**，或要**存进自己公众号草稿箱** | 不够 | `wechat-article-pipeline`（封面走 `--cover` 参数传进去） |
 | 还要正文过违禁词、出过审版 | 不够 | `wechat-banned-words` |
-| 标题还没起 | 不够 | `wechat-title` |
-| 正文还没写 | 不够 | `wechat-hot-write` |
+| 标题还没起 | 不够 | `doubaoya`（起标题走它路由到的 api.gzh.cozeData） |
+| 正文还没写 | 不够 | `doubaoya`（拉同主题爆文样本再写正文，走 api.gzh.hotArticle） |
 | 说不清要到哪一步 | — | `dby`（公众号飞轮的逐跳导航） |
 
 ## 关于响应里的 notice 字段

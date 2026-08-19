@@ -243,7 +243,7 @@ top-level 五段（+ 进阶 `components`）:
 | 只要把默认排版改成自己想要的样子 | ✅ 够了，**到这里就结束**（以后每次渲染自动生效） | — |
 | 还要**用这套主题排版某篇正文、存进自己公众号草稿箱** | 不够 | `wechat-article-pipeline`（存回服务端的默认排版它会自动拉；本机主题文件用 `--theme` 指过去） |
 | 已有排好版的图文，只想让它进草稿箱 | 不够 | `wechat-draft-publish` |
-| 正文还没写 | 不够 | `wechat-hot-write` |
+| 正文还没写 | 不够 | `doubaoya`（拉同主题爆文样本再写正文，走 api.gzh.hotArticle） |
 | 正文没过违禁词 | 不够 | `wechat-banned-words` |
 | 说不清要到哪一步 | — | `dby`（公众号飞轮的逐跳导航） |
 

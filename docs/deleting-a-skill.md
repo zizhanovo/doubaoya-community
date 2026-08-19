@@ -63,9 +63,11 @@
 
 🔴 判据必须是 **N 个而不是 1 个**——见第 4 步那条教训：抢回一个词就能骗过「至少 1 个」的闸。
 
-⚠️ 这道闸当下**立不起来**，因为它会立刻打红：`gzh-search` ≡ `gongzhonghao-search`、
-`xiaohongshu-hot-notes` / `xiaohongshu-search` 存在同端点抢词。**闸绿的前提是先合并同名能力**，
-那是另一趟车。在它建起来之前，这份 checklist 就是唯一的防线——请老老实实手工走完。
+✅ **2026-08-19 更新：挡路的那批同端点抢词已经合并掉了。** 当初立不起来的原因是
+`gzh-search` ≡ `gongzhonghao-search`、`xiaohongshu-hot-notes` ≡ `xiaohongshu-search`
+这类孪生在同一个端点上互抢意图词；这两对连同 `wechat-hot-write` / `wechat-title` 一共四个壳
+已合并进 `doubaoya`，端点侧不再有两个包争同一批词。倒排闸现在有条件立了，但**还没立**——
+在它真的建起来之前，这份 checklist 仍然是唯一的防线，请老老实实手工走完。
 
 ---
 

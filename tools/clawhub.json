@@ -109,14 +109,6 @@
         "数据源"
       ]
     },
-    "gongzhonghao-search": {
-      "displayName": "公众号文章搜索",
-      "topics": [
-        "微信公众号",
-        "文章搜索",
-        "数据源"
-      ]
-    },
     "gzh-ai-feed": {
       "displayName": "AI 赛道公众号日报内容源",
       "topics": [
@@ -283,15 +275,6 @@
         "数据源"
       ]
     },
-    "wechat-hot-write": {
-      "displayName": "公众号写作助手（对标爆文成稿）",
-      "topics": [
-        "微信公众号",
-        "写作",
-        "爆款仿写",
-        "选题"
-      ]
-    },
     "wechat-rewrite": {
       "displayName": "公众号爆款文案改写",
       "topics": [
@@ -319,15 +302,6 @@
         "Markdown"
       ]
     },
-    "wechat-title": {
-      "displayName": "公众号爆款标题创作",
-      "topics": [
-        "微信公众号",
-        "标题",
-        "爆款",
-        "数据源"
-      ]
-    },
     "xiaohongshu-crawler": {
       "displayName": "小红书笔记爬取",
       "topics": [
@@ -343,15 +317,6 @@
         "小红书",
         "榜单",
         "日榜",
-        "数据源"
-      ]
-    },
-    "xiaohongshu-hot-notes": {
-      "displayName": "小红书爆款笔记发现",
-      "topics": [
-        "小红书",
-        "爆款笔记",
-        "选题",
         "数据源"
       ]
     },
