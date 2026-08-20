@@ -112,27 +112,50 @@ export function classify(name, hash, currentHashes, knownHashes) {
  *    计划仍然是「重下 43 个」，用户每跑一次都看见一大串动作，于是分不清「真有更新」和
  *    「跑了个空转」——而这正是对账器唯一要回答的问题。
  * opts.forceRefresh 恢复「全量重下」的老语义，留给「我这个包坏了想重下一遍」。
+ *
+ * 🔴 **内容是当前版 ≠ 已经就位**。同一个包要在本机每个受管安装目录里都有落位，因为宿主是
+ *    按**自己那个目录**读 skill 的（Claude Code 只读 `.claude/skills`）。包只落进
+ *    `.agents/skills` 时，它在 Claude Code 眼里根本不存在——而内容哈希照样命中当前版，
+ *    于是旧的判据把它归进「已是当前版、不动」，**重跑多少次 /dby-update 都自愈不了**。
+ *    实测踩过：`multi-banned-words`（对外主推的可安装包之一）只在 `.agents/skills`，
+ *    整场会话 Claude Code 都看不见它。
+ *    所以判据是「内容 **且** 落位」：任一受管 agent 目录缺落位 ⇒ 照样进刷新单重装一遍。
+ *    opts.expectedAgents 给的是本机受管的 agent 名单（与 targetAgents 同源，装和查必须同一批）；
+ *    不给就退回只看内容（纯函数自检里那些没有 dirs 的合成 survey 走的就是这条）。
  */
 export function planReconcile(installed, upstreamNames, opts = {}) {
   const upstream = new Set(upstreamNames);
   const archive = [];
   const keep = [];
   const untouched = [];
-  for (const { name, state } of installed) {
+  for (const item of installed) {
+    const { name, state } = item;
     if (state === "foreign" || state === "modified") untouched.push({ name, state });
     else if (!upstream.has(name)) archive.push(name);
-    else keep.push({ name, state });
+    else keep.push(item);
   }
   const present = new Set(installed.map((i) => i.name));
   const add = [...upstream].filter((n) => !present.has(n)).sort();
   // 用户动过手的，连装都不许再装一遍盖掉它
   const blocked = new Set(untouched.filter((u) => u.state === "modified").map((u) => u.name));
-  const stale = (k) => Boolean(opts.forceRefresh) || k.state !== "current";
+  // 缺落位的：只在 keep 里找。用户改过的、别人家的早就进了 untouched，缺落位也绝不许重装盖掉。
+  const wantAgents = opts.expectedAgents || [];
+  const misplaced = keep
+    .filter((k) => {
+      if (!wantAgents.length) return false;
+      const placed = new Set((k.dirs || []).map((d) => d.agent));
+      return wantAgents.some((a) => !placed.has(a));
+    })
+    .map((k) => k.name)
+    .sort();
+  const misplacedSet = new Set(misplaced);
+  const stale = (k) => Boolean(opts.forceRefresh) || k.state !== "current" || misplacedSet.has(k.name);
   return {
     archive: archive.sort(),
     add: add.filter((n) => !blocked.has(n)),
     refresh: keep.filter(stale).map((k) => k.name).sort(),
     upToDate: keep.filter((k) => !stale(k)).map((k) => k.name).sort(),
+    misplaced,
     untouched: untouched.sort((a, b) => a.name.localeCompare(b.name)),
     blocked: [...blocked].sort(),
     gitTracked: [],
@@ -539,24 +562,76 @@ function runSkills(args, cwd) {
   }
 }
 
+/**
+ * 🔴 半迁移态的提示语：归档已经落盘、拉取却挂了（实测最常撞上的是 github clone 抖动，
+ * skills CLI 每装一次都要 clone 整仓）。这时磁盘**已经被改了一半**——N 个包移进了归档目录，
+ * 要拉的那批一个没落。
+ *
+ * 只说一句「没跑完，常见原因是断网」等于把用户丢在半路：他不知道自己机器现在是什么状态，
+ * 更不敢重跑（会不会归档两遍？会不会把刚归档的又搬一次？）。所以这句必须说清三件事：
+ * **已经做了什么、磁盘现在是半变更态、重跑同一条命令即可续上且归档不会重复**。
+ *
+ * 「归档不会重复」不是安慰话，是机制：对账每一跑都以磁盘现状重算，已归档的包早就不在安装
+ * 目录里了，下一跑连扫都扫不到它们，自然不会再进归档单。
+ */
+export function partialMigrationHint(archivedCount, archiveRoots, wantCount) {
+  const done = archivedCount
+    ? `已经归档 ${archivedCount} 个（原样躺在 ${archiveRoots.join("、")}），`
+    : "";
+  return (
+    `${done}但要拉的 ${wantCount} 个一个都没落 —— 你的磁盘现在是**改了一半**的状态。\n` +
+    `   直接重跑同一条命令就能续上：对账每一跑都以磁盘现状重算，已归档的包不会再归档一遍。\n` +
+    `   要是反复卡在这一步，多半是 git clone 那条路不通（skills CLI 每装一次都要 clone 整仓），换个网络再试。`
+  );
+}
+
 // ---------------------------------------------------------------- 自检
+
+/**
+ * 「该在的都在吗」——🔴 **逐目录核，不是并集核**。
+ *
+ * 旧写法是 `new Set(dirs.flatMap(listSkillDirs))`：两个安装目录并成一个集合再判缺失，
+ * 那是「或」——任一目录里有就算就位。可宿主是按**自己那个目录**读 skill 的
+ * （Claude Code 只读 `.claude/skills`），包只落进 `.agents/skills` 时它对宿主根本不存在。
+ * 于是自检打印「都能在安装目录里找到 / 全部通过」，而用户那台机器上那个包压根用不了。
+ * 实测踩过：`multi-banned-words` 只在 `.agents/skills`，整场会话 Claude Code 都看不见它。
+ *
+ * 受管目录 = 本机**真实存在**的那些（与 targetAgents 同源）：只有一个目录的机器不该被误报成缺。
+ * 一个都不存在 = 还没装过，核通用默认那一个，让它如实报缺，而不是空转成绿。
+ */
+export function checkPlacement(scope, wantNames) {
+  const dirs = installDirs(scope);
+  const live = dirs.filter((d) => existsSync(d.path));
+  const managed = live.length ? live : dirs.filter((d) => d.agent === "universal");
+  const bad = managed
+    .map((d) => {
+      const present = new Set(listSkillDirs(d.path));
+      return { dir: d, missing: wantNames.filter((n) => !present.has(n)) };
+    })
+    .filter((x) => x.missing.length);
+  if (!bad.length) {
+    return {
+      name: "skill 已就位",
+      ok: true,
+      detail: `${wantNames.length} 个 skill 在 ${managed.length} 个安装目录里逐个目录都在场（${managed.map((d) => d.label).join("、")}）。`,
+    };
+  }
+  return {
+    name: "skill 已就位",
+    ok: false,
+    detail: bad
+      .map((x) => `${x.dir.label} 缺 ${x.missing.length} 个：${x.missing.slice(0, 8).join(", ")}${x.missing.length > 8 ? " …" : ""}`)
+      .join("；"),
+    hint:
+      `宿主是按自己那个目录读 skill 的（Claude Code 只读 .claude/skills），少一处就等于那台机器上没有。` +
+      `先确认这些目录写得进去：${bad.map((x) => x.dir.path).join("  ")}；再重跑一次对账，它会把缺落位的包补齐。`,
+  };
+}
 
 async function selfTest(scope, wantNames) {
   const checks = [];
 
-  const dirs = installDirs(scope);
-  const present = new Set(dirs.flatMap((d) => listSkillDirs(d.path)));
-  const missing = wantNames.filter((n) => !present.has(n));
-  checks.push(
-    missing.length === 0
-      ? { name: "skill 已就位", ok: true, detail: `${wantNames.length} 个 skill 都能在安装目录里找到。` }
-      : {
-          name: "skill 已就位",
-          ok: false,
-          detail: `有 ${missing.length} 个没落盘：${missing.slice(0, 8).join(", ")}${missing.length > 8 ? " …" : ""}`,
-          hint: `检查这两个目录写得进去吗：${dirs.map((d) => d.path).join("  ")}`,
-        }
-  );
+  checks.push(checkPlacement(scope, wantNames));
 
   // 🔴 只报「设没设」，**一个字符的密钥内容都不许进日志**——这份输出会被用户原样贴进
   //    issue、群里、给 agent 转述。前缀看着人畜无害，但它是密钥的一部分，没有例外。
@@ -705,8 +780,16 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     console.log(
       opts.forceRefresh
         ? `   ♻️  要刷新 ${plan.refresh.length} 个（--force-refresh：不分新旧，全部重下一遍）`
-        : `   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版）`
+        : `   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版，或者少了一处落位）`
     );
+  }
+  // 🔴 单说一句「缺落位」，否则用户看到「内容明明是最新的还要重下」只会以为工具在空转。
+  if (plan.misplaced?.length) {
+    console.log(
+      `   🩹 其中 ${plan.misplaced.length} 个内容其实已经是当前版，但**没在每个安装目录里都落位**` +
+        `（典型是只落进了 .agents/skills，而 Claude Code 只读 .claude/skills，看不见它），重装一遍补齐：`
+    );
+    for (const n of plan.misplaced) console.log(`        ⤷ ${n}`);
   }
   if (plan.upToDate?.length) {
     console.log(`   ✅ 已经是当前版的 ${plan.upToDate.length} 个，不动（真想全部重下一遍：加 --force-refresh）`);
@@ -756,7 +839,11 @@ async function main() {
   const report = [];
   for (const scope of scopes) {
     const survey = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
-    const draft = planReconcile(survey, upstream.names, { forceRefresh: opts.forceRefresh });
+    // expectedAgents 与执行时的 targetAgents 同一批：判「缺不缺落位」的尺子，必须就是装的那把尺子。
+    const draft = planReconcile(survey, upstream.names, {
+      forceRefresh: opts.forceRefresh,
+      expectedAgents: targetAgents(scope),
+    });
     // 🔴 归档之前先问 git：受跟踪的包一律摘出来不动（详见 splitGitTracked）。
     //    只对归档候选跑 git，不是对全部已装包——一次对账最多几十次探测，可忽略。
     const plan = splitGitTracked(draft, findGitTracked(draft.archive, survey));
@@ -806,7 +893,7 @@ async function main() {
     if (plan.archive.length) {
       say(`\n归档 ${plan.archive.length} 个上游已下架的 skill（移走，不删）…`);
       const res = archivePackages(scope, plan.archive, survey);
-      archived.push({ scope: scope.label, ...res });
+      archived.push({ scope: scope.label, packages: plan.archive.length, ...res });
       say(`   已移到 ${res.root}`);
       // 目录已经移走，这一步只是让 skills CLI 把自己的安装记录也清掉。
       // 不传 -a：remove 省略 -a 时打到全部 agent；别照 --help 写 -a '*'，remove 不认星号。
@@ -819,7 +906,19 @@ async function main() {
       say(`\n拉取上游 ${want.length} 个 skill…`);
       const agentsToo = targetAgents(scope);
       say(`   装给：${agentsToo.join(", ")}`);
-      runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
+      try {
+        runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
+      } catch (err) {
+        // 🔴 归档已经落盘、拉取挂了 ⇒ 半迁移态。把「你现在在哪、怎么续上」换掉那句泛泛的断网提示。
+        if (err instanceof Friendly) {
+          err.hint = partialMigrationHint(
+            archived.reduce((n, a) => n + (a?.packages || 0), 0),
+            archived.map((a) => a?.root).filter(Boolean),
+            want.length
+          );
+        }
+        throw err;
+      }
     }
   }
 
@@ -894,6 +993,18 @@ async function main() {
     console.log(`   ${restoreCommand(a.root)}\n`);
     console.log(`   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，`);
     console.log(`   想让 \`npx skills list\` 也认回来，再跑一次：npx -y skills add ${REPO} -s <包名>`);
+  }
+  // skills CLI 会把「这次装了哪些包、哪个版本」记进项目里的 skills-lock.json，那是**受 git 跟踪**的
+  // 文件（不像 .doubaoya 自带忽略），所以对账跑完 git status 会多出一行。不说清，用户会以为
+  // 工具偷偷弄脏了他的工作区。
+  if (totalChanges > 0) {
+    for (const { scope } of report) {
+      if (scope.kind !== "project" || !scope.dir) continue;
+      const lock = join(scope.dir, "skills-lock.json");
+      if (!existsSync(lock)) continue;
+      console.log(`\n📝 ${lock} 会被 skills CLI 一起更新（记的是这次装了哪些包、哪个版本）。`);
+      console.log(`   这是**预期内**的改动，不是污染；它受 git 跟踪，会出现在 git status 里，照常提交即可。`);
+    }
   }
   console.log(
     allOk
@@ -1293,6 +1404,158 @@ function refreshScopeCheck() {
   return fails;
 }
 
+/**
+ * 🔴 落位 · 计划层：「内容是当前版」不等于「已经就位」。
+ *
+ * 这条钉的是一个**永不自愈**的形态：包只落进 `.agents/skills`，内容哈希照样命中当前版，
+ * 旧判据把它归进「已是当前版、不动」——于是 Claude Code 永远看不见它，用户重跑多少次
+ * /dby-update 都补不上。实测受害者是对外主推的 `multi-banned-words`。
+ * 所以判据必须是「内容 **且** 落位」：任一受管 agent 目录缺落位就得重装。
+ *
+ * 另一头同样得钉死：两处都在时必须**零动作**——补落位不许退化成又一个「每跑一次全量重下」；
+ * 本机只有一个安装目录时不许误报成缺；用户改过的包缺落位也绝不许被重装盖掉（那条红线在上面）。
+ */
+function placementPlanCheck() {
+  const fails = [];
+  const eq = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`落位·计划 · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  };
+  const claude = { label: ".claude/skills", path: "/nowhere/.claude/skills", agent: "claude-code" };
+  const universal = { label: ".agents/skills", path: "/nowhere/.agents/skills", agent: "universal" };
+  const both = ["claude-code", "universal"];
+
+  // 缺陷现场：内容是当前版，但只落进了 .agents/skills
+  const half = planReconcile([{ name: "dby", state: "current", dirs: [universal] }], ["dby"], { expectedAgents: both });
+  eq("🔴 缺一处落位的包没进刷新单（老用户重跑多少次都自愈不了）", half.refresh, ["dby"]);
+  eq("🔴 缺一处落位的包被算成了「已是当前版、不动」", half.upToDate, []);
+  eq("缺落位的要单列出来，好在计划里说清原因", half.misplaced, ["dby"]);
+
+  // 反面：两处都在 = 真就位 ⇒ 零动作
+  const full = planReconcile([{ name: "dby", state: "current", dirs: [claude, universal] }], ["dby"], { expectedAgents: both });
+  eq("🔴 两处都在还要刷新（补落位退化成了全量重下）", [full.refresh, full.misplaced], [[], []]);
+  eq("两处都在该记进「已是当前版」", full.upToDate, ["dby"]);
+
+  // 本机只有一个受管安装目录：落在那一个就算齐
+  const one = planReconcile([{ name: "dby", state: "current", dirs: [universal] }], ["dby"], { expectedAgents: ["universal"] });
+  eq("只有一个安装目录的机器不该被误报成缺落位", [one.refresh, one.misplaced], [[], []]);
+
+  // 🔴 用户动过手的包，缺落位也不许重装——刷新会盖掉他的改动
+  const touched = planReconcile([{ name: "mine", state: "modified", dirs: [universal] }], ["mine"], { expectedAgents: both });
+  eq("🔴 改过的包缺落位也绝不许被重装盖掉", [touched.refresh, touched.add, touched.misplaced], [[], [], []]);
+
+  // 用户只看得见文案：计划里得说清「为什么内容最新还要重下」
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => lines.push(args.join(" "));
+  try {
+    printPlan({ label: "自检 scope" }, [], { ...half, gitTracked: [], gitUnknown: [] }, {}, 0);
+  } finally {
+    console.log = original;
+  }
+  const said = lines.filter((l) => l.includes("落位"));
+  if (!said.length) fails.push("落位·计划 · 计划里没解释「内容已是当前版为什么还要重下」，用户只会以为工具在空转");
+  else if (!lines.some((l) => l.includes("⤷ dby"))) fails.push(`落位·计划 · 缺落位的包名没列出来：${JSON.stringify(lines)}`);
+
+  return fails;
+}
+
+/**
+ * 🔴 落位 · 自检层：`checkPlacement` 必须**逐目录**核，不是并集核。
+ *
+ * 旧写法把两个安装目录 flatMap 成一个集合再判缺失，那是「或」——任一目录有就算过。
+ * 造真目录来钉：`only-agents` 只在 `.agents/skills` 里，`.claude/skills` 存在但没有它。
+ * 并集逻辑下这条全绿（缺陷现场），逐目录逻辑必须红，而且要指名**哪个目录缺哪个包**。
+ */
+function placementSelfTestCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-placement-selfcheck-"));
+  try {
+    const scope = { kind: "project", dir: root, label: "自检 scope" };
+    const claudeDir = join(root, ".claude", "skills");
+    const agentsDir = join(root, ".agents", "skills");
+    for (const p of [join(claudeDir, "here"), join(agentsDir, "here"), join(agentsDir, "only-agents")]) {
+      mkdirSync(p, { recursive: true });
+    }
+
+    const both = checkPlacement(scope, ["here"]);
+    if (!both.ok) fails.push(`落位·自检 · 两处都在却报缺：${both.detail}`);
+
+    const missing = checkPlacement(scope, ["here", "only-agents"]);
+    if (missing.ok) {
+      fails.push("🔴 落位·自检 · 逐目录核退化成了并集核：包只在 .agents/skills，Claude Code 根本看不见，却报「全部通过」");
+    } else if (!missing.detail.includes(".claude/skills") || !missing.detail.includes("only-agents")) {
+      fails.push(`落位·自检 · 没说清是哪个目录缺哪个包：${missing.detail}`);
+    }
+
+    // 反向也要报：只在 .claude 里的包，.agents 那侧同样是缺
+    mkdirSync(join(claudeDir, "only-claude"), { recursive: true });
+    const reverse = checkPlacement(scope, ["only-claude"]);
+    if (reverse.ok || !reverse.detail.includes(".agents/skills")) {
+      fails.push(`落位·自检 · 只落进 .claude/skills 的包没在 .agents/skills 那侧报缺：ok=${reverse.ok} detail=${reverse.detail}`);
+    }
+
+    // 只有一个安装目录的机器不许被误报
+    const solo = mkdtempSync(join(tmpdir(), "dby-placement-solo-"));
+    try {
+      mkdirSync(join(solo, ".agents", "skills", "here"), { recursive: true });
+      const only = checkPlacement({ kind: "project", dir: solo }, ["here"]);
+      if (!only.ok) fails.push(`落位·自检 · 只有一个安装目录的机器被误报成缺：${only.detail}`);
+    } finally {
+      rmSync(solo, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 半迁移态的提示语。造法不 mock 我们自己的代码：PATH 上放一个「remove 成功、add 必挂」的
+ * 假 npx，于是归档**真的落盘**、拉取**真的失败**——正是网络抖动那一跑的现场（实测 5 次里中过 1 次）。
+ * 判据是那句话得说清三件事：已经归档了几个、磁盘是半变更态、重跑即可续上且归档不会重复。
+ */
+function partialMigrationCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-partial-selfcheck-"));
+  const bin = mkdtempSync(join(tmpdir(), "dby-partial-npx-"));
+  try {
+    writeFileSync(
+      join(bin, "npx"),
+      `#!/bin/sh\ncase " $* " in *" add "*) echo "fatal: unable to access github.com" >&2; exit 1;; esac\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    const pkg = join(root, ".claude", "skills", "retired-skill");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "SKILL.md"), "---\nname: retired-skill\n---\n");
+    const retired = computeSkillHash(pkg);
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "keep-skill": "doubaoya-skill/keep-skill@aaaaaaaaaaaa" } }));
+    writeFileSync(
+      join(root, "known-hashes.json"),
+      JSON.stringify({ skills: { "keep-skill": ["aaaaaaaaaaaa"], "retired-skill": [retired] } })
+    );
+
+    const res = spawnSync(
+      process.execPath,
+      [new URL(import.meta.url).pathname, "--yes", "--scope", "project", "--project-dir", root],
+      { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` } }
+    );
+    const out = `${res.stdout || ""}\n${res.stderr || ""}`;
+    const tail = () => JSON.stringify(out.slice(-500));
+    // 先确认这条自检**真踩在**半迁移态上，否则下面三条断言等于在空气里跑
+    if (existsSync(pkg)) fails.push(`半迁移 fixture 前提不成立：归档那一步没执行 ${tail()}`);
+    if (res.status === 0) fails.push(`半迁移 fixture 前提不成立：拉取那一步没失败（退出码 ${res.status}）`);
+    if (!/已经归档 1 个/.test(out)) fails.push(`🔴 半迁移提示没说「已经归档了几个」，用户不知道自己机器现在什么状态：${tail()}`);
+    if (!/改了一半/.test(out)) fails.push(`🔴 半迁移提示没说磁盘已经是半变更态：${tail()}`);
+    if (!/重跑同一条命令/.test(out) || !/不会再归档一遍/.test(out)) {
+      fails.push(`🔴 半迁移提示没说「重跑即可续上、归档不会重复」，用户不敢重跑：${tail()}`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
 function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
@@ -1349,7 +1612,7 @@ function runSelfCheck() {
 
   // 全新安装：全是新增，没有归档
   eq("全新安装", planReconcile([], ["a", "b"]), {
-    archive: [], add: ["a", "b"], refresh: [], upToDate: [], untouched: [], blocked: [], gitTracked: [], gitUnknown: [],
+    archive: [], add: ["a", "b"], refresh: [], upToDate: [], misplaced: [], untouched: [], blocked: [], gitTracked: [], gitUnknown: [],
   });
 
   // 🔴 受 git 跟踪的从归档单里摘出来，单列一栏；git 判不出来的另起一栏（原因不同、处置不同）
@@ -1367,9 +1630,12 @@ function runSelfCheck() {
   fails.push(...targetAgentsCheck());
   fails.push(...strayEveDirCheck());
   fails.push(...printPlanColumnsCheck());
+  fails.push(...placementPlanCheck());
+  fails.push(...placementSelfTestCheck());
   fails.push(...gitTrackedFixtureCheck());
   fails.push(...gitProbeFailureCheck());
   fails.push(...refreshScopeCheck());
+  fails.push(...partialMigrationCheck());
   fails.push(...jsonPurityCheck());
 
   if (fails.length) {
@@ -1380,6 +1646,8 @@ function runSelfCheck() {
     "selfcheck ok: classify / planReconcile / splitGitTracked（含真 git 仓实证：受跟踪的包不被归档、"
       + "受跟踪与判不出两栏的文案真能分辨、" +
       "git 探测失败时 fail-closed、归档根自忽略、复原命令真能复原、收敛态零动作且 --force-refresh 能全量重下、" +
+      "缺一处落位的包照样进刷新单（内容是当前版也算不上就位）且自检逐目录核不是并集核、" +
+      "归档已做而拉取挂掉时提示语说清「归档了几个 / 磁盘半变更 / 重跑续上且不重复」、" +
       "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse、" +
       "装的 agent 面收窄到本机真有的安装目录且与查的目录同源（不出现星号）、" +
       "agent/skills 存量副本只点名不代删）"
