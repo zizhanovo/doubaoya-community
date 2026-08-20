@@ -93,3 +93,31 @@ class RetiredDiscoverabilityTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RenamedIsNotRetiredTests(unittest.TestCase):
+    """改名 ≠ 下架：renames.json 里 to 仍在架的旧 slug，不按下架口径查端点。"""
+
+    def _with_rename(self, root: Path, *, to: str, live: bool):
+        (root / "renames.json").write_text(
+            json.dumps({"schema_version": 1, "renames": {"old-pkg": {"to": to, "userFiles": []}}}),
+            encoding="utf-8",
+        )
+        if live:
+            (root / "skills" / to).mkdir(parents=True, exist_ok=True)
+            (root / "skills" / to / "SKILL.md").write_text(f"---\nname: {to}\ndescription: x\n---\n", encoding="utf-8")
+
+    def test_renamed_slug_with_live_successor_is_skipped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = build_root(directory, retired={"old-pkg": ["/api/skills/search"]}, index_endpoints=["/api/apis/x/y"])
+            self._with_rename(root, to="dby-new", live=True)
+            with exempt():
+                validator.validate_retired_discoverability(root)
+
+    def test_renamed_slug_whose_successor_is_gone_is_still_checked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = build_root(directory, retired={"old-pkg": ["/api/skills/search"]}, index_endpoints=["/api/apis/x/y"])
+            self._with_rename(root, to="dby-new", live=False)
+            with exempt(), self.assertRaises(validator.ValidationError):
+                validator.validate_retired_discoverability(root)
+

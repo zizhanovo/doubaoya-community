@@ -1518,6 +1518,11 @@ TRIGGER_REAL_DELETION = {
     # 2026-08-20 迁出本分发的两个纯本地工具。它们与新媒体正交，本仓没有任何东西接手，
     # 所以「PDF提取」「技能优化」这类词**不迁**——迁进 dby-api 等于承诺一个我们不做的能力。
     "pdf-image-text-extractor",  # PDF/图片 OCR，与新媒体运营正交，零跨包引用，最干净的一刀
+    # 2026-08-20 unify-dby-naming：定位收敛到「公众号执行外脑」，情报 / 竞品 / 舆情调查在域外，
+    # 本仓没有任何包接手这条能力，词不迁（迁了等于承诺一个不存在的能力）。**知情取舍**：
+    # 反事实实验记录删掉它后「查公司底细」类话术 6 次里 4 次答不上、2 次幻觉编造包名——
+    # 代价已知并接受，README「2026-08 改名说明」给了从归档复原的命令。见 docs/deleting-a-skill.md 例外段。
+    "ai-intelligence-investigator",
     # 面向 skill 作者而非新媒体用户；且它的 references/standard-format.md 白纸黑字写着
     # 「超过 1024 字符**将被截断**」——与本仓实证的结论（是校验拒绝 / 整条丢弃，**不是截断**）
     # 正相反。在一个把这条限额当核心纪律的仓里分发一份说反了的教材，是独立于本轮压缩的删除理由。
@@ -1566,10 +1571,16 @@ def validate_trigger_word_coverage(root: Path = ROOT) -> list[str]:
             f"⚠️ {len(silent)} 个已下架包从未显式声明触发词，本闸看不住它们：{silent[:6]}{' …' if len(silent) > 6 else ''}"
         )
 
+    # 改名包当年的 description 里会写自己的名字 / 斜杠命令（`wechat-theme-studio`、`/wechat-theme-studio`）。
+    # 改名后这个词面天然消失，但它不是用户话术、也没有宿主还认旧斜杠命令——不算丢词。
+    # 只豁免「自指」这一个词，其余触发词照查：改名不是丢词的许可证。
+    renamed = renamed_slugs_with_live_successor(root)
+
     for slug in sorted(retired_words):
         if slug in TRIGGER_REAL_DELETION:
             continue
-        missing = [w for w in retired_words[slug] if _normalize(w) not in haystack]
+        self_refs = {_normalize(slug), _normalize("/" + slug)} if slug in renamed else set()
+        missing = [w for w in retired_words[slug] if _normalize(w) not in haystack and _normalize(w) not in self_refs]
         if slug in TRIGGER_WORD_DEBT:
             require(
                 bool(missing),
@@ -1607,6 +1618,23 @@ def validate_trigger_word_coverage(root: Path = ROOT) -> list[str]:
     return warnings
 
 
+def renamed_slugs_with_live_successor(root: Path = ROOT) -> set[str]:
+    """renames.json 里「to 仍是在架目录」的旧 slug。没有表、表不合法时返回空集——
+    形状问题由 validate_renames_table 报，这里只回答"谁是改名而非下架"。"""
+    path = root / "renames.json"
+    if not path.is_file():
+        return set()
+    try:
+        table = load_json(path)
+    except Exception:  # noqa: BLE001 — 形状问题归 validate_renames_table 管
+        return set()
+    renames = table.get("renames") if isinstance(table, dict) else None
+    if not isinstance(renames, dict):
+        return set()
+    live = {d.name for d in discover_skill_dirs(root)} if (root / "skills").is_dir() else set()
+    return {old for old, entry in renames.items() if isinstance(entry, dict) and entry.get("to") in live}
+
+
 def validate_retired_discoverability(root: Path = ROOT) -> None:
     """删包前必须过的闸：已下架包的能力，得在网关的能力索引里仍然找得到。
 
@@ -1639,7 +1667,15 @@ def validate_retired_discoverability(root: Path = ROOT) -> None:
         "请删掉——豁免表不该留孤儿",
     )
 
+    # 🔴 改名 ≠ 下架。renames.json 里的旧 slug 只是换了家，能力原样活在 `to` 那个包里，
+    #    它当年打的端点不必非得出现在能力索引——索引只登记 api 能力，而 doubaoya→dby-api
+    #    当年打的 /api/skills/search、/api/skills/recommend 是发现端点，本就不在索引里。
+    #    只有「to 仍在架」的改名才算数；to 也没了的，回到下架口径照常查。
+    renamed = renamed_slugs_with_live_successor(root)
+
     for slug in sorted(retired_endpoints):
+        if slug in renamed:
+            continue
         endpoints = retired_endpoints[slug]
         missing = [e for e in endpoints if e not in index_text]
         if slug in RETIRED_WITH_CAPABILITY:

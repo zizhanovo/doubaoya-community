@@ -234,6 +234,28 @@ class CommunityValidatorTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+    def test_trigger_gate_forgives_only_the_self_reference_of_a_renamed_slug(self):
+        """改名包旧 description 里的自指（旧名 / 旧斜杠命令）不算丢词；其余触发词照查。"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"dby-theme": "改公众号排版主题"}, {"wechat-theme-studio": ["wechat-theme-studio", "/wechat-theme-studio", "改公众号排版主题"]})
+            (root / "renames.json").write_text(
+                json.dumps({"schema_version": 1, "renames": {"wechat-theme-studio": {"to": "dby-theme", "userFiles": []}}}),
+                encoding="utf-8",
+            )
+            validator.validate_trigger_word_coverage(root)
+
+    def test_trigger_gate_still_rejects_a_renamed_slug_that_dropped_a_real_word(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"dby-theme": "改公众号排版主题"}, {"wechat-theme-studio": ["wechat-theme-studio", "换公众号配色"]})
+            (root / "renames.json").write_text(
+                json.dumps({"schema_version": 1, "renames": {"wechat-theme-studio": {"to": "dby-theme", "userFiles": []}}}),
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "换公众号配色"):
+                validator.validate_trigger_word_coverage(root)
+
     def test_trigger_gate_rejects_rescuing_one_word_and_dropping_the_rest(self):
         # 🔴 这是它唯一要防的形状：同一条能力上抢回一个词、漏掉其余几个。
         # 「全删」那种一眼可见的失败不是重点，「补了一点点所以看着像做过了」才是。
