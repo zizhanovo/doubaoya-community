@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-08-20T08:50:28.456865+00:00",
+  "generatedAt": "2026-08-20T09:11:47.045707+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "dby": "doubaoya-skill/dby@a4d72b56310c",
     "dby-charter": "doubaoya-skill/dby-charter@c3738aab09a9",
     "dby-update": "doubaoya-skill/dby-update@ceb277b7b3a2",
-    "doubaoya": "doubaoya-skill/doubaoya@ee5264c76066",
+    "doubaoya": "doubaoya-skill/doubaoya@711a03d2a65d",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@263cd71d3e9d",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
-    "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@b4ae491095d9",
-    "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@3490716a0562",
+    "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@3ca5a1ac9b04",
+    "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@8d6fed59d83c",
     "wechat-rewrite": "doubaoya-skill/wechat-rewrite@c1b4cca81823",
-    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@bfbad690f6e0"
+    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@6a1a737f0ea6"
   }
 }

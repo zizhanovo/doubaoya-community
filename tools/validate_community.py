@@ -945,6 +945,139 @@ PRICE_AMOUNT = re.compile(r"\d+(?:\.\d+)?\s*(?:元|点(?![击数赞评]))")
 OUR_BILLING_VOCAB = re.compile(r"扣点|扣\s*\d|点数|计费|credits|充值|上游成本")
 
 
+# ── 入口守卫闸（软链静默空跑）──────────────────────────────────────────────────
+# 🔴 **判「本文件是不是被直接执行」时，两边必须先 `realpathSync` 落到真路径再比。**
+#
+# `import.meta.url` 是 ESM loader **解过软链**的真路径，`process.argv[1]` 原样保留调用时给的
+# 那条路径。而软链正是 skills CLI 装出来的常态形态（`.claude/skills/<n>` → `.agents/skills/<n>`），
+# 于是「拿字面串比」的守卫在**绝对软链路径**调用下两串不等 ⇒ `main()` 一步都不进、退出码 0、
+# stdout 零字节。失败形态不是报错，是**什么都没发生**——用户和 agent 都看不出哪里错了。
+# 2026-08-20 实测：全仓 14 处同族守卫，13 处真炸（只有 account-verify 那处因为额外做了 realpath 侥幸活着）。
+#
+# 三种坏写法都中招，**包括看着像已经修对的那种**：
+#   ❌ ``import.meta.url === `file://${argv[1]}` ``           编码错 + 软链错
+#   ❌ ``path.resolve(argv[1]) === path.resolve(new URL(import.meta.url).pathname)``  同上
+#   ❌ ``import.meta.url === pathToFileURL(argv[1] || "").href``  编码对了，**软链照样错**
+# `pathToFileURL` 只治编码、不解软链——所以本闸认的不是它，是 `realpath`。
+#
+# 判据：在**代码行**（注释先剥掉）里，凡 `import.meta.url` 所在行的前后 8 个代码行内出现
+# `process.argv[1]`，就判定这是一处入口守卫比较，同一窗口内必须出现 `realpathSync` / `realpath(`。
+# 只扫代码行是有意的：这些文件的注释里逐字写着坏写法当反面教材（本仓 reconcile.mjs 就有），
+# 连注释一起扫会把「写下来警示后人」变成红。
+#
+# ponytail: 天花板 = 窗口是行距启发式，把守卫拆得特别散（相隔 8 个代码行以上）能绕过；
+# 而且它只认 realpath 这个名字，自己手写一个解软链函数它看不见。升级路径是接真 AST 解析
+# （tree-sitter / eslint 规则），而不是把窗口越开越大。真正的兜底在 tools/tests 那条动态测试：
+# 它**真起进程**经软链调用每个入口脚本，比对输出逐字一致——形态怎么变都逃不掉。
+ENTRY_GUARD_WINDOW = 8
+JS_LINE_COMMENT = re.compile(r"^\s*(?://|/\*|\*)")
+
+
+def code_lines_of(text: str) -> list[tuple[int, str]]:
+    """剥掉整行注释与块注释，返回 ``[(1 基行号, 正文)]``。行粒度足够——判据只看 token 在不在。"""
+    out: list[tuple[int, str]] = []
+    in_block = False
+    for lineno, line in enumerate(text.split("\n"), start=1):
+        stripped = line.strip()
+        if in_block:
+            if "*/" in stripped:
+                in_block = False
+            continue
+        if stripped.startswith("/*") and "*/" not in stripped:
+            in_block = True
+            continue
+        if JS_LINE_COMMENT.match(line):
+            continue
+        out.append((lineno, line))
+    return out
+
+
+def validate_entry_guards_resolve_symlinks(root: Path = ROOT) -> None:
+    """🔴 入口守卫必须两边先解软链再比，否则经软链调用时整个脚本静默空跑。判据见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        if relative.suffix != ".mjs":
+            continue
+        lines = code_lines_of(text)
+        for index, (lineno, line) in enumerate(lines):
+            if "import.meta.url" not in line:
+                continue
+            lo = max(0, index - ENTRY_GUARD_WINDOW)
+            hi = min(len(lines), index + ENTRY_GUARD_WINDOW + 1)
+            window = "\n".join(body for _, body in lines[lo:hi])
+            if "process.argv[1]" not in window:
+                continue  # `import.meta.url` 另有他用（__dirname 之类），不是入口守卫
+            require(
+                "realpathSync" in window or "realpath(" in window,
+                f"{display_path(root / relative)}:{lineno} 的入口守卫拿 process.argv[1] 直接比 "
+                "import.meta.url 派生的路径，两边都没先解软链。"
+                "后果不是报错而是**静默空跑**：经 .claude/skills/<n> 这条软链用绝对路径调用时，"
+                "main() 一步都不进、退出码 0、stdout 零字节。"
+                "改法照 skills/dby-update/scripts/reconcile.mjs 的 isMainModule()："
+                "两边先 realpathSync 再 pathToFileURL 比，解不开时别静默、吭一声。"
+                "（只把 `file://${argv[1]}` 换成 pathToFileURL 不算修好——那只治编码，不解软链。）",
+            )
+
+
+# ── 运行时声明一致性闸 ────────────────────────────────────────────────────────
+# 🔴 **包里有什么解释器的脚本，`compatibility` 就必须声明那个运行时。**
+#
+# 判据是**文件系统事实**，不是措辞，所以不存在误报空间：`scripts/*.py` 存在 → 必须提 Python；
+# `scripts/*.{mjs,cjs,js}` 存在 → 必须提 Node。
+#
+# 为什么值得有：2026-08-20 全仓实测，7 个带脚本的包里 **4 个有实质缺口**——
+# `multi-banned-words` / `wechat-rewrite` 各带一个 .py 而 compatibility 整个字段都不存在，
+# `dby-update` 带 .mjs 同样没有，`wechat-draft-publish` 两种脚本都有却只声明了 Node。
+# 用户机器上没装 python3 时，这些包是**运行时才炸**，而包里一个字都没提前说。
+#
+# 为什么不抄外部包的 `meta.json`（`required_binaries`）：那是个**没人自动读**的旁路文件
+# （ima 得在 SKILL.md 里专门写一句「Runtime dependencies: Check meta.json」才有人看，
+# 与 llms.txt 同属弱载体），而且它只是写下来，没有任何东西对账「写的和实际用的是不是一回事」。
+# `compatibility` 在 frontmatter 里、skill 一加载就在场，再配这道闸，比那个 JSON 强一档。
+#
+# ponytail: 天花板 = 只认解释器脚本，不认 `SKILL.md` 正文里直接写的 `python3 -c` 内联调用。
+# 升级路径 = 把正文里的裸解释器调用也纳入扫描面，而不是继续放宽这里的判据。
+RUNTIME_BY_SUFFIX = {
+    ".py": ("Python", re.compile(r"[Pp]ython")),
+    ".mjs": ("Node", re.compile(r"[Nn]ode")),
+    ".cjs": ("Node", re.compile(r"[Nn]ode")),
+    ".js": ("Node", re.compile(r"[Nn]ode")),
+}
+
+
+def validate_runtime_declaration(root: Path = ROOT) -> None:
+    """🔴 有 .py 就必须声明 Python，有 .mjs/.cjs/.js 就必须声明 Node。判据见上面那段注释。"""
+    for skill_dir in discover_skill_dirs(root):
+        scripts = skill_dir / "scripts"
+        if not scripts.is_dir():
+            continue
+        needed: dict[str, re.Pattern[str]] = {}
+        for entry in sorted(scripts.iterdir()):
+            hit = RUNTIME_BY_SUFFIX.get(entry.suffix)
+            if entry.is_file() and hit:
+                needed[hit[0]] = hit[1]
+        if not needed:
+            continue
+        declared = frontmatter_compatibility(skill_dir / "SKILL.md")
+        for runtime, pattern in sorted(needed.items()):
+            require(
+                bool(pattern.search(declared)),
+                f"{display_path(skill_dir)} 的 scripts/ 里有 {runtime} 脚本，"
+                f"但 frontmatter 的 compatibility 没有声明 {runtime}。"
+                "用户机器上缺这个运行时时，这个包是运行时才炸，包里却一个字都没提前说。",
+            )
+
+
+def frontmatter_compatibility(path: Path) -> str:
+    """取 frontmatter 的 compatibility 原文；没有该字段时返回空串（交给调用方判红）。"""
+    text = path.read_text(encoding="utf-8")
+    try:
+        block = text.split("---\n", 2)[1]
+    except IndexError as exc:
+        raise ValidationError(f"unclosed frontmatter: {display_path(path)}") from exc
+    match = re.search(r"^compatibility:\s*(.*(?:\n(?:[ \t]+.*|\s*))*)", block, re.M)
+    return match.group(1) if match else ""
+
+
 def validate_no_price_literals(root: Path = ROOT) -> None:
     """🔴 分发物里不许写死价格 / 点数。判据与理由见上面那段注释。"""
     for relative, text in scanned_text_files(root):
@@ -1427,6 +1560,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_retired_discoverability(root)
     validate_no_key_material(root)
     validate_no_key_prefix_instruction(root)
+    validate_entry_guards_resolve_symlinks(root)
     validate_no_price_literals(root)
     validate_no_agent_fanout(root)
     validate_user_agent_from_version(root)
