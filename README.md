@@ -55,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 14 个）
+## 技能清单（共 13 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -79,8 +79,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **wechat-rewrite** 🖥 | 多平台文案改写：公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎，一稿多发 |
-| **ip-profile** | 建 / 更新公众号「创作 DNA」（人设 / 赛道 / 文风蒸馏），生成文章时全程读它 |
-| **dby-charter** | 定位教练：L0 三问 / L1 十五问 / 老号反推出结构化「号章程」，逐节确认后存回服务端，选题 / 写作 / 复盘都按它走 |
+| **dby-charter** | 一份 IP 档案管两件事：定位教练出「号章程」（L0 三问 / L1 十五问 / 老号反推），文风蒸馏出「创作 DNA」（人设 / 赛道 / 产品 / 文风），选题 / 写作 / 复盘都按它走 |
 | **wechat-article-pipeline** | 公众号图文流水线：md→公众号 HTML→封面→存草稿箱（只存草稿、不群发） |
 | **wechat-draft-publish** | 把写好的图文存进你自己公众号草稿箱（只存草稿、不群发，需先绑定公众号） |
 | **wechat-theme-studio** | 按口语描述改公众号**默认排版主题**（配色 / 标题 / 引用 / 图注），本地预览后存回服务端 |

@@ -1,31 +1,21 @@
 ---
 name: dby-charter
 description: >-
-  定位教练 · 号章程（都爆鸭）——通过问诊帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），
-  产出结构化「号章程」存回 doubaoya 服务端，之后选题、写作、复盘都按它走。三个入口：
-  L0 三问 5 分钟出最小章程、L1 十五问完整问诊、老号反推（拉历史发文反推定位、逐项校对）。
-  教练对话在你自己的 agent 侧进行，doubaoya 只做存储与读写接口，免费不扣点。
-  触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现。
+  号章程 · 创作 DNA（都爆鸭）——一份 IP 档案管两件事：①**定位问诊**帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），产出结构化「号章程」，之后选题、写作、复盘都按它走（三个入口：L0 三问 5 分钟、L1 十五问完整问诊、老号反推）；②**文风蒸馏**从你的范文里蒸出「创作 DNA」（人设 / 赛道 / 个人产品 / 文风），之后写这个号的文章全程读它，让 AI 写得更像你本人。问诊与蒸馏都在你自己的 agent 侧用你自己的模型跑，doubaoya 只做存储与读写接口，不调 LLM、免费不扣点。触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现、IP 档案、公众号人设、文风 DNA、文风蒸馏、重新蒸馏、更新人设、个人产品、带货话术、IP 头像。
 ---
 
-# 定位教练 · 号章程（都爆鸭）
+# 号章程 · 创作 DNA（都爆鸭）
 
-你现在的角色是**定位教练**。用户做公众号的真实目标是变现，而多数人卡在**三层定位脱节**：内容定位
-（写什么）、用户定位（给谁看）、商业定位（怎么赚钱）各想各的——写的内容吸引来的读者不是会付费的人，
-付费路径又和内容主题对不上。你的活是通过问诊把这三层**咬合**起来，产出一份结构化的**号章程**，
-存回 doubaoya。
-
-**卖点一句话：章程不是一份报告，是跟着你的数据活着的。** 行业通病是「答几个问题吐一份 Markdown，
-用户看完存盘，从此与创作流程无关」。号章程不一样——存回服务端之后：
-
-- **选题按它选**：热点 × 定位 × 变现路径匹配，带货号与知识付费号该追的热点不是同一批；
-- **文章按它写**：读者画像与口吻对象来自 `audience`，结尾 CTA 按 `monetization.path` 设计；
-- **复盘按它评**：按 `northStar.metric` 判成败，而不是阅读量一刀切。
-
-> **分工**：doubaoya = 存储 + 接口；**你（agent）= 教练的脑子**。问诊、追问、诊断、下判断全在你这边跑，
-> **doubaoya 不调 LLM、不扣点、章程三条接口全程免费**。
+> 🔀 **这个包管两件事，先认准用户要哪件——它们共用一份 IP 档案，但是两套流程。**
 >
-> 数据走 **doubaoya.com** 一条线，鉴权用用户自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
+> | 用户在说 | 那就是这件事 | 走哪儿 |
+> |---|---|---|
+> | 我该做什么号 / 写什么 / 给谁看 / 怎么变现 / 定位 / 号章程 | **定位问诊 → 号章程**（`charter` 字段） | 就在本文件：三个入口（L0 / L1 / 老号反推）→「号章程结构」→ PUT |
+> | 让 AI 写得更像我 / 文风 DNA / 蒸馏 / 人设 / 个人产品 / IP 头像 | **文风蒸馏 → 创作 DNA**（`writingDnaJson` 等字段） | [`references/writing-dna.md`](references/writing-dna.md) |
+>
+> 一句话分工：**章程回答「这个号该做什么」，创作 DNA 回答「这个号写起来什么味」。**
+> 两者是同一份档案上的不同字段，所以 API 契约只有一张表（见下面「API 契约」）。
+> 用户第一次来、两件都没有时，**先做章程再蒸文风**——没想清楚写什么，蒸出来的文风也没地方用。
 
 ---
 
@@ -46,6 +36,30 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 先看 `success`，为 `true` 才读 `data`，否则读 `error.code` / `error.message`。
 
 **铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。**
+
+---
+
+## 定位问诊（第一件事：出号章程）
+
+> 另一件事（文风蒸馏 / 建档 / 改人设产品）走
+> [`references/writing-dna.md`](references/writing-dna.md)，下面这一整节讲的是**定位问诊**。
+
+你现在的角色是**定位教练**。用户做公众号的真实目标是变现，而多数人卡在**三层定位脱节**：内容定位
+（写什么）、用户定位（给谁看）、商业定位（怎么赚钱）各想各的——写的内容吸引来的读者不是会付费的人，
+付费路径又和内容主题对不上。你的活是通过问诊把这三层**咬合**起来，产出一份结构化的**号章程**，
+存回 doubaoya。
+
+**卖点一句话：章程不是一份报告，是跟着你的数据活着的。** 行业通病是「答几个问题吐一份 Markdown，
+用户看完存盘，从此与创作流程无关」。号章程不一样——存回服务端之后：
+
+- **选题按它选**：热点 × 定位 × 变现路径匹配，带货号与知识付费号该追的热点不是同一批；
+- **文章按它写**：读者画像与口吻对象来自 `audience`，结尾 CTA 按 `monetization.path` 设计；
+- **复盘按它评**：按 `northStar.metric` 判成败，而不是阅读量一刀切。
+
+> **分工**：doubaoya = 存储 + 接口；**你（agent）= 教练的脑子**。问诊、追问、诊断、下判断全在你这边跑，
+> **doubaoya 不调 LLM、不扣点、章程三条接口全程免费**。
+>
+> 数据走 **doubaoya.com** 一条线，鉴权用用户自己的密钥（环境变量 `DOUBAOYA_API_KEY`，形如 `dyh_…`）。
 
 ---
 
@@ -185,22 +199,47 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 
 ## API 契约
 
+🔑 **章程和档案是同一个资源**：章程只是 IP 档案上的一个字段。所以契约只有这一张表，
+两半都在这儿——上半是章程，下半是档案本身（人设 / 产品 / 文风 DNA / 头像）。
+这些路由**在 catalog 里没有条目**，「入参现拉」在这儿拉不到东西，所以本表是它们唯一的真相源，
+逐字与后端一致，别删。
+
+**章程**
+
 | 方法 | 路径 | 说明 | 返回 `data` |
 |------|------|------|------|
 | GET | `/api/ip-profile/charter` | 读**默认档案**的章程（便捷路由） | `{ profileId, charter \| null, charterUpdatedAt }` |
 | GET | `/api/ip-profile/:id/charter` | 读指定档案的章程 | `{ charter \| null, charterUpdatedAt }` |
 | PUT | `/api/ip-profile/:id/charter` | **全量替换**章程（不是增量 patch） | `{ charter, charterUpdatedAt }` |
 
+**档案本身**（人设 / 赛道 / 产品 / 文风 DNA / 头像，流程见
+[`references/writing-dna.md`](references/writing-dna.md)）
+
+| 方法 | 路径 | 说明 | 请求体关键字段 | 返回 |
+|------|------|------|----------------|------|
+| GET | `/api/ip-profile` | 查我的默认档案 | — | `{ profile \| null }` |
+| GET | `/api/ip-profiles` | 查我的全部档案 | — | `{ profiles: [] }` |
+| POST | `/api/ip-profile` | 建档 | `name, isDefault, avatarUrl, imageUrls, personaJson, productsJson, niche, nicheTags` | `{ profile }` |
+| PUT | `/api/ip-profile/:id` | 改档 / 存蒸好的 DNA | 上面任意字段 + `writingDnaJson, dnaSampleCount, dnaDistilledAt, dnaModel, wechatThemeId, wechatAppid` | `{ profile }` |
+| DELETE | `/api/ip-profile/:id` | 删档 | — | `{ deleted: true, id }` |
+| POST | `/api/ip-profile/:id/samples` | 存一篇范文 | `title?, sourceUrl?, content` | `{ sample, dnaSampleCount }` |
+| POST | `/api/upload` | 上传图片到图床（存头像 / 生图参考图用） | `dataBase64（data URI，png/jpeg/webp，≤2MB）, filename?` | `{ url, key, contentType, size }` |
+
+体积上限：`writingDnaJson` ≤ 32KB（超限 400 `DNA_TOO_LARGE`）；单篇范文 `content` ≤ 50KB（超限 400
+`SAMPLE_TOO_LARGE`）；上传图片 ≤ 2MB（超限 400 `IMAGE_TOO_LARGE`）。档案存取 / 范文录入
+**全部免费**，不调 LLM、不扣点。
+
 三条注意，一条都别漏：
 
 - **回环注意（红字级，最常踩）**：GET 响应里的 `charter` 会**附带一个合成的 `products` 字段**（来自档案的
   `productsJson`，只读投影，方便下游一次 GET 拿到完整语义）。走「**GET → 改 → PUT**」流程时
   **必须先把 `products` 键剥掉**再 PUT，否则 400——报错信息会直接告诉你「产品请写 `productsJson`
-  （`PUT /api/ip-profile/:id`）；PUT charter 前请先剥掉 products 键」。**改产品走 `ip-profile` skill，
-  不走这里。**
+  （`PUT /api/ip-profile/:id`）；PUT charter 前请先剥掉 products 键」。**改产品走档案那半边**
+  （见 [`references/writing-dna.md`](references/writing-dna.md) 的「六、个人产品」），不走 charter 路由。
 - **PUT 是全量替换**：只改一个字段，也要先 GET 拿全量、改完把**整份**PUT 回去。少传的键会被判「缺失」而 400。
-- **无默认档案时 `GET /api/ip-profile/charter` 返回 404**。先按 `ip-profile` skill 建档
-  （`POST /api/ip-profile`），拿到档案 id，再回来存章程。
+- **无默认档案时 `GET /api/ip-profile/charter` 返回 404**。先建档
+  （`POST /api/ip-profile`，流程见 [`references/writing-dna.md`](references/writing-dna.md) 的
+  「一、第一次建档」），拿到档案 id，再回来存章程。
 
 ### 错误处理
 
@@ -209,6 +248,12 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 | 401 | `UNAUTHORIZED` | 没带密钥或密钥无效 | 检查 `DOUBAOYA_API_KEY`，去密钥中心重新生成 |
 | 404 | `NOT_FOUND` | 档案不存在 / 不属于你 / 无默认档案 | 先 `GET /api/ip-profiles` 确认 id，或先建档 |
 | 400 | `CHARTER_INVALID` | 章程没过校验（枚举 / 长度 / 结构 / 体积 / `products` 回写） | 按 `message` 逐条修正后重 PUT |
+| 400 | `VALIDATION_ERROR` | 档案参数不合法（如范文 `content` 为空） | 修正参数重试 |
+| 400 | `DNA_TOO_LARGE` | `writingDnaJson` 超 32KB | 精简后重试 |
+| 400 | `SAMPLE_TOO_LARGE` | 单篇范文超 50KB | 截断或分篇存 |
+| 400 | `IMAGE_TOO_LARGE` | 上传图片超 2MB | 压缩后重试 |
+| 400 | `UNSUPPORTED_TYPE` | 上传图片不是 png/jpeg/webp | 转换格式后重试 |
+| 502 | `UPLOAD_FAILED` | 图床上传失败（上游临时故障） | 可重试 |
 
 `CHARTER_INVALID` 的 `message` 是**所有校验问题用「；」拼成的完整清单**，原样透传给自己看，
 **逐条改完一次性重 PUT**，不要一条一条试。
@@ -274,6 +319,7 @@ curl -s https://doubaoya.com/api/ip-profile/charter \
 | `references/monetization.md` | 谈钱时（八种活法逐一说明、实操路径硬门槛数据） |
 | `references/diagnosis.md` | 做体检 / 用户卡壳时（死法清单、三层脱节诊断、商业诊断四检） |
 | `references/intake.md` | L1 问诊全程，逐题读（15 问清单、追问技巧库、假定位体检） |
+| `references/writing-dna.md` | 做**另一件事**时读：建档 / 收范文 / 蒸文风 DNA / 改人设产品 / 设头像 |
 
 ---
 
@@ -282,7 +328,8 @@ curl -s https://doubaoya.com/api/ip-profile/charter \
 - **不承诺涨粉、不承诺收入**。定位只提高命中概率，不保证结果。
 - 引用的变现门槛数据是 **2026-08 调研快照**，平台政策与行情会过时——引用时必须向用户说明。
 - **教练对话与判断全在你（agent）侧**用你自己的模型跑：**doubaoya 零 LLM、零扣点，章程三条接口全免费**。
-- 本 skill **只写章程**。个人产品（`productsJson`）的维护走 `ip-profile` skill，别试图从 charter 写产品。
+- **charter 路由只写章程**。个人产品（`productsJson`）、人设、文风 DNA 走档案路由
+  （`PUT /api/ip-profile/:id`），别试图从 charter 写它们——回环那条注意说的就是这件事。
 - **铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 所有请求只发往 **doubaoya.com**。
 
 ---
@@ -291,10 +338,11 @@ curl -s https://doubaoya.com/api/ip-profile/charter \
 
 ```
 dby-charter/
-├── SKILL.md            # 教练流程与七条红线
-└── references/         # 方法论知识库，按需加载
+├── SKILL.md            # 两件事的入口：教练流程与七条红线 + 全部 API 契约
+└── references/         # 按需加载
     ├── frameworks.md   # 定位框架
     ├── monetization.md # 变现路径与硬门槛数据（2026-08 快照）
     ├── diagnosis.md    # 死法清单与三层脱节诊断
-    └── intake.md       # 15 问问诊清单与追问技巧
+    ├── intake.md       # 15 问问诊清单与追问技巧
+    └── writing-dna.md  # 文风蒸馏与档案维护（原 ip-profile 包）
 ```

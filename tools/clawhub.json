@@ -58,14 +58,6 @@
         "基础设施"
       ]
     },
-    "ip-profile": {
-      "displayName": "公众号 IP 档案",
-      "topics": [
-        "微信公众号",
-        "IP 定位",
-        "内容策略"
-      ]
-    },
     "multi-banned-words": {
       "displayName": "多平台违禁词检测",
       "topics": [
