@@ -183,6 +183,60 @@ class CommunityValidatorTests(unittest.TestCase):
             self.budget_fixture(root, {"doubaoya": "选题"}, {"celebrity-slice": ["明星切片", "字幕烧制"]})
             self.assertEqual(validator.validate_trigger_word_coverage(root), [])
 
+    def test_factor_expansion_refuses_prose_as_a_prefix(self):
+        """坑一：散文里的冒号不许把整句话变成因式头。
+
+        不限死前缀长度的话，「…新媒体取数与创作总入口：一条 DOUBAOYA_API_KEY…」会被当成一个
+        因式组，拿整句散文当前缀、把后面所有词当尾巴——展开出一堆垃圾，**并顺手吃掉真正的那一组**。
+        """
+        # 用**真实形状**做素材：散文里有一个冒号，同一 chunk 末尾才是真正的因式组。
+        # 断言写成全等而不是 not-in —— not-in 太弱，长前缀变异下它照样过。
+        expanded = validator._expand_factors(
+            "新媒体取数与创作总入口：一条 DOUBAOYA_API_KEY 调能力。Trigger words: 小红书：搜索/封面"
+        )
+        self.assertEqual(expanded, {"小红书搜索", "小红书封面"})
+
+    def test_factor_expansion_takes_the_last_group_not_the_first_colon(self):
+        """坑二：同一 chunk 里散文在前、因式组在后时，取的必须是**后面**那个组。
+
+        散文和第一个因式组之间没有顿号、同处一个 chunk；从左边切（partition）必然切在散文
+        那个冒号上，症状是 `小红书封面` 展不出来——正是压缩稿最需要它展出来的那种词。
+        """
+        self.assertIn("小红书封面", validator._expand_factors("……Trigger words: 小红书：搜索/封面"))
+
+    def test_factor_expansion_is_injective(self):
+        """单射性：写下几个尾巴就是几个词面，**不许靠写字膨胀出覆盖**。
+
+        这是「只给一维前缀这一条方向」换来的结构性保证——所以「不许凭空造覆盖」不需要
+        另立一道反向闸，它是语法的推论。二维交叉 `a/b：x/y` 会膨胀（实测 23 真词配 31 幻影），
+        那等于向 agent 承诺「抖音周榜」「视频号封面」这些我们没有的能力。
+        """
+        self.assertEqual(
+            validator._expand_factors("小红书：搜索/封面/选题"),
+            {"小红书搜索", "小红书封面", "小红书选题"},
+        )
+        # 尾巴数 == 词面数（去重后），比值恒 ≤1，永远不会 >1。
+        self.assertEqual(len(validator._expand_factors("公众号：取数/写作/爬虫/标题")), 4)
+
+    def test_factor_expansion_only_adds_never_rewrites_the_literal_haystack(self):
+        """单调性：旧 haystack 是新 haystack 的**前缀** ⇒ 新判据覆盖面严格 ⊇ 旧判据。
+
+        这条是「升级不可能造成回归」的结构性依据，比「跑一遍看还绿不绿」强——后者只证明
+        今天这一份语料没回归，前者证明任何语料都不会。
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"doubaoya": "小红书：搜索/封面", "b-pkg": "公众号榜单"})
+            descriptions = [
+                validator.frontmatter_description(d / "SKILL.md")
+                for d in validator.discover_skill_dirs(root)
+            ]
+            literal = validator._normalize(" ".join(descriptions))
+            upgraded = literal + " " + " ".join(
+                w for text in descriptions for w in validator._expand_factors(text)
+            )
+            self.assertTrue(upgraded.startswith(literal))
+
     def test_description_budget_rejects_blowing_the_shared_pool(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
