@@ -56,6 +56,19 @@ NEXT_STEP_HEADING = "## 下一步"
 # 所以先不加。实测若改成扫全文，wechat-theme-studio 会被 `line-height`/`border-left`/`benya-clean`
 # 打红，wechat-article-pipeline 会被 `font-size`/`letter-spacing`/`design-config` 打红，全是误报。
 SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
+# 反引号里的**任意** slug 形状（连字符可有可无）。它单独用是没有意义的——`keyword` / `limit`
+# 都会命中——所以它只在**与 installed 求交**之后使用，交集本身就是判据，零误报面。
+#
+# 为什么需要它：SKILL_TOKEN 要求至少一个连字符，于是 `doubaoya` / `dby` 这两个**没有连字符
+# 的真 Skill** 在它眼里根本不是 Skill。后果是「下一步」表里把下游改指总入口，闸会报
+# 「names no downstream Skill」——把「指对了」判成「没指」。2026-08-19 合并四个孪生壳时，
+# wechat-article-pipeline 的下一步表里 `wechat-account-analyzer` 是唯一带连字符的 token，
+# 改指 `doubaoya` 当场打红，就是这条。
+#
+# 🔴 只放宽「有没有下游」这一问，**不放宽死指针那一问**：死指针问的是「像 Skill 但不存在」，
+# 那一问必须留着保守的连字符形状。实测把死指针闸也放宽，doubaoya 正文里正当点名的已退役
+# 平台 `mera`（单词、无连字符）会当场误报——而噪音闸等于没有闸。
+ANY_SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`")
 
 # ── 调用路由闸 ────────────────────────────────────────────────────────────────
 # 平台有**两个不相交的能力集合**，各走一条路由，彼此不回落：
@@ -459,10 +472,12 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
             f"{name}/SKILL.md has no `{NEXT_STEP_HEADING}` section: a chain Skill that names no downstream "
             "Skill lets the agent stop here and call the job done",
         )
-        referenced = set(SKILL_TOKEN.findall(section))
-        dead = sorted(referenced - installed)
+        # 死指针那一问用保守形状（要求连字符），避免把 `keyword` 之类当成死链。
+        dead = sorted(set(SKILL_TOKEN.findall(section)) - installed)
         require(not dead, f"{name}/SKILL.md 下一步 references Skills that do not exist: {dead}")
-        forward = referenced - {name}
+        # 「有没有下游」那一问用放宽形状 ∩ installed —— 交集即判据，所以 `doubaoya` / `dby`
+        # 这种无连字符的真 Skill 也算数（见 ANY_SKILL_TOKEN 的注释）。
+        forward = (set(ANY_SKILL_TOKEN.findall(section)) & installed) - {name}
         require(forward, f"{name}/SKILL.md 下一步 names no downstream Skill")
 
     # dby 是任务后导航的单一事实源——它的路由表里出现死链，等于把用户导进空气。
