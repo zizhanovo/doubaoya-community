@@ -34,7 +34,7 @@ npx skills add zizhanovo/doubaoya-community
 也可以只装其中某一个技能：
 
 ```bash
-npx skills add zizhanovo/doubaoya-community/skills/trending-hub
+npx skills add zizhanovo/doubaoya-community/skills/doubaoya
 ```
 
 > **推荐从主入口开始**：装好后输入 `/dby`（都爆鸭公众号工具箱主入口），它按「选题 → 写草稿 → 排版 → 代发 → 复盘 → 反哺选题」的飞轮，逐步把你路由到该用的技能。第一次用输入 `/dby 新手入门`；干完一步不知道下一步，随时回 `/dby`。
@@ -55,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 20 个）
+## 技能清单（共 16 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -78,8 +78,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **wechat-account-analyzer** | 公众号账号诊断 / 体检，支持多号竞品对照 |
-| **wechat-similar-account** | 公众号对标账号推荐，搭竞品矩阵 |
 | **wechat-rewrite** 🖥 | 把文案改写成公众号爆款风格 |
 | **ip-profile** | 建 / 更新公众号「创作 DNA」（人设 / 赛道 / 文风蒸馏），生成文章时全程读它 |
 | **dby-charter** | 定位教练：L0 三问 / L1 十五问 / 老号反推出结构化「号章程」，逐节确认后存回服务端，选题 / 写作 / 复盘都按它走 |
@@ -97,7 +95,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **trending-hub** | 全网热榜聚合，产跨平台选题信号 |
 | **multi-banned-words** | 跨平台违禁词对照 + 统一安全改写 |
 | **multi-rewrite** 🖥 | 一稿多发：按各平台规则改写成多平台版本 |
 
@@ -110,7 +107,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 
 | 技能 | 能力 |
 |------|------|
-| **playlet-wechat-feed** | 公众号短剧爆款文章日报内容源 |
 
 ### 🎨 AI 生成 · 搜索
 

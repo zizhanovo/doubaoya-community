@@ -34,8 +34,7 @@
       "id": "doubaoya-cloud-public-data",
       "priority": 90,
       "candidate_skills": [
-        "doubaoya",
-        "wechat-account-analyzer"
+        "doubaoya"
       ],
       "use_when": [
         "user requests public article discovery or keyword search without QR login",

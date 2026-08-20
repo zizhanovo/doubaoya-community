@@ -312,7 +312,7 @@ Content-Type: application/json
 4. 两个集合都没有 → 这个能力**不存在**（或已下架）。如实告诉用户，别再猜别的 slug。
 
 > ⚠️ 你脑子里 / 本文里记住的 slug 只是**起手线索**；能不能调、怎么调，以发现接口的返回为准。
-> 尤其别把**技能包目录名**（`npx skills add` 装进来的那个文件夹名，如 `trending-hub`、
+> 尤其别把**技能包目录名**（`npx skills add` 装进来的那个文件夹名，如 `wechat-theme-studio`、
 > `dby`、`wechat-article-pipeline`）当成调用 slug——它们**不是**，打过去必 404。
 
 ---

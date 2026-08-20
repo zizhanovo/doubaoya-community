@@ -70,8 +70,7 @@
       "id": "doubaoya-public-discovery",
       "priority": 80,
       "candidate_skills": [
-        "doubaoya",
-        "trending-hub"
+        "doubaoya"
       ],
       "use_when": [
         "user asks what is trending, viral, or popular on public platforms",
