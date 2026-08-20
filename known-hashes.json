@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T06:42:43.117109+00:00",
+  "generatedAt": "2026-08-20T06:45:07.871072+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -796,6 +796,8 @@
       "/api/apis/multi/multi-content-export-top"
     ],
     "multi-rewrite": [],
+    "optimize-skill-md": [],
+    "pdf-image-text-extractor": [],
     "playlet-bili-feed": [
       "/api/apis/bilibili/bilibili-playlet-feed"
     ],
@@ -1129,6 +1131,23 @@
       "全平台改写",
       "多平台改写",
       "跨平台适配"
+    ],
+    "optimize-skill-md": [
+      "skill格式",
+      "优化SKILL.md",
+      "优化Skill",
+      "技能优化",
+      "技能编写",
+      "规范化技能"
+    ],
+    "pdf-image-text-extractor": [
+      "OCR识别",
+      "PDF提取",
+      "PDF文字",
+      "图片文字",
+      "扫描件",
+      "提取文本",
+      "文档提取"
     ],
     "playlet-wechat-feed": [
       "公众号爆文",
