@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T13:48:44.115718+00:00",
+  "generatedAt": "2026-08-20T14:44:03.549909+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -93,7 +93,8 @@
       "b798cca6be87"
     ],
     "dby-publish": [
-      "1395aeae698c"
+      "1395aeae698c",
+      "487cb9172be9"
     ],
     "dby-rewrite": [
       "db8a6e744f97"
