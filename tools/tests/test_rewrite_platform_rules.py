@@ -1,6 +1,6 @@
 """合并后 rewrite 包的 self-check。
 
-三合一之后 `wechat-rewrite` 的脚本是**唯一**还在解析平台规则的东西（原来三个包各有一份），
+三合一之后 `dby-rewrite` 的脚本是**唯一**还在解析平台规则的东西（原来三个包各有一份），
 而规则从「一个大文件切章节」改成了「一平台一文件」。这两件事各带一个会静默失败的形状：
 
   · 规则文件与脚本的平台表**对不上**——脚本认得 `知乎`，references/ 下却没有 `知乎.md`。
@@ -17,7 +17,7 @@ from pathlib import Path
 import unittest
 
 
-SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "wechat-rewrite"
+SKILL_DIR = Path(__file__).resolve().parents[2] / "skills" / "dby-rewrite"
 MODULE_PATH = SKILL_DIR / "scripts" / "rewrite.py"
 SPEC = importlib.util.spec_from_file_location("doubaoya_rewrite", MODULE_PATH)
 assert SPEC and SPEC.loader

@@ -57,7 +57,7 @@
 `cloudflare`（211 行，纯决策树，只做选型不碰操作）
 vs `cloudflare-deploy`（224 行，含认证、命令、故障排除）。
 
-那就是我们的 `dby` vs `doubaoya-gateway`。区别只是：人家把它当成一条**写出来的原则**，
+那就是我们的 `dby` vs `dby-gateway`。区别只是：人家把它当成一条**写出来的原则**，
 我们是碰巧长成了这样。
 
 ### 3. Gabe Giro 的 Router Pattern：路由层的成本论证
@@ -156,7 +156,7 @@ Trail of Bits / Dean Peters）。模式选择树：
 
 先说清楚哪些地方我们**已经领先**：
 
-`doubaoya-gateway` 开头那句「**这是一个基础设施 Skill，它不干活**」
+`dby-gateway` 开头那句「**这是一个基础设施 Skill，它不干活**」
 加上那张「本 Skill 管 / 不管」对照表，比调研到的任何一个仓库的边界声明都干净；
 「**契约现拉，本地文档只当索引**」比 `openai/skills` 更进一步。这两条不要动。
 
@@ -164,7 +164,7 @@ Trail of Bits / Dean Peters）。模式选择树：
 
 ### ① 层次不是元数据（最要紧）
 
-11 个包的 frontmatter 里没有任何 `type` / `tier` / `layer` 字段，
+9 个包的 frontmatter 里没有任何 `type` / `tier` / `layer` 字段，
 所以「谁能引用谁」没有任何一道闸认识。
 
 建议：加 `type: router | gateway | workflow | component`，
@@ -191,22 +191,24 @@ Anthropic 明确要求 eval 先于文档；`supabase/agent-skills` 有 `test/`�
 最低成本起步 = 抄 `hussi9/skill-router` 的路由日志 + 审计脚本，
 先让路由准确率有个**数**，而不是靠盲测采样。
 
-### ④ 两个包超了官方红线（2026-08-20 实测）
+### ④ 一个包逼近官方红线（2026-08-20 实测，`unify-dby-naming` 改名车之后重测）
+
+> 首次实测是 `unify-dby-naming` 改名车之前（11 个包、三套前缀）；改名车统一了 `dby-` 前缀、
+> 把两个公众号发布相关的包合并成一个、下架了一个域外能力包——详情见
+> [`deleting-a-skill.md`「例外」段](deleting-a-skill.md#例外真删除的能力不要补词)。9 个在架包重测如下：
 
 | 包 | description 字符 | 正文行数 |
 |---|---|---|
-| `doubaoya` | **949**（上限 1024） | **608**（建议 <500） |
-| `wechat-article-pipeline` | 360 | **522**（建议 <500） |
+| `dby-api` | **949**（上限 1024） | **608**（建议 <500） |
+| `dby-publish` | 400 | **574**（建议 <500，合并另一个公众号草稿发布包的入口与触发词后行数略增） |
 | `dby-charter` | 357 | 348 |
-| `doubaoya-gateway` | 352 | 299 |
-| `wechat-rewrite` | 286 | 114 |
-| `wechat-theme-studio` | 276 | 252 |
-| `dby-update` | 269 | 149 |
+| `dby-gateway` | 352 | 322 |
+| `dby-rewrite` | 286 | 119 |
+| `dby-update` | 269 | 216 |
+| `dby-theme` | 266 | 252 |
 | `dby` | 224 | 278 |
-| `wechat-draft-publish` | 199 | 330 |
-| `ai-intelligence-investigator` | 192 | 129 |
-| `multi-banned-words` | 110 | 192 |
-| **合计 description** | **3574 字符** | —— |
+| `dby-banned-words` | 110 | 195 |
+| **合计 description** | **3213 字符** | —— |
 
 复现命令：
 
@@ -221,11 +223,11 @@ for f in sorted(glob.glob('skills/*/SKILL.md')):
 EOF
 ```
 
-🔴 `doubaoya` 的 949 字符**逼近 1024 硬上限**——那条巨型触发词串再加两个词就会被截断，
+🔴 `dby-api` 的 949 字符**逼近 1024 硬上限**——那条巨型触发词串再加两个词就会被截断，
 而截断是静默的。
 
 ⚠️ 注意 `validate_community.py` **已经有一道长度闸**，但它盯的是另一条线：
-`>250 字符` → 「在旧版宿主上会被砍」。当前 11 个包里有 **7 个**在这条线以上，
+`>250 字符` → 「在旧版宿主上会被砍」。当前 9 个包里仍有 **7 个**在这条线以上，
 于是 949 那一条只是七条告警里的一条，**被自己的噪音淹掉了**。
 缺的不是闸，是**那条真正会静默截断的硬红线**（1024）没有任何断言盯着。
 
@@ -239,7 +241,7 @@ EOF
    `>900` 单独告警。现有的 `>250` 那条降级为提示——它一次报 7 条，
    等于把真正致命的那条埋了。这是唯一一条「不做就会静默出事」的。
 2. **frontmatter 加 `type` 字段 + 引用方向闸**（半天）。直接解断链根因。
-3. **拆 `doubaoya`**（608 行 → 决策树主文件 + `references/`，按模式②），
+3. **拆 `dby-api`**（608 行 → 决策树主文件 + `references/`，按模式②），
    顺手把 949 字符的 description 压到 400 以内。
 4. **建一个 `_` 前缀的内部编排包**：不进 skill 列表、不吃共享预算，
    承载「内部必经、只在边界问终态」的创作前半段主干。

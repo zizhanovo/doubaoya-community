@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "routes": [
+    {
+      "id": "doubaoya-authoring-delivery",
+      "priority": 95,
+      "terminal_skill": "dby-publish",
+      "candidate_skills": [
+        "dby-api",
+        "dby-theme",
+        "dby-publish",
+        "dby"
+      ],
+      "use_when": [
+        "user requests a complete Official Account article to be written and delivered",
+        "user requests title, cover, or compliance work on an article they are writing",
+        "user requests layout rendering into Official Account HTML",
+        "user requests saving an article into their own draft box",
+        "user asks which step of the writing flywheel comes next"
+      ],
+      "target_state_gates": [
+        "The user's stated target state decides how far along this route to travel; ask when it is unstated.",
+        "Target state 'a finished draft text' stops at the writing Skill; nothing downstream runs.",
+        "Target state 'laid-out Official Account HTML' or 'the post sitting in my own draft box' travels to dby-publish.",
+        "dby-publish writes into the user's own Official Account backend (draft only, never mass send), so it needs an explicit target state, not an inferred one."
+      ],
+      "auth": {
+        "type": "doubaoya-api-key-plus-bound-official-account",
+        "requires_doubaoya_api_key": true
+      }
+    },
+    {
+      "id": "doubaoya-cloud-public-data",
+      "priority": 90,
+      "candidate_skills": [
+        "dby-api"
+      ],
+      "use_when": [
+        "user requests public article discovery or keyword search without QR login",
+        "user requests reading, like, recommendation, or comment metrics",
+        "user requests account analysis, trend research, or topic ideation"
+      ],
+      "auth": {
+        "type": "doubaoya-api-key",
+        "requires_doubaoya_api_key": true
+      }
+    }
+  ],
+  "precedence": [
+    "Evaluate the highest-priority matching route first.",
+    "Intent to write, lay out, or deliver the user's own article selects doubaoya-authoring-delivery; how far along that route to travel is decided by the target state the user stated, not by a fixed number of hops.",
+    "Explicit interaction-metric intent selects doubaoya-cloud-public-data; those metrics only exist on the cloud data capabilities.",
+    "Research routes feed the authoring route: once a topic is chosen, hand the work forward rather than treating a search result as the deliverable, unless the user asked only for the research."
+  ],
+  "forbidden_misroutes": [
+    {
+      "from": "doubaoya-authoring-delivery",
+      "request_signals": [
+        "stop at the drafted article text when the user asked for the draft box",
+        "stop at the banned-word check when the user asked for laid-out HTML",
+        "deliver markdown only when the user asked for a publishable post",
+        "write into the draft box when the user only asked for the article text"
+      ],
+      "reason": "Route by the user's target state in both directions: stopping at the text when they asked for a post in their draft box strands the work, and writing into their Official Account when they only asked for the text is an unrequested side effect."
+    },
+    {
+      "from": "doubaoya-cloud-public-data",
+      "request_signals": [
+        "local QR login",
+        "local session",
+        "resumable archive",
+        "article body export"
+      ],
+      "reason": "Cloud discovery skills must not replace the user-approved local archive workflow."
+    }
+  ]
+}

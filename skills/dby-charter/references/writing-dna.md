@@ -240,7 +240,7 @@ curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
 
 `profile.writingDnaJson.voiceSystemPrompt` 前置到写作 system prompt；`taboos` 作硬性禁用词；
 `structure` 作骨架；`cognition.values` + `productsJson[].ctaScript` 收尾引导。想把稿子直接存进
-公众号草稿箱，配合 `wechat-article-pipeline` skill 一起用。
+公众号草稿箱，配合 `dby-publish` skill 一起用。
 
 ---
 
