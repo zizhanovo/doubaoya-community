@@ -6,6 +6,9 @@ description: >-
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
 version: 3.1.0
+compatibility: >-
+  需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
+  需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
 ---
 
 # dby-update：把本鸭对账到最新
