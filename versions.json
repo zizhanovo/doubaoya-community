@@ -1,16 +1,14 @@
 {
-  "generatedAt": "2026-08-20T12:53:08.196335+00:00",
+  "generatedAt": "2026-08-20T13:48:32.023538+00:00",
   "skills": {
-    "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
-    "dby": "doubaoya-skill/dby@a4d72b56310c",
-    "dby-charter": "doubaoya-skill/dby-charter@c3738aab09a9",
-    "dby-update": "doubaoya-skill/dby-update@069172b7e331",
-    "doubaoya": "doubaoya-skill/doubaoya@711a03d2a65d",
-    "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@ced4b44acb42",
-    "multi-banned-words": "doubaoya-skill/multi-banned-words@faf1cc0742cb",
-    "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@cac10a28d159",
-    "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@df3ce832c6a8",
-    "wechat-rewrite": "doubaoya-skill/wechat-rewrite@815e4a5c25ee",
-    "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@6a1a737f0ea6"
+    "dby": "doubaoya-skill/dby@8a3dde169bfd",
+    "dby-api": "doubaoya-skill/dby-api@9b9682a7a602",
+    "dby-banned-words": "doubaoya-skill/dby-banned-words@f124f3174c56",
+    "dby-charter": "doubaoya-skill/dby-charter@7d8ce219936b",
+    "dby-gateway": "doubaoya-skill/dby-gateway@b798cca6be87",
+    "dby-publish": "doubaoya-skill/dby-publish@1395aeae698c",
+    "dby-rewrite": "doubaoya-skill/dby-rewrite@db8a6e744f97",
+    "dby-theme": "doubaoya-skill/dby-theme@b1b4f5ebb9e6",
+    "dby-update": "doubaoya-skill/dby-update@35a0d058b1c6"
   }
 }
