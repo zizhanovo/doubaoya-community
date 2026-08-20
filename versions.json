@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T06:40:52.593517+00:00",
+  "generatedAt": "2026-08-20T06:43:43.423591+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "dby": "doubaoya-skill/dby@a4d72b56310c",
@@ -8,8 +8,6 @@
     "doubaoya": "doubaoya-skill/doubaoya@ee5264c76066",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@263cd71d3e9d",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
-    "optimize-skill-md": "doubaoya-skill/optimize-skill-md@b70db0754ccf",
-    "pdf-image-text-extractor": "doubaoya-skill/pdf-image-text-extractor@8ba5a1a01cc5",
     "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@b4ae491095d9",
     "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@3490716a0562",
     "wechat-rewrite": "doubaoya-skill/wechat-rewrite@c1b4cca81823",

@@ -67,22 +67,6 @@
         "本地运行"
       ]
     },
-    "optimize-skill-md": {
-      "displayName": "SKILL.md 优化器",
-      "topics": [
-        "Agent Skill",
-        "文档优化",
-        "本地运行"
-      ]
-    },
-    "pdf-image-text-extractor": {
-      "displayName": "PDF / 图片文字提取",
-      "topics": [
-        "OCR",
-        "PDF",
-        "文字提取"
-      ]
-    },
     "wechat-article-pipeline": {
       "displayName": "公众号图文流水线（选题→成稿→排版→草稿箱）",
       "topics": [

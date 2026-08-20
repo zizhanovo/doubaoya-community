@@ -55,7 +55,7 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 > **只想更新本鸭、不碰别人的技能**：输入 `/dby-update`，它只按仓库精确同步 `zizhanovo/doubaoya-community`
 > （`npx skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y`），不会像无参数的 `npx skills update` 那样连你装的其他技能一起更，也不动你本地的 `config.json` / 创作 DNA / 产出文件。
 
-## 技能清单（共 13 个）
+## 技能清单（共 11 个）
 
 > 大部分技能要一条 `DOUBAOYA_API_KEY`（调 doubaoya.com 公开 API）；
 > 标 **🖥 本地** 的纯本地运行、不联网、不需要 key，agent 自己干活。
@@ -115,8 +115,6 @@ npx skills update wechat-article-pipeline  # 只更新某一个技能
 | 技能 | 能力 |
 |------|------|
 | **ai-intelligence-investigator** | 情报 / 竞品 / 舆情调查方法论，交叉验证产报告 |
-| **optimize-skill-md** | 把一份 SKILL.md 规范化、优化到标准格式 |
-| **pdf-image-text-extractor** | 本地从 PDF / 图片提取文字 |
 
 ## 怎么调（给好奇的人）
 
