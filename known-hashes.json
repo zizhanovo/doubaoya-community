@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T12:53:15.974969+00:00",
+  "generatedAt": "2026-08-20T13:48:44.115718+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -69,23 +69,44 @@
       "578b1a067705",
       "75694e183386",
       "7ec123c4ccf5",
+      "8a3dde169bfd",
       "9c4f8edfa780",
       "a4d72b56310c",
       "e0ef82da64ee",
       "fccf378e28ef"
     ],
+    "dby-api": [
+      "9b9682a7a602"
+    ],
+    "dby-banned-words": [
+      "f124f3174c56"
+    ],
     "dby-charter": [
       "289a7e8efa11",
+      "7d8ce219936b",
       "a2710665f546",
       "a85067a32ed9",
       "a9eaab1fad23",
       "c3738aab09a9"
+    ],
+    "dby-gateway": [
+      "b798cca6be87"
+    ],
+    "dby-publish": [
+      "1395aeae698c"
+    ],
+    "dby-rewrite": [
+      "db8a6e744f97"
+    ],
+    "dby-theme": [
+      "b1b4f5ebb9e6"
     ],
     "dby-update": [
       "04182fab354c",
       "069172b7e331",
       "0f57ebd82f3b",
       "2a8c66b15aa2",
+      "35a0d058b1c6",
       "4bbc2e85239b",
       "53d92b2192de",
       "6f72e665fa97",
@@ -692,6 +713,7 @@
     ]
   },
   "retiredEndpoints": {
+    "ai-intelligence-investigator": [],
     "astock-social-feed": [
       "/api/apis/multi/cn30-multi-search"
     ],
@@ -725,6 +747,58 @@
     ],
     "doubao-websearch": [
       "/api/skills/doubao-web-search"
+    ],
+    "doubaoya": [
+      "/api/apis/douyin/comments",
+      "/api/apis/douyin/realtime-search",
+      "/api/apis/douyin/search-work",
+      "/api/apis/gongzhonghao/category-time-hot",
+      "/api/apis/gongzhonghao/gongzhonghao-ai-feed",
+      "/api/apis/gongzhonghao/gongzhonghao-coze-cover",
+      "/api/apis/gongzhonghao/gongzhonghao-daily-publish",
+      "/api/apis/gongzhonghao/gongzhonghao-index-rank",
+      "/api/apis/gongzhonghao/gongzhonghao-playlet-feed",
+      "/api/apis/gongzhonghao/gongzhonghao-raise-rank",
+      "/api/apis/gongzhonghao/gongzhonghao-search-user",
+      "/api/apis/gongzhonghao/gongzhonghao-work-list",
+      "/api/apis/gongzhonghao/hot-article",
+      "/api/apis/gongzhonghao/search-article",
+      "/api/apis/multi/cn30-multi-search",
+      "/api/apis/multi/multi-content-export-top",
+      "/api/apis/sph/search-user",
+      "/api/apis/sph/search-work",
+      "/api/apis/sph/shipinhao-ai-feed",
+      "/api/apis/tool/parse-content-detail",
+      "/api/apis/trend/hot-keywords",
+      "/api/apis/trend/trending-hub-keyword",
+      "/api/apis/xiaohongshu/crawl-work",
+      "/api/apis/xiaohongshu/search-note",
+      "/api/apis/xiaohongshu/search-work",
+      "/api/apis/xiaohongshu/xiaohongshu-coze",
+      "/api/apis/xiaohongshu/xiaohongshu-daily-top",
+      "/api/apis/xiaohongshu/xiaohongshu-low-fans-top",
+      "/api/apis/xiaohongshu/xiaohongshu-weekly-top",
+      "/api/skills/cn-last30days",
+      "/api/skills/content-safety-check",
+      "/api/skills/doubao-web-search",
+      "/api/skills/gpt-image-gen",
+      "/api/skills/playlet-wechat-feed",
+      "/api/skills/recommend",
+      "/api/skills/search",
+      "/api/skills/trend-radar",
+      "/api/skills/wechat-account-analyzer",
+      "/api/skills/wechat-channels-ai-feed",
+      "/api/skills/wechat-cover",
+      "/api/skills/wechat-fastest-growing",
+      "/api/skills/wechat-prohibited-word",
+      "/api/skills/wechat-search",
+      "/api/skills/wechat-similar-account",
+      "/api/skills/xiaohongshu-viral-notes"
+    ],
+    "doubaoya-gateway": [
+      "/api/apis/trend/hot-topics",
+      "/api/skills/dby-charter",
+      "/api/skills/recommend"
     ],
     "douyin-account-diagnosis": [
       "/api/apis/douyin/douyin-account-diagnosis",
@@ -805,6 +879,9 @@
     "mera": [
       "/api/apis/mera/self"
     ],
+    "multi-banned-words": [
+      "/api/apis/tool/check-banned-words"
+    ],
     "multi-content-feed": [
       "/api/apis/multi/multi-content-export-top"
     ],
@@ -849,6 +926,11 @@
       "/api/apis/gongzhonghao/gongzhonghao-account-analyzer",
       "/api/apis/gongzhonghao/gzh-sync-notes"
     ],
+    "wechat-article-pipeline": [
+      "/api/skills/gpt-image-gen",
+      "/api/skills/wechat-draft-publish",
+      "/api/skills/wechat-render"
+    ],
     "wechat-banned-words": [],
     "wechat-channels-ai-feed": [
       "/api/apis/sph/shipinhao-ai-feed"
@@ -856,6 +938,7 @@
     "wechat-cover": [
       "/api/apis/gongzhonghao/gongzhonghao-coze-cover"
     ],
+    "wechat-draft-publish": [],
     "wechat-fastest-growing": [
       "/api/apis/gongzhonghao/gongzhonghao-raise-rank"
     ],
@@ -869,10 +952,14 @@
     "wechat-original-hot": [
       "/api/apis/gongzhonghao/category-time-hot"
     ],
+    "wechat-rewrite": [
+      "/api/skills/wechat-rewrite"
+    ],
     "wechat-similar-account": [
       "/api/apis/gongzhonghao/gongzhonghao-similar-account",
       "/api/apis/gongzhonghao/gzh-sync-account"
     ],
+    "wechat-theme-studio": [],
     "wechat-title": [
       "/api/apis/gongzhonghao/gongzhonghao-coze-cover"
     ],
@@ -927,6 +1014,17 @@
     "zhihu-rewrite": []
   },
   "retiredTriggerWords": {
+    "ai-intelligence-investigator": [
+      "信息核实",
+      "信息溯源",
+      "多源验证",
+      "情报调查",
+      "深度调查",
+      "竞品调查",
+      "背景调查",
+      "舆情调查",
+      "调查报告"
+    ],
     "astock-social-feed": [
       "A股",
       "A股复盘",
@@ -1000,6 +1098,193 @@
       "联网搜索",
       "联网查证",
       "豆包搜索"
+    ],
+    "doubaoya": [
+      "AI出图",
+      "AI视频号",
+      "TOP",
+      "一周爆款",
+      "中线选题",
+      "主视觉",
+      "今日热点",
+      "今日爆款",
+      "仿写",
+      "优化",
+      "低粉爆款",
+      "低粉高赞",
+      "作品",
+      "作品详情",
+      "信号",
+      "借势选题",
+      "全平台爆款",
+      "全网热搜",
+      "全网热榜",
+      "公众号取数",
+      "公众号诊断",
+      "公众号违禁词",
+      "公众号：取数",
+      "内容：创作",
+      "写作",
+      "写小红书",
+      "冷启动对标",
+      "出海",
+      "出海：选题",
+      "分析",
+      "创作",
+      "参考",
+      "发了什么",
+      "发文复盘",
+      "取数",
+      "合规检测",
+      "后再写",
+      "周度趋势",
+      "周排行",
+      "周榜",
+      "图生图",
+      "增长榜",
+      "增长率排行",
+      "复盘",
+      "头部账号",
+      "套路",
+      "实时取数",
+      "实时搜索",
+      "对标",
+      "对标：分析",
+      "封面",
+      "封面：灵感",
+      "小号打法",
+      "小红书抖音公众号",
+      "小红书：搜索",
+      "引用来源",
+      "扒抖音作品",
+      "扒文章",
+      "扒评论区",
+      "批量爬公众号",
+      "批量诊断",
+      "找对标笔记",
+      "找选题",
+      "抖音：搜索",
+      "拆解",
+      "持续走高",
+      "排行",
+      "推荐",
+      "搜抖音爆款",
+      "改图",
+      "敏感词",
+      "文旅",
+      "文生图",
+      "日报",
+      "日榜",
+      "最多点赞",
+      "最新发布",
+      "极限词",
+      "某公众号发了什么",
+      "查出处",
+      "标杆账号",
+      "标题",
+      "标题：灵感",
+      "榜",
+      "榜单",
+      "每天在推什么",
+      "每日榜",
+      "流量风口",
+      "流量风向",
+      "灵感",
+      "热度指数",
+      "热搜",
+      "热搜关键词",
+      "热榜",
+      "热榜TOP10",
+      "热点：扫描",
+      "热门文章",
+      "热门笔记",
+      "热门账号",
+      "照着写小红书",
+      "爆文",
+      "爆款",
+      "爆款笔记",
+      "爆款：文章",
+      "爬取",
+      "爬虫",
+      "生成",
+      "生成图片",
+      "用户需求",
+      "盯公众号",
+      "相似账号",
+      "看评论",
+      "看赛道热门内容",
+      "矩阵",
+      "短剧",
+      "短视频选题",
+      "社媒舆情",
+      "竞品：账号",
+      "笔记发现",
+      "笔记查询",
+      "笔记：对标",
+      "素人爆款",
+      "素材",
+      "结构",
+      "综合搜索",
+      "综合热点",
+      "联网搜索",
+      "联网查证",
+      "聚合热榜",
+      "舆情监测",
+      "视频号：AI",
+      "角度",
+      "解析链接",
+      "订阅公众号",
+      "设计",
+      "评论",
+      "评论分析",
+      "评论风向",
+      "诊断",
+      "话题研究",
+      "豆包搜索",
+      "账号",
+      "账号体检",
+      "账号健康度",
+      "账号发文列表",
+      "账号画像",
+      "赛道日报",
+      "起号参考",
+      "起标题",
+      "跟踪",
+      "跨平台热搜",
+      "跨平台：选题",
+      "蹭热点",
+      "过审",
+      "近30天作品",
+      "近期爆款",
+      "违禁词",
+      "追更",
+      "追流量",
+      "追热点",
+      "选题",
+      "选题：拆解",
+      "配图",
+      "链接解析",
+      "阅读增长",
+      "首图灵感",
+      "高点击标题",
+      "黑马",
+      "黑马笔记",
+      "黑马账号"
+    ],
+    "doubaoya-gateway": [
+      "DEDICATED_ROUTE",
+      "DOUBAOYA_API_KEY",
+      "ENDPOINT_NOT_FOUND",
+      "NO_RESULT",
+      "SKILL_NOT_FOUND",
+      "doubaoya 调用协议",
+      "execution.target",
+      "inputContract",
+      "operationKey",
+      "入参规格",
+      "统一信封",
+      "该打哪条路由",
+      "调用网关"
     ],
     "douyin-comment": [
       "扒评论区",
@@ -1131,6 +1416,16 @@
       "更新人设",
       "重新蒸馏"
     ],
+    "multi-banned-words": [
+      "全平台违禁词",
+      "多平台违禁词",
+      "广告法",
+      "敏感词",
+      "跨平台合规",
+      "违禁词检测",
+      "违规词",
+      "限流自查"
+    ],
     "multi-content-feed": [
       "全平台爆款",
       "内容出海",
@@ -1215,6 +1510,18 @@
       "账号健康度",
       "账号画像"
     ],
+    "wechat-article-pipeline": [
+      "公众号图文流水线",
+      "写公众号",
+      "带封面发布到草稿箱",
+      "把文章存进公众号草稿箱",
+      "接着排版发草稿",
+      "推公众号草稿",
+      "正文写好了怎么发",
+      "要排版好的公众号 HTML",
+      "转公众号排版",
+      "重新推草稿"
+    ],
     "wechat-banned-words": [
       "公众号违禁词",
       "合规检测",
@@ -1245,6 +1552,11 @@
       "起标题",
       "高点击标题"
     ],
+    "wechat-draft-publish": [
+      "代发公众号草稿箱",
+      "公众号草稿箱",
+      "存公众号草稿"
+    ],
     "wechat-fastest-growing": [
       "公众号黑马",
       "增长榜",
@@ -1270,6 +1582,24 @@
       "起标题",
       "选题角度"
     ],
+    "wechat-rewrite": [
+      "一稿多发",
+      "全平台改写",
+      "公众号改写",
+      "公众号文案",
+      "公众号风格",
+      "内容改写",
+      "多平台改写",
+      "小红书改写",
+      "小红书文案",
+      "小红书风格",
+      "微信改写",
+      "标题钩子",
+      "爆款改写",
+      "种草文案",
+      "笔记改写",
+      "跨平台适配"
+    ],
     "wechat-similar-account": [
       "公众号对标",
       "对标推荐",
@@ -1277,6 +1607,17 @@
       "相似账号",
       "竞品账号",
       "起号参考"
+    ],
+    "wechat-theme-studio": [
+      "change layout",
+      "heading style",
+      "palette",
+      "wechat-theme-studio",
+      "定制主题样式",
+      "换公众号配色",
+      "改公众号排版",
+      "改默认排版",
+      "调排版主题"
     ],
     "wechat-title": [
       "公众号标题",
