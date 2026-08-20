@@ -93,9 +93,9 @@ version: 1.0.0
 | 想改 / 定制公众号排版样式（换配色 / 标题条 / 引用卡）、把默认排版改掉 | `wechat-theme-studio` | 按口语改 themeJson→本地预览→落两处：存回服务端（网页工作室与 /api/wechat/render 读它）+ 存成本机 theme 文件（发文流水线读它） |
 | 文章写好了要排版 + 封面 + 存进自己公众号草稿箱 | `wechat-article-pipeline` | md→公众号 HTML→封面→草稿的确定性流水线（只存草稿、不群发） |
 | 已有排好的图文，只想推进草稿箱 | `wechat-draft-publish` | 只存草稿、绝不群发，需先绑定公众号 |
-| 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `wechat-account-analyzer` | 账号诊断，支持多号并诊做竞品对照 |
+| 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `doubaoya` | 账号诊断（`skill.wechat.accountAnalyzer`）：给账号名，拉粉丝 / 发文 / 阅读等真实运营指标 |
 | 想追更某个号 / 复盘竞品最近发了啥 | `doubaoya` | 拉指定时段历史发文做追更复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
-| 想找对标账号 / 起号参考 / 搭竞品矩阵 | `wechat-similar-account` | 同赛道对标 + 高阶标杆账号 |
+| 想找对标账号 / 起号参考 / 搭竞品矩阵 | `doubaoya` | 相似账号推荐（`skill.wechat.similarAccount`）：3 层加权匹配，同阶对标号 + 高阶标杆号 |
 | 想看行业头部榜 / 竞品跟踪 | `doubaoya` | 日 / 周 / 月热度指数榜：`POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
 | 要把已发布的公众号文章拉正文 / 归档 | `doubaoya` | 按文章链接拉正文（本地扫码归档的 MP Ark 已下架） |
 
@@ -157,6 +157,21 @@ version: 1.0.0
 | 有现成旧稿想复用这个角度 | `wechat-rewrite` | 本地改写成公众号爆款风 |
 | 选题还模糊，想先看爆款规律 | `doubaoya` | 同主题爆文里找共性再定选题 |
 
+> 🔑 **「我这个号今天该做什么选题」的正确三步**（原综合热点选题包那套玩法，包合并后由本图承接）：
+>
+> 1. **无关键词直取综合热点** —— 走 `doubaoya` 的 `api.trend.hotSpotKeyword`，把当下全网最热的
+>    一批直接拉下来。要害是**不带关键词**。
+> 2. **明确个人 IP 定位** —— 用户的账号名 / IP 名（比如「菜籽油」）是**他是谁**
+>    （领域 / 人设 / 角度 / 受众），**不是搜索词**。从用户本人或其简介、往期爆款里拿到这份定位；
+>    **不清楚就直接问他**：「你这号平时做什么内容、面向谁、你的独特视角是什么？」
+> 3. **智能匹配** —— 拿第 1 步的热榜 × 第 2 步的 IP 定位，挑出这个 IP **能可信借势**的 2–3 条。
+>    两条判据一起看：**热度**（够热、最好跨平台撞榜）与 **IP 契合度**（以这个人设的真实视角
+>    接不接得住——接不住的哪怕再热也先放掉）。每条给出**这个 IP 的独家切角**，
+>    再答一句「为什么现在能爆」。
+>
+> ❌ **绝不把 IP 名字丢进搜索接口。** 搜「菜籽油」只会搜到字面同名内容，跟这个号该写什么无关。
+> IP 只用在第 3 步的匹配筛选上。这是这条路最常见、也最贵的一个错。
+
 #### 写草稿阶段 —— 来自 `doubaoya` / `wechat-rewrite` / `ip-profile`
 
 | 结论信号 | 推荐下一步 | 为什么 |
@@ -178,20 +193,20 @@ version: 1.0.0
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
-| 草稿已存，发布后想看表现 | `wechat-account-analyzer` | 攒几天数据给号做体检 / 看发文表现 |
+| 草稿已存，发布后想看表现 | `doubaoya` | 攒几天数据给号做体检 / 看发文表现（`skill.wechat.accountAnalyzer`） |
 | 想盯自己或竞品的发文节奏 | `doubaoya` | 拉时段发文做追更复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
 | 已发文想归档正文 | `doubaoya` | 按文章链接拉正文（本地扫码归档的 MP Ark 已下架） |
 
-#### 复盘 → 反哺 —— 来自 `wechat-account-analyzer` / `doubaoya`（发文列表）
+#### 复盘 → 反哺 —— 来自 `doubaoya`（账号诊断 / 发文列表）
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 复盘看清受众爱看啥，回去挖下一个选题 | `doubaoya` | **飞轮闭环**：用复盘信号喂下一轮选题 |
-| 发现自己号偏弱，想找对标学 | `wechat-similar-account` | 对标补短板、搭竞品矩阵 |
+| 发现自己号偏弱，想找对标学 | `doubaoya` | 对标补短板、搭竞品矩阵（`skill.wechat.similarAccount`） |
 | 想盯行业头部动态 | `doubaoya` | 头部榜看赛道趋势：`POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
 | 想深挖某条爆文为什么火 | `doubaoya` | 拆同主题爆款规律 |
 
-#### 对标 → 反哺 —— 来自 `wechat-similar-account` / 头部榜
+#### 对标 → 反哺 —— 来自 `doubaoya`（对标推荐 / 头部榜）
 
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|

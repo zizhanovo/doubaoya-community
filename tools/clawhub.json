@@ -100,33 +100,6 @@
         "文字提取"
       ]
     },
-    "playlet-wechat-feed": {
-      "displayName": "公众号短剧文章日报内容源",
-      "topics": [
-        "微信公众号",
-        "短剧",
-        "日报",
-        "内容源"
-      ]
-    },
-    "trending-hub": {
-      "displayName": "全网热点选题（结合个人 IP 匹配）",
-      "topics": [
-        "热榜",
-        "爆款选题",
-        "全网数据",
-        "数据源"
-      ]
-    },
-    "wechat-account-analyzer": {
-      "displayName": "公众号账号诊断",
-      "topics": [
-        "微信公众号",
-        "账号分析",
-        "竞品分析",
-        "数据源"
-      ]
-    },
     "wechat-article-pipeline": {
       "displayName": "公众号图文流水线（选题→成稿→排版→草稿箱）",
       "topics": [
@@ -152,15 +125,6 @@
         "文案改写",
         "爆款",
         "本地运行"
-      ]
-    },
-    "wechat-similar-account": {
-      "displayName": "公众号对标账号推荐",
-      "topics": [
-        "微信公众号",
-        "对标账号",
-        "竞品分析",
-        "数据源"
       ]
     },
     "wechat-theme-studio": {
