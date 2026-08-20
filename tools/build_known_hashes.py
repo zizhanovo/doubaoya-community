@@ -49,6 +49,24 @@ def _is_hashed(rel: str) -> bool:
     )
 
 
+# 🔴 必须用 -z。git 默认开着 core.quotePath：路径里只要有一个非 ASCII 字符，
+# ls-tree 就把整条路径**加引号并转义成八进制**（`"skills/x/references/B\347\253\231.md"`）。
+# 那个前导引号会让下面 `path[len(PREFIX):]` 整体错位一格，切出一个**空 slug**——
+# 而且这个包的文件集会**少掉所有中文名文件**，于是它的哈希算错。
+# 后果不是报错，是**静默认不出包**：known-hashes.json 是用户机对账认领旧包的闭集，
+# 当前版哈希不在闭集里，reconcile 就当它是陌生包。
+# 实测：加 references/公众号.md 这类文件之后，wechat-rewrite 的当前哈希直接不在闭集里。
+# 🔑 关掉引号要的是 `-c core.quotePath=false`，**`-z` 单独不够**——它只换了记录分隔符，
+# `%(path)` 照样转义（试过，当场被下面那条断言拦住）。`-z` 仍然留着，它挡的是
+# 路径含换行那种病态情况。下面那条断言是这套解析唯一的活口：路径形状再变，它当场喊。
+def tree_listing(commit: str) -> str:
+    """列出某个 commit 下 skills/ 的全部 (blob, 路径)，NUL 分隔、**不转义**。"""
+    return _git(
+        "-c", "core.quotePath=false",
+        "ls-tree", "-r", "-z", "--full-name", "--format=%(objectname) %(path)", commit, "--", PREFIX
+    )
+
+
 def collect_filesets() -> tuple[
     dict[str, set[tuple[tuple[str, str], ...]]], dict[str, str]
 ]:
@@ -64,14 +82,13 @@ def collect_filesets() -> tuple[
     filesets: dict[str, set[tuple[tuple[str, str], ...]]] = {}
     latest_skill_md: dict[str, str] = {}
     for commit in _git("rev-list", "--all").split():
-        listing = _git(
-            "ls-tree", "-r", "--full-name", "--format=%(objectname) %(path)", commit, "--", PREFIX
-        )
+        listing = tree_listing(commit)
         per_slug: dict[str, list[tuple[str, str]]] = {}
-        for line in listing.splitlines():
+        for line in listing.split("\0"):
             if not line.strip():
                 continue
             obj, path = line.split(" ", 1)
+            assert path.startswith(PREFIX), f"ls-tree 给了个没头没脑的路径：{path!r}"
             tail = path[len(PREFIX):]
             slug, _, rel = tail.partition("/")
             if not rel or not _is_hashed(rel):
