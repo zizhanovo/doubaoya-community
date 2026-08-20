@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-19T18:09:55.196289+00:00",
+  "generatedAt": "2026-08-20T06:11:53.397807+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -65,14 +65,17 @@
       "3012327e9323",
       "3614ff73a0b8",
       "39e738fe2c0e",
+      "3f2f22ed69d1",
       "578b1a067705",
       "75694e183386",
+      "7ec123c4ccf5",
       "9c4f8edfa780",
       "e0ef82da64ee",
       "fccf378e28ef"
     ],
     "dby-charter": [
       "289a7e8efa11",
+      "a2710665f546",
       "a85067a32ed9",
       "a9eaab1fad23"
     ],
@@ -98,7 +101,10 @@
     ],
     "doubaoya": [
       "035c62d0cddb",
+      "1d9e98ab2e75",
+      "1ebfe7566006",
       "22b7c35a85ae",
+      "2fdef21b13a1",
       "3193cf932cb7",
       "31e5a53fe52c",
       "3a14e308dcf3",
@@ -137,6 +143,7 @@
       "08201331442c",
       "153805c138d1",
       "1b9f82882898",
+      "263cd71d3e9d",
       "2d4cf93eb151",
       "2d577dc98f2b",
       "6d6420eaf6ff",
@@ -304,6 +311,7 @@
       "e8eafd02c7ba"
     ],
     "multi-rewrite": [
+      "2cffb89cf0cd",
       "8e07dbeed572",
       "c025bdecf97c"
     ],
@@ -313,6 +321,7 @@
     "pdf-image-text-extractor": [
       "7100990470e0",
       "79fe3715dfe0",
+      "8ba5a1a01cc5",
       "dfbc50fee134"
     ],
     "playlet-bili-feed": [
@@ -409,11 +418,13 @@
       "6af7fdbdf97a",
       "6ee823b7415b",
       "6fe62bf1b7aa",
+      "7330e2346ed3",
       "88e8c98c695d",
       "8e51d419df6b",
       "8fd6a7602be1",
       "91db95749649",
       "9fd965739ead",
+      "b4ae491095d9",
       "bc543b555f3e",
       "c2e53f8828fd",
       "c394ba22e112",
@@ -458,6 +469,7 @@
       "1cff688f3db3",
       "24d35d8ef1cc",
       "2bc61f8b2f21",
+      "3490716a0562",
       "36d50bb4dd9b",
       "65dcd550c6fc",
       "75ef5514352b",
@@ -508,6 +520,7 @@
       "e0e969f32bec"
     ],
     "wechat-rewrite": [
+      "b029d45ec1cd",
       "b4dac418f209",
       "d8ac8745b5c1"
     ],
@@ -531,7 +544,8 @@
       "81ae208bad6f",
       "926fd8f6a52b",
       "93f89aa0f52a",
-      "a9633c71f829"
+      "a9633c71f829",
+      "bfbad690f6e0"
     ],
     "wechat-title": [
       "0376b445a8b7",
@@ -610,6 +624,7 @@
     ],
     "xiaohongshu-rewrite": [
       "03deba6d22ab",
+      "8210b53d8ac5",
       "c8d85a5bd293"
     ],
     "xiaohongshu-search": [
@@ -780,6 +795,9 @@
     "playlet-douyin-feed": [
       "/api/apis/douyin/douyin-playlet-feed"
     ],
+    "playlet-wechat-feed": [
+      "/api/apis/gongzhonghao/gongzhonghao-playlet-feed"
+    ],
     "playlet-xiaohongshu-feed": [
       "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
     ],
@@ -793,6 +811,9 @@
     "tiktok-account-search": [
       "/api/apis/tiktok/search-user"
     ],
+    "trending-hub": [
+      "/api/apis/trend/trending-hub-keyword"
+    ],
     "trending-hub-top10": [
       "/api/apis/trend/hot-keywords"
     ],
@@ -801,6 +822,10 @@
     ],
     "wechat-10w-hot": [
       "/api/apis/gongzhonghao/category-time-hot"
+    ],
+    "wechat-account-analyzer": [
+      "/api/apis/gongzhonghao/gongzhonghao-account-analyzer",
+      "/api/apis/gongzhonghao/gzh-sync-notes"
     ],
     "wechat-banned-words": [],
     "wechat-channels-ai-feed": [
@@ -821,6 +846,10 @@
     "wechat-mp-exporter": [],
     "wechat-original-hot": [
       "/api/apis/gongzhonghao/category-time-hot"
+    ],
+    "wechat-similar-account": [
+      "/api/apis/gongzhonghao/gongzhonghao-similar-account",
+      "/api/apis/gongzhonghao/gzh-sync-account"
     ],
     "wechat-title": [
       "/api/apis/gongzhonghao/gongzhonghao-coze-cover"
@@ -1076,6 +1105,14 @@
       "出海爆款",
       "出海选题"
     ],
+    "playlet-wechat-feed": [
+      "公众号爆文",
+      "文旅",
+      "每天在推什么",
+      "每日榜",
+      "短剧",
+      "赛道日报"
+    ],
     "seedream-5-lite": [
       "AI 出图",
       "图生图",
@@ -1091,6 +1128,19 @@
       "搜 TikTok 账号",
       "海外抖音账号"
     ],
+    "trending-hub": [
+      "借势选题",
+      "全网热榜",
+      "找选题",
+      "热搜",
+      "爆款选题",
+      "综合热点",
+      "趋势",
+      "蹭热点",
+      "追热点",
+      "选题",
+      "选题信号"
+    ],
     "trending-hub-top10": [
       "今日热点",
       "全网热搜",
@@ -1099,6 +1149,14 @@
       "热点榜",
       "聚合热榜",
       "跨平台热搜"
+    ],
+    "wechat-account-analyzer": [
+      "公众号诊断",
+      "批量诊断",
+      "竞品诊断",
+      "账号体检",
+      "账号健康度",
+      "账号画像"
     ],
     "wechat-banned-words": [
       "公众号违禁词",
@@ -1154,6 +1212,14 @@
       "爆款仿写",
       "起标题",
       "选题角度"
+    ],
+    "wechat-similar-account": [
+      "公众号对标",
+      "对标推荐",
+      "对标矩阵",
+      "相似账号",
+      "竞品账号",
+      "起号参考"
     ],
     "wechat-title": [
       "公众号标题",
