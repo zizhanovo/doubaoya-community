@@ -30,10 +30,10 @@ class CommunityValidatorTests(unittest.TestCase):
                 validator.frontmatter_name(skill)
 
     def routing_fixture(self, root: Path) -> Path:
-        destination = root / "skills" / "doubaoya"
+        destination = root / "skills" / "dby-api"
         (destination / "references").mkdir(parents=True)
         shutil.copy2(validator.ROUTING, destination / "references" / "wechat-routing.json")
-        shutil.copy2(validator.SKILLS / "doubaoya" / "SKILL.md", destination / "SKILL.md")
+        shutil.copy2(validator.SKILLS / "dby-api" / "SKILL.md", destination / "SKILL.md")
         routing = json.loads(validator.ROUTING.read_text(encoding="utf-8"))
         names = set()
         for route in routing["routes"]:
@@ -78,26 +78,26 @@ class CommunityValidatorTests(unittest.TestCase):
                     {"terminal_skill": validator.AUTHORING_CHAIN[0]}
                 ),
             )
-            with self.assertRaisesRegex(validator.ValidationError, "authoring route must terminate at wechat-article-pipeline"):
+            with self.assertRaisesRegex(validator.ValidationError, "authoring route must terminate at dby-publish"):
                 validator.validate_routing(root)
 
     # ── 路由指针闸：routing json 里点名 Skill 的字段不许指向不存在的目录 ──────────
     # 判据是**结构性**的（顶层带 routes 数组即算路由表），所以这些 fixture 故意不叫
     # *-routing.json —— 文件名换了闸还得照扫，否则新增第三份路由表就天然在扫描面之外。
     def pointer_fixture(self, root: Path, mutate) -> None:
-        for name in ("doubaoya", "wechat-article-pipeline"):
+        for name in ("dby-api", "dby-publish"):
             (root / "skills" / name).mkdir(parents=True)
             (root / "skills" / name / "SKILL.md").write_text(
                 f"---\nname: {name}\ndescription: x\n---\n", encoding="utf-8"
             )
-        references = root / "skills" / "doubaoya" / "references"
+        references = root / "skills" / "dby-api" / "references"
         references.mkdir()
         table = {
             "routes": [{
                 "id": "r1",
-                "primary_skill": "doubaoya",
-                "terminal_skill": "wechat-article-pipeline",
-                "candidate_skills": ["doubaoya"],
+                "primary_skill": "dby-api",
+                "terminal_skill": "dby-publish",
+                "candidate_skills": ["dby-api"],
             }]
         }
         mutate(table)
@@ -129,9 +129,9 @@ class CommunityValidatorTests(unittest.TestCase):
         # 🔴 一个路由表都没扫到 = 闸在空转，而空转长得和真通过一模一样。
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "skills" / "doubaoya").mkdir(parents=True)
-            (root / "skills" / "doubaoya" / "SKILL.md").write_text(
-                "---\nname: doubaoya\ndescription: x\n---\n", encoding="utf-8"
+            (root / "skills" / "dby-api").mkdir(parents=True)
+            (root / "skills" / "dby-api" / "SKILL.md").write_text(
+                "---\nname: dby-api\ndescription: x\n---\n", encoding="utf-8"
             )
             with self.assertRaisesRegex(validator.ValidationError, "一个 routing 表都没扫到"):
                 validator.validate_routing_skill_pointers(root)
@@ -142,7 +142,7 @@ class CommunityValidatorTests(unittest.TestCase):
         target = root / "skills" / "dby-publish"
         target.mkdir(parents=True)
         (target / "SKILL.md").write_text("---\nname: dby-publish\ndescription: fixture\n---\n", encoding="utf-8")
-        known = {"wechat-article-pipeline": ["aaaaaaaaaaaa"]}
+        known = {"old-pkg-a": ["aaaaaaaaaaaa"]}
         if known_extra:
             known.update(known_extra)
         (root / "known-hashes.json").write_text(json.dumps({"skills": known}), encoding="utf-8")
@@ -166,14 +166,14 @@ class CommunityValidatorTests(unittest.TestCase):
             root = Path(directory)
             self.renames_fixture(
                 root,
-                {"wechat-article-pipeline": {"to": "dby-publish", "userFiles": ["config.json", "profiles/"]}},
+                {"old-pkg-a": {"to": "dby-publish", "userFiles": ["config.json", "profiles/"]}},
             )
             validator.validate_renames_table(root)
 
     def test_renames_table_rejects_target_not_installed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.renames_fixture(root, {"wechat-article-pipeline": {"to": "ghost-pkg", "userFiles": []}})
+            self.renames_fixture(root, {"old-pkg-a": {"to": "ghost-pkg", "userFiles": []}})
             with self.assertRaisesRegex(validator.ValidationError, "不是 skills/ 下在架目录"):
                 validator.validate_renames_table(root)
 
@@ -196,7 +196,7 @@ class CommunityValidatorTests(unittest.TestCase):
             root = Path(directory)
             self.renames_fixture(
                 root,
-                {"wechat-article-pipeline": {"to": "dby-publish", "userFiles": ["../escape.json"]}},
+                {"old-pkg-a": {"to": "dby-publish", "userFiles": ["../escape.json"]}},
             )
             with self.assertRaisesRegex(validator.ValidationError, r"含 \.\."):
                 validator.validate_renames_table(root)
@@ -206,7 +206,7 @@ class CommunityValidatorTests(unittest.TestCase):
             root = Path(directory)
             self.renames_fixture(
                 root,
-                {"wechat-article-pipeline": {"to": "dby-publish", "userFiles": ["/etc/passwd"]}},
+                {"old-pkg-a": {"to": "dby-publish", "userFiles": ["/etc/passwd"]}},
             )
             with self.assertRaisesRegex(validator.ValidationError, "不能以 / 开头"):
                 validator.validate_renames_table(root)
@@ -241,7 +241,7 @@ class CommunityValidatorTests(unittest.TestCase):
             root = Path(directory)
             self.budget_fixture(
                 root,
-                {"doubaoya": "小红书笔记分析数据"},
+                {"dby-api": "小红书笔记分析数据"},
                 {"xiaohongshu-note-analyzer": ["笔记分析", "笔记拆解", "对标分析", "选题拆解", "爆款结构"]},
             )
             with self.assertRaisesRegex(validator.ValidationError, "删包/改词弄丢了话术"):
@@ -252,7 +252,7 @@ class CommunityValidatorTests(unittest.TestCase):
             root = Path(directory)
             self.budget_fixture(
                 root,
-                {"doubaoya": "小红书 笔记分析 笔记拆解 对标分析"},
+                {"dby-api": "小红书 笔记分析 笔记拆解 对标分析"},
                 {"xiaohongshu-note-analyzer": ["笔记分析", "笔记拆解", "对标分析"]},
             )
             self.assertEqual(validator.validate_trigger_word_coverage(root), [])
@@ -261,13 +261,13 @@ class CommunityValidatorTests(unittest.TestCase):
         # 「AI 视频号」与「AI视频号」是同一个词，不该因为一个空格判成丢词
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.budget_fixture(root, {"doubaoya": "AI视频号日报"}, {"wechat-channels-ai-feed": ["AI 视频号"]})
+            self.budget_fixture(root, {"dby-api": "AI视频号日报"}, {"wechat-channels-ai-feed": ["AI 视频号"]})
             self.assertEqual(validator.validate_trigger_word_coverage(root), [])
 
     def test_trigger_gate_skips_capabilities_deleted_for_real(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.budget_fixture(root, {"doubaoya": "选题"}, {"celebrity-slice": ["明星切片", "字幕烧制"]})
+            self.budget_fixture(root, {"dby-api": "选题"}, {"celebrity-slice": ["明星切片", "字幕烧制"]})
             self.assertEqual(validator.validate_trigger_word_coverage(root), [])
 
     def test_factor_expansion_refuses_prose_as_a_prefix(self):
@@ -313,7 +313,7 @@ class CommunityValidatorTests(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            self.budget_fixture(root, {"doubaoya": "小红书：搜索/封面", "b-pkg": "公众号榜单"})
+            self.budget_fixture(root, {"dby-api": "小红书：搜索/封面", "b-pkg": "公众号榜单"})
             descriptions = [
                 validator.frontmatter_description(d / "SKILL.md")
                 for d in validator.discover_skill_dirs(root)
@@ -397,12 +397,13 @@ class CommunityValidatorTests(unittest.TestCase):
                 validator.validate_authoring_chain(root)
 
     def test_authoring_chain_accepts_a_downstream_slug_without_a_hyphen(self):
-        """`doubaoya` / `dby` 没有连字符，但它们是真 Skill，指向它们就是有下游。
+        """`dby` 是这仓库里目前唯一没有连字符、但仍是真实 Skill 的目录名，指向它就是有下游。
 
         Skill 名的保守形状要求至少一个连字符，于是「下一步」表里把下游从 `wechat-account-analyzer`
-        改指总入口 `doubaoya` 时，闸会报「names no downstream Skill」——把**指对了**判成**没指**。
-        合并薄壳时下游天然会向总入口收敛，所以这不是个别情况，是结构性的。
-        放宽只作用于「有没有下游」这一问，且**与 installed 求交**，交集本身就是判据。
+        改指导航入口 `dby` 时，闸会报「names no downstream Skill」——把**指对了**判成**没指**。
+        `unify-dby-naming` 改名车之前 `doubaoya` 同样没有连字符，改名后它变成 `dby-api`，
+        无连字符的真 Skill 只剩 `dby` 一个了；放宽只作用于「有没有下游」这一问，
+        且**与 installed 求交**，交集本身就是判据。
         """
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -411,7 +412,7 @@ class CommunityValidatorTests(unittest.TestCase):
             text = skill.read_text(encoding="utf-8")
             start = text.index(validator.NEXT_STEP_HEADING)
             end = text.index("\n## ", start)
-            hyphenless = "doubaoya"
+            hyphenless = "dby"
             self.assertIn(hyphenless, {path.name for path in validator.discover_skill_dirs(root)})
             self.assertNotIn(hyphenless, validator.SKILL_TOKEN.findall(f"`{hyphenless}`"),
                              "保守形状本就够不着无连字符的 slug——够得着的话这条测试就没有素材")
@@ -425,13 +426,13 @@ class CommunityValidatorTests(unittest.TestCase):
     def test_dead_pointer_gate_still_ignores_hyphenless_names(self):
         """放宽只给「有没有下游」，**不给死指针**——否则正文里正当点名的已退役平台会被误报。
 
-        doubaoya 正文里写着已整体退役的 `mera`（单词、无连字符）。实测把死指针闸一并放宽，
+        dby-api 正文里写着已整体退役的 `mera`（单词、无连字符）。实测把死指针闸一并放宽，
         它当场变成一条红灯，而噪音闸等于没有闸。
         """
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "doubaoya" / "SKILL.md"
+            skill = root / "skills" / "dby-api" / "SKILL.md"
             known = json.loads((validator.ROOT / "known-hashes.json").read_text(encoding="utf-8"))
             installed = {path.name for path in validator.discover_skill_dirs(root)}
             hyphenless_retired = sorted(s for s in set(known["skills"]) - installed if "-" not in s)
@@ -451,17 +452,17 @@ class CommunityValidatorTests(unittest.TestCase):
                 validator.validate_authoring_chain(root)
 
     def test_authoring_chain_rejects_pointer_to_a_retired_package(self):
-        """doubaoya 点名一个**已下架的技能包** = 把 agent 导向装不上的包，且全程无报错。
+        """dby-api 点名一个**已下架的技能包** = 把 agent 导向装不上的包，且全程无报错。
 
         2026-08-19 合并四个孪生壳时，它正文里两处 `wechat-hot-write` / `wechat-title` 就是这么
         活下来的——链上 Skill 的「下一步」有闸、dby 全篇有闸，偏偏分发量最大的这一份没有。
-        判据比 dby 那条收窄一档：只报**曾经真的是技能包目录**的名字，所以 doubaoya 正当点名的
+        判据比 dby 那条收窄一档：只报**曾经真的是技能包目录**的名字，所以 dby-api 正当点名的
         能力 slug（seedream-lite）、端点名片段（ai-feed）不会误报——下面第二个断言钉住这一点。
         """
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "doubaoya" / "SKILL.md"
+            skill = root / "skills" / "dby-api" / "SKILL.md"
             original = skill.read_text(encoding="utf-8")
             known = json.loads((validator.ROOT / "known-hashes.json").read_text(encoding="utf-8"))
             retired = sorted(set(known["skills"])
@@ -477,9 +478,9 @@ class CommunityValidatorTests(unittest.TestCase):
             validator.validate_authoring_chain(root)
 
     def test_retired_pointer_scan_covers_every_skill_not_just_the_entry_points(self):
-        """扫描面是**全部** Skill 正文与 references，不是 doubaoya / dby 那两份。
+        """扫描面是**全部** Skill 正文与 references，不是 dby-api / dby 那两份。
 
-        这条测试是 2026-08-19 退役 10 个壳时买回来的：闸只盯 doubaoya，于是
+        这条测试是 2026-08-19 退役 10 个壳时买回来的：闸只盯 dby-api，于是
         wechat-hot-article 正文里的 `gzh-search` 和 image-gen 正文里的 `xiaohongshu-search`
         全靠人 grep 才发现。闸盯着谁，就只有谁不会烂——所以这里把**普通 Skill**
         和 **references 目录**各钉一条；少扫任何一处，对应断言就不再抛错。
@@ -490,9 +491,9 @@ class CommunityValidatorTests(unittest.TestCase):
         # 判据是「普通 Skill 的正文也在扫描面内」，具体是哪个包无关紧要。
         ordinary = next(
             d.name for d in validator.discover_skill_dirs(validator.ROOT)
-            if d.name not in {"doubaoya", "dby", "doubaoya-gateway"}
+            if d.name not in {"dby-api", "dby", "dby-gateway"}
         )
-        for relative in (f"skills/{ordinary}/SKILL.md", "skills/doubaoya-gateway/references/routing-pitfalls.md"):
+        for relative in (f"skills/{ordinary}/SKILL.md", "skills/dby-gateway/references/routing-pitfalls.md"):
             with self.subTest(relative), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 self.repository_fixture(root)
@@ -550,8 +551,8 @@ class CommunityValidatorTests(unittest.TestCase):
         # 三个字段上游从来没回过。文档教 agent 读 `matchedWords` 的那阵子，「为空 ⇒ 合规 ✅」
         # 是个恒真判据，每一段文案都被放行——变异证据分别覆盖「全仓禁」与「只在违禁词 Skill 禁」两类。
         for skill_name, injection, ghost in (
-            ("multi-banned-words", "若 `matchedWords` 为空则合规。", "matchedWords"),
-            ("multi-banned-words", "读 `data.suggestions` 拿建议。", "suggestions"),
+            ("dby-banned-words", "若 `matchedWords` 为空则合规。", "matchedWords"),
+            ("dby-banned-words", "读 `data.suggestions` 拿建议。", "suggestions"),
             # 第三条是**域外**样本：riskLevel 全仓禁，连不碰违禁词的包也不许写。
             # 用哪个包无所谓，现取即可（见 a_non_safety_skill 的注释）。
             (None, "整体风险等级看 `riskLevel`。", "riskLevel"),
@@ -588,7 +589,7 @@ class CommunityValidatorTests(unittest.TestCase):
         # `suggestions` 混进去也不报。分域改成扫整个技能包后这条才红。
         #
         # 那个包 2026-08-19 退役了，仓里也不再有「标记只出现在脚本里」的真实样本
-        # （multi-banned-words 的标记 SKILL.md 与脚本里都有）。所以**自己种一个**这种形状的包：
+        # （dby-banned-words 的标记 SKILL.md 与脚本里都有）。所以**自己种一个**这种形状的包：
         # 要证的性质是「分域看整个目录、不只看 SKILL.md」，种出来的样本证得一样硬，且不会再烂。
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -612,7 +613,7 @@ class CommunityValidatorTests(unittest.TestCase):
         # 而同一份文件的红线写着接口不返回它。description 是选路层，说错影响面最大。
         for skill_name, original, mutated, phrase in (
             (
-                "multi-banned-words",
+                "dby-banned-words",
                 "多平台违禁词检测——",
                 "多平台违禁词检测，给替换建议——",
                 "替换建议",
@@ -634,7 +635,7 @@ class CommunityValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.repository_fixture(root)
-            skill = root / "skills" / "multi-banned-words" / "SKILL.md"
+            skill = root / "skills" / "dby-banned-words" / "SKILL.md"
             skill.write_text(
                 skill.read_text(encoding="utf-8") + "\n\n> 接口不返回风险等级与替换建议，命中词清单也没有。\n",
                 encoding="utf-8",
@@ -651,12 +652,12 @@ class CommunityValidatorTests(unittest.TestCase):
             validator.validate_banned_word_fields(root)
 
     def test_frontmatter_description_reads_folded_blocks(self):
-        # doubaoya 用折叠式 ``>-``，description 正文在后面的缩进行里；
+        # dby-api 用折叠式 ``>-``，description 正文在后面的缩进行里；
         # 只取首行会让闸对折叠式 description 视而不见。
-        description = validator.frontmatter_description(validator.SKILLS / "doubaoya" / "SKILL.md")
+        description = validator.frontmatter_description(validator.SKILLS / "dby-api" / "SKILL.md")
         self.assertIn("都爆鸭", description)
         self.assertNotIn(">-", description)
-        single = validator.frontmatter_description(validator.SKILLS / "multi-banned-words" / "SKILL.md")
+        single = validator.frontmatter_description(validator.SKILLS / "dby-banned-words" / "SKILL.md")
         self.assertTrue(single.startswith("多平台违禁词检测"))
         self.assertNotIn("version:", single)
 
@@ -807,7 +808,7 @@ class CallRouteGateTests(unittest.TestCase):
         # 用一个**仍然存在**的技能包目录名（原来写的是 content-parse，它随批 3 退役——
         # 那之后这条仍然绿，但走的是「历史闭集里的旧包名」那条分支，证的已经不是同一件事了）。
         with self.assertRaisesRegex(validator.ValidationError, "多半把技能包目录名当成了调用 slug"):
-            self.check("`POST /api/skills/wechat-article-pipeline/invoke`\n")
+            self.check("`POST /api/skills/dby-publish/invoke`\n")
 
     def test_rejects_skill_slug_on_the_apis_route(self):
         with self.assertRaisesRegex(validator.ValidationError, r"得走 /api/skills/real-skill/invoke"):
@@ -863,12 +864,12 @@ class GatewayContractFreedomTests(unittest.TestCase):
 
     #: 每个变异都在这四处各跑一遍，钉住两件事：
     #: ① 扫描面是**整个技能包**（references/ 是参数最舒服的落点，README 是最容易被忘的那份）；
-    #: ② 扫描面是**两个包**——doubaoya 的分发量比网关大，它烤进去的参数一样会漂。
+    #: ② 扫描面是**两个包**——dby-api 的分发量比网关大，它烤进去的参数一样会漂。
     DOCUMENTS = (
         (validator.GATEWAY_SKILL, "SKILL.md"),
         (validator.GATEWAY_SKILL, "references/routing-pitfalls.md"),
-        ("doubaoya", "SKILL.md"),
-        ("doubaoya", "README.md"),
+        ("dby-api", "SKILL.md"),
+        ("dby-api", "README.md"),
     )
 
     def fixture(self, mutate=None, target: tuple[str, str] | None = None) -> Path:
@@ -895,12 +896,12 @@ class GatewayContractFreedomTests(unittest.TestCase):
         validator.validate_gateway_contract_freedom(self.fixture())
 
     def test_scan_covers_the_business_entry_skill(self):
-        """扫描面必须含 doubaoya——它是分发量最大的那个包，也是参数曾经真被烤进去的那个。
+        """扫描面必须含 dby-api——它是分发量最大的那个包，也是参数曾经真被烤进去的那个。
 
         没有这条断言，把 CONTRACT_FREE_SKILLS 悄悄改回只剩网关，上面所有 subTest 会
         「少跑两处」而不是「失败」，闸缩了一半却全绿。
         """
-        self.assertIn("doubaoya", validator.CONTRACT_FREE_SKILLS)
+        self.assertIn("dby-api", validator.CONTRACT_FREE_SKILLS)
         self.assertIn(validator.GATEWAY_SKILL, validator.CONTRACT_FREE_SKILLS)
 
     def test_rejects_camel_case_field_name_anywhere(self):
@@ -1137,7 +1138,7 @@ class EntryGuardGateTests(unittest.TestCase):
     def test_in_place_regression_is_caught(self):
         """不只是「新文件抄坏写法」——真实文件的守卫退化回去也要当场红。"""
         root = self.fixture()
-        target = root / "skills" / "doubaoya" / "scripts" / "doubaoya.mjs"
+        target = root / "skills" / "dby-api" / "scripts" / "doubaoya.mjs"
         text = target.read_text(encoding="utf-8")
         start = text.index("function isMainModule() {")
         end = text.index("\n}\n", start) + len("\n}\n")
@@ -1149,7 +1150,7 @@ class EntryGuardGateTests(unittest.TestCase):
         )
         self.assertNotIn("realpathSync(", degraded.replace('import { realpathSync } from "node:fs";', ""))
         target.write_text(degraded, encoding="utf-8")
-        with self.assertRaisesRegex(validator.ValidationError, r"skills/doubaoya/scripts/doubaoya\.mjs:\d+"):
+        with self.assertRaisesRegex(validator.ValidationError, r"skills/dby-api/scripts/doubaoya\.mjs:\d+"):
             validator.validate_entry_guards_resolve_symlinks(root)
 
     def test_real_repository_has_zero_findings(self):

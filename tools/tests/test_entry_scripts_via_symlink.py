@@ -29,20 +29,19 @@ SKILLS = ROOT / "skills"
 #   · 其余                    —— 支持 --help，打印用法后 exit 0
 ENTRY_FLAGS: dict[str, list[str]] = {
     "dby-update/scripts/reconcile.mjs": ["--help"],
-    "doubaoya/scripts/doubaoya.mjs": [],
-    "wechat-article-pipeline/scripts/account-verify.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/design-studio.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/extract-theme.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/fetch-article.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/gen-image.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/import-theme.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/pipeline.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/plan-figures.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/preprocess-and-publish.mjs": [],
-    "wechat-article-pipeline/scripts/render-wechat-html.mjs": ["--help"],
-    "wechat-article-pipeline/scripts/validate-theme.mjs": ["--help"],
-    "wechat-draft-publish/scripts/preprocess-and-publish.mjs": [],
-    "wechat-theme-studio/scripts/validate-theme.mjs": ["--help"],
+    "dby-api/scripts/doubaoya.mjs": [],
+    "dby-publish/scripts/account-verify.mjs": ["--help"],
+    "dby-publish/scripts/design-studio.mjs": ["--help"],
+    "dby-publish/scripts/extract-theme.mjs": ["--help"],
+    "dby-publish/scripts/fetch-article.mjs": ["--help"],
+    "dby-publish/scripts/gen-image.mjs": ["--help"],
+    "dby-publish/scripts/import-theme.mjs": ["--help"],
+    "dby-publish/scripts/pipeline.mjs": ["--help"],
+    "dby-publish/scripts/plan-figures.mjs": ["--help"],
+    "dby-publish/scripts/preprocess-and-publish.mjs": [],
+    "dby-publish/scripts/render-wechat-html.mjs": ["--help"],
+    "dby-publish/scripts/validate-theme.mjs": ["--help"],
+    "dby-theme/scripts/validate-theme.mjs": ["--help"],
 }
 
 

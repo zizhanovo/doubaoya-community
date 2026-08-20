@@ -125,9 +125,9 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 把最重的输入（从零回答 15 问）变成**校对**（对错勾选）：
 
 1. **拉素材**：
-   - `doubaoya` 打 `POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` 拉这个号的历史发文；
-   - `doubaoya` 打账号诊断能力 `skill.wechat.accountAnalyzer`（若已有复盘数据，一并读进来）；
-   - `doubaoya` 打相似账号推荐 `skill.wechat.similarAccount` 拉同赛道对标账号——顺带完成
+   - `dby-api` 打 `POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` 拉这个号的历史发文；
+   - `dby-api` 打账号诊断能力 `skill.wechat.accountAnalyzer`（若已有复盘数据，一并读进来）；
+   - `dby-api` 打相似账号推荐 `skill.wechat.similarAccount` 拉同赛道对标账号——顺带完成
      `references/intake.md` 里的**「假定位体检」**
      （说得出 3 家对标账号 + 说得出自己与它们的差异点；说不出，多半是定位没落到真实市场）。
 2. **反推**：从素材里反推出整份章程草案——历史选题反推 `positioning`，评论区与打开场景反推 `audience`，

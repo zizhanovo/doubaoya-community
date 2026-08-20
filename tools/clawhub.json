@@ -6,24 +6,37 @@
     "（wechat-cover -> 'Wechat Cover'），必须用 --name 显式覆盖，否则商店卡片上是一串没人搜得到的英文。",
     "owner 是发布者 handle：ClawHub 的 slug 按 owner 分命名空间（canonical URL = /<owner>/skills/<slug>），",
     "带 --owner 发布可以避开已被他人占用的裸 slug。",
-    "改这个文件后跑 tools/clawhub_publish.py 预览，跑 tools/validate_community.py 校验清单没漂移。"
+    "改这个文件后跑 tools/clawhub_publish.py 预览，跑 tools/validate_community.py 校验清单没漂移。",
+    "2026-08-20 unify-dby-naming 改名车：键改成新 slug；一个下架包与一个已被合并吸收的包的",
+    "两条条目已删除（详见 docs/deleting-a-skill.md），本地条目还没在 ClawHub 上手工下架的",
+    "老条目由维护者按发布计划另行处理。"
   ],
   "owner": "doubaoya",
   "skills": {
-    "ai-intelligence-investigator": {
-      "displayName": "情报调查员（本地版）",
-      "topics": [
-        "情报调查",
-        "研究",
-        "本地运行"
-      ]
-    },
     "dby": {
       "displayName": "dby · 都爆鸭公众号工具箱",
       "topics": [
         "微信公众号",
         "工具箱",
         "路由"
+      ]
+    },
+    "dby-api": {
+      "displayName": "都爆鸭 · 新媒体数据总入口",
+      "topics": [
+        "新媒体",
+        "爆款选题",
+        "热榜",
+        "数据源"
+      ]
+    },
+    "dby-banned-words": {
+      "displayName": "多平台违禁词检测",
+      "topics": [
+        "违禁词",
+        "合规审核",
+        "多平台",
+        "本地运行"
       ]
     },
     "dby-charter": {
@@ -34,23 +47,7 @@
         "内容策略"
       ]
     },
-    "dby-update": {
-      "displayName": "都爆鸭 Skill 自更新",
-      "topics": [
-        "更新",
-        "维护"
-      ]
-    },
-    "doubaoya": {
-      "displayName": "都爆鸭 · 新媒体数据总入口",
-      "topics": [
-        "新媒体",
-        "爆款选题",
-        "热榜",
-        "数据源"
-      ]
-    },
-    "doubaoya-gateway": {
+    "dby-gateway": {
       "displayName": "都爆鸭 · 调用网关",
       "topics": [
         "调用协议",
@@ -58,34 +55,17 @@
         "基础设施"
       ]
     },
-    "multi-banned-words": {
-      "displayName": "多平台违禁词检测",
-      "topics": [
-        "违禁词",
-        "合规审核",
-        "多平台",
-        "本地运行"
-      ]
-    },
-    "wechat-article-pipeline": {
+    "dby-publish": {
       "displayName": "公众号图文流水线（选题→成稿→排版→草稿箱）",
       "topics": [
         "微信公众号",
         "内容流水线",
         "排版",
-        "发布"
-      ]
-    },
-    "wechat-draft-publish": {
-      "displayName": "公众号草稿箱发布",
-      "topics": [
-        "微信公众号",
         "发布",
-        "草稿箱",
-        "自动化"
+        "草稿箱"
       ]
     },
-    "wechat-rewrite": {
+    "dby-rewrite": {
       "displayName": "公众号爆款文案改写",
       "topics": [
         "微信公众号",
@@ -94,13 +74,20 @@
         "本地运行"
       ]
     },
-    "wechat-theme-studio": {
+    "dby-theme": {
       "displayName": "公众号排版主题工作室",
       "topics": [
         "微信公众号",
         "排版",
         "主题",
         "Markdown"
+      ]
+    },
+    "dby-update": {
+      "displayName": "都爆鸭 Skill 自更新",
+      "topics": [
+        "更新",
+        "维护"
       ]
     }
   }

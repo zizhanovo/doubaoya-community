@@ -4,7 +4,36 @@
     "这是 dby-update 对账器（skills/dby-update/scripts/reconcile.mjs）读的改名表：上游把某个 slug 改名（或合并进另一个 slug）之后，靠这张表告诉本机用户机器上的对账器该把老目录搬到哪。",
     "谁读它：只有 reconcile.mjs 会拉这份文件；本仓其余脚本/文档不依赖它。",
     "userFiles 的语义：老目录里属于用户本地数据的相对路径列表（文件或以 / 结尾的目录）。对账器只搬「老目录有、上游新包没有」的那些文件——上游新包自带的默认内容（比如内置主题）不会被老副本覆盖，用户自己留下的东西才会被搬走。",
-    "机制小车阶段（本次发布）renames 必须保持为空对象：先让对账器学会读表、搬运，行为零变化；等存量用户的对账器都升级到会读表的版本之后，改名车再把这张表填满。见 openspec/changes/unify-dby-naming/design.md 的 D4。"
+    "改名车已发（2026-08-20，openspec/changes/unify-dby-naming）：下表是这次改名/合并/下架的完整映射；`ai-intelligence-investigator` 是纯下架（能力随包退出），不出现在这张表里——按 docs/deleting-a-skill.md「例外」段处理，没有新包可搬。"
   ],
-  "renames": {}
+  "renames": {
+    "wechat-article-pipeline": {
+      "to": "dby-publish",
+      "userFiles": ["config.json", "design-config.json", "profiles/", "themes/", "assets/ip/"]
+    },
+    "wechat-draft-publish": {
+      "to": "dby-publish",
+      "userFiles": []
+    },
+    "wechat-theme-studio": {
+      "to": "dby-theme",
+      "userFiles": []
+    },
+    "wechat-rewrite": {
+      "to": "dby-rewrite",
+      "userFiles": []
+    },
+    "multi-banned-words": {
+      "to": "dby-banned-words",
+      "userFiles": []
+    },
+    "doubaoya": {
+      "to": "dby-api",
+      "userFiles": []
+    },
+    "doubaoya-gateway": {
+      "to": "dby-gateway",
+      "userFiles": []
+    }
+  }
 }

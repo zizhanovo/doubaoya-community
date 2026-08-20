@@ -15,31 +15,31 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
-ROUTING = SKILLS / "doubaoya" / "references" / "wechat-routing.json"
+ROUTING = SKILLS / "dby-api" / "references" / "wechat-routing.json"
 
 # 公众号写作链：从"写正文"到"存进草稿箱"的每一跳。链上每个 Skill 都必须在自己的 SKILL.md 里
 # 声明前向指针（一节 `## 下一步`，点名下游的真实 Skill）。没有它，agent 写完正文就宣布交付完成，
 # 用户手上仍然只有一段 Markdown——这条链断过一次，本闸就是防它再静默断掉。
 #
-# 🔴 **链头从 Skill 变成了 doubaoya。** 原来的第 1 跳 `wechat-hot-write`（拉样本写正文）与第 3 跳
+# 🔴 **链头从 Skill 变成了 dby-api。** 原来的第 1 跳 `wechat-hot-write`（拉样本写正文）与第 3 跳
 # `wechat-title`（起标题）在 2026-08-19 的孪生合并里下架了：它们与 `wechat-hot-article` /
 # `wechat-cover` 各自共用同一个上游端点（api.gzh.hotArticle / api.gzh.cozeData），
-# 两两在选路上互噬。合并后这两件事由 `doubaoya` 按意图路由承接，所以：
+# 两两在选路上互噬。合并后这两件事由 `dby-api` 按意图路由承接，所以：
 #   * 本元组只留**下架后仍存在**的那几跳（前向指针闸只能对真实目录成立）；
-#   * 「链头必须在场」这条不变量改由下面 must_route 里的 `doubaoya` 守——它现在既是入口也是第 1 跳。
+#   * 「链头必须在场」这条不变量改由下面 must_route 里的 `dby-api` 守——它现在既是入口也是第 1 跳。
 # 换句话说，缩短的是元组，不是这条链：写正文、起标题两件事仍然必须有人接，只是接的人换了。
 # 🔴 2026-08-19 第二次缩短：`wechat-banned-words`（合规）与 `wechat-cover`（封面）也退役了，
-# 两件事同样并进 `doubaoya` 按意图路由。元组再次只留**下架后仍存在**的那几跳；
+# 两件事同样并进 `dby-api` 按意图路由。元组再次只留**下架后仍存在**的那几跳；
 # 「合规环与封面环必须有人接」这两条不变量改由下面 CHAIN_CAPABILITIES 守（判据从"点名某个包"
 # 换成"那条能力在总入口的意图路由表里在场"）。链没变短，接的人换了——这一点每次都要写清楚，
 # 否则下一个读到 2 跳元组的人会以为写作链只剩两步。
 AUTHORING_CHAIN = (
-    "wechat-theme-studio",
-    "wechat-article-pipeline",
+    "dby-theme",
+    "dby-publish",
 )
 # 写作链上**已经没有独立技能包**的那几跳，各自的落点能力。少了任一条，对应那一跳就重新变成
 # 「没人接的活」，而且不会有任何地方报错——这正是本表存在的理由。
-# 每条都必须出现在 doubaoya 的 SKILL.md（§0.5 意图速查表）里。
+# 每条都必须出现在 dby-api 的 SKILL.md（§0.5 意图速查表）里。
 CHAIN_CAPABILITIES = {
     "api.gzh.hotArticle": "第 1 跳：拉同主题爆文样本再写正文（原 wechat-hot-write / wechat-hot-article）",
     "api.gzh.cozeData": "封面与标题环：同赛道爆款封面/标题素材（原 wechat-title / wechat-cover）",
@@ -53,20 +53,20 @@ NEXT_STEP_HEADING = "## 下一步"
 #
 # ponytail: 这个形状会误伤 CSS 属性与文件名，所以只扫「下一步」那一节（外加整篇 dby）,不扫全文。
 # 天花板：链上 skill 的正文里若出现死链，本闸看不见。升级路径是加白名单——但那份白名单自己会漂移，
-# 所以先不加。实测若改成扫全文，wechat-theme-studio 会被 `line-height`/`border-left`/`benya-clean`
-# 打红，wechat-article-pipeline 会被 `font-size`/`letter-spacing`/`design-config` 打红，全是误报。
+# 所以先不加。实测若改成扫全文，dby-theme 会被 `line-height`/`border-left`/`benya-clean`
+# 打红，dby-publish 会被 `font-size`/`letter-spacing`/`design-config` 打红，全是误报。
 SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`")
 # 反引号里的**任意** slug 形状（连字符可有可无）。它单独用是没有意义的——`keyword` / `limit`
 # 都会命中——所以它只在**与 installed 求交**之后使用，交集本身就是判据，零误报面。
 #
-# 为什么需要它：SKILL_TOKEN 要求至少一个连字符，于是 `doubaoya` / `dby` 这两个**没有连字符
+# 为什么需要它：SKILL_TOKEN 要求至少一个连字符，于是 `dby-api` / `dby` 这两个**没有连字符
 # 的真 Skill** 在它眼里根本不是 Skill。后果是「下一步」表里把下游改指总入口，闸会报
 # 「names no downstream Skill」——把「指对了」判成「没指」。2026-08-19 合并四个孪生壳时，
-# wechat-article-pipeline 的下一步表里 `wechat-account-analyzer` 是唯一带连字符的 token，
-# 改指 `doubaoya` 当场打红，就是这条。
+# dby-publish 的下一步表里 `wechat-account-analyzer` 是唯一带连字符的 token，
+# 改指 `dby-api` 当场打红，就是这条。
 #
 # 🔴 只放宽「有没有下游」这一问，**不放宽死指针那一问**：死指针问的是「像 Skill 但不存在」，
-# 那一问必须留着保守的连字符形状。实测把死指针闸也放宽，doubaoya 正文里正当点名的已退役
+# 那一问必须留着保守的连字符形状。实测把死指针闸也放宽，dby-api 正文里正当点名的已退役
 # 平台 `mera`（单词、无连字符）会当场误报——而噪音闸等于没有闸。
 ANY_SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`")
 
@@ -75,7 +75,7 @@ ANY_SKILL_TOKEN = re.compile(r"`([a-z][a-z0-9]*(?:-[a-z0-9]+)*)`")
 #   产品化 Skill  → POST /api/skills/<slug>/invoke          （catalog 的 skillDefinitions）
 #   平台数据能力  → POST /api/apis/<platform>/<slug>/call    （catalog 的 apiEndpointDefinitions）
 # 拿错集合的 slug 去打另一条，返回 404，且**没有任何回落**。本仓文档一度把技能包的**目录名**
-# （trending-hub / dby / wechat-article-pipeline）当成调用 slug 写进 /api/skills/<slug>/invoke，
+# （trending-hub / dby / dby-publish）当成调用 slug 写进 /api/skills/<slug>/invoke，
 # 于是那几条示例注定 404——而 §「404 就回去查发现接口」的指引又永远查不到它们，agent 原地死循环。
 # 本闸就是钉死这件事：文档/脚本里出现的每一条调用路径，都必须真的在主仓目录里。
 SKILL_INVOKE_PATH = re.compile(r"/api/skills/([A-Za-z0-9][A-Za-z0-9._~-]*)/invoke")
@@ -106,14 +106,14 @@ CATALOG_MARKERS = (
 # 一份仅供选路的能力索引（operationKey + 一行用途 + 详情端点）、跨能力的选路知识。
 # 一旦有人图省事把某条能力的入参字段抄进来，它就退化成又一份「看起来很确定、其实在骗人」的
 # 快照契约——正是本轮要根治的病。本闸就是钉死这件事。
-GATEWAY_SKILL = "doubaoya-gateway"
+GATEWAY_SKILL = "dby-gateway"
 
-# 🔴 扫描面**不止网关**。`doubaoya` 是业务总入口，它的意图路由表同样在回答「调哪条」，
+# 🔴 扫描面**不止网关**。`dby-api` 是业务总入口，它的意图路由表同样在回答「调哪条」，
 # 而它一度还顺手回答了「怎么填参数」——那一列烤进去的入参跟网关里的一样会漂，且它的
 # 分发量比网关大得多。判据对两个包完全相同，所以共用同一道闸而不是各写一份。
 # 往这张表里加一个包之前先问：**它是不是在给 agent 讲「有哪些能力、该调哪条」？** 是就该进来；
 # 业务 Skill（wechat-cover 那类只干一件事的）不进——它们只调自己那一条，天然没有索引。
-CONTRACT_FREE_SKILLS = (GATEWAY_SKILL, "doubaoya")
+CONTRACT_FREE_SKILLS = (GATEWAY_SKILL, "dby-api")
 
 # 协议词汇表：**信封 + 发现/详情 DTO + 入参契约 DTO** 的键，外加 JSON Schema 自己的元关键字。
 # 🔴 往这份表里加一个**能力入参字段名**（keyword / limit / thumbMediaId / publishTimeStart …），
@@ -178,7 +178,7 @@ RETIRED_WITH_CAPABILITY = {
     # mera 是**整个平台**退役，不是我们不想要：mera.doubaoya.com 的 DNS 记录已移除
     # （dig 返回 NXDOMAIN），六条 api.mera.* 在发现接口里被 hidden 过滤，
     # GET /api/apis/mera/<slug> 与「压根不存在」同为 404。判据与失效条件写在
-    # skills/doubaoya/references/mera-routing.json 的 retired 块里。
+    # skills/dby-api/references/mera-routing.json 的 retired 块里。
     # 2026-08-18 删掉它的壳，能力侧本就没有可发现的东西可留。
     "mera",
     # seedream-lite 的能力 2026-08-10 就下架了（成功率 0%，出图通道迁走时它被留在原地），
@@ -283,8 +283,29 @@ def validate_skill_inventory(root: Path = ROOT) -> None:
         names[name] = directory
 
 
+def validate_skill_slug_prefix(root: Path = ROOT) -> None:
+    """命名闸：`skills/` 下每个目录名必须落在 `{dby} ∪ dby-*` 里，且等于 frontmatter `name`
+    （后一半已由 validate_skill_inventory 守，这里只加前缀这一条）。
+
+    见 docs/naming.md 的规则与理由。判据是**形状**、不认内容——新包一旦前缀写错，装机那一刻
+    就当场红，不必等到发现/路由链路某处报错才被人肉发现。`dby` 单独放行是因为它是唯一的
+    无连字符主入口（`unify-dby-naming` 改名车之后，`{dby} ∪ dby-*` 与「无连字符真 Skill」的
+    特例集合 `{dby}` 是同一件事：`dby` 本身既满足前缀约定，也是唯一的无连字符例外）。
+    """
+    directories = discover_skill_dirs(root)
+    bad = sorted(
+        directory.name
+        for directory in directories
+        if directory.name != "dby" and not directory.name.startswith("dby-")
+    )
+    require(
+        not bad,
+        f"这些目录名不符合命名约定（必须是 `dby` 或 `dby-*`）：{bad}。见 docs/naming.md。",
+    )
+
+
 def validate_routing(root: Path = ROOT) -> None:
-    routing_path = root / "skills" / "doubaoya" / "references" / "wechat-routing.json"
+    routing_path = root / "skills" / "dby-api" / "references" / "wechat-routing.json"
     routing = load_json(routing_path)
     require(isinstance(routing, dict), "wechat-routing.json must be an object")
     require_exact_keys(routing, {"schema_version", "routes", "precedence", "forbidden_misroutes"}, "routing")
@@ -337,7 +358,7 @@ def validate_routing(root: Path = ROOT) -> None:
     cloud = route_by_id["doubaoya-cloud-public-data"]
     # 写侧必须压过泛化的云端搜索路由：否则「帮我写一篇公众号文章」又会被导进只管搜索的那条路。
     require(authoring["priority"] > cloud["priority"], "authoring route must precede the general cloud route")
-    require(authoring["terminal_skill"] == "wechat-article-pipeline", "authoring route must terminate at wechat-article-pipeline")
+    require(authoring["terminal_skill"] == "dby-publish", "authoring route must terminate at dby-publish")
     require(
         set(AUTHORING_CHAIN) <= set(authoring["candidate_skills"]),
         f"authoring route is missing chain Skills: {sorted(set(AUTHORING_CHAIN) - set(authoring['candidate_skills']))}",
@@ -384,9 +405,9 @@ def validate_routing(root: Path = ROOT) -> None:
     for signal in ("local qr login", "local session", "resumable archive", "article body export"):
         require(signal in cloud_signals, f"cloud forbidden-misroute signals are missing: {signal}")
 
-    doubaoya_text = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
-    require("references/wechat-routing.json" in doubaoya_text, "doubaoya SKILL.md does not load the routing source")
-    require("互动指标" in doubaoya_text, "doubaoya SKILL.md does not state the WeChat capability split")
+    doubaoya_text = (root / "skills" / "dby-api" / "SKILL.md").read_text(encoding="utf-8")
+    require("references/wechat-routing.json" in doubaoya_text, "dby-api SKILL.md does not load the routing source")
+    require("互动指标" in doubaoya_text, "dby-api SKILL.md does not state the WeChat capability split")
 
 
 def next_step_section(text: str) -> str | None:
@@ -420,7 +441,7 @@ def validate_banned_word_fields(root: Path = ROOT) -> None:
       都是对的），扫正文必然误伤，扫 description 则没有误伤面。
 
     禁的是「听起来像接口返回的结构」这类名词。**「风险等级」这个概念压根不存在**——接口不回，
-    本鸭也不许自创（见 multi-banned-words「不要自创风险等级」）。「替换建议」「命中词清单」
+    本鸭也不许自创（见 dby-banned-words「不要自创风险等级」）。「替换建议」「命中词清单」
     本鸭确实会产出，但在 description 这种没有主语的推销语里，它们读起来就是字段承诺；
     要在 description 里讲这个交付物，请改说交付物本身（「合规替换」「标注版正文」），
     别用听着像字段的名词。
@@ -475,7 +496,7 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
         # 死指针那一问用保守形状（要求连字符），避免把 `keyword` 之类当成死链。
         dead = sorted(set(SKILL_TOKEN.findall(section)) - installed)
         require(not dead, f"{name}/SKILL.md 下一步 references Skills that do not exist: {dead}")
-        # 「有没有下游」那一问用放宽形状 ∩ installed —— 交集即判据，所以 `doubaoya` / `dby`
+        # 「有没有下游」那一问用放宽形状 ∩ installed —— 交集即判据，所以 `dby-api` / `dby`
         # 这种无连字符的真 Skill 也算数（见 ANY_SKILL_TOKEN 的注释）。
         forward = (set(ANY_SKILL_TOKEN.findall(section)) & installed) - {name}
         require(forward, f"{name}/SKILL.md 下一步 names no downstream Skill")
@@ -486,14 +507,14 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
     require(not dead_in_dby, f"dby/SKILL.md routes to Skills that do not exist: {dead_in_dby}")
 
     # 🔴 「删了壳却没改指针」这一种错，扫描面必须是**全部 Skill 正文**，不是某几份。
-    # 2026-08-19 合并四个孪生壳时，doubaoya 正文里两处 `wechat-hot-write` / `wechat-title`
-    # 活了下来——因为当时只有链上 Skill 的 `## 下一步` 和 dby 全篇有闸。补 doubaoya 那一份
+    # 2026-08-19 合并四个孪生壳时，dby-api 正文里两处 `wechat-hot-write` / `wechat-title`
+    # 活了下来——因为当时只有链上 Skill 的 `## 下一步` 和 dby 全篇有闸。补 dby-api 那一份
     # 之后同一天又退役 10 个壳，`gzh-search`（wechat-hot-article 正文）与 `xiaohongshu-search`
     # （image-gen 正文）照样是靠人 grep 才发现的：**闸盯着谁，就只有谁不会烂。**
     #
     # 判据比 dby 那条**收窄一档**，因为 Skill 正文会正当地点名一堆「不是技能包」的东西：能力 slug
     # （`seedream-lite`）、端点名片段（`ai-feed`）、已下架平台的能力（`note-write` / `source-read`）。
-    # 拿 dby 的朴素判据扫 doubaoya 会当场误报 6 条，而噪音闸等于没有闸。所以只报**曾经真的是一个
+    # 拿 dby 的朴素判据扫 dby-api 会当场误报 6 条，而噪音闸等于没有闸。所以只报**曾经真的是一个
     # 技能包目录、现在没了**的名字——那正好就是这一种错，零误报面（实测：全部 43 份正文 0 命中）。
     # 取材是 known-hashes.json 的历史闭集（91 个 slug），离线可跑、不依赖 git。
     #
@@ -515,20 +536,20 @@ def validate_authoring_chain(root: Path = ROOT) -> None:
         )
 
     # 总入口必须知道这条链存在（否则"帮我写一篇公众号文章"又只会命中单个搜索类能力），
-    # 至少要点名合规环与终点。🔴 起点那一跳现在就是 doubaoya 自己（`wechat-hot-write` 已合并进来），
+    # 至少要点名合规环与终点。🔴 起点那一跳现在就是 dby-api 自己（`wechat-hot-write` 已合并进来），
     # 所以「点名起点」改由**它的意图路由表里必须有拉爆文样本那一行**来守：api.gzh.hotArticle
     # 在 §0.5 在场，等价于原来那条「必须点名 wechat-hot-write」。
-    doubaoya_text = (root / "skills" / "doubaoya" / "SKILL.md").read_text(encoding="utf-8")
+    doubaoya_text = (root / "skills" / "dby-api" / "SKILL.md").read_text(encoding="utf-8")
     for capability, why in sorted(CHAIN_CAPABILITIES.items()):
         require(
             capability in doubaoya_text,
-            f"doubaoya SKILL.md 里找不到 {capability}（{why}）。这一跳已经没有独立技能包了，"
+            f"dby-api SKILL.md 里找不到 {capability}（{why}）。这一跳已经没有独立技能包了，"
             "总入口的意图路由表就是它唯一的落点；从表里消失 = 这一跳重新变成没人接的活，"
             "而且不会有任何地方报错。",
         )
-    must_route = ("wechat-article-pipeline", "dby")
+    must_route = ("dby-publish", "dby")
     missing = sorted(name for name in must_route if f"`{name}`" not in doubaoya_text)
-    require(not missing, f"doubaoya SKILL.md does not route to the authoring chain: {missing}")
+    require(not missing, f"dby-api SKILL.md does not route to the authoring chain: {missing}")
 
 
 def locate_catalog(root: Path = ROOT) -> Path | None:
@@ -733,7 +754,7 @@ def validate_gateway_contract_freedom(root: Path = ROOT) -> None:
                 "没有指针的 references 文件不会被任何 agent 加载。",
             )
 
-    # 「必须有一张索引表」只对网关成立——索引是它的职责。doubaoya 的意图路由表首列是
+    # 「必须有一张索引表」只对网关成立——索引是它的职责。dby-api 的意图路由表首列是
     # **用户话术**（那才是它要回答的问题），天然不长成索引行；但它一旦长出索引行，
     # 上面的三列判据照样管着。
     require(gateway_rows, f"skills/{GATEWAY_SKILL}/ 下找不到能力索引表")
@@ -994,7 +1015,7 @@ def validate_no_key_prefix_instruction(root: Path = ROOT) -> None:
 # 判据只打**我方计费**，不打行业知识：
 #   · `¥` / `￥` 后面跟数字 —— 本仓里这个符号只用于我方报价，一律红；
 #   · 数字 + 元／点，且**同段**出现我方计费词（扣点 / 点数 / 计费 / credits / 充值 / 上游成本）。
-# 所以 dby-charter 里的「金融 5–8 元点击单价」、wechat-rewrite 快手规则里的文案示例「10元带回家」
+# 所以 dby-charter 里的「金融 5–8 元点击单价」、dby-rewrite 快手规则里的文案示例「10元带回家」
 # 都不受影响——那是行业知识和写作素材，不是我们的价目表。
 PRICE_YUAN_SYMBOL = re.compile(r"[¥￥]\s*\d")
 PRICE_AMOUNT = re.compile(r"\d+(?:\.\d+)?\s*(?:元|点(?![击数赞评]))")
@@ -1116,8 +1137,8 @@ def validate_entry_guards_resolve_symlinks(root: Path = ROOT) -> None:
 # `scripts/*.{mjs,cjs,js}` 存在 → 必须提 Node。
 #
 # 为什么值得有：2026-08-20 全仓实测，7 个带脚本的包里 **4 个有实质缺口**——
-# `multi-banned-words` / `wechat-rewrite` 各带一个 .py 而 compatibility 整个字段都不存在，
-# `dby-update` 带 .mjs 同样没有，`wechat-draft-publish` 两种脚本都有却只声明了 Node。
+# `dby-banned-words` / `dby-rewrite` 各带一个 .py 而 compatibility 整个字段都不存在，
+# `dby-update` 带 .mjs 同样没有，被合并进 `dby-publish` 的原草稿发布包两种脚本都有却只声明了 Node。
 # 用户机器上没装 python3 时，这些包是**运行时才炸**，而包里一个字都没提前说。
 #
 # 为什么不抄外部包的 `meta.json`（`required_binaries`）：那是个**没人自动读**的旁路文件
@@ -1235,7 +1256,7 @@ def validate_no_agent_fanout(root: Path = ROOT) -> None:
 # 写死字面量的后果不是报错，是**静默失效**：该包永远自报「我是没有版本的旧客户端」，于是
 # **它的更新提示永远不会触发**——用户一直用着旧包，我们这边也收不到任何信号。没有报错、没有
 # 降级、没有日志，只有「更新功能对这个包从来没生效过」。已经这么坏过一次：
-# wechat-article-pipeline / wechat-draft-publish 两个包的 .mjs 都把 UA 写成了 "doubaoya-skill/1.0"。
+# dby-publish 的两个入口脚本（当时分属两个包）都把 UA 写成了 "doubaoya-skill/1.0"。
 #
 # 判据只认**把 UA 定死**这一件事：一个 UA 名字（User-Agent / USER_AGENT / userAgent / UA）
 # 后面直接跟 `:` 或 `=` 再跟 `doubaoya-skill/` 字面量。这正是 tools/migrate_user_agent.py 早就
@@ -1411,7 +1432,7 @@ def validate_description_budget(root: Path = ROOT) -> list[str]:
         "用户，已经足以被我们自己撑进截断模式——我们的包会开始互相丢描述。** "
         "超了不是「尾巴被截断」，是整条 description 被静默丢掉、且牺牲品随机。"
         "砍字数请从触发面窄的包的**散文**下手：别砍触发词（差集闸会拦），"
-        "别砍 doubaoya（唯一真正靠 description 抢话术的包）。详见 docs/deleting-a-skill.md",
+        "别砍 dby-api（唯一真正靠 description 抢话术的包）。详见 docs/deleting-a-skill.md",
     )
     return warnings
 
@@ -1438,7 +1459,7 @@ def _normalize(text: str) -> str:
 
 # ── 因式触发词的展开 ─────────────────────────────────────────────────────────
 # description 是稀缺资源，穷举「小红书搜索、小红书选题、小红书封面…」会把同一个平台名
-# 抄十八遍（实测 doubaoya 里「小红书」抄了 18 遍、「公众号」10 遍）。因式写法
+# 抄十八遍（实测 dby-api 里「小红书」抄了 18 遍、「公众号」10 遍）。因式写法
 # `小红书：搜索/选题/封面` 一次说清，但**字面子串闸看不懂它**——haystack 里没有
 # 「小红书选题」这个连续子串。本函数把因式段展开回词面，展开结果**追加**进 haystack。
 #
@@ -1485,8 +1506,9 @@ def _expand_factors(text: str) -> set[str]:
 # 收得进来的只有两种形状，别再加第三种：
 #   ① 上游能力真没了（端点不存在 / 平台整体退役）；
 #   ② **纯本地工具整体迁出本分发**——本仓从此没有任何包或接口做这件事。
-# 两种的共同点是「迁词就等于撒谎」。⚠️ 反例记在这儿免得下次心软：`ai-intelligence-investigator`
-# 也曾是迁出候选，但反事实实测显示删掉后「帮我查这家公司的底细」4/6 落 NONE、
+# 两种的共同点是「迁词就等于撒谎」。⚠️ 反例记在这儿免得下次心软：那个曾管「情报调查」的包
+# （2026-08-20 因定位收窄而下架，见 docs/deleting-a-skill.md「例外」段）也曾是迁出候选，
+# 但反事实实测显示删掉后「帮我查这家公司的底细」4/6 落 NONE、
 # 2/6 **幻觉出一个不存在的包名**——留在新媒体主场里的意图缺口会变成幻觉，那种包不该迁出，
 # 更不该靠本表把账抹平。下面两条能进来，恰恰因为它们与新媒体正交，缺口是诚实的。
 TRIGGER_REAL_DELETION = {
@@ -1494,7 +1516,7 @@ TRIGGER_REAL_DELETION = {
     "wechat-mp-exporter",  # 本地扫码归档，vendored 第三方 + Snyk Critical，能力随包一起没
     "mera",                # 整个平台退役（DNS NXDOMAIN、发现接口 hidden 过滤）
     # 2026-08-20 迁出本分发的两个纯本地工具。它们与新媒体正交，本仓没有任何东西接手，
-    # 所以「PDF提取」「技能优化」这类词**不迁**——迁进 doubaoya 等于承诺一个我们不做的能力。
+    # 所以「PDF提取」「技能优化」这类词**不迁**——迁进 dby-api 等于承诺一个我们不做的能力。
     "pdf-image-text-extractor",  # PDF/图片 OCR，与新媒体运营正交，零跨包引用，最干净的一刀
     # 面向 skill 作者而非新媒体用户；且它的 references/standard-format.md 白纸黑字写着
     # 「超过 1024 字符**将被截断**」——与本仓实证的结论（是校验拒绝 / 整条丢弃，**不是截断**）
@@ -1559,7 +1581,7 @@ def validate_trigger_word_coverage(root: Path = ROOT) -> list[str]:
             not missing,
             f"删包/改词弄丢了话术：已下架的 {slug} 当年声明的触发词 {missing} "
             "在现存 description 里一个都找不到。description 是 agent 选 skill 那一刻唯一在场的东西——"
-            "词没了，能力还在架也没人够得着。把词迁进意图对得上的存活包（通常是 doubaoya），"
+            "词没了，能力还在架也没人够得着。把词迁进意图对得上的存活包（通常是 dby-api），"
             "并在它正文的意图路由表里补一行完整调用路径；确属能力一起删除的，"
             f"登记进 TRIGGER_REAL_DELETION。详见 {TRIGGER_DEBT_NOTE}",
         )
@@ -1712,6 +1734,7 @@ def validate_gate_registration(root: Path = ROOT) -> None:
 def validate_repository(root: Path = ROOT) -> list[str]:
     validate_gate_registration(root)
     validate_skill_inventory(root)
+    validate_skill_slug_prefix(root)
     validate_readme(root)
     validate_clawhub_manifest(root)
     validate_renames_table(root)

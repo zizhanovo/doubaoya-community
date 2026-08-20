@@ -136,7 +136,7 @@ export function classify(name, hash, currentHashes, knownHashes) {
  *    按**自己那个目录**读 skill 的（Claude Code 只读 `.claude/skills`）。包只落进
  *    `.agents/skills` 时，它在 Claude Code 眼里根本不存在——而内容哈希照样命中当前版，
  *    于是旧的判据把它归进「已是当前版、不动」，**重跑多少次 /dby-update 都自愈不了**。
- *    实测踩过：`multi-banned-words`（对外主推的可安装包之一）只在 `.agents/skills`，
+ *    实测踩过：`dby-banned-words`（对外主推的可安装包之一，历史名字已改名）只在 `.agents/skills`，
  *    整场会话 Claude Code 都看不见它。
  *    所以判据是「内容 **且** 落位」：任一受管 agent 目录缺落位 ⇒ 照样进刷新单重装一遍。
  *    opts.expectedAgents 给的是本机受管的 agent 名单（与 targetAgents 同源，装和查必须同一批）；
@@ -826,7 +826,7 @@ export function partialMigrationHint(archivedCount, archiveRoots, wantCount) {
  * 那是「或」——任一目录里有就算就位。可宿主是按**自己那个目录**读 skill 的
  * （Claude Code 只读 `.claude/skills`），包只落进 `.agents/skills` 时它对宿主根本不存在。
  * 于是自检打印「都能在安装目录里找到 / 全部通过」，而用户那台机器上那个包压根用不了。
- * 实测踩过：`multi-banned-words` 只在 `.agents/skills`，整场会话 Claude Code 都看不见它。
+ * 实测踩过：`dby-banned-words`（历史名字已改名）只在 `.agents/skills`，整场会话 Claude Code 都看不见它。
  *
  * 受管目录 = 本机**真实存在**的那些（与 targetAgents 同源）：只有一个目录的机器不该被误报成缺。
  * 一个都不存在 = 还没装过，核通用默认那一个，让它如实报缺，而不是空转成绿。
@@ -1799,7 +1799,7 @@ function refreshScopeCheck() {
  *
  * 这条钉的是一个**永不自愈**的形态：包只落进 `.agents/skills`，内容哈希照样命中当前版，
  * 旧判据把它归进「已是当前版、不动」——于是 Claude Code 永远看不见它，用户重跑多少次
- * /dby-update 都补不上。实测受害者是对外主推的 `multi-banned-words`。
+ * /dby-update 都补不上。实测受害者是对外主推的 `dby-banned-words`（历史名字已改名）。
  * 所以判据必须是「内容 **且** 落位」：任一受管 agent 目录缺落位就得重装。
  *
  * 另一头同样得钉死：两处都在时必须**零动作**——补落位不许退化成又一个「每跑一次全量重下」；
@@ -1951,15 +1951,15 @@ function partialMigrationCheck() {
 /** 只放一个已下架老包（无 renames.json 语义）的 fixture，供"空表 / 缺表"回退检查用。 */
 function buildBareOldPackageFixture() {
   const root = mkdtempSync(join(tmpdir(), "dby-renames-bare-"));
-  const pkg = join(root, ".claude", "skills", "wechat-article-pipeline");
+  const pkg = join(root, ".claude", "skills", "old-pkg-a");
   mkdirSync(pkg, { recursive: true });
-  writeFileSync(join(pkg, "SKILL.md"), "---\nname: wechat-article-pipeline\n---\n");
+  writeFileSync(join(pkg, "SKILL.md"), "---\nname: old-pkg-a\n---\n");
   const hash = computeSkillHash(pkg);
   // 上游名单不能是空的（那会被当成异常直接中止），随手带一个"仍在架"的包撑住 fetchUpstream。
   writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "keep-skill": "doubaoya-skill/keep-skill@aaaaaaaaaaaa" } }));
   writeFileSync(
     join(root, "known-hashes.json"),
-    JSON.stringify({ skills: { "wechat-article-pipeline": [hash], "keep-skill": ["aaaaaaaaaaaa"] } })
+    JSON.stringify({ skills: { "old-pkg-a": [hash], "keep-skill": ["aaaaaaaaaaaa"] } })
   );
   return root;
 }
@@ -1995,7 +1995,7 @@ function renamesFallbackCheck() {
       return fails;
     }
     const emptyParsed = JSON.parse(emptyRes.stdout);
-    if (!emptyParsed.report[0].plan.archive.includes("wechat-article-pipeline")) {
+    if (!emptyParsed.report[0].plan.archive.includes("old-pkg-a")) {
       fails.push("renames 回退 fixture 前提不成立：老包应该正常进归档单");
     }
 
@@ -2028,26 +2028,26 @@ function renamesFallbackCheck() {
 }
 
 /**
- * 造一套"老包已在上游改名"的 fixture：project scope 下 `.claude/skills/wechat-article-pipeline`
+ * 造一套"老包已在上游改名"的 fixture：project scope 下 `.claude/skills/old-pkg-a`
  * （老包，含 config.json / profiles/x.json / themes/benya-clean.json 三样用户数据）+ 可选的
  * 预装 `dby-publish`（模拟"新包已经落地"——`planRenameMigration` 只有在目标目录存在时才能
  * 正确判定"上游新包自带、不用搬"的文件，所以主线场景必须让它已经在场；这本身也是真实场景：
  * `dby-publish` 是一个真实存在于上游全集的包，`skills add` 会把它装出来）。
- * `renames.json` 固定指 `wechat-article-pipeline → dby-publish`。
+ * `renames.json` 固定指 `old-pkg-a → dby-publish`。
  */
 function buildRenameFixture({ preinstallTarget = true, targetHasConfig = false, gitTrackOld = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), "dby-rename-selfcheck-"));
   const skillsDir = join(root, ".claude", "skills");
-  const oldDir = join(skillsDir, "wechat-article-pipeline");
+  const oldDir = join(skillsDir, "old-pkg-a");
   mkdirSync(join(oldDir, "profiles"), { recursive: true });
   mkdirSync(join(oldDir, "themes"), { recursive: true });
-  writeFileSync(join(oldDir, "SKILL.md"), "---\nname: wechat-article-pipeline\n---\n");
+  writeFileSync(join(oldDir, "SKILL.md"), "---\nname: old-pkg-a\n---\n");
   writeFileSync(join(oldDir, "config.json"), JSON.stringify({ mine: true }));
   writeFileSync(join(oldDir, "profiles", "x.json"), JSON.stringify({ ip: "my-ip" }));
   writeFileSync(join(oldDir, "themes", "benya-clean.json"), JSON.stringify({ from: "old" }));
   const oldHash = computeSkillHash(oldDir);
 
-  const known = { "wechat-article-pipeline": [oldHash] };
+  const known = { "old-pkg-a": [oldHash] };
   const versions = {};
   let targetDir = null;
   if (preinstallTarget) {
@@ -2069,7 +2069,7 @@ function buildRenameFixture({ preinstallTarget = true, targetHasConfig = false, 
     JSON.stringify({
       schema_version: 1,
       renames: {
-        "wechat-article-pipeline": { to: "dby-publish", userFiles: ["config.json", "profiles/", "themes/"] },
+        "old-pkg-a": { to: "dby-publish", userFiles: ["config.json", "profiles/", "themes/"] },
       },
     })
   );
@@ -2079,7 +2079,7 @@ function buildRenameFixture({ preinstallTarget = true, targetHasConfig = false, 
     git("init", "-q");
     git("config", "user.email", "selfcheck@example.com");
     git("config", "user.name", "selfcheck");
-    git("add", "-f", ".claude/skills/wechat-article-pipeline");
+    git("add", "-f", ".claude/skills/old-pkg-a");
     git("commit", "-qm", "track old pkg");
   }
 
@@ -2151,7 +2151,7 @@ function renameMigrationCheck() {
       const archiveResult = (realParsed.archived || []).find((a) => a?.count);
       const manifestPath = archiveResult && join(archiveResult.root, "manifest.json");
       const manifest = manifestPath && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf-8")) : null;
-      const pkgEntry = manifest?.packages?.find((p) => p.skill === "wechat-article-pipeline");
+      const pkgEntry = manifest?.packages?.find((p) => p.skill === "old-pkg-a");
       if (!pkgEntry) fails.push(`🔴 改名迁移 · 归档 manifest 里没有老包的条目：${JSON.stringify(manifest)}`);
       else if (!/改名为.*dby-publish/.test(pkgEntry.reason || "")) {
         fails.push(`🔴 改名迁移 · manifest 条目的 reason 没说清改名去向：${JSON.stringify(pkgEntry.reason)}`);
@@ -2196,7 +2196,7 @@ function renameMigrationCheck() {
       fails.push("改名迁移·git 跟踪 · dry-run 没算出计划");
     } else {
       if ((plan.renamed || []).length) fails.push(`🔴 改名迁移·git 跟踪 · 受跟踪的老目录不该进 renamed：${JSON.stringify(plan.renamed)}`);
-      if (!(plan.renamedSkipped || []).some((s) => s.from === "wechat-article-pipeline" && s.reason === "tracked")) {
+      if (!(plan.renamedSkipped || []).some((s) => s.from === "old-pkg-a" && s.reason === "tracked")) {
         fails.push(`🔴 改名迁移·git 跟踪 · 没有单列进 renamedSkipped：${JSON.stringify(plan.renamedSkipped)}`);
       }
     }
@@ -2306,20 +2306,20 @@ function runSelfCheck() {
   // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
   // fixture 层慢但证不了"每一种输入组合都对"，见 renameMigrationCheck 顶部注释。
   const renameFixtureInstalled = [
-    { name: "wechat-article-pipeline", hash: "aaa", state: "historical" },
-    { name: "wechat-draft-publish", hash: "zzz", state: "modified" },
+    { name: "old-pkg-a", hash: "aaa", state: "historical" },
+    { name: "old-pkg-b", hash: "zzz", state: "modified" },
     { name: "dby", hash: "ccc", state: "historical" },
   ];
-  const upstreamNames = ["dby-publish", "dby"]; // article-pipeline / draft-publish 都已下架
+  const upstreamNames = ["dby-publish", "dby"]; // old-pkg-a / old-pkg-b 都已下架
   const draft = planReconcile(renameFixtureInstalled, upstreamNames);
-  eq("改名前：两个老 slug 都落进归档/不碰单", [draft.archive, draft.untouched.map((u) => u.name)], [["wechat-article-pipeline"], ["wechat-draft-publish"]]);
+  eq("改名前：两个老 slug 都落进归档/不碰单", [draft.archive, draft.untouched.map((u) => u.name)], [["old-pkg-a"], ["old-pkg-b"]]);
 
   const emptyExtract = extractRenames(draft, {}, upstreamNames);
-  eq("🔴 空表：archive/untouched 必须与无表时完全一样", [emptyExtract.archive, emptyExtract.untouched.map((u) => u.name), emptyExtract.renameCandidates], [["wechat-article-pipeline"], ["wechat-draft-publish"], []]);
+  eq("🔴 空表：archive/untouched 必须与无表时完全一样", [emptyExtract.archive, emptyExtract.untouched.map((u) => u.name), emptyExtract.renameCandidates], [["old-pkg-a"], ["old-pkg-b"], []]);
 
   const renamesTable = {
-    "wechat-article-pipeline": { to: "dby-publish", userFiles: ["config.json"] },
-    "wechat-draft-publish": { to: "dby-publish", userFiles: [] },
+    "old-pkg-a": { to: "dby-publish", userFiles: ["config.json"] },
+    "old-pkg-b": { to: "dby-publish", userFiles: [] },
   };
   const filled = extractRenames(draft, renamesTable, upstreamNames);
   eq("historical 老包摘进改名候选，不再进归档单", filled.archive, []);
@@ -2328,23 +2328,23 @@ function runSelfCheck() {
     "改名候选携带 to / userFiles",
     filled.renameCandidates.sort((a, b) => a.from.localeCompare(b.from)),
     [
-      { from: "wechat-article-pipeline", to: "dby-publish", userFiles: ["config.json"] },
-      { from: "wechat-draft-publish", to: "dby-publish", userFiles: [] },
+      { from: "old-pkg-a", to: "dby-publish", userFiles: ["config.json"] },
+      { from: "old-pkg-b", to: "dby-publish", userFiles: [] },
     ]
   );
 
   // to 还没上线到本次上游名单：老包留在原来的单子里，不许贸然搬家
-  const notYetUpstream = extractRenames(draft, { "wechat-article-pipeline": { to: "dby-publish", userFiles: [] } }, ["dby"]);
-  eq("🔴 to 不在本次上游名单时不搬：老包留在归档单", notYetUpstream.archive, ["wechat-article-pipeline"]);
+  const notYetUpstream = extractRenames(draft, { "old-pkg-a": { to: "dby-publish", userFiles: [] } }, ["dby"]);
+  eq("🔴 to 不在本次上游名单时不搬：老包留在归档单", notYetUpstream.archive, ["old-pkg-a"]);
   eq("to 不在名单时不产生改名候选", notYetUpstream.renameCandidates, []);
 
-  const splitFilled = splitRenameGitTracked(filled, { tracked: ["wechat-article-pipeline"], unknown: ["wechat-draft-publish"] });
-  eq("受跟踪的改名候选摘进 renamedSkipped·tracked", splitFilled.renamedSkipped.find((r) => r.from === "wechat-article-pipeline")?.reason, "tracked");
-  eq("判不出的改名候选摘进 renamedSkipped·unknown", splitFilled.renamedSkipped.find((r) => r.from === "wechat-draft-publish")?.reason, "unknown");
+  const splitFilled = splitRenameGitTracked(filled, { tracked: ["old-pkg-a"], unknown: ["old-pkg-b"] });
+  eq("受跟踪的改名候选摘进 renamedSkipped·tracked", splitFilled.renamedSkipped.find((r) => r.from === "old-pkg-a")?.reason, "tracked");
+  eq("判不出的改名候选摘进 renamedSkipped·unknown", splitFilled.renamedSkipped.find((r) => r.from === "old-pkg-b")?.reason, "unknown");
   eq("两个都被摘走后 renamed 为空", splitFilled.renamed, []);
   eq("splitRenameGitTracked 之后不再带 renameCandidates 字段", "renameCandidates" in splitFilled, false);
   const splitNone = splitRenameGitTracked(filled, { tracked: [], unknown: [] });
-  eq("git 都干净时两条都进 renamed", splitNone.renamed.map((r) => r.from).sort(), ["wechat-article-pipeline", "wechat-draft-publish"]);
+  eq("git 都干净时两条都进 renamed", splitNone.renamed.map((r) => r.from).sort(), ["old-pkg-a", "old-pkg-b"]);
   eq("git 都干净时 renamedSkipped 为空", splitNone.renamedSkipped, []);
 
   fails.push(...renamesFallbackCheck());
