@@ -255,6 +255,50 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "names no downstream Skill"):
                 validator.validate_authoring_chain(root)
 
+    def test_authoring_chain_accepts_a_downstream_slug_without_a_hyphen(self):
+        """`doubaoya` / `dby` 没有连字符，但它们是真 Skill，指向它们就是有下游。
+
+        Skill 名的保守形状要求至少一个连字符，于是「下一步」表里把下游从 `wechat-account-analyzer`
+        改指总入口 `doubaoya` 时，闸会报「names no downstream Skill」——把**指对了**判成**没指**。
+        合并薄壳时下游天然会向总入口收敛，所以这不是个别情况，是结构性的。
+        放宽只作用于「有没有下游」这一问，且**与 installed 求交**，交集本身就是判据。
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / validator.AUTHORING_CHAIN[1] / "SKILL.md"
+            text = skill.read_text(encoding="utf-8")
+            start = text.index(validator.NEXT_STEP_HEADING)
+            end = text.index("\n## ", start)
+            hyphenless = "doubaoya"
+            self.assertIn(hyphenless, {path.name for path in validator.discover_skill_dirs(root)})
+            self.assertNotIn(hyphenless, validator.SKILL_TOKEN.findall(f"`{hyphenless}`"),
+                             "保守形状本就够不着无连字符的 slug——够得着的话这条测试就没有素材")
+            skill.write_text(
+                text[:start] + f"{validator.NEXT_STEP_HEADING}\n\n| 想要什么 | 下一步 |\n|---|---|\n"
+                f"| 接着干 | `{hyphenless}` |\n" + text[end + 1 :],
+                encoding="utf-8",
+            )
+            validator.validate_authoring_chain(root)
+
+    def test_dead_pointer_gate_still_ignores_hyphenless_names(self):
+        """放宽只给「有没有下游」，**不给死指针**——否则正文里正当点名的已退役平台会被误报。
+
+        doubaoya 正文里写着已整体退役的 `mera`（单词、无连字符）。实测把死指针闸一并放宽，
+        它当场变成一条红灯，而噪音闸等于没有闸。
+        """
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.repository_fixture(root)
+            skill = root / "skills" / "doubaoya" / "SKILL.md"
+            known = json.loads((validator.ROOT / "known-hashes.json").read_text(encoding="utf-8"))
+            installed = {path.name for path in validator.discover_skill_dirs(root)}
+            hyphenless_retired = sorted(s for s in set(known["skills"]) - installed if "-" not in s)
+            self.assertTrue(hyphenless_retired, "历史闭集里没有无连字符的已下架包，这条测试就没有素材")
+            skill.write_text(skill.read_text(encoding="utf-8")
+                             + f"\n\n`{hyphenless_retired[0]}` 整个平台已退役。\n", encoding="utf-8")
+            validator.validate_authoring_chain(root)
+
     def test_authoring_chain_rejects_dead_skill_link_in_dby(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
