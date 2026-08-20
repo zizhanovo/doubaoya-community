@@ -10,7 +10,7 @@
 - [x] 1.2 新增仓库根 `renames.json`，`schema_version: 1`，`renames: {}`；`tools/validate_community.py` 加闸：每个 `to` 必须是在架 slug、每个旧 slug 必须存在于 `known-hashes.json`。验证（两向）：空表通过；故意写一条 `to` 指向不存在的 slug 时打红，贴两段输出。
 - [x] 1.3 `reconcile.mjs` 读取上游 `renames.json`：表缺失 / 不合法 → 提示一行继续；空表 → 行为与旧版逐条一致；有条目 → 「装新包 → 按 userFiles 搬运老目录有而新包没有的文件 → 归档老目录」，冲突不覆盖、失败不归档、受 git 跟踪只提示、输出搬运清单。验证：临时目录造假老包（`config.json` + `profiles/x.json`）+ 假上游表，`--dry-run` 与真跑各一次，文件逐字节相同、老目录进归档；二次运行无动作；空表对照跑输出 diff 为空。
 - [x] 1.4 `skills/dby-update/SKILL.md` 补「改名迁移」说明（renames / userFiles 语义、两趟发布为什么）。验证：文档段落存在。
-- [ ] 1.5 机制小车收口三笔（禁 amend）：内容 commit → `python3 tools/stamp_versions.py` commit → `python3 tools/build_known_hashes.py` commit。验证：`git log -3` 三笔独立；`validate_community.py` + `pytest tools/tests -q` 全绿。
+- [x] 1.5 机制小车收口三笔（禁 amend）：内容 commit → `python3 tools/stamp_versions.py` commit → `python3 tools/build_known_hashes.py` commit。验证：`git log -3` 三笔独立；`validate_community.py` + `pytest tools/tests -q` 全绿。
 - [ ] 1.6 交主仓会话编排：社区仓推 → 主仓 `sync-skill-versions.mjs` 重生成两张表并提交 → api 部署。验证：线上 User-Agent 开始出现 `dby-update@<新哈希>`。
 - [ ] 1.7 观察期：改名车发布前确认 `dby-update@<新哈希>` 在近 N 天调用里的占比达到可接受水平（阈值由维护者定，写进 `.WRITER`）。验证：查询结果贴进 `.WRITER`。
 
