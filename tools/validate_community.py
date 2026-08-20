@@ -795,6 +795,65 @@ def validate_clawhub_manifest(root: Path = ROOT) -> None:
         )
 
 
+def validate_renames_table(root: Path = ROOT) -> None:
+    """仓库根 ``renames.json``：`dby-update` 对账器读的改名表，见 skill-rename-migration spec。
+
+    结构约束只管"表本身是不是自洽的"：`to` 必须指向一个**在架**的技能包目录（对账器要把新包
+    装出来，指向一个不存在的目录等于让它去装一个装不上的东西）；旧 slug 必须**不在架**且必须
+    在 ``known-hashes.json`` 的历史闭集里（这条表只该收"我们发布过、后来改名的"旧 slug——闭集
+    之外的名字对账器根本不认得是我们的包，写进来也搬不动任何人的机器）；``userFiles`` 是相对
+    路径列表，不许用 ``..`` 跳出包目录，也不许用绝对路径（那两种写法在对账器眼里都会算成
+    "包目录之外的某处"，是真实的路径穿越风险，不是想多了——对账器会拿它们直接去拼文件系统
+    操作）。
+    """
+    path = root / "renames.json"
+    require(path.is_file(), "renames.json 不存在：dby-update 对账器的改名迁移逻辑依赖它读取，见 openspec/changes/unify-dby-naming")
+    table = load_json(path)
+    require(isinstance(table, dict), "renames.json must be an object")
+    require(table.get("schema_version") == 1, f"unsupported renames.json schema_version: {table.get('schema_version')!r}")
+    renames = table.get("renames")
+    require(isinstance(renames, dict), "renames.json 的 renames 字段必须是对象")
+
+    installed = {path.name for path in discover_skill_dirs(root)}
+    known = load_json(root / "known-hashes.json")
+    known_slugs = set(known.get("skills", {})) if isinstance(known, dict) else set()
+
+    for old_slug, entry in sorted(renames.items()):
+        label = f"renames.json[{old_slug!r}]"
+        require(isinstance(entry, dict), f"{label} must be an object")
+        require_exact_keys(entry, {"to", "userFiles"}, label)
+
+        to = entry.get("to")
+        require(isinstance(to, str) and to, f"{label}.to 必须是非空字符串")
+        require(
+            to in installed,
+            f"{label}.to = {to!r} 不是 skills/ 下在架目录——对账器会去装一个装不上的包",
+        )
+        require(
+            old_slug not in installed,
+            f"renames.json 的旧 slug {old_slug!r} 现在仍是在架目录——改名表只该收已下架的旧 slug，"
+            "在架目录不该出现在这张表里",
+        )
+        require(
+            old_slug in known_slugs,
+            f"renames.json 的旧 slug {old_slug!r} 不在 known-hashes.json 的历史闭集里——"
+            "对账器认不出它是我们发布过的包，这张表写了也没用",
+        )
+
+        user_files = entry.get("userFiles")
+        require(isinstance(user_files, list), f"{label}.userFiles 必须是数组")
+        for item in user_files:
+            require(isinstance(item, str) and item, f"{label}.userFiles 里有非字符串或空字符串项：{item!r}")
+            require(
+                not item.startswith("/"),
+                f"{label}.userFiles 的 {item!r} 不能以 / 开头——对账器只按相对路径拼接，绝对路径会跳出包目录",
+            )
+            require(
+                ".." not in PurePosixPath(item).parts,
+                f"{label}.userFiles 的 {item!r} 含 ..，会跳出包目录，是真实的路径穿越风险",
+            )
+
+
 def publishable_files(root: Path = ROOT) -> list[Path]:
     git = subprocess.run(
         ["git", "-C", str(root), "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
@@ -1655,6 +1714,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_skill_inventory(root)
     validate_readme(root)
     validate_clawhub_manifest(root)
+    validate_renames_table(root)
     validate_routing(root)
     validate_routing_skill_pointers(root)
     validate_authoring_chain(root)
