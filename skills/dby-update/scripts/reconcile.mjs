@@ -37,10 +37,16 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import * as readline from "node:readline/promises";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+// 本脚本自己在磁盘上的真实路径。要拿它去 spawn 自己时用这个，别用
+// `new URL(import.meta.url).pathname`——那是**没解码**的 URL 路径段，家目录里
+// 只要有一个空格就变成 `%20`，spawn 当场 ENOENT。
+const SELF_PATH = fileURLToPath(import.meta.url);
 
 const REPO = "zizhanovo/doubaoya-community";
 // DBY_RAW_BASE 只给验证用：指向本地 checkout 或某个分支，好在改动 push 之前先对着
@@ -1132,6 +1138,55 @@ function gitProbeFailureCheck() {
 }
 
 /**
+ * 🔴 经**软链**调用时，这个脚本必须照常干活——不许静默空跑。
+ *
+ * 为什么单独钉一条：软链不是边角，是 skills CLI 装出来的**常态形态**。装到 claude-code 时
+ * 真目录落在 `.agents/skills/<name>`，`.claude/skills/<name>` 是指过去的一条软链；而 SKILL.md
+ * 教的查找顺序把 `.claude` 那条排在**前面**——照着 SKILL.md 执行的 agent，第一个找到的就是软链。
+ * 入口守卫一旦退化回「`import.meta.url` 直接比 `process.argv[1]` 拼出来的串」，这条路径上
+ * `main()` 一步都不进：**退出码 0、stdout 零字节**。它长得和「跑完了、没事可做」一模一样，
+ * 既有的任何一条自检都不会红（自检自己是走真路径起的进程），用户也不会来报错——
+ * 只会以为对账跑过了。所以判据必须是「真造一条软链、真起进程、看有没有输出」。
+ *
+ * fixture 完全离线：只跑 `--help`（不联网、不碰任何安装目录），
+ * 目录形态照抄本机真实那份：真副本在 `.agents/skills/…`，`.claude/skills/<name>` 是相对软链。
+ * 判据两条：退出码 0（本来就 0，单独看它等于没看），且**输出与走真路径调用逐字一致**。
+ */
+function symlinkEntryCheck() {
+  // 🔴 mkdtemp 给的路径**自己就可能是条软链**（macOS 上 tmpdir() 是 /var/… → /private/var/…）。
+  //    不先 realpath，这条自检的「走真路径」那一头其实也经了软链，对照组就废了。
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "dby-symlink-selfcheck-")));
+  try {
+    const realDir = join(root, ".agents", "skills", "dby-update", "scripts");
+    mkdirSync(realDir, { recursive: true });
+    const realScript = join(realDir, "reconcile.mjs");
+    cpSync(SELF_PATH, realScript);
+    mkdirSync(join(root, ".claude", "skills"), { recursive: true });
+    symlinkSync(join("..", "..", ".agents", "skills", "dby-update"), join(root, ".claude", "skills", "dby-update"));
+    const linked = join(root, ".claude", "skills", "dby-update", "scripts", "reconcile.mjs");
+
+    const run = (script) => spawnSync(process.execPath, [script, "--help"], { encoding: "utf-8" });
+    const viaLink = run(linked);
+    const viaReal = run(realScript);
+
+    if (!viaReal.stdout.trim()) {
+      // 前提不成立：连真路径都不出东西，下面那条断言就是在空气里跑
+      return [`软链入口 · fixture 前提不成立：走真路径的 --help 也是空的（退出码 ${viaReal.status}）`];
+    }
+    const fails = [];
+    if (viaLink.status !== 0) fails.push(`软链入口 · 退出码应为 0，实际 ${viaLink.status}：${(viaLink.stderr || "").trim().slice(-200)}`);
+    if (!viaLink.stdout.trim()) {
+      fails.push("🔴 软链入口 · 整个脚本静默空跑了：退出码 0、stdout 零字节（入口守卫又退化成拿 argv[1] 字面比 import.meta.url 了）");
+    } else if (viaLink.stdout !== viaReal.stdout) {
+      fails.push(`软链入口 · 输出与真路径不一致：软链 ${JSON.stringify(viaLink.stdout.slice(0, 80))} vs 真路径 ${JSON.stringify(viaReal.stdout.slice(0, 80))}`);
+    }
+    return fails;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+/**
  * 🔴 `--json` 的 stdout 必须是**一份能被 JSON.parse 整个吃下去的纯 JSON**。
  * 判据只认这一个：真起一个子进程跑 `--dry-run --json`，把它的 stdout 原样喂给
  * JSON.parse。不用「以 { 开头」这种弱断言——弱断言正是被绕过的那种闸。
@@ -1149,7 +1204,7 @@ function jsonPurityCheck() {
     writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: { "some-skill": ["aaaaaaaaaaaa"] } }));
     const res = spawnSync(
       process.execPath,
-      [new URL(import.meta.url).pathname, "--dry-run", "--json", "--scope", "project", "--project-dir", root],
+      [SELF_PATH, "--dry-run", "--json", "--scope", "project", "--project-dir", root],
       { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root } }
     );
     if (res.status !== 0) return [`--json 跑挂了（退出码 ${res.status}）：${(res.stderr || "").trim().split("\n").pop()}`];
@@ -1341,7 +1396,7 @@ function stubNpxDir() {
  */
 function refreshScopeCheck() {
   const fails = [];
-  const script = new URL(import.meta.url).pathname;
+  const script = SELF_PATH;
   const { bin, marker } = stubNpxDir();
   const run = (root, args) =>
     spawnSync(process.execPath, [script, "--scope", "project", "--project-dir", root, ...args], {
@@ -1536,7 +1591,7 @@ function partialMigrationCheck() {
 
     const res = spawnSync(
       process.execPath,
-      [new URL(import.meta.url).pathname, "--yes", "--scope", "project", "--project-dir", root],
+      [SELF_PATH, "--yes", "--scope", "project", "--project-dir", root],
       { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` } }
     );
     const out = `${res.stdout || ""}\n${res.stderr || ""}`;
@@ -1637,6 +1692,7 @@ function runSelfCheck() {
   fails.push(...refreshScopeCheck());
   fails.push(...partialMigrationCheck());
   fails.push(...jsonPurityCheck());
+  fails.push(...symlinkEntryCheck());
 
   if (fails.length) {
     for (const f of fails) console.error(`selfcheck FAILED: ${f}`);
@@ -1649,6 +1705,7 @@ function runSelfCheck() {
       "缺一处落位的包照样进刷新单（内容是当前版也算不上就位）且自检逐目录核不是并集核、" +
       "归档已做而拉取挂掉时提示语说清「归档了几个 / 磁盘半变更 / 重跑续上且不重复」、" +
       "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse、" +
+      "经软链调用（skills CLI 装出来的常态形态）照常干活而不是静默空跑、" +
       "装的 agent 面收窄到本机真有的安装目录且与查的目录同源（不出现星号）、" +
       "agent/skills 存量副本只点名不代删）"
   );
@@ -1657,8 +1714,40 @@ function runSelfCheck() {
 
 // ---------------------------------------------------------------- 入口
 
-const isMain = process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href;
-if (isMain) {
+/**
+ * 🔴「这个文件是不是被直接执行的」不能拿 `import.meta.url` 去比 `file://${process.argv[1]}`：
+ *    `import.meta.url` 是 ESM loader **解过软链**的真路径，`process.argv[1]` 原样保留
+ *    调用时给的那条路径。而软链恰恰是 skills CLI 装出来的常态形态
+ *    （`.claude/skills/<name>` → `.agents/skills/<name>`，SKILL.md 的查找顺序还把软链
+ *    那条排在**前面**），于是经软链调用时两串不等 ⇒ `main()` 一步都不进、退出码 0、
+ *    stdout 零字节：用户看到的不是报错，是**什么都没发生**——最难查的失败形态。
+ *    所以两边都先 `realpathSync` 落到同一条真路径再比。
+ *    顺带 `file://${p}` 这种拼串对含空格 / 非 ASCII 的路径编码是错的，`pathToFileURL` 才是对的。
+ */
+function isMainModule() {
+  const argv1 = process.argv[1];
+  if (!argv1) return false; // node -e / REPL / 管道喂进来：本来就没有主脚本，安静退场是对的
+  const href = (p) => {
+    try {
+      return pathToFileURL(realpathSync(p)).href;
+    } catch {
+      return null;
+    }
+  };
+  const called = href(argv1);
+  const here = href(SELF_PATH);
+  if (called && here) return called === here;
+  // realpath 解不开（路径当场被删、权限不足……）：**绝不静默**。先退回未解软链的字面比较，
+  // 还判不出来就吭一声——宁可多打一行提示，也不要再来一次「零输出、退出码 0」。
+  if (argv1 === SELF_PATH) return true;
+  console.error(
+    `提示：解析不出 ${argv1} 的真实路径，没法确认是不是在直接跑本脚本；` +
+      `如果你就是在直接跑它，换成绝对路径重试。`
+  );
+  return false;
+}
+
+if (isMainModule()) {
   if (process.argv.includes("--self-check")) {
     process.exit(runSelfCheck());
   } else {
