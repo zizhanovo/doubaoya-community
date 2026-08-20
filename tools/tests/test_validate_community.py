@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import tempfile
@@ -900,6 +901,112 @@ class GatewayContractFreedomTests(unittest.TestCase):
                     validator.ValidationError, f"选路层 Skill 不见了：skills/{name}/SKILL.md"
                 ):
                     validator.validate_gateway_contract_freedom(root)
+
+
+class EntryGuardGateTests(unittest.TestCase):
+    """入口守卫闸的两向验证：坏写法逐种见红、全仓真实内容零误报。
+
+    这道闸拦的病是**静默空跑**——经软链用绝对路径调用时 main() 一步都不进、退出码 0、
+    stdout 零字节。所以「红」的判据不能只看抛没抛，还要看报里有没有点名文件、行号和后果。
+    """
+
+    # 三种坏写法，逐字照抄 2026-08-20 修之前仓里真实存在的形态。第三条是**伪修对**那种：
+    # 用了 pathToFileURL（编码对了），软链照样炸——闸必须连它一起判红，不然下一个人
+    # 「我已经用 pathToFileURL 了」就把自己说服了。
+    BAD_FORMS = {
+        "拼串": 'if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {\n  main();\n}\n',
+        "resolve-pathname": (
+            "const invokedDirectly =\n"
+            "  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname);\n"
+            "if (invokedDirectly) {\n  main();\n}\n"
+        ),
+        "pathToFileURL-only": 'if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {\n  main();\n}\n',
+    }
+
+    def fixture(self) -> Path:
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        root = Path(directory)
+        shutil.copytree(validator.SKILLS, root / "skills")
+        return root
+
+    @staticmethod
+    def a_skill_with_scripts(root: Path) -> Path:
+        """现取一个真有 scripts/ 的包放变异体。写死包名的测试会跟着包一起烂。"""
+        for directory in sorted((root / "skills").iterdir()):
+            if (directory / "scripts").is_dir():
+                return directory / "scripts"
+        raise AssertionError("仓里一个带 scripts/ 的 Skill 都没有了，本闸失去素材")
+
+    def test_each_bad_form_is_caught_by_name_and_line(self):
+        for label, body in self.BAD_FORMS.items():
+            with self.subTest(form=label):
+                root = self.fixture()
+                mutant = self.a_skill_with_scripts(root) / "mutant-entry.mjs"
+                mutant.write_text(
+                    "// 变异体：照抄修复前的坏守卫。\n"
+                    'import path from "node:path";\n'
+                    'import { pathToFileURL } from "node:url";\n'
+                    "\nasync function main() {\n  process.stdout.write(\"ok\\n\");\n}\n\n" + body,
+                    encoding="utf-8",
+                )
+                with self.assertRaises(validator.ValidationError) as caught:
+                    validator.validate_entry_guards_resolve_symlinks(root)
+                message = str(caught.exception)
+                relative = mutant.relative_to(root).as_posix()
+                self.assertIn(relative, message)  # 点名到文件
+                self.assertRegex(message, rf"{re.escape(relative)}:\d+")  # 点名到行号
+                self.assertIn("静默空跑", message)  # 说清后果，不是「不符合规范」
+                self.assertIn("realpathSync", message)  # 说清怎么改
+
+    def test_pathtofileurl_alone_is_not_accepted_as_fixed(self):
+        """单独钉死伪修对那条：编码治了、软链没治，仍必须红。"""
+        root = self.fixture()
+        mutant = self.a_skill_with_scripts(root) / "mutant-pseudo-fixed.mjs"
+        mutant.write_text(
+            'import { pathToFileURL } from "node:url";\n'
+            "function main() {}\n" + self.BAD_FORMS["pathToFileURL-only"],
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(validator.ValidationError, "只治编码，不解软链"):
+            validator.validate_entry_guards_resolve_symlinks(root)
+
+    def test_in_place_regression_is_caught(self):
+        """不只是「新文件抄坏写法」——真实文件的守卫退化回去也要当场红。"""
+        root = self.fixture()
+        target = root / "skills" / "doubaoya" / "scripts" / "doubaoya.mjs"
+        text = target.read_text(encoding="utf-8")
+        start = text.index("function isMainModule() {")
+        end = text.index("\n}\n", start) + len("\n}\n")
+        degraded = text[:start] + text[end:]
+        degraded = degraded.replace(
+            "if (isMainModule()) {",
+            "if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {",
+            1,
+        )
+        self.assertNotIn("realpathSync(", degraded.replace('import { realpathSync } from "node:fs";', ""))
+        target.write_text(degraded, encoding="utf-8")
+        with self.assertRaisesRegex(validator.ValidationError, r"skills/doubaoya/scripts/doubaoya\.mjs:\d+"):
+            validator.validate_entry_guards_resolve_symlinks(root)
+
+    def test_real_repository_has_zero_findings(self):
+        """反向：全仓真实内容一处都不许误报——注释里逐字写着坏写法当反面教材，不许被误伤。"""
+        validator.validate_entry_guards_resolve_symlinks(validator.ROOT)
+
+    def test_bad_form_inside_a_comment_is_not_a_finding(self):
+        """把坏写法写进注释警示后人是**对的行为**，闸不许因此变红（只扫代码行的由来）。"""
+        root = self.fixture()
+        note = self.a_skill_with_scripts(root) / "only-a-comment.mjs"
+        note.write_text(
+            "// 反面教材，别照抄：\n"
+            "// if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {\n"
+            "/*\n"
+            " * 也别写成 path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)\n"
+            " */\n"
+            "export const NOTE = 1;\n",
+            encoding="utf-8",
+        )
+        validator.validate_entry_guards_resolve_symlinks(root)
 
 
 if __name__ == "__main__":
