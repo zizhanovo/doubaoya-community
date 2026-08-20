@@ -1579,7 +1579,79 @@ def validate_retired_discoverability(root: Path = ROOT) -> None:
         )
 
 
+# ── 元闸：定义了就必须注册 ────────────────────────────────────────────────────
+# 🔴 **每一个 `validate_*` 都必须能从 `validate_repository` 走到，否则它一次都不会跑。**
+#
+# 这条不是假想。2026-08-20 真出过：两个会话并发改本文件，一方把自己那段"我的改动"用
+# **位置区间**切出来入 index（从我的标记，到下一个我认得的函数名），而对方恰好在这两个边界
+# 之间插了一个新闸 —— 于是**函数体进了提交、注册行没进**。结果是 `validate_runtime_declaration`
+# 定义得好好的、一行都不缺，`validate_repository` 里却没人叫它。
+#
+# 这类事故的可怕之处在于**没有任何测试会红**：闸本身语法正确、import 得进来、单测（如果有）
+# 照样能直接调它通过；`validate_community.py` 也照常 exit 0。仓库看着比以前更安全了
+# （"我们又加了一道闸"），实际那道闸一次都没跑过。**"定义了但不调用"是唯一一种能让
+# 新增防护静默归零、且所有绿灯都还亮着的形态**，所以它需要一条专门的元闸来挡。
+#
+# 判据：从 `validate_repository` 出发做**传递闭包**（A 调 B、B 调 C 都算注册），
+# 模块里定义的 `validate_*` 必须全在闭包里。用传递闭包而不是"必须被 validate_repository
+# 直接点名"，是为了留出"一个闸内部拆成几个子闸"的正当写法——今天没有这种写法，
+# 但判据不该逼着以后的人把结构写平。
+#
+# ponytail: 天花板 = 正则读自己的源码、按顶层 `def` 切函数体，动态构造的调用
+# （`globals()["validate_x"]()`、装饰器注册表）它看不见。升级路径是 ast 模块。
+# 这里没上 ast 是因为本文件的调用形态全是字面直调，正则够用且报错更好读。
+GATE_NAME = re.compile(r"\b(validate_\w+)\s*\(")
+
+
+def registered_gates(source: str) -> tuple[set[str], set[str]]:
+    """返回 ``(定义的 validate_*, 从 validate_repository 可达的 validate_*)``。"""
+    heads = [(m.start(), m.group(1)) for m in re.finditer(r"^def (\w+)\(", source, re.M)]
+    bodies: dict[str, str] = {}
+    for index, (position, name) in enumerate(heads):
+        end = heads[index + 1][0] if index + 1 < len(heads) else len(source)
+        bodies[name] = source[position:end]
+    defined = {name for name in bodies if name.startswith("validate_")}
+
+    def calls(name: str) -> set[str]:
+        # 跳过 def 那一行，免得函数名把自己算成调用自己。
+        # partition 而不是 index：切不出函数体时（正则失配）得让下面的空转断言来报，
+        # 不能在这里先崩一个 ValueError —— 那种报法看不出发生了什么。
+        body = bodies.get(name, "").partition("\n")[2]
+        return {match.group(1) for match in GATE_NAME.finditer(body)}
+
+    reachable: set[str] = set()
+    pending = ["validate_repository"]
+    while pending:
+        name = pending.pop()
+        if name in reachable:
+            continue
+        reachable.add(name)
+        pending.extend(callee for callee in calls(name) if callee in defined)
+    return defined, reachable & defined
+
+
+def validate_gate_registration(root: Path = ROOT) -> None:
+    """🔴 定义了却没人调用的闸 = 静默归零的防护。判据与那次真实事故见上面那段注释。"""
+    source = Path(__file__).read_text(encoding="utf-8")
+    defined, reachable = registered_gates(source)
+    orphans = sorted(defined - reachable)
+    require(
+        not orphans,
+        f"这些闸定义了却没人调用，等于一次都不会跑：{orphans}。"
+        "在 validate_repository() 里加上注册行（或让某个已注册的闸调它）。"
+        "⚠️ 这种漏法**不会有任何测试变红**——闸本身语法没错、单独调也能过、"
+        "validate_community.py 照样 exit 0，仓库看着还更安全了，实际那道防护是空的。"
+        "已经真出过一次：两路并发改本文件，函数体进了提交、注册行没进。",
+    )
+    require(
+        len(defined) >= 20,
+        f"只解析出 {len(defined)} 个 validate_*，本文件不该这么少 —— "
+        "多半是切函数体的正则失配了，元闸在空转，而空转长得跟通过一模一样。",
+    )
+
+
 def validate_repository(root: Path = ROOT) -> list[str]:
+    validate_gate_registration(root)
     validate_skill_inventory(root)
     validate_readme(root)
     validate_clawhub_manifest(root)

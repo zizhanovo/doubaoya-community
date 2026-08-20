@@ -903,6 +903,83 @@ class GatewayContractFreedomTests(unittest.TestCase):
                     validator.validate_gateway_contract_freedom(root)
 
 
+class GateRegistrationMetaGateTests(unittest.TestCase):
+    """元闸：定义了却没人调用的闸 = 静默归零的防护，且**没有任何别的测试会红**。
+
+    变异用的是**真实事故本身**：2026-08-20 两路并发改 validate_community.py，
+    `validate_runtime_declaration` 的函数体进了提交、`validate_repository` 里的注册行没进。
+    """
+
+    def load_mutant(self, mutate) -> object:
+        """把 validate_community.py 改一改放进临时 tools/ 里 import 回来。
+
+        闸读的是自己的 `__file__`，所以变异体照的是自己那份源码——不碰真文件。
+        目录结构照原样（tmp/tools/validate_community.py），免得模块级的
+        `ROOT = Path(__file__).resolve().parents[1]` 落到奇怪的地方。
+        """
+        directory = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, directory, True)
+        (directory / "tools").mkdir()
+        target = directory / "tools" / "validate_community.py"
+        target.write_text(mutate(VALIDATOR.read_text(encoding="utf-8")), encoding="utf-8")
+        spec = importlib.util.spec_from_file_location(f"mutant_{directory.name}", target)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    @staticmethod
+    def drop_registration(name: str):
+        def mutate(source: str) -> str:
+            line = f"    {name}(root)\n"
+            assert source.count(line) == 1, f"{name} 的注册行不是预期形态，变异没意义"
+            return source.replace(line, "", 1)
+        return mutate
+
+    def test_dropping_a_registration_is_caught_by_name(self):
+        # 第一条就是真实事故那个函数；第二条是本轮新加的闸——两条都得能抓。
+        for name in ("validate_runtime_declaration", "validate_entry_guards_resolve_symlinks"):
+            with self.subTest(gate=name):
+                module = self.load_mutant(self.drop_registration(name))
+                with self.assertRaises(module.ValidationError) as caught:
+                    module.validate_gate_registration()
+                message = str(caught.exception)
+                self.assertIn(name, message)  # 点名到底是哪个闸失联
+                self.assertIn("一次都不会跑", message)  # 说清后果
+                self.assertIn("不会有任何测试变红", message)  # 说清为什么需要这条元闸
+
+    def test_real_module_has_no_orphan_gates(self):
+        """反向：本文件真实内容里一个孤儿都没有。"""
+        validator.validate_gate_registration()
+        defined, reachable = validator.registered_gates(VALIDATOR.read_text(encoding="utf-8"))
+        self.assertEqual(sorted(defined - reachable), [])
+
+    def test_indirect_registration_counts(self):
+        """A 调 B 也算注册——判据不该逼着以后的人把闸的结构写平。"""
+        def mutate(source: str) -> str:
+            source = source.replace(
+                "def validate_repository(root: Path = ROOT) -> list[str]:\n",
+                "def validate_nested_probe(root: Path = ROOT) -> None:\n    return None\n\n\n"
+                "def validate_repository(root: Path = ROOT) -> list[str]:\n",
+                1,
+            )
+            # 只让某个已注册的闸去调它，validate_repository 里不点名
+            return source.replace(
+                '    """🔴 定义了却没人调用的闸 = 静默归零的防护。判据与那次真实事故见上面那段注释。"""\n',
+                '    """probe"""\n    validate_nested_probe(root)\n',
+                1,
+            )
+        module = self.load_mutant(mutate)
+        module.validate_gate_registration()  # 不许因为"没被 validate_repository 直接点名"就报红
+
+    def test_meta_gate_fails_loudly_when_it_parses_nothing(self):
+        """🔴 正则失配 ⇒ 一个闸都解析不出来 = 元闸空转，而空转长得跟通过一模一样。"""
+        # 直接打断切函数体的那条正则（模拟"以后有人改了本文件的书写形态导致失配"），
+        # 而不是改函数名——改名会连元闸自己一起改没，测的就不是空转了。
+        module = self.load_mutant(lambda source: source.replace(r'r"^def (\w+)\("', r'r"^NEVERMATCH (\w+)\("', 1))
+        with self.assertRaisesRegex(module.ValidationError, "元闸在空转"):
+            module.validate_gate_registration()
+
+
 class EntryGuardGateTests(unittest.TestCase):
     """入口守卫闸的两向验证：坏写法逐种见红、全仓真实内容零误报。
 
