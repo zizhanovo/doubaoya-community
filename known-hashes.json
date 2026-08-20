@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T06:35:25.315481+00:00",
+  "generatedAt": "2026-08-20T06:42:43.117109+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -70,6 +70,7 @@
       "75694e183386",
       "7ec123c4ccf5",
       "9c4f8edfa780",
+      "a4d72b56310c",
       "e0ef82da64ee",
       "fccf378e28ef"
     ],
@@ -77,7 +78,8 @@
       "289a7e8efa11",
       "a2710665f546",
       "a85067a32ed9",
-      "a9eaab1fad23"
+      "a9eaab1fad23",
+      "c3738aab09a9"
     ],
     "dby-update": [
       "0f57ebd82f3b",
@@ -89,6 +91,7 @@
       "8b15b3b187e6",
       "9a2708863bc4",
       "bb1c48d2428f",
+      "c51a1f7c37be",
       "c8fc00825fa8",
       "e88f976ec4bb"
     ],
@@ -782,6 +785,7 @@
     "image-gen": [
       "/api/skills/gpt-image-gen"
     ],
+    "ip-profile": [],
     "ks-ai-feed": [
       "/api/apis/kuaishou/kuaishou-ai-feed"
     ],
@@ -1100,6 +1104,17 @@
       "文生图",
       "生成图片",
       "配图"
+    ],
+    "ip-profile": [
+      "IP 头像",
+      "IP 档案",
+      "个人产品",
+      "公众号人设",
+      "带货话术",
+      "文风 DNA",
+      "文风蒸馏",
+      "更新人设",
+      "重新蒸馏"
     ],
     "multi-content-feed": [
       "全平台爆款",
