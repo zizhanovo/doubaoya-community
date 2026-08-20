@@ -136,6 +136,92 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "一个 routing 表都没扫到"):
                 validator.validate_routing_skill_pointers(root)
 
+    # ── renames.json（改名迁移表）闸 ───────────────────────────────────────
+    def renames_fixture(self, root: Path, renames: dict, known_extra: dict | None = None) -> None:
+        """最小化 fixture：一个在架目标包（dby-publish）+ 历史闭集里挂着一个已下架的旧 slug。"""
+        target = root / "skills" / "dby-publish"
+        target.mkdir(parents=True)
+        (target / "SKILL.md").write_text("---\nname: dby-publish\ndescription: fixture\n---\n", encoding="utf-8")
+        known = {"wechat-article-pipeline": ["aaaaaaaaaaaa"]}
+        if known_extra:
+            known.update(known_extra)
+        (root / "known-hashes.json").write_text(json.dumps({"skills": known}), encoding="utf-8")
+        (root / "renames.json").write_text(json.dumps({"schema_version": 1, "renames": renames}), encoding="utf-8")
+
+    def test_renames_table_missing_file_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "skills").mkdir()
+            with self.assertRaisesRegex(validator.ValidationError, "renames.json 不存在"):
+                validator.validate_renames_table(root)
+
+    def test_renames_table_empty_passes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(root, {})
+            validator.validate_renames_table(root)
+
+    def test_renames_table_valid_entry_passes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(
+                root,
+                {"wechat-article-pipeline": {"to": "dby-publish", "userFiles": ["config.json", "profiles/"]}},
+            )
+            validator.validate_renames_table(root)
+
+    def test_renames_table_rejects_target_not_installed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(root, {"wechat-article-pipeline": {"to": "ghost-pkg", "userFiles": []}})
+            with self.assertRaisesRegex(validator.ValidationError, "不是 skills/ 下在架目录"):
+                validator.validate_renames_table(root)
+
+    def test_renames_table_rejects_old_slug_still_installed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(root, {"dby-publish": {"to": "dby-publish", "userFiles": []}})
+            with self.assertRaisesRegex(validator.ValidationError, "现在仍是在架目录"):
+                validator.validate_renames_table(root)
+
+    def test_renames_table_rejects_old_slug_outside_known_hashes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(root, {"never-published": {"to": "dby-publish", "userFiles": []}})
+            with self.assertRaisesRegex(validator.ValidationError, "不在 known-hashes.json 的历史闭集里"):
+                validator.validate_renames_table(root)
+
+    def test_renames_table_rejects_parent_traversal_in_user_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(
+                root,
+                {"wechat-article-pipeline": {"to": "dby-publish", "userFiles": ["../escape.json"]}},
+            )
+            with self.assertRaisesRegex(validator.ValidationError, r"含 \.\."):
+                validator.validate_renames_table(root)
+
+    def test_renames_table_rejects_absolute_user_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.renames_fixture(
+                root,
+                {"wechat-article-pipeline": {"to": "dby-publish", "userFiles": ["/etc/passwd"]}},
+            )
+            with self.assertRaisesRegex(validator.ValidationError, "不能以 / 开头"):
+                validator.validate_renames_table(root)
+
+    def test_renames_table_rejects_unknown_schema_version(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "skills" / "dby-publish"
+            target.mkdir(parents=True)
+            (target / "SKILL.md").write_text("---\nname: dby-publish\ndescription: fixture\n---\n", encoding="utf-8")
+            (root / "known-hashes.json").write_text(json.dumps({"skills": {}}), encoding="utf-8")
+            (root / "renames.json").write_text(json.dumps({"schema_version": 2, "renames": {}}), encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, "unsupported renames.json schema_version"):
+                validator.validate_renames_table(root)
+
     # ── 差集闸 + description 预算闸 ────────────────────────────────────────
     def budget_fixture(self, root: Path, descriptions: dict[str, str], retired: dict | None = None) -> None:
         for name, text in descriptions.items():

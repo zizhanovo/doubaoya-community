@@ -34,6 +34,18 @@
 //
 // 为什么不能直接用 `npx skills update`：它只更新「已经装了的」，
 // 永远删不掉上游已经砍掉的那些——那些会永久停在被砍前的旧契约上。
+//
+// 🔴 自更新顺序（任务 1.1 已核实，结论钉在这里防再被问一遍）：main() 每一跑固定是
+//    「摊开清单给人看 → 归档 → `skills add`（装 add + refresh，**dby-update 自己也在这批里**）
+//    → 复核 + 自检」，**同一个 Node 进程绝不 re-exec**——`skills add` 只是把新版脚本文件写到磁盘，
+//    正在跑的这个进程仍然是旧代码，跑到文件末尾就退出了，不会自己重启去接着用刚落地的新逻辑。
+//    这就是为什么 rename 表（`renames.json`）要先于「改名内容本身」单独发一趟：老用户机器上
+//    首次撞见改名时，**正在执行对账的仍是当时已经在磁盘上的那份 reconcile.mjs**——如果它还不
+//    认识 rename 表，就只会把老目录整体归档（数据不丢但要用户手动搬），而不是本 change 承诺的
+//    「装新包 → 搬本地数据 → 归档老目录」。所以发布必须分两趟：先发「读表 + 搬运」这套机制
+//    （此时表内容为空、零行为变化），等存量用户的对账器进程都已经用上这版新代码之后，
+//    再单独发一趟把 renames.json 填满。同一台机器要吃到新逻辑，必须是**下一次**用户手动
+//    再跑一遍 `/dby-update`，不是本次跑完之后自动生效。详见 design.md D4「机制矛盾与两趟发布」。
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -55,6 +67,7 @@ const RAW = process.env.DBY_RAW_BASE || `https://raw.githubusercontent.com/${REP
 const RAW_OVERRIDDEN = Boolean(process.env.DBY_RAW_BASE);
 const VERSIONS_URL = `${RAW}/versions.json`;
 const KNOWN_URL = `${RAW}/known-hashes.json`;
+const RENAMES_URL = `${RAW}/renames.json`;
 const CONTENTS_API = `https://api.github.com/repos/${REPO}/contents/skills`;
 const HEALTH_URL = "https://doubaoya.com/api/health";
 
@@ -169,6 +182,43 @@ export function planReconcile(installed, upstreamNames, opts = {}) {
   };
 }
 
+/**
+ * 从归档单 / 不碰单里，把上游已改名的老包摘出来单起一条改名迁移候选（`renameCandidates`）。
+ * 纯函数：只吃 `renames` 表（fetchUpstream 拉来的那份，空表时是 `{}`）和 upstream 名单，
+ * 不碰磁盘——这样才能像 planReconcile 一样离线自检，也让「空表行为必须与无表完全相同」
+ * 这条 spec 要求可以直接断言。
+ *
+ * 🔴 两个来源都要收：
+ *   - `draft.archive` 里的（老目录内容 = 我们发布过的某个历史版，一个字没被用户碰过）；
+ *   - `draft.untouched` 里 `state === "modified"` 的（用户在老目录里留过东西——**这正是要搬
+ *     的那批人**：`config.json` 本身就会让内容哈希偏离已知版本，于是几乎所有真实用过这个
+ *     包的用户，老目录都会落在 modified 态，不是 historical 态）。
+ * `state === "foreign"` 的不碰：闭集里认不出的包不该被当成"我们的老包在等改名"。
+ *
+ * 只有 `renames[oldSlug].to` **真的在本次上游名单里**才算数——表可能引用一个还没上线的
+ * 新 slug（发布节奏没对齐时会发生），这时按"还不能搬"处理，老目录留在原来的单子里，
+ * 走旧路径（该归档归档、该不碰不碰），不因为表里有一条半成品记录就贸然搬家。
+ */
+export function extractRenames(draft, renames, upstreamNames) {
+  const table = renames || {};
+  const upstream = new Set(upstreamNames);
+  const renameCandidates = [];
+  const archive = draft.archive.filter((name) => {
+    const entry = table[name];
+    if (!entry || !upstream.has(entry.to)) return true;
+    renameCandidates.push({ from: name, to: entry.to, userFiles: entry.userFiles || [] });
+    return false;
+  });
+  const untouched = draft.untouched.filter((u) => {
+    if (u.state !== "modified") return true;
+    const entry = table[u.name];
+    if (!entry || !upstream.has(entry.to)) return true;
+    renameCandidates.push({ from: u.name, to: entry.to, userFiles: entry.userFiles || [] });
+    return false;
+  });
+  return { ...draft, archive, untouched, renameCandidates };
+}
+
 // ------------------------------------------------- 🔴 受 git 跟踪的包，绝不归档
 
 /**
@@ -252,6 +302,26 @@ export function splitGitTracked(plan, held) {
     gitTracked: plan.archive.filter((n) => tracked.has(n)).sort(),
     gitUnknown: plan.archive.filter((n) => unknown.has(n)).sort(),
   };
+}
+
+/**
+ * 改名候选里同样不许碰受 git 跟踪 / 判不出来的老目录——理由与 splitGitTracked 完全一致
+ * （归档 = 从用户工作区搬走文件），只是这里归档的还是"改名后的老目录"而不是"下架的老目录"。
+ * 摘出来的进 `renamedSkipped`（带上原因，spec 要求"只提示不动"），剩下的才是真正会执行
+ * 「装新包 → 搬数据 → 归档老目录」这条链的 `renamed`。
+ */
+export function splitRenameGitTracked(plan, held) {
+  const tracked = new Set(held?.tracked || []);
+  const unknown = new Set(held?.unknown || []);
+  const renamed = [];
+  const renamedSkipped = [];
+  for (const r of plan.renameCandidates || []) {
+    if (tracked.has(r.from)) renamedSkipped.push({ ...r, reason: "tracked" });
+    else if (unknown.has(r.from)) renamedSkipped.push({ ...r, reason: "unknown" });
+    else renamed.push(r);
+  }
+  const { renameCandidates, ...rest } = plan;
+  return { ...rest, renamed, renamedSkipped };
 }
 
 // ---------------------------------------------------------------- 人话报错
@@ -425,7 +495,27 @@ async function fetchJson(url, label) {
 }
 
 /**
- * 上游三件套：当前全集名单、当前版哈希、历史闭集。
+ * 🔴 rename 表按「无 rename」退化，且**不中止**对账——这是 spec 里"表缺失或不可解析"那条
+ * Scenario 的硬要求。不认识的 schema_version 同样退化：以后表结构真的要改版，老对账器
+ * 撞见新 schema 也不该直接崩，而是当没有表继续跑。
+ */
+async function fetchRenames(notes) {
+  let table;
+  try {
+    table = await fetchJson(RENAMES_URL, "拉取改名表");
+  } catch (err) {
+    notes.push(`上游没有可用的改名表（${err.message}），按无改名处理`);
+    return {};
+  }
+  if (!table || typeof table !== "object" || table.schema_version !== 1 || typeof table.renames !== "object" || table.renames === null) {
+    notes.push("上游没有可用的改名表（格式不对或 schema_version 不认识），按无改名处理");
+    return {};
+  }
+  return table.renames;
+}
+
+/**
+ * 上游四件套：当前全集名单、当前版哈希、历史闭集、改名表。
  * 名单以 GitHub 目录列表为准（`skills add` 装的就是这些目录），
  * 哈希以 versions.json 为准；目录列表拉不到时退回 versions.json 的键。
  */
@@ -434,6 +524,7 @@ async function fetchUpstream() {
   const versions = await fetchJson(VERSIONS_URL, "拉取上游版本表");
   const known = await fetchJson(KNOWN_URL, "拉取历史版本闭集");
   if (!versions?.skills || !known?.skills) throw new Friendly("上游版本表格式不对，先不动你本机的任何东西。");
+  const renames = await fetchRenames(notes);
 
   const currentHashes = Object.fromEntries(
     Object.entries(versions.skills).map(([k, v]) => [k, String(v).split("@").pop()])
@@ -456,7 +547,7 @@ async function fetchUpstream() {
     if (unstamped.length) notes.push(`上游有 ${unstamped.length} 个包还没盖版本戳（${unstamped.join(", ")}），它们只会被装上、不参与新旧判定。`);
   }
   if (!names.length) throw new Friendly("上游清单是空的，这不正常，先不动你本机的任何东西。");
-  return { names, currentHashes, knownHashes, notes };
+  return { names, currentHashes, knownHashes, renames, notes };
 }
 
 // ---------------------------------------------------------------- 归档
@@ -506,8 +597,13 @@ function restoreCommand(root) {
 /**
  * 把包移进归档目录。**绝不 rm**——用户机器我们看不见，删错了得能捞回来。
  * 按来源目录分层存放，并写一份 manifest 说明每个包原来在哪、怎么放回去。
+ *
+ * `opts.reason` 覆盖 manifest 顶层的默认归档理由（改名迁移用它写"上游改名为 X，本地数据
+ * 已搬运"，而不是泛泛的"上游已下架"）；`opts.perPackage[name]` 给单条 package 记录附加字段
+ * （改名迁移用它挂 `migratedFiles` / `conflicts`），不影响普通下架归档的既有行为（不传就是
+ * 原来那样）。
  */
-function archivePackages(scope, names, survey) {
+function archivePackages(scope, names, survey, opts = {}) {
   if (!names.length) return null;
   const root = archiveRoot(scope);
   ensureSelfIgnored(doubaoyaHome(scope));
@@ -528,7 +624,7 @@ function archivePackages(scope, names, survey) {
           cpSync(from, to, { recursive: true }); // 跨设备时退回「先拷再删」
           rmSync(from, { recursive: true, force: true });
         }
-        moved.push({ skill: name, from, to, hash: entry?.hash });
+        moved.push({ skill: name, from, to, hash: entry?.hash, ...(opts.perPackage?.[name] || {}) });
       } catch (err) {
         throw explainFsError(err, "归档 skill", from);
       }
@@ -536,7 +632,7 @@ function archivePackages(scope, names, survey) {
   }
   const manifest = {
     archivedAt: new Date().toISOString(),
-    reason: "上游已下架，由 dby-update 对账归档；内容哈希命中我们发布过的历史版本",
+    reason: opts.reason || "上游已下架，由 dby-update 对账归档；内容哈希命中我们发布过的历史版本",
     restore: "把下面每条的 to 移回 from 即可复原（mv <to> <from>），或整份复原跑 restoreCommand 那条",
     restoreCommand: restoreCommand(root),
     restoreNote:
@@ -546,6 +642,136 @@ function archivePackages(scope, names, survey) {
   };
   writeFileSync(join(root, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return { root, count: moved.length };
+}
+
+// ---------------------------------------------------------------- 改名迁移
+
+/**
+ * 一批候选路径里，去掉不存在的、按真实路径去重（`.claude/skills/<name>` 常常是软链指向
+ * `.agents/skills/<name>`，两条路径不去重会对同一份真实目录搬两遍——第二遍会把第一遍刚
+ * 搬过去的文件误判成"新目录已有同名文件"）。
+ */
+function uniqueRealDirs(paths) {
+  const seen = new Map();
+  for (const p of paths) {
+    if (!existsSync(p)) continue;
+    let key;
+    try {
+      key = realpathSync(p);
+    } catch {
+      key = p;
+    }
+    if (!seen.has(key)) seen.set(key, p);
+  }
+  return [...seen.values()];
+}
+
+/** 目录下所有文件的相对路径（不排除点文件——用户数据里没有理由排除，与 hashedFiles 不同用途）。 */
+function walkRelativeFiles(dir) {
+  const out = [];
+  const walk = (rel) => {
+    for (const entry of readdirSync(join(dir, rel) || dir)) {
+      if (entry === "__pycache__") continue;
+      const r = rel ? join(rel, entry) : entry;
+      let st;
+      try {
+        st = statSync(join(dir, r));
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) walk(r);
+      else if (st.isFile()) out.push(r);
+    }
+  };
+  walk("");
+  return out;
+}
+
+/**
+ * 搬一个文件。`silentConflict` 区分两种"新目录已有同名文件"：
+ *   - userFiles 里**直接点名的文件**（如 `config.json`）：新目录已有 = 记进 conflicts 提示
+ *     （spec 的"新包已有同名文件"场景），因为这不该发生——上游包不该自带一个和用户配置同名
+ *     的文件，出现了值得让用户知道。
+ *   - userFiles 里**目录展开出来的文件**（如 `themes/benya-clean.json`）：新目录已有 = 静默
+ *     跳过、不提示，这是**预期内**的常态——上游包本来就会带一批默认主题/资源文件，D4 的判据
+ *     正是"老目录有、上游新包没有的文件才搬"，把每一个默认文件都报成"冲突"是纯噪音。
+ */
+function transferOne(from, to, rel, result, { execute, silentConflict }) {
+  if (existsSync(to)) {
+    if (!silentConflict) result.conflicts.push({ rel, keptAt: to });
+    return;
+  }
+  if (!execute) {
+    result.migrated.push(rel);
+    return;
+  }
+  mkdirSync(dirname(to), { recursive: true });
+  cpSync(from, to);
+  // 🔴 校验逐字节相同：读回比对，不信任 cpSync 静默成功。
+  if (!readFileSync(from).equals(readFileSync(to))) {
+    throw new Error(`复制后内容不一致：${rel}`);
+  }
+  result.migrated.push(rel);
+}
+
+/**
+ * 算一条改名迁移会搬哪些文件 / 冲突哪些（`execute: false`），或者真的去搬（`execute: true`，
+ * 默认）。**两种模式走同一套判定代码**——这是刻意的：`--dry-run` 打印的"将搬运的文件清单"
+ * 必须和真跑时完全一致，判定逻辑只写一份，不许有第二条"预测口径"跟真实执行口径慢慢漂开。
+ *
+ * `rename.userFiles` 里每一项先去掉末尾的 `/`（renames.json 里目录形态自带一个），再看它在
+ * 老目录里是文件还是目录：文件直接比对，目录递归展开成文件列表逐个搬。
+ */
+function planRenameMigration(scope, survey, rename, { execute = true } = {}) {
+  const entry = survey.find((s) => s.name === rename.from);
+  const sourceDirs = uniqueRealDirs((entry?.dirs || []).map((d) => join(d.path, rename.from)));
+  const targetDirs = uniqueRealDirs(installDirs(scope).map((d) => join(d.path, rename.to)));
+  const result = { from: rename.from, to: rename.to, migrated: [], conflicts: [], ok: true };
+  if (!sourceDirs.length) {
+    // 幂等的另一半：老目录已经不在了（多半是上一跑已经搬完归档掉了），无事可做，不是失败。
+    result.skipped = "老目录已经不在了（可能上一跑已经搬完）";
+    return result;
+  }
+  const source = sourceDirs[0];
+  let target;
+  if (targetDirs.length) {
+    target = targetDirs[0];
+  } else if (!execute) {
+    // 🔴 dry-run 预览：这会儿新包多半还没装（真跑时执行顺序是先 `skills add` 再搬），这不算
+    //    错误。用它"将来会落在哪"的路径继续走同一套判定——`existsSync` 对不存在的路径天然
+    //    返回 false，算出来的自然是"源目录这些都还没被占，会搬"；代价是没法预先排除"上游新包
+    //    自带、恰好同名"的文件，如实在 pending 里说清楚，不假装算得准。
+    target = join(installDirs(scope)[0].path, rename.to);
+    result.pending = "新包这会儿还没落地（真跑时会先装好新包再搬）；这份清单没法排除上游新包自带、恰好同名的文件";
+  } else {
+    result.ok = false;
+    result.error = `新包 ${rename.to} 还没落地，没法搬运用户数据`;
+    result.manualCmd = `cp -R ${JSON.stringify(sourceDirs[0])} <新安装目录>/${rename.to}`;
+    return result;
+  }
+  result.sourceDir = source;
+  result.targetDir = target;
+  try {
+    for (const raw of rename.userFiles || []) {
+      const rel = raw.replace(/\/+$/, "");
+      if (!rel) continue;
+      const from = join(source, rel);
+      if (!existsSync(from)) continue; // 老目录里没有这一项，跳过，不是错误
+      if (statSync(from).isDirectory()) {
+        for (const file of walkRelativeFiles(from)) {
+          const relFile = join(rel, file);
+          transferOne(join(source, relFile), join(target, relFile), relFile, result, { execute, silentConflict: true });
+        }
+      } else {
+        transferOne(from, join(target, rel), rel, result, { execute, silentConflict: false });
+      }
+    }
+  } catch (err) {
+    result.ok = false;
+    result.error = err instanceof Friendly ? err.message : explainFsError(err, "搬运改名用户数据", source).message;
+    result.manualCmd = `cp -R ${JSON.stringify(source)} ${JSON.stringify(target)}`;
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------- 执行
@@ -778,6 +1004,26 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     console.log(`        （不是你版本化了它们，是这台机器上的 git 没能回答我。先确认 git 装了、能跑：`);
     console.log(`         git -C <包所在目录> ls-files —— 修好再重跑本对账，它们就会正常归档。）`);
   }
+  // 🔴 改名迁移单独一栏：结论不是「归档」也不是「新增」，是「装新包 → 搬本地数据 → 老目录归档」
+  //    这条三步链，混进上面任一栏都会被当成别的动作看待。
+  if (plan.renamed?.length) {
+    console.log(`   🔀 改名迁移 ${plan.renamed.length} 个（上游把它们改名了；先装新包，把本地数据搬过去，老目录再归档）：`);
+    for (const r of plan.renamed) {
+      console.log(`        ${r.from} → ${r.to}`);
+      const p = r.preview;
+      if (p?.migrated?.length) console.log(`           会搬：${p.migrated.join(", ")}`);
+      if (p?.conflicts?.length) console.log(`           冲突（新目录已有同名文件，不覆盖）：${p.conflicts.map((c) => c.rel).join(", ")}`);
+      if (p && !p.ok) console.log(`           ⚠️ ${p.error}（这一条会保留老目录不动，需要手工处理）`);
+    }
+  }
+  if (plan.renamedSkipped?.length) {
+    console.log(
+      `   🔒 另有 ${plan.renamedSkipped.length} 个老目录上游已改名，但受 git 跟踪或判不出来，跳过不动：`
+    );
+    for (const r of plan.renamedSkipped) {
+      console.log(`        ${r.from} → ${r.to}（${r.reason === "tracked" ? "受跟踪，是你自己版本化的包" : "git 判不出来"}）`);
+    }
+  }
   if (plan.add.length) {
     console.log(`   ✨ 要新增 ${plan.add.length} 个：`);
     for (const n of plan.add) console.log(`        + ${n}`);
@@ -850,16 +1096,29 @@ async function main() {
       forceRefresh: opts.forceRefresh,
       expectedAgents: targetAgents(scope),
     });
+    // 🔴 改名候选要先从 archive / untouched 里摘出来，再对"剩下的"跑普通归档的 git 检查——
+    //    不然一个正在改名迁移的老目录会漏过普通归档的 git 检查（它已经不在 archive 里了），
+    //    必须单独再对改名候选跑一遍同样的检查（详见 splitRenameGitTracked）。
+    const withRenames = extractRenames(draft, upstream.renames, upstream.names);
     // 🔴 归档之前先问 git：受跟踪的包一律摘出来不动（详见 splitGitTracked）。
     //    只对归档候选跑 git，不是对全部已装包——一次对账最多几十次探测，可忽略。
-    const plan = splitGitTracked(draft, findGitTracked(draft.archive, survey));
+    const gitSplit = splitGitTracked(withRenames, findGitTracked(withRenames.archive, survey));
+    const renameNames = gitSplit.renameCandidates.map((r) => r.from);
+    const plan = splitRenameGitTracked(gitSplit, findGitTracked(renameNames, survey));
+    // dry-run 与真跑共用同一套判定（execute:false 只读不写）：这里先把「会搬哪些文件」算出来
+    // 挂在计划上，供打印 / --json 用——保证「计划说的」和「真跑做的」永远是同一份代码算出来的。
+    plan.renamed = plan.renamed.map((r) => ({ ...r, preview: planRenameMigration(scope, survey, r, { execute: false }) }));
     const stray = surveyStrayEveDir(scope, upstream.currentHashes, upstream.knownHashes);
     report.push({ scope, survey, plan, stray });
   }
 
   // 🔴 刷新一样是「往用户磁盘上写文件」的动作（`skills add` 会原地覆写），不该比归档少一道门。
-  //    它也是这个计数唯一的真相来源：totalChanges === 0 必须真的等于「一个动作都没有」。
-  const totalChanges = report.reduce((n, r) => n + r.plan.archive.length + r.plan.add.length + r.plan.refresh.length, 0);
+  //    改名迁移同样要写磁盘（搬文件 + 归档老目录），也计进这个唯一真相来源：
+  //    totalChanges === 0 必须真的等于「一个动作都没有」。
+  const totalChanges = report.reduce(
+    (n, r) => n + r.plan.archive.length + r.plan.add.length + r.plan.refresh.length + r.plan.renamed.length,
+    0
+  );
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
     for (const { scope, survey, plan, stray } of report) {
@@ -892,6 +1151,7 @@ async function main() {
 
   // ---- 执行
   const archived = [];
+  const renameOutcomesByScope = new Map();
   for (const { scope, survey, plan } of report) {
     const cwd = scope.kind === "global" ? undefined : scope.dir;
     const scopeFlag = scope.kind === "global" ? ["-g"] : [];
@@ -906,8 +1166,12 @@ async function main() {
       runSkills(["remove", ...plan.archive, ...scopeFlag, "-y"], cwd);
     }
 
-    // 只装该装的：用户改过的包被排除在外，免得 --all 一把盖掉人家的改动。
-    const want = [...plan.add, ...plan.refresh].sort();
+    // 只装该装的：用户改过的包被排除在外，免得 --all 一把盖掉人家的改动；
+    // 改名迁移的目标包也要在这批一起装上（除非它已经是当前版，不用重装）——
+    // 「装新包 → 搬本地数据 → 老目录归档」这条链，第一步必须先落地。
+    const upToDateSet = new Set(plan.upToDate);
+    const renameTargets = plan.renamed.filter((r) => !upToDateSet.has(r.to)).map((r) => r.to);
+    const want = [...new Set([...plan.add, ...plan.refresh, ...renameTargets])].sort();
     if (want.length) {
       say(`\n拉取上游 ${want.length} 个 skill…`);
       const agentsToo = targetAgents(scope);
@@ -925,6 +1189,49 @@ async function main() {
         }
         throw err;
       }
+    }
+
+    // ---- 改名迁移：新包已经落地，现在搬本地数据、再把搬完的老目录归档。
+    // 🔴 顺序固定：先搬、搬成功才归档——任一条搬运失败，那一条老目录原地不动（spec 硬要求）。
+    if (plan.renamed.length) {
+      say(`\n改名迁移 ${plan.renamed.length} 个（老 slug 已在上游改名）…`);
+      const perPackage = {};
+      const toArchive = [];
+      const outcomes = [];
+      for (const r of plan.renamed) {
+        const result = planRenameMigration(scope, survey, r, { execute: true });
+        outcomes.push(result);
+        if (result.skipped) {
+          say(`   ${r.from} → ${r.to}：${result.skipped}`);
+          continue;
+        }
+        if (!result.ok) {
+          say(`   ⚠️ ${r.from} → ${r.to} 搬运失败：${result.error}`);
+          say(`      老目录原地不动，需要就手工执行：${result.manualCmd}`);
+          continue;
+        }
+        perPackage[r.from] = {
+          migratedFiles: result.migrated,
+          conflicts: result.conflicts,
+          reason: `上游改名为 ${r.to}，本地数据已搬运：${JSON.stringify(result.migrated)}`,
+        };
+        toArchive.push(r.from);
+        say(
+          `   ${r.from} → ${r.to}：搬了 ${result.migrated.length} 个文件` +
+            (result.conflicts.length ? `，${result.conflicts.length} 个冲突未覆盖（新目录已有同名文件）` : "")
+        );
+      }
+      if (toArchive.length) {
+        const res = archivePackages(scope, toArchive, survey, {
+          reason: "上游改名，由 dby-update 对账迁移；本地数据已搬到新包，老目录仅作保留可复原",
+          perPackage,
+        });
+        archived.push({ scope: scope.label, packages: toArchive.length, ...res });
+        say(`   老目录已归档到 ${res.root}`);
+        // 目录已经移走，这一步只是让 skills CLI 把自己对老 slug 的安装记录也清掉。
+        runSkills(["remove", ...toArchive, ...scopeFlag, "-y"], cwd);
+      }
+      renameOutcomesByScope.set(scope, outcomes);
     }
   }
 
@@ -949,12 +1256,17 @@ async function main() {
     //    正好在最该确认「东西真的还在」的那一跑上变成空转。已经是当前版的那些同样该在场。
     const expect = [...plan.add, ...plan.refresh, ...(plan.upToDate || [])];
     const checks = await selfTest(scope, expect);
-    results.push({ scope, plan, after, stillStale, keptModified, keptForeign, checks });
+    const renameResults = renameOutcomesByScope.get(scope) || [];
+    results.push({ scope, plan, after, stillStale, keptModified, keptForeign, checks, renameResults });
   }
+
+  // 改名迁移里「搬运失败、老目录没归档」的，必须让整体退出码反映出来——它不是自检项，
+  // 是本轮真的没做完的事，跟 stillStale 一个级别。
+  const renameFailed = results.some((r) => r.renameResults.some((o) => !o.skipped && !o.ok));
 
   if (opts.json) {
     console.log(JSON.stringify({ notes: upstream.notes, results: results.map(stripScope), archived, executed: true }, null, 2));
-    return results.every((r) => r.checks.every((c) => c.ok)) ? 0 : 3;
+    return results.every((r) => r.checks.every((c) => c.ok)) && !renameFailed ? 0 : 3;
   }
 
   let allOk = true;
@@ -979,6 +1291,29 @@ async function main() {
     if (r.stillStale.length) {
       allOk = false;
       console.log(`   ⚠️ 还有 ${r.stillStale.length} 个没归档掉：${r.stillStale.join(", ")}`);
+    }
+    if (r.plan.renamed.length) {
+      console.log(`   🔀 改名迁移 ${r.plan.renamed.length} 个：`);
+      for (const o of r.renameResults) {
+        if (o.skipped) {
+          console.log(`        ${o.from} → ${o.to}：${o.skipped}`);
+          continue;
+        }
+        if (!o.ok) {
+          allOk = false;
+          console.log(`        ⚠️ ${o.from} → ${o.to}：搬运失败（${o.error}），老目录原地不动`);
+          console.log(`           手工执行：${o.manualCmd}`);
+          continue;
+        }
+        console.log(`        ${o.from} → ${o.to}：搬了 ${o.migrated.length} 个文件（${o.migrated.join(", ") || "无"}）`);
+        if (o.conflicts.length) console.log(`           冲突未覆盖（新目录已有同名文件）：${o.conflicts.map((c) => c.rel).join(", ")}`);
+      }
+    }
+    if (r.plan.renamedSkipped?.length) {
+      console.log(
+        `   🔒 另有 ${r.plan.renamedSkipped.length} 个老目录上游已改名、但受 git 跟踪或判不出来，没动：` +
+          r.plan.renamedSkipped.map((s) => `${s.from}→${s.to}`).join(", ")
+      );
     }
     console.log(`\n   自检：`);
     for (const c of r.checks) {
@@ -1611,6 +1946,279 @@ function partialMigrationCheck() {
   return fails;
 }
 
+// ---------------------------------------------------------------- 改名迁移自检
+
+/** 只放一个已下架老包（无 renames.json 语义）的 fixture，供"空表 / 缺表"回退检查用。 */
+function buildBareOldPackageFixture() {
+  const root = mkdtempSync(join(tmpdir(), "dby-renames-bare-"));
+  const pkg = join(root, ".claude", "skills", "wechat-article-pipeline");
+  mkdirSync(pkg, { recursive: true });
+  writeFileSync(join(pkg, "SKILL.md"), "---\nname: wechat-article-pipeline\n---\n");
+  const hash = computeSkillHash(pkg);
+  // 上游名单不能是空的（那会被当成异常直接中止），随手带一个"仍在架"的包撑住 fetchUpstream。
+  writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "keep-skill": "doubaoya-skill/keep-skill@aaaaaaaaaaaa" } }));
+  writeFileSync(
+    join(root, "known-hashes.json"),
+    JSON.stringify({ skills: { "wechat-article-pipeline": [hash], "keep-skill": ["aaaaaaaaaaaa"] } })
+  );
+  return root;
+}
+
+/**
+ * 🔴 spec 的硬要求：表缺失 / 不可解析时**不中止**，按无改名继续，且计划必须与「空表」逐字一致。
+ * 三种退化各造一份 fixture：不写 renames.json / 写非法 JSON / schema_version 给个不认识的数字，
+ * 逐一跟「空表」那份的 dry-run 计划比对。
+ */
+function renamesFallbackCheck() {
+  const fails = [];
+  const run = (root) =>
+    spawnSync(process.execPath, [SELF_PATH, "--dry-run", "--json", "--scope", "project", "--project-dir", root], {
+      encoding: "utf-8",
+      env: { ...process.env, DBY_RAW_BASE: root },
+    });
+
+  const emptyRoot = buildBareOldPackageFixture();
+  writeFileSync(join(emptyRoot, "renames.json"), JSON.stringify({ schema_version: 1, renames: {} }));
+  const variants = {
+    缺表: buildBareOldPackageFixture(), // 干脆不写 renames.json
+    非法JSON: buildBareOldPackageFixture(),
+    不认识的schema: buildBareOldPackageFixture(),
+  };
+  writeFileSync(join(variants.非法JSON, "renames.json"), "{ 这不是合法 JSON");
+  writeFileSync(join(variants.不认识的schema, "renames.json"), JSON.stringify({ schema_version: 99, renames: {} }));
+
+  const roots = [emptyRoot, ...Object.values(variants)];
+  try {
+    const emptyRes = run(emptyRoot);
+    if (emptyRes.status !== 0) {
+      fails.push(`renames 回退 · 空表 fixture 跑挂了（退出码 ${emptyRes.status}）：${(emptyRes.stderr || "").trim().split("\n").pop()}`);
+      return fails;
+    }
+    const emptyParsed = JSON.parse(emptyRes.stdout);
+    if (!emptyParsed.report[0].plan.archive.includes("wechat-article-pipeline")) {
+      fails.push("renames 回退 fixture 前提不成立：老包应该正常进归档单");
+    }
+
+    for (const [label, root] of Object.entries(variants)) {
+      const res = run(root);
+      if (res.status !== 0) {
+        fails.push(`renames 回退 · ${label} 跑挂了（退出码 ${res.status}）：${(res.stderr || "").trim().split("\n").pop()}`);
+        continue;
+      }
+      const parsed = JSON.parse(res.stdout);
+      // 只比 plan：survey/scope 里带着各自 fixture 的临时目录绝对路径，天然不相等，
+      // 真正该比的是"算出来的计划"，不是路径字面量。
+      const plans = (r) => r.report.map((s) => s.plan);
+      if (JSON.stringify(plans(parsed)) !== JSON.stringify(plans(emptyParsed))) {
+        fails.push(
+          `🔴 renames 回退 · ${label} 时的计划应与空表完全一致：${label}=${JSON.stringify(plans(parsed))} 空表=${JSON.stringify(plans(emptyParsed))}`
+        );
+      }
+      if (!parsed.notes.some((n) => n.includes("没有可用的改名表"))) {
+        fails.push(`🔴 renames 回退 · ${label} 时 notes 没有提示按无改名处理：${JSON.stringify(parsed.notes)}`);
+      }
+      if (!(res.stderr || "").includes("没有可用的改名表")) {
+        fails.push(`renames 回退 · ${label} 时提示没走 stderr`);
+      }
+    }
+  } finally {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 造一套"老包已在上游改名"的 fixture：project scope 下 `.claude/skills/wechat-article-pipeline`
+ * （老包，含 config.json / profiles/x.json / themes/benya-clean.json 三样用户数据）+ 可选的
+ * 预装 `dby-publish`（模拟"新包已经落地"——`planRenameMigration` 只有在目标目录存在时才能
+ * 正确判定"上游新包自带、不用搬"的文件，所以主线场景必须让它已经在场；这本身也是真实场景：
+ * `dby-publish` 是一个真实存在于上游全集的包，`skills add` 会把它装出来）。
+ * `renames.json` 固定指 `wechat-article-pipeline → dby-publish`。
+ */
+function buildRenameFixture({ preinstallTarget = true, targetHasConfig = false, gitTrackOld = false } = {}) {
+  const root = mkdtempSync(join(tmpdir(), "dby-rename-selfcheck-"));
+  const skillsDir = join(root, ".claude", "skills");
+  const oldDir = join(skillsDir, "wechat-article-pipeline");
+  mkdirSync(join(oldDir, "profiles"), { recursive: true });
+  mkdirSync(join(oldDir, "themes"), { recursive: true });
+  writeFileSync(join(oldDir, "SKILL.md"), "---\nname: wechat-article-pipeline\n---\n");
+  writeFileSync(join(oldDir, "config.json"), JSON.stringify({ mine: true }));
+  writeFileSync(join(oldDir, "profiles", "x.json"), JSON.stringify({ ip: "my-ip" }));
+  writeFileSync(join(oldDir, "themes", "benya-clean.json"), JSON.stringify({ from: "old" }));
+  const oldHash = computeSkillHash(oldDir);
+
+  const known = { "wechat-article-pipeline": [oldHash] };
+  const versions = {};
+  let targetDir = null;
+  if (preinstallTarget) {
+    targetDir = join(skillsDir, "dby-publish");
+    mkdirSync(join(targetDir, "themes"), { recursive: true });
+    writeFileSync(join(targetDir, "SKILL.md"), "---\nname: dby-publish\n---\n");
+    // 上游新包自带的默认主题——跟老目录里那份同名但内容不同，用来证明"不覆盖"。
+    writeFileSync(join(targetDir, "themes", "benya-clean.json"), JSON.stringify({ from: "upstream" }));
+    if (targetHasConfig) writeFileSync(join(targetDir, "config.json"), JSON.stringify({ notMine: true }));
+    const targetHash = computeSkillHash(targetDir);
+    known["dby-publish"] = [targetHash];
+    versions["dby-publish"] = `doubaoya-skill/dby-publish@${targetHash}`;
+  }
+
+  writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: versions }));
+  writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: known }));
+  writeFileSync(
+    join(root, "renames.json"),
+    JSON.stringify({
+      schema_version: 1,
+      renames: {
+        "wechat-article-pipeline": { to: "dby-publish", userFiles: ["config.json", "profiles/", "themes/"] },
+      },
+    })
+  );
+
+  if (gitTrackOld) {
+    const git = (...args) => spawnSync("git", ["-C", root, ...args], { encoding: "utf-8" });
+    git("init", "-q");
+    git("config", "user.email", "selfcheck@example.com");
+    git("config", "user.name", "selfcheck");
+    git("add", "-f", ".claude/skills/wechat-article-pipeline");
+    git("commit", "-qm", "track old pkg");
+  }
+
+  return { root, oldDir, targetDir };
+}
+
+/**
+ * 🔴 改名迁移全链路实证：不 mock 文件系统，真读真写。这条要防的正是"计划算得对、真搬起来
+ * 还是把用户数据丢了/覆盖了"这一种退化——它长得和通过一模一样，只有真的比对文件内容才拦得住。
+ *
+ * 🔴 判据不含"整体退出码必须是 0"：`selfTest` 里的健康检查/API 钥匙检查会打真实网络请求，
+ * 自检环境大概率没网也没配钥匙，那两项**必然**报红、把退出码顶成 3——这与改名迁移对不对
+ * 是两件事（`partialMigrationCheck` 已经是这么处理的）。所以这里只信 `--json` 的 stdout 内容，
+ * 不信退出码。
+ */
+function renameMigrationCheck() {
+  const fails = [];
+  const { bin } = stubNpxDir();
+  const runNode = (root, args) =>
+    spawnSync(process.execPath, [SELF_PATH, "--scope", "project", "--project-dir", root, ...args], {
+      encoding: "utf-8",
+      env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` },
+    });
+  const parseOrFail = (res, label) => {
+    try {
+      return JSON.parse(res.stdout);
+    } catch (err) {
+      fails.push(`改名迁移 · ${label} 的 stdout 不是合法 JSON（${err.message}）：${(res.stderr || "").trim().split("\n").pop()}`);
+      return null;
+    }
+  };
+
+  // ── 主线：dry-run 预览 → 真跑迁移 → 二次运行幂等 ──────────────────────
+  const fx = buildRenameFixture();
+  try {
+    const originalConfig = readFileSync(join(fx.oldDir, "config.json"));
+    const originalProfile = readFileSync(join(fx.oldDir, "profiles", "x.json"));
+
+    const dryParsed = parseOrFail(runNode(fx.root, ["--dry-run", "--json"]), "主线 dry-run");
+    const previewMigrated = dryParsed?.report?.[0]?.plan?.renamed?.[0]?.preview?.migrated;
+    if (!previewMigrated) {
+      fails.push(`🔴 改名迁移 · dry-run 计划里没有这条改名或没有预览：${JSON.stringify(dryParsed?.report)}`);
+    } else {
+      if (!previewMigrated.includes("config.json")) fails.push(`改名迁移 · dry-run 没列出 config.json：${JSON.stringify(previewMigrated)}`);
+      if (!previewMigrated.includes(join("profiles", "x.json"))) {
+        fails.push(`改名迁移 · dry-run 没列出 profiles/x.json：${JSON.stringify(previewMigrated)}`);
+      }
+      if (previewMigrated.includes(join("themes", "benya-clean.json"))) {
+        fails.push(`🔴 改名迁移 · dry-run 把上游新包自带的 themes/benya-clean.json 也列进了搬运清单：${JSON.stringify(previewMigrated)}`);
+      }
+    }
+
+    const realParsed = parseOrFail(runNode(fx.root, ["--yes", "--json"]), "主线真跑");
+    if (realParsed) {
+      const targetDir = join(fx.root, ".claude", "skills", "dby-publish");
+      if (existsSync(fx.oldDir)) fails.push("🔴 改名迁移 · 真跑完老目录还在（没有归档）");
+      if (!existsSync(join(targetDir, "config.json")) || !readFileSync(join(targetDir, "config.json")).equals(originalConfig)) {
+        fails.push("🔴 改名迁移 · config.json 搬过去之后内容不是逐字节相同");
+      }
+      if (
+        !existsSync(join(targetDir, "profiles", "x.json")) ||
+        !readFileSync(join(targetDir, "profiles", "x.json")).equals(originalProfile)
+      ) {
+        fails.push("🔴 改名迁移 · profiles/x.json 搬过去之后内容不是逐字节相同");
+      }
+      const theme = JSON.parse(readFileSync(join(targetDir, "themes", "benya-clean.json"), "utf-8"));
+      if (theme.from !== "upstream") fails.push("🔴 改名迁移 · 上游新包自带的 themes/benya-clean.json 被老目录同名文件覆盖了");
+
+      const archiveResult = (realParsed.archived || []).find((a) => a?.count);
+      const manifestPath = archiveResult && join(archiveResult.root, "manifest.json");
+      const manifest = manifestPath && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf-8")) : null;
+      const pkgEntry = manifest?.packages?.find((p) => p.skill === "wechat-article-pipeline");
+      if (!pkgEntry) fails.push(`🔴 改名迁移 · 归档 manifest 里没有老包的条目：${JSON.stringify(manifest)}`);
+      else if (!/改名为.*dby-publish/.test(pkgEntry.reason || "")) {
+        fails.push(`🔴 改名迁移 · manifest 条目的 reason 没说清改名去向：${JSON.stringify(pkgEntry.reason)}`);
+      }
+    }
+
+    const againParsed = parseOrFail(runNode(fx.root, ["--dry-run", "--json"]), "二次运行");
+    if (againParsed && (againParsed.report?.[0]?.plan?.renamed || []).length) {
+      fails.push(`🔴 改名迁移 · 二次运行不是幂等的，仍有 renamed 条目：${JSON.stringify(againParsed.report[0].plan.renamed)}`);
+    }
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+  }
+
+  // ── 冲突：新目录已有 config.json → 不覆盖、conflicts 有记录，且不挡住老目录归档 ──────
+  const conflictFx = buildRenameFixture({ targetHasConfig: true });
+  try {
+    const targetConfigBefore = readFileSync(join(conflictFx.targetDir, "config.json"));
+    const realParsed = parseOrFail(runNode(conflictFx.root, ["--yes", "--json"]), "冲突场景真跑");
+    if (realParsed) {
+      const outcome = realParsed.results?.[0]?.renameResults?.[0];
+      if (!outcome?.conflicts?.some((c) => c.rel === "config.json")) {
+        fails.push(`🔴 改名迁移·冲突 · config.json 已存在却没记进 conflicts：${JSON.stringify(outcome)}`);
+      }
+      if (existsSync(conflictFx.oldDir)) {
+        fails.push("改名迁移·冲突 · 单个文件冲突不该挡住整条老目录的归档");
+      }
+    }
+    if (!readFileSync(join(conflictFx.targetDir, "config.json")).equals(targetConfigBefore)) {
+      fails.push("🔴 改名迁移·冲突 · 目标已有的 config.json 被覆盖了——不覆盖是硬红线");
+    }
+  } finally {
+    rmSync(conflictFx.root, { recursive: true, force: true });
+  }
+
+  // ── git 跟踪：老目录不搬、不归档，只提示 ────────────────────────────────
+  const gitFx = buildRenameFixture({ gitTrackOld: true });
+  try {
+    const dryParsed = parseOrFail(runNode(gitFx.root, ["--dry-run", "--json"]), "git 跟踪场景 · dry-run");
+    const plan = dryParsed?.report?.[0]?.plan;
+    if (!plan) {
+      fails.push("改名迁移·git 跟踪 · dry-run 没算出计划");
+    } else {
+      if ((plan.renamed || []).length) fails.push(`🔴 改名迁移·git 跟踪 · 受跟踪的老目录不该进 renamed：${JSON.stringify(plan.renamed)}`);
+      if (!(plan.renamedSkipped || []).some((s) => s.from === "wechat-article-pipeline" && s.reason === "tracked")) {
+        fails.push(`🔴 改名迁移·git 跟踪 · 没有单列进 renamedSkipped：${JSON.stringify(plan.renamedSkipped)}`);
+      }
+    }
+    if (!existsSync(gitFx.oldDir)) fails.push("🔴 改名迁移·git 跟踪 · dry-run 不该动任何文件，老目录却不见了");
+
+    // 🔴 真跑一遍——这是这条自检最薄的一层冰：判定看着对，真执行起来还是把受跟踪的
+    //    老目录搬走了，只有真跑才拦得住。
+    parseOrFail(runNode(gitFx.root, ["--yes", "--json"]), "git 跟踪场景 · 真跑");
+    if (!existsSync(gitFx.oldDir)) {
+      fails.push("🔴 改名迁移·git 跟踪 · 真跑之后受跟踪的老目录被搬走了——这条是防数据丢失红线");
+    }
+    if (!existsSync(join(gitFx.oldDir, "config.json"))) {
+      fails.push("🔴 改名迁移·git 跟踪 · 真跑之后老目录里的用户数据不见了");
+    }
+  } finally {
+    rmSync(gitFx.root, { recursive: true, force: true });
+  }
+
+  rmSync(bin, { recursive: true, force: true });
+  return fails;
+}
+
 function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
@@ -1694,6 +2302,54 @@ function runSelfCheck() {
   fails.push(...jsonPurityCheck());
   fails.push(...symlinkEntryCheck());
 
+  // 🔴 改名迁移（renames.json）：纯函数层先钉 extractRenames / splitRenameGitTracked，
+  // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
+  // fixture 层慢但证不了"每一种输入组合都对"，见 renameMigrationCheck 顶部注释。
+  const renameFixtureInstalled = [
+    { name: "wechat-article-pipeline", hash: "aaa", state: "historical" },
+    { name: "wechat-draft-publish", hash: "zzz", state: "modified" },
+    { name: "dby", hash: "ccc", state: "historical" },
+  ];
+  const upstreamNames = ["dby-publish", "dby"]; // article-pipeline / draft-publish 都已下架
+  const draft = planReconcile(renameFixtureInstalled, upstreamNames);
+  eq("改名前：两个老 slug 都落进归档/不碰单", [draft.archive, draft.untouched.map((u) => u.name)], [["wechat-article-pipeline"], ["wechat-draft-publish"]]);
+
+  const emptyExtract = extractRenames(draft, {}, upstreamNames);
+  eq("🔴 空表：archive/untouched 必须与无表时完全一样", [emptyExtract.archive, emptyExtract.untouched.map((u) => u.name), emptyExtract.renameCandidates], [["wechat-article-pipeline"], ["wechat-draft-publish"], []]);
+
+  const renamesTable = {
+    "wechat-article-pipeline": { to: "dby-publish", userFiles: ["config.json"] },
+    "wechat-draft-publish": { to: "dby-publish", userFiles: [] },
+  };
+  const filled = extractRenames(draft, renamesTable, upstreamNames);
+  eq("historical 老包摘进改名候选，不再进归档单", filled.archive, []);
+  eq("🔴 modified 老包也要摘进改名候选——它正是真实用户的常态态", filled.untouched.map((u) => u.name), []);
+  eq(
+    "改名候选携带 to / userFiles",
+    filled.renameCandidates.sort((a, b) => a.from.localeCompare(b.from)),
+    [
+      { from: "wechat-article-pipeline", to: "dby-publish", userFiles: ["config.json"] },
+      { from: "wechat-draft-publish", to: "dby-publish", userFiles: [] },
+    ]
+  );
+
+  // to 还没上线到本次上游名单：老包留在原来的单子里，不许贸然搬家
+  const notYetUpstream = extractRenames(draft, { "wechat-article-pipeline": { to: "dby-publish", userFiles: [] } }, ["dby"]);
+  eq("🔴 to 不在本次上游名单时不搬：老包留在归档单", notYetUpstream.archive, ["wechat-article-pipeline"]);
+  eq("to 不在名单时不产生改名候选", notYetUpstream.renameCandidates, []);
+
+  const splitFilled = splitRenameGitTracked(filled, { tracked: ["wechat-article-pipeline"], unknown: ["wechat-draft-publish"] });
+  eq("受跟踪的改名候选摘进 renamedSkipped·tracked", splitFilled.renamedSkipped.find((r) => r.from === "wechat-article-pipeline")?.reason, "tracked");
+  eq("判不出的改名候选摘进 renamedSkipped·unknown", splitFilled.renamedSkipped.find((r) => r.from === "wechat-draft-publish")?.reason, "unknown");
+  eq("两个都被摘走后 renamed 为空", splitFilled.renamed, []);
+  eq("splitRenameGitTracked 之后不再带 renameCandidates 字段", "renameCandidates" in splitFilled, false);
+  const splitNone = splitRenameGitTracked(filled, { tracked: [], unknown: [] });
+  eq("git 都干净时两条都进 renamed", splitNone.renamed.map((r) => r.from).sort(), ["wechat-article-pipeline", "wechat-draft-publish"]);
+  eq("git 都干净时 renamedSkipped 为空", splitNone.renamedSkipped, []);
+
+  fails.push(...renamesFallbackCheck());
+  fails.push(...renameMigrationCheck());
+
   if (fails.length) {
     for (const f of fails) console.error(`selfcheck FAILED: ${f}`);
     return 1;
@@ -1707,7 +2363,11 @@ function runSelfCheck() {
       "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse、" +
       "经软链调用（skills CLI 装出来的常态形态）照常干活而不是静默空跑、" +
       "装的 agent 面收窄到本机真有的安装目录且与查的目录同源（不出现星号）、" +
-      "agent/skills 存量副本只点名不代删）"
+      "agent/skills 存量副本只点名不代删、" +
+      "改名迁移 renames.json：空表/缺表/非法表退化一致、historical 与 modified 老包都能摘进改名候选、" +
+      "to 未上线时不贸然搬家、受跟踪与判不出的改名候选单列不动、" +
+      "真实文件系统上 config.json / profiles 逐字节搬对、上游新包自带的同名文件不被覆盖、" +
+      "新目录已有同名文件时冲突不覆盖也不挡住老目录归档、二次运行幂等）"
   );
   return 0;
 }
