@@ -137,7 +137,7 @@ doubaoya.com 连不连得通），最后打印一份结果，并告诉用户归�
   `.gitignore` 对 git 隐形，不会污染用户仓库。
 - 🔴 **受 git 跟踪的包一个都不归档**；git 探测跑不通、判不出来的，同样保守跳过，宁可少归档一个。
   两种情形脚本会**分两栏**打出来，因为处置不同（自己 `git rm` vs 先修 git）。
-- **不动你的本地数据 / 配置**：`wechat-article-pipeline` 的 `config.json`、`ip-profile` 的创作 DNA、
+- **不动你的本地数据 / 配置**：`wechat-article-pipeline` 的 `config.json`、`dby-charter` 的创作 DNA、
   封面 / 草稿等产出文件都不受影响——对账只覆盖 skill 目录里受版本管理的那些文件。
 - 不创建后台任务、定时任务或 Agent Hook。
 - 用户只问「有什么更新 / 现在什么版本 / 要不要更」→ **先回答，不执行**（`--dry-run` 正好用来回答这个）。
