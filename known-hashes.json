@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T06:11:53.397807+00:00",
+  "generatedAt": "2026-08-20T06:35:25.315481+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -134,6 +134,7 @@
       "e59ca8d2e11c",
       "e8b2bfb279bc",
       "ee3213835010",
+      "ee5264c76066",
       "f4a3b5eb3fd6",
       "f770e22a5fb4",
       "f918bc7c1258",
@@ -522,6 +523,7 @@
     "wechat-rewrite": [
       "b029d45ec1cd",
       "b4dac418f209",
+      "c1b4cca81823",
       "d8ac8745b5c1"
     ],
     "wechat-similar-account": [
@@ -789,6 +791,7 @@
     "multi-content-feed": [
       "/api/apis/multi/multi-content-export-top"
     ],
+    "multi-rewrite": [],
     "playlet-bili-feed": [
       "/api/apis/bilibili/bilibili-playlet-feed"
     ],
@@ -882,6 +885,7 @@
     "xiaohongshu-note-analyzer": [
       "/api/apis/xiaohongshu/xiaohongshu-coze"
     ],
+    "xiaohongshu-rewrite": [],
     "xiaohongshu-search": [
       "/api/apis/xiaohongshu/search-note",
       "/api/apis/xiaohongshu/xiaohongshu-coze"
@@ -1105,6 +1109,12 @@
       "出海爆款",
       "出海选题"
     ],
+    "multi-rewrite": [
+      "一稿多发",
+      "全平台改写",
+      "多平台改写",
+      "跨平台适配"
+    ],
     "playlet-wechat-feed": [
       "公众号爆文",
       "文旅",
@@ -1303,6 +1313,13 @@
       "笔记对标",
       "笔记拆解",
       "选题拆解"
+    ],
+    "xiaohongshu-rewrite": [
+      "小红书改写",
+      "小红书文案",
+      "小红书风格",
+      "种草文案",
+      "笔记改写"
     ],
     "xiaohongshu-search": [
       "内容灵感",
