@@ -1,0 +1,185 @@
+
+上游现有 9 个 skill；我们发布过的历史版本闭集覆盖 97 个 slug
+
+── 项目（/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj）
+   已装 11 个：当前版 0、我们的旧版 10、你改过的 1、别人的 0
+   📦 要归档 1 个（上游已下架；移进归档目录，不删）：
+        - ai-intelligence-investigator
+   🔀 改名迁移 7 个（上游把它们改名了；先装新包，把本地数据搬过去，老目录再归档）：
+        doubaoya → dby-api
+        doubaoya-gateway → dby-gateway
+        multi-banned-words → dby-banned-words
+        wechat-draft-publish → dby-publish
+        wechat-rewrite → dby-rewrite
+        wechat-theme-studio → dby-theme
+        wechat-article-pipeline → dby-publish
+           会搬：config.json, profiles/README.md, profiles/example-ip.json, profiles/my.json, themes/CREDITS.md, themes/LICENSE-wewrite, themes/README.md, themes/THEME-SCHEMA.md, themes/benya-clean.json, themes/benya-premium.json, themes/doocs-classic.json, themes/doocs-grace.json, themes/doocs-simple.json, themes/knowledge.json, themes/magazine.json, themes/mine.json, themes/minimal.json, themes/wewrite-github.json, themes/wewrite-ink.json, themes/wewrite-minimal-gold.json, themes/wewrite-newspaper.json, themes/wewrite-professional-clean.json, themes/wewrite-sspai.json, themes/wewrite-warm-editorial.json, assets/ip/README.md
+   ✨ 要新增 6 个：
+        + dby-api
+        + dby-banned-words
+        + dby-gateway
+        + dby-publish
+        + dby-rewrite
+        + dby-theme
+   ♻️  要刷新 3 个（本机这份落后于上游当前版，或者少了一处落位）
+
+归档 1 个上游已下架的 skill（移走，不删）…
+   已移到 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/.doubaoya/archive/2026-08-20T13-53-49
+│
+●   claude-code_2-1-237_agent  Agent detected — removing non-interactively
+[?25l│
+◇  Found 10 unique installed skill(s)
+[?25h│
+■  No matching skills found for: ai-intelligence-investigator
+
+拉取上游 9 个 skill…
+   装给：claude-code
+
+│
+●   claude-code_2-1-237_agent  Agent detected — installing non-interactively
+[?25l│
+◇  Source: https://github.com/zizhanovo/doubaoya-community.git
+[?25h[?25l│
+◒  Cloning repository…[1G[J◐  Cloning repository…[1G[J◓  Cloning repository…[1G[J◑  Cloning repository…[1G[J◒  Cloning repository…[1G[J◐  Cloning repository…[1G[J◓  Cloning repository…[1G[J◑  Cloning repository…[1G[J◒  Cloning repository….[1G[J◐  Cloning repository….[1G[J◓  Cloning repository….[1G[J◑  Cloning repository….[1G[J◒  Cloning repository….[1G[J◐  Cloning repository….[1G[J◓  Cloning repository….[1G[J◑  Cloning repository….[1G[J◒  Cloning repository…..[1G[J◐  Cloning repository…..[1G[J◓  Cloning repository…..[1G[J◑  Cloning repository…..[1G[J◒  Cloning repository…..[1G[J◐  Cloning repository…..[1G[J◓  Cloning repository…..[1G[J◑  Cloning repository…..[1G[J◒  Cloning repository…...[1G[J◐  Cloning repository…...[1G[J◓  Cloning repository…...[1G[J◑  Cloning repository…...[1G[J◒  Cloning repository…...[1G[J◐  Cloning repository…...[1G[J◓  Cloning repository…...[1G[J◑  Cloning repository…...[1G[J◒  Cloning repository…...[1G[J◐  Cloning repository…[1G[J◇  Repository cloned
+[?25h[?25l│
+[1G[J◇  Found 9 skills
+[?25h│
+●  Selected 9 skills: dby, dby-api, dby-banned-words, dby-charter, dby-gateway, dby-publish, dby-rewrite, dby-theme, dby-update
+
+│
+◇  Installation Summary ──────────────╮
+│                                     │
+│  ./.agents/skills/dby               │
+│    copy → Claude Code               │
+│    overwrites: Claude Code          │
+│                                     │
+│  ./.agents/skills/dby-api           │
+│    copy → Claude Code               │
+│                                     │
+│  ./.agents/skills/dby-banned-words  │
+│    copy → Claude Code               │
+│                                     │
+│  ./.agents/skills/dby-charter       │
+│    copy → Claude Code               │
+│    overwrites: Claude Code          │
+│                                     │
+│  ./.agents/skills/dby-gateway       │
+│    copy → Claude Code               │
+│                                     │
+│  ./.agents/skills/dby-publish       │
+│    copy → Claude Code               │
+│                                     │
+│  ./.agents/skills/dby-rewrite       │
+│    copy → Claude Code               │
+│                                     │
+│  ./.agents/skills/dby-theme         │
+│    copy → Claude Code               │
+│                                     │
+│  ./.agents/skills/dby-update        │
+│    copy → Claude Code               │
+│    overwrites: Claude Code          │
+│                                     │
+├─────────────────────────────────────╯
+│
+◇  Security Risk Assessments ──────────────────────────────────────╮
+│                                                                  │
+│                    Gen               Socket            Snyk      │
+│  dby               Safe              0 alerts          Low Risk  │
+│  dby-api           --                --                --        │
+│  dby-banned-words  --                --                --        │
+│  dby-charter       Safe              0 alerts          Med Risk  │
+│  dby-gateway       --                --                --        │
+│  dby-publish       --                --                --        │
+│  dby-rewrite       --                --                --        │
+│  dby-theme         --                --                --        │
+│  dby-update        Safe              0 alerts          Med Risk  │
+│                                                                  │
+│  Details: https://skills.sh/zizhanovo/doubaoya-community         │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────╯
+[?25l│
+[1G[J◇  Installation complete
+[?25h
+│
+◇  Installed 9 skills ────────────────────╮
+│                                         │
+│  ✓ dby (copied)                         │
+│    → ./.claude/skills/dby               │
+│  ✓ dby-api (copied)                     │
+│    → ./.claude/skills/dby-api           │
+│  ✓ dby-banned-words (copied)            │
+│    → ./.claude/skills/dby-banned-words  │
+│  ✓ dby-charter (copied)                 │
+│    → ./.claude/skills/dby-charter       │
+│  ✓ dby-gateway (copied)                 │
+│    → ./.claude/skills/dby-gateway       │
+│  ✓ dby-publish (copied)                 │
+│    → ./.claude/skills/dby-publish       │
+│  ✓ dby-rewrite (copied)                 │
+│    → ./.claude/skills/dby-rewrite       │
+│  ✓ dby-theme (copied)                   │
+│    → ./.claude/skills/dby-theme         │
+│  ✓ dby-update (copied)                  │
+│    → ./.claude/skills/dby-update        │
+│                                         │
+├─────────────────────────────────────────╯
+
+│
+└  Done!  Review skills before use; they run with full agent permissions.
+
+
+改名迁移 7 个（老 slug 已在上游改名）…
+   doubaoya → dby-api：搬了 0 个文件
+   doubaoya-gateway → dby-gateway：搬了 0 个文件
+   multi-banned-words → dby-banned-words：搬了 0 个文件
+   wechat-draft-publish → dby-publish：搬了 0 个文件
+   wechat-rewrite → dby-rewrite：搬了 0 个文件
+   wechat-theme-studio → dby-theme：搬了 0 个文件
+   wechat-article-pipeline → dby-publish：搬了 3 个文件
+   老目录已归档到 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/.doubaoya/archive/2026-08-20T13-53-59
+│
+●   claude-code_2-1-237_agent  Agent detected — removing non-interactively
+[?25l│
+◇  Found 9 unique installed skill(s)
+[?25h│
+■  No matching skills found for: doubaoya, doubaoya-gateway, multi-banned-words, wechat-draft-publish, wechat-rewrite, wechat-theme-studio, wechat-article-pipeline
+
+── 项目（/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj） 对账完成
+   归档 1，新增 6，刷新 3，本来就是当前版没动 0
+   现在：当前版 8、你改过的 1（原样保留 0）、别人的 0（原样保留 0）
+   🔀 改名迁移 7 个：
+        doubaoya → dby-api：搬了 0 个文件（无）
+        doubaoya-gateway → dby-gateway：搬了 0 个文件（无）
+        multi-banned-words → dby-banned-words：搬了 0 个文件（无）
+        wechat-draft-publish → dby-publish：搬了 0 个文件（无）
+        wechat-rewrite → dby-rewrite：搬了 0 个文件（无）
+        wechat-theme-studio → dby-theme：搬了 0 个文件（无）
+        wechat-article-pipeline → dby-publish：搬了 3 个文件（config.json, profiles/my.json, themes/mine.json）
+
+   自检：
+   ✅ skill 已就位：9 个 skill 在 1 个安装目录里逐个目录都在场（.claude/skills）。
+   ✅ API 钥匙：DOUBAOYA_API_KEY 已设置。
+   ✅ 服务连通：doubaoya.com 健康检查通过。
+
+归档的 1 份原样躺在 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/.doubaoya/archive/2026-08-20T13-53-49
+   确认没问题 → 整个目录删掉即可。
+   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：
+
+   node -e "const p=require('path'),f=require('fs');for(const it of require('/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/.doubaoya/archive/2026-08-20T13-53-49/manifest.json').packages){f.mkdirSync(p.dirname(it.from),{recursive:true});f.renameSync(it.to,it.from)}"
+
+   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，
+   想让 `npx skills list` 也认回来，再跑一次：npx -y skills add zizhanovo/doubaoya-community -s <包名>
+
+归档的 7 份原样躺在 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/.doubaoya/archive/2026-08-20T13-53-59
+   确认没问题 → 整个目录删掉即可。
+   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：
+
+   node -e "const p=require('path'),f=require('fs');for(const it of require('/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/.doubaoya/archive/2026-08-20T13-53-59/manifest.json').packages){f.mkdirSync(p.dirname(it.from),{recursive:true});f.renameSync(it.to,it.from)}"
+
+   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，
+   想让 `npx skills list` 也认回来，再跑一次：npx -y skills add zizhanovo/doubaoya-community -s <包名>
+
+📝 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj/skills-lock.json 会被 skills CLI 一起更新（记的是这次装了哪些包、哪个版本）。
+   这是**预期内**的改动，不是污染；它受 git 跟踪，会出现在 git status 里，照常提交即可。
+
+全部通过。当前对话如果还没读到新能力，新建一次对话就能用。

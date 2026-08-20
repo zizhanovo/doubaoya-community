@@ -1,0 +1,44 @@
+
+上游现有 9 个 skill；我们发布过的历史版本闭集覆盖 97 个 slug
+
+── 项目（/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj2）
+   已装 10 个：当前版 9、我们的旧版 0、你改过的 1、别人的 0
+   🔀 改名迁移 1 个（上游把它们改名了；先装新包，把本地数据搬过去，老目录再归档）：
+        wechat-article-pipeline → dby-publish
+           会搬：config.json, profiles/my.json
+   ✅ 已经是当前版的 9 个，不动（真想全部重下一遍：加 --force-refresh）
+
+改名迁移 1 个（老 slug 已在上游改名）…
+   wechat-article-pipeline → dby-publish：搬了 2 个文件
+   老目录已归档到 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj2/.doubaoya/archive/2026-08-20T13-54-43
+│
+●   claude-code_2-1-237_agent  Agent detected — removing non-interactively
+[?25l│
+◇  Found 9 unique installed skill(s)
+[?25h│
+■  No matching skills found for: wechat-article-pipeline
+
+── 项目（/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj2） 对账完成
+   归档 0，新增 0，刷新 0，本来就是当前版没动 9
+   现在：当前版 8、你改过的 1（原样保留 0）、别人的 0（原样保留 0）
+   🔀 改名迁移 1 个：
+        wechat-article-pipeline → dby-publish：搬了 2 个文件（config.json, profiles/my.json）
+
+   自检：
+   ✅ skill 已就位：9 个 skill 在 1 个安装目录里逐个目录都在场（.claude/skills）。
+   ✅ API 钥匙：DOUBAOYA_API_KEY 已设置。
+   ✅ 服务连通：doubaoya.com 健康检查通过。
+
+归档的 1 份原样躺在 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj2/.doubaoya/archive/2026-08-20T13-54-43
+   确认没问题 → 整个目录删掉即可。
+   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：
+
+   node -e "const p=require('path'),f=require('fs');for(const it of require('/private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj2/.doubaoya/archive/2026-08-20T13-54-43/manifest.json').packages){f.mkdirSync(p.dirname(it.from),{recursive:true});f.renameSync(it.to,it.from)}"
+
+   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，
+   想让 `npx skills list` 也认回来，再跑一次：npx -y skills add zizhanovo/doubaoya-community -s <包名>
+
+📝 /private/tmp/claude-501/-Users-zizhan-projects-doubaoya-community/8dd767e0-5dd8-4221-bb9e-06818a36fa48/scratchpad/e2e/proj2/skills-lock.json 会被 skills CLI 一起更新（记的是这次装了哪些包、哪个版本）。
+   这是**预期内**的改动，不是污染；它受 git 跟踪，会出现在 git status 里，照常提交即可。
+
+全部通过。当前对话如果还没读到新能力，新建一次对话就能用。

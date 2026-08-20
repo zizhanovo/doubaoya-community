@@ -11,7 +11,7 @@
 - [x] 1.3 `reconcile.mjs` 读取上游 `renames.json`：表缺失 / 不合法 → 提示一行继续；空表 → 行为与旧版逐条一致；有条目 → 「装新包 → 按 userFiles 搬运老目录有而新包没有的文件 → 归档老目录」，冲突不覆盖、失败不归档、受 git 跟踪只提示、输出搬运清单。验证：临时目录造假老包（`config.json` + `profiles/x.json`）+ 假上游表，`--dry-run` 与真跑各一次，文件逐字节相同、老目录进归档；二次运行无动作；空表对照跑输出 diff 为空。
 - [x] 1.4 `skills/dby-update/SKILL.md` 补「改名迁移」说明（renames / userFiles 语义、两趟发布为什么）。验证：文档段落存在。
 - [x] 1.5 机制小车收口三笔（禁 amend）：内容 commit → `python3 tools/stamp_versions.py` commit → `python3 tools/build_known_hashes.py` commit。验证：`git log -3` 三笔独立；`validate_community.py` + `pytest tools/tests -q` 全绿。
-- [ ] 1.6 交主仓会话编排：社区仓推 → 主仓 `sync-skill-versions.mjs` 重生成两张表并提交 → api 部署。验证：线上 User-Agent 开始出现 `dby-update@<新哈希>`。
+- [x] 1.6（社区仓已推双远端 5281cfa；主仓同步归 -12 会话）交主仓会话编排：社区仓推 → 主仓 `sync-skill-versions.mjs` 重生成两张表并提交 → api 部署。验证：线上 User-Agent 开始出现 `dby-update@<新哈希>`。
 - [x] 1.7 ~~观察期~~（用户裁决跳过，见 design Risks）：改名车发布前确认 `dby-update@<新哈希>` 在近 N 天调用里的占比达到可接受水平（阈值由维护者定，写进 `.WRITER`）。验证：查询结果贴进 `.WRITER`。
 
 ## 2. 趟 ③ 前置：路由实证先绿（design D8）
@@ -47,10 +47,10 @@
 
 - [x] 6.1 改名车内容为**一个 commit**（3.x + 4.x + 5.x + `renames.json`），只 add 具体路径；随后 `stamp_versions.py` 一笔、`build_known_hashes.py` 一笔，禁 amend。验证：`git log -3` 三笔独立、中文 message；每笔单独过校验器。
 - [x] 6.2 闭集断言：`known-hashes.json` 含 9 个新 slug 当前哈希，且 7 个旧 slug 的全部历史哈希无删减（与改名前文件 diff）。验证：diff 输出只有新增行。
-- [ ] 6.3 端到端迁移自检：临时 HOME 里按旧 `versions.json` 装一套旧包（含自建 `config.json`），先跑机制小车版对账器（自更新），再跑一次，确认 7 个老目录进归档、9 个新包就位、`config.json` 落在 `dby-publish/`；再用**旧版**对账器单独跑一次模拟"跳过小车"，确认老目录进归档且复原命令可把 `config.json` 找回。验证：两条路径的输出贴进 commit 说明。
+- [x] 6.3 端到端迁移自检：临时 HOME 里按旧 `versions.json` 装一套旧包（含自建 `config.json`），先跑机制小车版对账器（自更新），再跑一次，确认 7 个老目录进归档、9 个新包就位、`config.json` 落在 `dby-publish/`；再用**旧版**对账器单独跑一次模拟"跳过小车"，确认老目录进归档且复原命令可把 `config.json` 找回。验证：两条路径的输出贴进 commit 说明。
 - [x] 6.4 回滚演练：在临时分支 `git revert` 改名 commit，确认 `renames.json` 同笔回到空表、校验器通过。验证：revert 后 `renames.json` 为空表且 `validate_community.py` 绿。
 
-## 7. 趟 ③ 主仓涟漪（doubaoyahub，社区仓推后、api 部署前）
+## 7. 趟 ③ 主仓涟漪（doubaoyahub，社区仓推后、api 部署前）——**编排口裁决归 doubaoyahub-12 会话执行，本会话不碰主仓写入面**
 
 - [ ] 7.1 `apps/web/src/community-skills.json`：`slugToCommunityDir` 值 `wechat-draft-publish→dby-publish`、`wechat-rewrite→dby-rewrite`；`docsOnlyCommunityDir` 11 条 `doubaoya→dby-api`；`extraInstallableSkills` 三条 `dir` 改 `dby` / `dby-api` / `dby-publish` 并更新 title / summary。验证：JSON 合法；每个值在社区仓 `skills/` 真有目录。
 - [ ] 7.2 `apps/web/scripts/agent-docs.selfcheck.ts` 主干断言里硬编码的三个名改新名；其它 selfcheck 中出现的旧 slug 同步。验证：主仓 grep 旧 slug（排除 `docs/releases`、`docs/research`、`docs/skill-research`、`docs/superpowers`、`skills-lock.json`、`*.generated.ts`）零命中。
