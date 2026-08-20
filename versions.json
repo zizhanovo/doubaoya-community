@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-08-20T08:02:01.330175+00:00",
+  "generatedAt": "2026-08-20T08:50:28.456865+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "dby": "doubaoya-skill/dby@a4d72b56310c",
     "dby-charter": "doubaoya-skill/dby-charter@c3738aab09a9",
-    "dby-update": "doubaoya-skill/dby-update@2a8c66b15aa2",
+    "dby-update": "doubaoya-skill/dby-update@ceb277b7b3a2",
     "doubaoya": "doubaoya-skill/doubaoya@ee5264c76066",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@263cd71d3e9d",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",

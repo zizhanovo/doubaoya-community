@@ -80,6 +80,11 @@ version: 3.1.0
 npx -y skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y
 ```
 
+🔴 **找到了、跑了、却一个字都没打印（退出码 0、零字节）**：不是「没事可做」，是**本机装的是旧版**。
+上面这张表里 `.claude/skills/…` 那两条通常是**软链**（真目录在 `.agents/skills/…`），而旧版的入口
+守卫经软链调用时整个脚本一步都不跑。**先换 `.agents` 那条真路径重跑一次**（能出东西就说明是这个病），
+再用上面那条命令把自己升级上来，然后重新找一遍路径。
+
 ### 2. 先看清单（🔴 显式给 scope，别靠 auto 猜）
 
 ```bash
