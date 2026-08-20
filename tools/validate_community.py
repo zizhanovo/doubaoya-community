@@ -1212,6 +1212,50 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", "", text)
 
 
+# ── 因式触发词的展开 ─────────────────────────────────────────────────────────
+# description 是稀缺资源，穷举「小红书搜索、小红书选题、小红书封面…」会把同一个平台名
+# 抄十八遍（实测 doubaoya 里「小红书」抄了 18 遍、「公众号」10 遍）。因式写法
+# `小红书：搜索/选题/封面` 一次说清，但**字面子串闸看不懂它**——haystack 里没有
+# 「小红书选题」这个连续子串。本函数把因式段展开回词面，展开结果**追加**进 haystack。
+#
+# 单调性：旧 haystack 是新 haystack 的**前缀**（只追加、不改写）⇒ 新判据的覆盖面
+# 严格 ⊇ 旧判据，**结构上不可能对旧写法产生回归**。
+#
+# 🔴 语法只有两条产生式，且**方向只有前缀一种**：
+#     ① `前缀：尾1/尾2/…`  → 前缀+尾i
+#     ② `词1/词2/…`        → 就是这些词
+# 为什么不给后缀方向、更不给二维交叉（`a/b：x/y`）：**一维前缀的展开是单射的**
+# ——每个尾巴恰好产生一个词面，写下几个就是几个，**不可能凭空造出覆盖**。
+# 二维交叉会膨胀：实测最优的一组交叉是 23 个真词配 31 个幻影词（膨胀 2.3 倍），
+# 那等于让人靠写 `a/b/c：x/y/z` 骗出九个词的覆盖，其中六个是我们没有的能力
+# （「抖音周榜」「视频号封面」）。后缀方向则引入歧义：`a/b：c` 到底是「两个前缀配一个尾」
+# 还是「一个前缀 a/b」？⇒ **只给一维前缀这一条方向，「不许凭空造覆盖」就成了语法的推论，
+# 不需要另立一道反向闸。**
+#
+# 一个因式组：短前缀 + "：" + 斜杠分隔的尾巴。前缀限死 ≤6 字且不含标点/空白 ——
+# 没有这条，散文里的「…新媒体取数与创作总入口：一条 DOUBAOYA_API_KEY…」会被当成因式组，
+# 拿整句散文当前缀、把后面所有词当尾巴，**展开出一堆垃圾并顺手吃掉真正的那一组**。
+# 用 search（取最后一个合法组）而不是 partition（取第一个冒号）：散文和第一个因式组
+# 之间没有顿号、同处一个 chunk，从左边切必然切在散文那个冒号上。
+# 这两条各踩过一次，症状都是 `小红书封面` 展不出来。
+FACTOR_GROUP = re.compile(r"([^\s，。：、（）()/]{1,6})：([^：]+)$")
+
+
+def _expand_factors(text: str) -> set[str]:
+    out: set[str] = set()
+    for chunk in text.split("、"):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        match = FACTOR_GROUP.search(chunk)
+        if match:
+            head, tails = match.group(1), match.group(2)
+            out.update(_normalize(head + t) for t in tails.split("/") if t.strip())
+        else:
+            out.update(_normalize(w) for w in chunk.split("/") if w.strip())
+    return out
+
+
 # 能力**本身**也一起没了的包，触发词不该迁——迁了等于承诺一个不存在的能力。
 TRIGGER_REAL_DELETION = {
     "celebrity-slice",     # /api/apis/media/asr 生产上根本不存在，从建站起就是死壳
@@ -1245,7 +1289,11 @@ def validate_trigger_word_coverage(root: Path = ROOT) -> list[str]:
     )
 
     directories = discover_skill_dirs(root)
-    haystack = _normalize(" ".join(frontmatter_description(d / "SKILL.md") for d in directories))
+    descriptions = [frontmatter_description(d / "SKILL.md") for d in directories]
+    # 字面 haystack（旧判据，一字不改）+ 因式展开出来的词面（只加不减，所以旧写法零回归）。
+    haystack = _normalize(" ".join(descriptions)) + " " + " ".join(
+        w for text in descriptions for w in _expand_factors(text)
+    )
     current = {d.name for d in directories}
     warnings: list[str] = []
 
