@@ -75,15 +75,6 @@
         "本地运行"
       ]
     },
-    "multi-rewrite": {
-      "displayName": "一稿多发 · 七平台文案改写",
-      "topics": [
-        "文案改写",
-        "一稿多发",
-        "多平台",
-        "本地运行"
-      ]
-    },
     "optimize-skill-md": {
       "displayName": "SKILL.md 优化器",
       "topics": [
@@ -134,15 +125,6 @@
         "排版",
         "主题",
         "Markdown"
-      ]
-    },
-    "xiaohongshu-rewrite": {
-      "displayName": "小红书笔记文案改写",
-      "topics": [
-        "小红书",
-        "文案改写",
-        "种草",
-        "本地运行"
       ]
     }
   }

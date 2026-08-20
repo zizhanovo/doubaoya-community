@@ -935,7 +935,7 @@ def validate_no_key_prefix_instruction(root: Path = ROOT) -> None:
 # 判据只打**我方计费**，不打行业知识：
 #   · `¥` / `￥` 后面跟数字 —— 本仓里这个符号只用于我方报价，一律红；
 #   · 数字 + 元／点，且**同段**出现我方计费词（扣点 / 点数 / 计费 / credits / 充值 / 上游成本）。
-# 所以 dby-charter 里的「金融 5–8 元点击单价」、multi-rewrite 文案示例里的「10元带回家」
+# 所以 dby-charter 里的「金融 5–8 元点击单价」、wechat-rewrite 快手规则里的文案示例「10元带回家」
 # 都不受影响——那是行业知识和写作素材，不是我们的价目表。
 PRICE_YUAN_SYMBOL = re.compile(r"[¥￥]\s*\d")
 PRICE_AMOUNT = re.compile(r"\d+(?:\.\d+)?\s*(?:元|点(?![击数赞评]))")

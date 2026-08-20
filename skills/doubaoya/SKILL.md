@@ -146,8 +146,8 @@ MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
 
 - **"A股公众号 / 股市大V / 股票公众号榜单"** —— 三步：`api.gzh.searchUser` 搜号 →
   `api.gzh.workList`（或 `api.gzh.dailyPublish`）拉发文 → `api.gzh.hotArticle` 找爆文。
-- **"把这条爆款改写成我的文案"** —— 不调接口：Skill `wechat-rewrite`（公众号）/
-  `xiaohongshu-rewrite`（小红书）/ `multi-rewrite`（一稿多发），纯本地、不要 key。
+- **"把这条爆款改写成我的文案"** —— 不调接口：Skill `wechat-rewrite` 一个包管七个平台
+  （公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎，也能一稿多发），纯本地、不要 key。
   没装就用搜来的素材由你合成。
 - ~~**"帮我记一下 / 查查我的笔记 / 我是个什么样的人"**~~ —— ⛔ **第二大脑（`mera`）已下架**，
   无替代能力：如实告知，**别拿公开搜索顶替**（见上方「我自己的东西」例外）。
