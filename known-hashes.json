@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T09:14:43.076515+00:00",
+  "generatedAt": "2026-08-20T09:22:13.702057+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -82,6 +82,7 @@
       "c3738aab09a9"
     ],
     "dby-update": [
+      "04182fab354c",
       "0f57ebd82f3b",
       "2a8c66b15aa2",
       "4bbc2e85239b",
@@ -157,6 +158,7 @@
       "7b241df32a12",
       "80b4f6da2278",
       "bfb8ea8b88d0",
+      "ced4b44acb42",
       "d7be4ecd8086",
       "f4b4d82e21d0"
     ],
@@ -307,7 +309,8 @@
       "ac0452642139",
       "c79fa9a6e8a4",
       "dbfa9d3e6537",
-      "fa04fbf2319c"
+      "fa04fbf2319c",
+      "faf1cc0742cb"
     ],
     "multi-content-feed": [
       "258b43f01e0b",
@@ -436,6 +439,7 @@
       "bc543b555f3e",
       "c2e53f8828fd",
       "c394ba22e112",
+      "cac10a28d159",
       "ea71215fb478",
       "f2b4bed93925",
       "f501d5f2fbde",
@@ -488,6 +492,7 @@
       "d33943fee4fe",
       "d7759ec3a416",
       "de6addceab4f",
+      "df3ce832c6a8",
       "e8992f4bad24"
     ],
     "wechat-fastest-growing": [
@@ -529,6 +534,7 @@
       "e0e969f32bec"
     ],
     "wechat-rewrite": [
+      "815e4a5c25ee",
       "b029d45ec1cd",
       "b4dac418f209",
       "c1b4cca81823",
