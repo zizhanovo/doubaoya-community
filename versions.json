@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-08-20T05:42:35.599885+00:00",
+  "generatedAt": "2026-08-20T06:03:10.134436+00:00",
   "skills": {
     "ai-intelligence-investigator": "doubaoya-skill/ai-intelligence-investigator@73620ccabced",
     "dby": "doubaoya-skill/dby@3f2f22ed69d1",
     "dby-charter": "doubaoya-skill/dby-charter@a9eaab1fad23",
     "dby-update": "doubaoya-skill/dby-update@78d16ebe4793",
-    "doubaoya": "doubaoya-skill/doubaoya@1ebfe7566006",
+    "doubaoya": "doubaoya-skill/doubaoya@1d9e98ab2e75",
     "doubaoya-gateway": "doubaoya-skill/doubaoya-gateway@80b4f6da2278",
     "ip-profile": "doubaoya-skill/ip-profile@fbbf493d9e83",
     "multi-banned-words": "doubaoya-skill/multi-banned-words@fa04fbf2319c",
@@ -17,7 +17,7 @@
     "wechat-account-analyzer": "doubaoya-skill/wechat-account-analyzer@153389f9602d",
     "wechat-article-pipeline": "doubaoya-skill/wechat-article-pipeline@7330e2346ed3",
     "wechat-draft-publish": "doubaoya-skill/wechat-draft-publish@3490716a0562",
-    "wechat-rewrite": "doubaoya-skill/wechat-rewrite@b4dac418f209",
+    "wechat-rewrite": "doubaoya-skill/wechat-rewrite@b029d45ec1cd",
     "wechat-similar-account": "doubaoya-skill/wechat-similar-account@cd3982196ca4",
     "wechat-theme-studio": "doubaoya-skill/wechat-theme-studio@bfbad690f6e0",
     "xiaohongshu-rewrite": "doubaoya-skill/xiaohongshu-rewrite@8210b53d8ac5"
