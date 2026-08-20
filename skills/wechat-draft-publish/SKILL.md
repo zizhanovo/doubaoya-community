@@ -1,6 +1,6 @@
 ---
 name: wechat-draft-publish
-description: 公众号草稿发布 · 把一篇写好的图文存进你自己公众号的草稿箱（只存草稿、绝不群发；之后你去公众号后台确认后手动群发）。当用户要把文章/图文推进公众号、存公众号草稿、把写好的稿子发到公众号后台、代发公众号草稿箱、addDraft、draft/add 时使用。这是一个写入能力，会写到用户自己的公众号，需先在 doubaoya.com 绑定公众号。
+description: 公众号草稿发布 · 把一篇写好的图文存进你自己公众号的草稿箱（只存草稿、绝不群发；之后你去公众号后台确认后手动群发）。当用户要把文章/图文推进公众号、存公众号草稿、把写好的稿子发到公众号后台、代发公众号草稿箱、addDraft、draft/add 时使用。这是一个写入能力，会写到用户自己的公众号，需先在 doubaoya.com 绑定公众号。触发词：存公众号草稿、公众号草稿箱、代发公众号草稿箱。
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch），不装任何 npm 包。
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。并且用户已在 doubaoya.com 绑定自己的公众号。
