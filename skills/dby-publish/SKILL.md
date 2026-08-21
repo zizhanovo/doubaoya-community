@@ -102,7 +102,7 @@ python3 "$SKILL_PATH/scripts/publish_draft.py" \
 | operationKey | 详情端点 | 用在第几步 |
 |---|---|---|
 | `skill.wechat.render` ⚠️专用 | `GET /api/skills/wechat-render` | 第 5 步 md→HTML（服务端排版那条路） |
-| `skill.ai.imageGen` | `GET /api/skills/gpt-image-gen` | 第 6 步生封面 / 配图（`scripts/gen-image.mjs` 就是它的薄壳） |
+| `skill.ai.imageGen` | `GET /api/skills/gpt-image-gen` | 第 6 步生封面 / 配图（`scripts/gen-image.mjs` 就是它的薄壳）。**单独要一张图、不走流水线时去 `dby-image`**——出图的等待与重试纪律全在那个包里；这里只保留流水线内的上传与排布职责 |
 | `skill.wechat.draftPublish` ⚠️专用 | `GET /api/skills/wechat-draft-publish` | 第 9 步存草稿 |
 
 1. **鉴权**：所有*调用*端点都要 `Authorization: Bearer $DOUBAOYA_API_KEY`。
