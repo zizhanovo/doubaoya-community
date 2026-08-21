@@ -274,12 +274,21 @@ async function main() {
 
   // ---- 5. engine-2 主题喂给 validator 必须 error ---------------------------
   {
+    // 判据两条，缺一不可：① 必须是 error（不是 warning）；② 必须给出**出路**。
+    // 出路的文字随流水线改走平台渲染变了（旧文案说「由流水线自动拉取编译版」——流水线
+    // 已经不拉了，那是句假话），现在的出路是「存进排版工作室，然后不写 --theme」。
+    // 这里钉「排版工作室」而不是钉整句，是为了让措辞能改、承诺不能丢。
+    const wayOut = (e) => e.includes("排版工作室");
     const r1 = validateTheme({ meta: { engine: 2 } });
-    assert.ok(r1.errors.some((e) => e.includes("engine 2") && e.includes("format=compiled")), "meta.engine:2 必须 error 且指路编译版");
+    assert.ok(r1.errors.some((e) => e.includes("engine 2") && wayOut(e)), "meta.engine:2 必须 error 且给出出路");
     const r2 = validateTheme({ tokens: { ref: { color: { primary: "#ff8708" } } } });
-    assert.ok(r2.errors.some((e) => e.includes("tokens") && e.includes("format=compiled")), "top-level tokens 必须 error");
+    assert.ok(r2.errors.some((e) => e.includes("tokens") && wayOut(e)), "top-level tokens 必须 error 且给出出路");
     const r3 = validateTheme({ elements: { h2: { style: "color:{{ref.color.primary}};" } } });
-    assert.ok(r3.errors.some((e) => e.includes("ref.color.primary") && e.includes("format=compiled")), "带点号 token 必须 error");
+    assert.ok(r3.errors.some((e) => e.includes("ref.color.primary") && wayOut(e)), "带点号 token 必须 error 且给出出路");
+    // 🔴 反向钉死：出路里不许再出现「流水线自动拉取」这类已经不成立的说法。
+    for (const r of [r1, r2, r3]) {
+      assert.ok(!r.errors.some((e) => e.includes("自动拉取")), "报错里不许写流水线会自动拉主题——它不会了");
+    }
     // 反例：正常 engine-1 主题不受影响。
     const r4 = validateTheme(COMPILED_FIXTURE);
     assert.equal(r4.errors.length, 0, `编译形态 fixture 应通过校验：${r4.errors[0] || ""}`);

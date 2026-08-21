@@ -34,9 +34,17 @@ const TOP_LEVEL_KEYS = new Set(['meta', 'palette', 'page', 'elements', 'decorati
 // 而非 warning），指路服务端编译版。冲掉本块（ENGINE2_HINT 与它的三处 errors.push）
 // = engine-2 主题重新静默烂 HTML 进草稿箱——selfcheck-remote-theme.mjs 第 5 项守着它，
 // re-sync 后跑一遍自检即可发现。
+//
+// ⚠️ 已知偏严（2026-08 实测，未改）：流水线改走平台渲染后，--theme 送出的主题由**平台**套，
+// 而平台**认识** engine 2（实测报错已进到 engine-2 专属校验：要 meta.extends、要颜色 token
+// 配对）。所以对流水线这条路，本闸会拦下平台其实能处理的主题。没有顺手放松它，因为：
+// ① 本闸同时守着本机渲染那条路，那里它仍然完全正确；② 放松属于行为扩张，得先有规格。
+// 想用 engine-2 排版的正解见下面 ENGINE2_HINT：存进排版工作室，然后不写 --theme。
 const ENGINE2_HINT =
-  '此主题为 engine 2，本机渲染器（engine 1）不认识它，渲染会把 {{ref.xxx}} 原样留在正文里。' +
-  '需要服务端编译版：配置 DOUBAOYA_API_KEY 后由流水线自动拉取，或 GET /api/wechat/theme?format=compiled。';
+  '此主题为 engine 2。本机渲染器（engine 1）不认识它，渲染会把 {{ref.xxx}} 原样留在正文里，' +
+  '所以单跑 render-wechat-html.mjs / 设计工作台这条路用不了它。' +
+  '走流水线（pipeline.mjs）想用这套排版：把它保存到 doubaoya.com 排版工作室，然后**不写 --theme** —— ' +
+  '渲染在平台做，服务端会直接套你保存的那套。';
 const PALETTE_KEYS = new Set(['text', 'heading', 'accent', 'accent2', 'muted', 'bgSoft', 'border', 'link']);
 // NOTE: this list only decides whether an `elements.<tag>` key gets a
 // "not a recognized tag" WARNING — it is not part of the safety boundary
