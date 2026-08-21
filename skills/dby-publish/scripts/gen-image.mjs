@@ -176,6 +176,18 @@ export async function generateImage(o) {
     }
   }
 
+  // 🔴 客户端超时必须**显式设置**，且必须大于服务端 240 秒的处理上限。
+  //
+  // 这里原本一个超时都没设，靠运行时的隐式默认值恰好比 240 秒大才没出事——那是运气不是契约。
+  // 运行时升级、换个部署环境、或有人加一句「保险起见」的短超时，它就掉到 240 秒以下了。
+  // 而失败形态**不会报错**：服务端超时会退款，客户端提前放弃**不会**——请求照样在服务端
+  // 跑完、照样扣费，调用方只看到一句「超时」。用户付了钱、图生成了、我们说超时。
+  // 这种缺陷不报错，只烧钱，所以宁可写死也不依赖默认值。
+  //
+  // 超时之后**不重试**：重试等于为同一张图付两次钱。
+  const IMAGE_GEN_TIMEOUT_MS = 300_000; // 服务端上限 240s + 60s 余量
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), IMAGE_GEN_TIMEOUT_MS);
   let res;
   try {
     res = await fetch(`${base}${IMAGE_GEN_INVOKE_PATH}`, {
@@ -185,9 +197,19 @@ export async function generateImage(o) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(reqBody),
+      signal: ac.signal,
     });
   } catch (e) {
+    if (e?.name === "AbortError") {
+      throw new Error(
+        `生图超时（等了 ${IMAGE_GEN_TIMEOUT_MS / 1000} 秒，服务端上限 240 秒）。` +
+          `🔴 别自动重试：服务端可能已经出图并扣费，重试就是为同一张图付两次钱。` +
+          `要不要再来一次，让用户决定。`,
+      );
+    }
     throw new Error(`生图请求发送失败（无法连接 ${base}）：${e.message}`);
+  } finally {
+    clearTimeout(timer);
   }
 
   const j = await res.json().catch(() => null);

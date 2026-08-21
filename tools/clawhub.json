@@ -55,6 +55,15 @@
         "基础设施"
       ]
     },
+    "dby-image": {
+      "displayName": "都爆鸭 · AI 生图与改图",
+      "topics": [
+        "生图",
+        "改图",
+        "AI绘图",
+        "内容创作"
+      ]
+    },
     "dby-publish": {
       "displayName": "公众号图文流水线（选题→成稿→排版→草稿箱）",
       "topics": [
