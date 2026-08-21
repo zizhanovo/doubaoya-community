@@ -1,5 +1,12 @@
 # themes/ — 公众号 排版主题
 
+> ⚠️ **本文档描述的是本机渲染器 `scripts/render-wechat-html.mjs`。**
+> 发布流水线 `pipeline.mjs` 的 md→HTML 已改走**平台渲染**（`POST /api/wechat/render`），
+> 主题由服务端套：不写 `--theme` 就用你在 doubaoya.com 排版工作室保存的默认排版；
+> 写了 `--theme <path>`，流水线会先在本机用这里的校验器验一遍，再把整套 JSON 送去平台。
+> 所以**主题格式契约两边一致**，本文档照读；只是「谁来套用」变了。
+
+
 一个**主题**（`theme.json`）是一份声明式的 JSON，把一种公众号排版风格（配色 + 每种元素的
 内联样式模板 + 整篇装饰）**外化成数据**，让渲染器 `scripts/render-wechat-html.mjs` **确定性地**套用——
 不用改一行渲染代码。因为公众号草稿编辑器会剥掉 `<style>`/`<head>`/class 样式，所以每个元素都得自带
