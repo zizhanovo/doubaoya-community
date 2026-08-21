@@ -322,7 +322,7 @@ def validate_routing(root: Path = ROOT) -> None:
         priority = route.get("priority")
         require(isinstance(route_id, str) and route_id and route_id not in route_ids, "route IDs must be unique strings")
         expected_keys = {
-            "doubaoya-authoring-delivery": {"id", "priority", "terminal_skill", "candidate_skills", "use_when", "target_state_gates", "auth"},
+            "doubaoya-authoring-delivery": {"id", "priority", "terminal_skill", "candidate_skills", "use_when", "target_state_gates", "auth", "mainline_owner", "mainline_note"},
             "doubaoya-cloud-public-data": {"id", "priority", "candidate_skills", "use_when", "auth"},
         }
         require(route_id in expected_keys, f"unknown route ID: {route_id}")
@@ -1767,6 +1767,51 @@ def validate_gate_registration(root: Path = ROOT) -> None:
     )
 
 
+def validate_mainline_pointer(root: Path = ROOT) -> None:
+    """🔴 写作主干只许定义一次，其余三处只留一句指向 owner 的话——且那个 owner 必须真的存在。
+
+    这一条守的不是「有没有写」，是**指针会不会指空**。本仓踩过：`dby` 曾把主干委托给主仓的
+    一个流程文件，而那个文件从来不存在（两次会话分别核实过）。指向不存在的目标比不指向更糟——
+    agent 会去找、找不到，然后自己编一份主干出来，而这一步不会有任何地方报错。
+
+    判据三条，缺一不可：
+      ① 路由配置里 mainline_owner 声明的那个包，必须是 skills/ 下真实存在的目录；
+      ② 另外两处（dby 的路由表、dby-publish 的前提句）必须点名同一个 owner；
+      ③ owner 自己必须存在且带 SKILL.md。
+
+    ⚠️ 刻意**不**检查「主干步骤有没有被复述」：那要做自然语言判断，会误报，
+    而一个会误报的闸等于没有闸。这里只钉「指针指得到」这一件能机械判定的事。
+    ponytail: 天花板 = 有人把主干步骤抄进第二处而不动指针，本闸看不见；
+    升级路径 = 给主干步骤加显式标记再做唯一性断言，但那要先有标记。
+    """
+    routing = load_json(root / "skills" / "dby-api" / "references" / "wechat-routing.json")
+    routes = routing.get("routes", [])
+    owners = {r.get("mainline_owner") for r in routes if isinstance(r, dict) and r.get("mainline_owner")}
+    require(
+        len(owners) == 1,
+        f"wechat-routing.json 里 mainline_owner 应当恰好声明一个，实际 {sorted(owners)}。"
+        "主干只有一个 owner，多于一个就是又把真相劈成了两份。",
+    )
+    owner = owners.pop()
+    installed = {path.name for path in discover_skill_dirs(root)}
+    require(
+        owner in installed,
+        f"wechat-routing.json 的 mainline_owner 指向 {owner!r}，而 skills/ 下没有这个目录。"
+        "指向不存在的目标比不指向更糟：agent 会去找、找不到，然后自己编一份主干出来。",
+    )
+    require(
+        (root / "skills" / owner / "SKILL.md").is_file(),
+        f"主干 owner {owner} 的目录在，但没有 SKILL.md —— 指针落到了一个空壳上。",
+    )
+    for pointer_file in ("dby", "dby-publish"):
+        text = (root / "skills" / pointer_file / "SKILL.md").read_text(encoding="utf-8")
+        require(
+            f"`{owner}`" in text,
+            f"{pointer_file}/SKILL.md 没有点名主干 owner `{owner}`。"
+            "三处主干描述必须都指向同一个 owner，否则「一份真相手抄四处」当场复发。",
+        )
+
+
 def validate_repository(root: Path = ROOT) -> list[str]:
     validate_gate_registration(root)
     validate_skill_inventory(root)
@@ -1776,6 +1821,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_renames_table(root)
     validate_routing(root)
     validate_routing_skill_pointers(root)
+    validate_mainline_pointer(root)
     validate_authoring_chain(root)
     validate_banned_word_fields(root)
     validate_gateway_contract_freedom(root)
