@@ -53,6 +53,13 @@ export const COVER_GUARD =
   "leave calm atmospheric background at the top and bottom edges. The image will be " +
   "center-cropped to a wide 2.35:1 banner, so nothing important should touch the top or bottom edge.";
 
+// 🔴 `size` 是**建议不是契约**——上游不保证按请求出图。2026-08-21 实测三次：
+//   1536x1024（横）→ 1254x1254（正方）；1024x1536（竖）→ 1024x1536 ✅；
+//   1536x1024（横，重打）→ 1693x929（横，但尺寸与比例都不对）。
+// 同一个横版请求两次给出两个不同的错误结果，所以它不是固定映射，是不保证。
+// ⇒ 下面这两个常量是**期望值**，不要当成拿到手的尺寸用。真要固定比例就本地裁。
+// 好在 COVER_GUARD 是给模型的**构图**指令（主体压在中央水平带），
+// 即使拿回正方形，被微信按 2.35:1 裁时也还扛得住——但那是缓解，不是保证。
 export const SIZE_COVER = "1536x1024";
 export const SIZE_FIGURE = "1024x1024";
 
