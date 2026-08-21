@@ -135,7 +135,7 @@ curl --max-time 300 ...     # curl 显式设
 | **L0** 一句话基线 | 用户没给细节，先出一张看方向 | 就在 `prompt-ladder.md` |
 | **L1** 加比例 + 排除项 + 用途 | 大多数成品图停在这一级 | 同上 |
 | **L2** 只补出问题的那一个维度 | 出图后不满意，**先定位是哪一点** | `prompt-ladder.md` 有症状对照表 → 再翻 [`axes.md`](references/axes.md) 的对应一节 |
-| **L3** 场景骨架 | 做封面 / 插图 / IP 主视觉 / 信息图 | [`scenes-wechat.md`](references/scenes-wechat.md) |
+| **L3** 场景骨架 | 做各平台的封面 / 插图 | 按平台挑：[公众号](references/scenes-wechat.md) / [小红书](references/scenes-xiaohongshu.md) / [抖音·视频号·快手](references/scenes-video.md) |
 | **L4** 改图 | 已经有图要动它 | [`editing.md`](references/editing.md) |
 
 🔴 **一次只加一个维度。** 同时加三个，出来还不对时你无法知道是哪一个没生效，
