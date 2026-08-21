@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T14:44:03.549909+00:00",
+  "generatedAt": "2026-08-21T06:01:31.774836+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -120,6 +120,9 @@
       "c8fc00825fa8",
       "ceb277b7b3a2",
       "e88f976ec4bb"
+    ],
+    "dby-write": [
+      "e75c09cb73fd"
     ],
     "doubao-websearch": [
       "2b05ffa5169a",
