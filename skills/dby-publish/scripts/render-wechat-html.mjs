@@ -4,7 +4,17 @@
 // UNIVERSAL, zero-dependency Markdown -> 公众号 (WeChat Official Account) HTML,
 // now THEME-DRIVEN.
 //
-// This is the ZERO-DEP DEFAULT renderer for the 都爆鸭 (doubaoya) community
+// 🔴 定位（2026-08 变更）：本渲染器**已退出发布流水线主干**。
+//    pipeline.mjs 的 md→HTML 现在只走**平台渲染** POST /api/wechat/render，
+//    因为只有那条路会返回一个 detailUrl —— 用户点开就能看见排出来什么样。
+//    本文件保留，只服务两个服务端够不着的场景：
+//      ① 本机设计工作台 design-studio.mjs；
+//      ② 用户**没有密钥**、只想先看这篇排出来什么样。
+//    ⚠️ 这条路是纯本机的，**不产生任何在线预览链接**——要给用户链接就得走平台。
+//    另注：`:::` 组件语法（关注卡/金句/花式标题/分割）本文件仍解析，但平台渲染器不认，
+//    所以走流水线时**别写**，写了会原样漏成正文里的字符。
+//
+// This is the ZERO-DEP LOCAL renderer for the 都爆鸭 (doubaoya) community
 // `dby-publish` skill.
 //   * Runtime: Node >= 18. Uses Node builtins + global fetch ONLY.
 //   * No bun, no third-party theme repos, no npm deps, no personal paths.
@@ -940,6 +950,11 @@ function parseArgs(argv) {
 }
 
 const HELP = `render-wechat-html.mjs — zero-dep, theme-driven Markdown -> 公众号 HTML
+
+🔴 本机渲染器，**已退出发布流水线主干**（pipeline.mjs 现在只走平台渲染
+   POST /api/wechat/render）。本文件只服务两个场景：设计工作台，以及
+   「没有密钥、只想先看这篇排出来什么样」。
+   ⚠️ 这条路**不产生在线预览链接** —— 在线链接只有走平台渲染（pipeline.mjs）才有。
 
 Usage:
   node render-wechat-html.mjs --md <input.md> [--out <output.html>] [--title <str>] [--theme <theme.json>]

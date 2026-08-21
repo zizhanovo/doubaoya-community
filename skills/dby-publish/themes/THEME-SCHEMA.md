@@ -1,5 +1,11 @@
 # `theme.json` — the 公众号 theme contract (authoritative)
 
+> ⚠️ **本文档描述的是本机渲染器 `scripts/render-wechat-html.mjs` 如何套用主题。**
+> 发布流水线 `pipeline.mjs` 已改走**平台渲染**（`POST /api/wechat/render`），由服务端套主题。
+> **schema 与校验器两边通用**（流水线送 `themeJson` 前就是用这里的 `validate-theme.mjs` 验的），
+> 本文档照读；变的只是「谁来套用」。
+
+
 A **theme** lets you replicate a reference 公众号 article's typography/layout style
 without touching the renderer. It is a declarative JSON map of:
 

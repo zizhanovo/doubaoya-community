@@ -46,7 +46,7 @@
       "id": 5,
       "title": "md→HTML",
       "type": "render",
-      "rule": "仅当输入是 --md 时，用 render-wechat-html 渲染成公众号内联样式 HTML（原样保留每个 <img src>，不改写图片）。输入是 --html 则直接使用，跳过本步。",
+      "rule": "仅当输入是 --md 时，调用平台渲染 POST /api/wechat/render 得到公众号内联样式 HTML（原样保留每个 <img src>，不改写图片），并把响应里的 detailUrl 作为在线预览链接转达给用户。渲染失败一律中止，绝不回退本机渲染器。输入是 --html 则直接使用，跳过本步。",
       "mustPass": false
     },
     {

@@ -8,13 +8,17 @@
 //
 // 组合关系（不重复造轮子）：
 //   * 账号解析      ← ./account-verify.mjs         (resolveAccountKey)
-//   * md→公众号 HTML ← ./render-wechat-html.mjs      (renderWechatHtml)
+//   * md→公众号 HTML ← **平台** POST /api/wechat/render (renderViaPlatform，本文件内)
 //   * 图片预上传+存草稿 ← ./preprocess-and-publish.mjs (子进程，vendored)
 //
 // 硬规则（在代码里强制）：
 //   1. 只存草稿绝不群发：绝不接受/转发任何群发参数（--mass-send/--broadcast…直接报错）。
 //   2. 发布前必 whoami：第 2 步账号校验必须成功，第 5 步保存草稿才会跑。
 //   3. 绝不打印 API key。
+//   4. md→HTML **只走平台渲染**，失败一律中止，绝不回退本机渲染器。
+//      本机渲染器（./render-wechat-html.mjs）仍在，但已退出流水线主干，只服务两个场景：
+//      设计工作台 design-studio.mjs，以及「没有密钥、只想先看排版长什么样」。
+//      🔴 那条路**不产生在线预览链接** —— 走平台才有 detailUrl，那正是它存在的理由。
 //
 // 单一事实源：9 步 SOP 与硬规则同时声明在同目录 ../pipeline.json，SKILL.md 与本文件
 // 都以它为准。
@@ -31,7 +35,6 @@ import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { resolveAccountKey } from "./account-verify.mjs";
-import { renderWechatHtml } from "./render-wechat-html.mjs";
 import { validateTheme } from "./validate-theme.mjs";
 import { printArchivedConfigHint } from "./lib/archived-config-hint.mjs";
 
@@ -154,23 +157,30 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --digest <str>              摘要
   --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
   --profile <path>            IP/身份 profile（默认取 config.ipProfile）
-  --theme <path>              显式覆盖 Markdown 主题。不显式指定（且 config 未写 mdTheme 路径）时，
-                              先用密钥拉服务端编译主题（你在 doubaoya.com 设置的默认排版，
-                              GET /api/wechat/theme?format=compiled，拉不到就静默回退），
-                              最后兜底 themes/benya-clean.json
-  --theme neutral             显式使用中性渲染器，不套项目主题
+  --theme <path>              显式覆盖 Markdown 主题：本机先校验，再把整套 JSON 作为
+                              themeJson 送去平台渲染。**不指定**（且 config 未写 mdTheme
+                              路径）时一个主题字段都不传，由服务端套你在 doubaoya.com
+                              排版工作室保存的默认排版 —— 想换默认排版去那里改，
+                              那是唯一该改它的地方。
+  --theme neutral             显式要求中性排版（themeId=neutral，零品牌色）
   --design <json>             设计工作台产出的 design-config.json：套主题 + 设封面 + 按 h2
                               锚点注入配图。由 scripts/design-studio.mjs 生成。显式 --theme/
                               --cover 与 --design 冲突时命令行优先并告警。
   --output-processed-html <p> 渲染出的 HTML 落地路径（默认写临时文件）
   --base-url <url>            API 基址（默认 $DOUBAOYA_BASE_URL 或 https://doubaoya.com）
-  --dry-run                   只渲染+校验+扫描本地图，**不发布**
+  --dry-run                   只渲染+校验+扫描本地图，**不发布**（照样走平台渲染，
+                              照样给你在线预览链接 —— 渲染免费且无副作用）
   -h, --help                  显示帮助
 
 硬规则:
   · 只存草稿绝不群发（不接受任何 --mass-send/--broadcast/群发 参数）
   · 发布前必 whoami 校验目标账号（校验不过就停）
   · 绝不打印 API key
+  · md→HTML 只走平台渲染（POST /api/wechat/render），失败一律中止、绝不回退本机渲染器
+
+没有密钥、只想先看这篇排出来什么样:
+  node scripts/render-wechat-html.mjs --md a.md --out a.html
+  —— 纯本机，**不产生在线预览链接**（在线链接只有走平台渲染才有）。
 
 鉴权: DOUBAOYA_API_KEY 由 account-verify 从 env/~/.doubaoya/Keychain 解析，仅在内存中传给子进程。
 `;
@@ -209,54 +219,87 @@ export function hasExplicitLocalTheme({ cliTheme, configuredTheme, configHasThem
   return fromCli || fromConfig;
 }
 
-// 拉服务端编译主题（用户在 doubaoya.com 设置的默认排版，engine-2 已在服务端编译成
-// engine-1 形状的全字面量 JSON）。接口尚未处处可用，所以任何失败都优雅回退本机主题：
-// 401 → warn（密钥问题要让用户知道）；404/网络错/超时 → 一句 info，不重试不刷屏。
-// 拉到后先过 validateTheme 保险带再交给渲染器。成功返回 data（{theme, themeName, …}），
-// 任何失败返回 null。
-export async function fetchCompiledTheme({
+// 平台渲染 —— **流水线唯一的 md→HTML 渲染方**（POST /api/wechat/render，免费不扣点）。
+//
+// 🔴 失败一律 throw，**绝不回退本机渲染器**。静默回退会产出「看起来成功、却没有预览
+//    链接、排版还可能不是用户设的那套」的东西 —— 那正是本次改造要消灭的那类缺陷。
+//    调用方接住之后 fail()（进程退出），不写任何 HTML 文件、不进入发布步骤。
+//
+// 主题：显式指定才送（整套 themeJson，或 neutral 送 themeId）；没指定就三个主题字段
+//    **一个都不传**，由服务端套用户在排版工作室保存的默认排版。服务端优先级
+//    themeJson > themeId > themeName > 用户默认 > 内置兜底 benya-clean，与流水线以前
+//    那四级同构 —— 所以本机不再做第二遍决策，主题从此只有一个事实源。
+//
+// 不传 title：公众号后台单独承载标题，正文里不要第二个 H1（与 normalizeDraftMarkdown 同一意图）。
+export async function renderViaPlatform({
   baseUrl,
   apiKey,
-  timeoutMs = 5000,
-  onInfo = () => {},
-  onWarn = () => {},
+  markdown,
+  themeJson = null,
+  themeId = null,
+  timeoutMs = 30000,
 } = {}) {
-  if (!apiKey) return null;
+  if (!apiKey) {
+    throw new Error(
+      "平台渲染需要 DOUBAOYA_API_KEY（在 doubaoya.com 密钥中心生成）。\n" +
+        "   没有密钥、只想先看这篇排出来什么样：node scripts/render-wechat-html.mjs --md a.md\n" +
+        "   —— 但那条路是纯本机的，**不产生在线预览链接**。"
+    );
+  }
+  const body = { markdown };
+  if (themeJson) body.themeJson = themeJson;
+  else if (themeId) body.themeId = themeId;
+
   let res;
   try {
-    res = await fetch(`${baseUrl}/api/wechat/theme?format=compiled`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
+    res = await fetch(`${baseUrl}/api/wechat/render`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (e) {
-    const why = e && (e.name === "TimeoutError" || e.name === "AbortError") ? "超时" : "网络错误";
-    onInfo(`服务端编译主题拉取失败（${why}），本次用本机主题。`);
-    return null;
+    const why =
+      e && (e.name === "TimeoutError" || e.name === "AbortError")
+        ? `超时（${timeoutMs}ms）`
+        : `网络错误（${e && e.message}）`;
+    throw new Error(`平台渲染请求失败：${why}`);
   }
-  if (res.status === 401) {
-    onWarn("拉取服务端主题被拒（401）：DOUBAOYA_API_KEY 无效或缺失，请检查密钥配置；本次用本机主题。");
-    return null;
-  }
+
   let env = null;
+  let text = "";
   try {
-    env = JSON.parse(await res.text());
+    text = await res.text();
   } catch {}
-  const data = env && env.success === true ? env.data || {} : null;
-  if (!res.ok || !data || typeof data.theme !== "object" || data.theme === null) {
-    onInfo(`服务端编译主题不可用（HTTP ${res.status}），本次用本机主题。`);
-    return null;
+  try {
+    env = JSON.parse(text);
+  } catch {}
+
+  if (res.status === 401) {
+    throw new Error("平台渲染被拒（401）：DOUBAOYA_API_KEY 无效或缺失，请检查密钥配置。");
   }
-  const { errors, warnings } = validateTheme(data.theme);
-  for (const w of warnings) onWarn(`服务端主题告警: ${w}`);
-  if (errors.length) {
-    onWarn(`服务端编译主题未通过本地校验（${errors.length} 个错误，首个: ${errors[0]}），本次用本机主题。`);
-    return null;
+  if (!res.ok || !env || env.success !== true) {
+    const err = (env && env.error) || null;
+    const code = (err && err.code) || `HTTP ${res.status}`;
+    const msg = (err && err.message) || "响应无法解析";
+    throw new Error(`平台渲染失败（${code}）：${msg}`);
   }
-  if (Array.isArray(data.dropped) && data.dropped.length) {
-    onWarn(`服务端编译时降级丢弃了 ${data.dropped.length} 项: ${data.dropped.join("、")}`);
+  const data = env.data || {};
+  if (typeof data.html !== "string" || data.html.trim() === "") {
+    throw new Error("平台渲染返回了空 HTML。");
   }
-  return data;
+  return {
+    html: data.html,
+    themeSource: typeof data.themeSource === "string" ? data.themeSource : null,
+    warnings: Array.isArray(data.warnings) ? data.warnings : [],
+    // 这次结果在 doubaoya.com 上的详情页 —— 点开能**看见**排版效果（手机宽度沙箱预览）。
+    // 流水线存在的意义之一就是把它交到用户手里。
+    detailUrl: typeof env.detailUrl === "string" ? env.detailUrl : null,
+  };
 }
 
 // 解析 Markdown 主题路径：显式 --theme 优先，其次 config.mdTheme，最后项目默认主题。
@@ -332,11 +375,6 @@ export function normalizeDraftMarkdown(markdown) {
   while (lines[0]?.trim() === "") lines.shift();
 
   return lines.join("\n");
-}
-
-// 公众号后台已经单独承载文章标题，正文渲染不注入或保留重复 H1。
-export function renderMarkdownForDraft(markdown, theme) {
-  return renderWechatHtml(normalizeDraftMarkdown(markdown), { theme });
 }
 
 // GET 一个 doubaoya API（带 key），返回 { ok, data, code, message }。key 绝不打印。
@@ -597,9 +635,11 @@ async function main() {
   const nickname = chosen.nickname || "(已绑定公众号)";
   const appid = chosen.authorizerAppid;
 
-  // ===== 步骤 4/5：md→HTML 渲染 ==========================================
-  step(4, mdPath ? "md→HTML 渲染" : "使用已排版 HTML（跳过渲染）");
+  // ===== 步骤 4/5：md→HTML 渲染（平台）==================================
+  step(4, mdPath ? "md→HTML 渲染（平台 POST /api/wechat/render）" : "使用已排版 HTML（跳过渲染）");
   let processedHtmlPath;
+  /** 这次渲染在 doubaoya.com 上的详情页；回报时交给用户点开看效果。--html 那条路没有。 */
+  let renderDetailUrl = null;
   if (mdPath) {
     const resolvedMd = path.resolve(mdPath);
     let mdContent;
@@ -608,65 +648,84 @@ async function main() {
     } catch (e) {
       fail(`读不到 Markdown 文件 ${resolvedMd}（${e.message}）`);
     }
-    // 主题优先级：--theme（含 --design 折算）> config.mdTheme（显式写了路径时）>
-    // 服务端编译主题（用户在 doubaoya.com 设置的默认排版）> 项目默认主题。
-    // "neutral" 是唯一显式退回中性渲染器的标记。
     // --design 的主题作为 cliTheme 入口生效；显式 --theme 冲突时命令行优先并告警。
     let effectiveCliTheme = args.theme;
     if (designThemeCli) {
       if (args.theme) warn("--theme 与 --design 的主题冲突：命令行 --theme 优先，忽略设计主题。");
       else effectiveCliTheme = designThemeCli;
     }
-    let theme;
+
+    // 主题只在**显式指定**时才送。没指定 → 三个主题字段一个都不传，服务端套账号默认排版。
+    // 以前这里有一条本机四级优先级 + 拉服务端编译主题回来本机套用；那套整个退场了，
+    // 因为服务端自己的优先级与它同构 —— 留着等于同一个决策做两遍，一漂移就是
+    // 「主题双源对不上」重演。想换默认排版，去 doubaoya.com 排版工作室改，那是唯一该改它的地方。
+    let themeJson = null;
+    let themeId = null;
     if (
-      !hasExplicitLocalTheme({
+      hasExplicitLocalTheme({
         cliTheme: effectiveCliTheme,
         configuredTheme: config.mdTheme,
         configHasTheme,
       })
     ) {
-      const remote = await fetchCompiledTheme({ baseUrl, apiKey, onInfo: info, onWarn: warn });
-      if (remote) {
-        theme = remote.theme;
-        info(
-          `已拉取服务端编译主题: ${remote.themeName || "(未命名)"}` +
-            `（source=${remote.source || "?"}, compiledFrom=engine ${remote.compiledFrom || 1}` +
-            `${remote.isDefault ? ", 账号默认排版" : ""}）`
-        );
+      const themePath = resolveMarkdownThemePath({
+        cliTheme: effectiveCliTheme,
+        configuredTheme: config.mdTheme,
+        configHasTheme,
+        configDir: path.dirname(configPath),
+      });
+      if (themePath === null) {
+        // "neutral" —— 渲染器内置的零品牌色默认，平台侧同名 themeId，语义一致。
+        themeId = "neutral";
+        info("已显式要求中性排版（themeId=neutral，零品牌色）。");
+      } else {
+        const themeObj = await readJsonMaybe(themePath);
+        if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
+        // 🔴 本机先校验再送：不合法的主题送到服务端只会换回一个更难读的远端 400，
+        //    而本机校验的报错是逐条的。这一条写在 spec 里。
+        const { errors, warnings } = validateTheme(themeObj);
+        for (const w of warnings) warn(`主题告警: ${w}`);
+        if (errors.length) {
+          fail(`主题校验失败（${errors.length} 个错误）:\n` + errors.map((e) => `   ❌ ${e}`).join("\n"));
+        }
+        themeJson = themeObj;
+        info(`已加载主题: ${themePath}（${themeObj.meta && themeObj.meta.name ? themeObj.meta.name : "未命名"}）`);
       }
-    }
-    const themePath = theme
-      ? null
-      : resolveMarkdownThemePath({
-          cliTheme: effectiveCliTheme,
-          configuredTheme: config.mdTheme,
-          configHasTheme,
-          configDir: path.dirname(configPath),
-        });
-    if (themePath) {
-      const themeObj = await readJsonMaybe(themePath);
-      if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
-      const { errors, warnings } = validateTheme(themeObj);
-      for (const w of warnings) warn(`主题告警: ${w}`);
-      if (errors.length) {
-        fail(`主题校验失败（${errors.length} 个错误）:\n` + errors.map((e) => `   ❌ ${e}`).join("\n"));
-      }
-      theme = themeObj;
-      info(`已加载主题: ${themePath}（${themeObj.meta && themeObj.meta.name ? themeObj.meta.name : "未命名"}）`);
-    } else if (!theme) {
-      info("已显式使用中性渲染器（未套项目主题）。");
     }
     // 设计配置的配图：渲染前按 h2 锚点注入到 Markdown 源。
     if (designInjects.length) {
       mdContent = injectImagesAfterHeadings(mdContent, designInjects, (m) => warn(m));
       info(`已按设计配置注入 ${designInjects.length} 张配图到 Markdown 源（h2 锚点）。`);
     }
-    const html = renderMarkdownForDraft(mdContent, theme);
+
+    let rendered;
+    try {
+      rendered = await renderViaPlatform({
+        baseUrl,
+        apiKey,
+        // 公众号后台单独承载标题：正文里剥掉 frontmatter 与首个 H1，也不传 title。
+        markdown: normalizeDraftMarkdown(mdContent),
+        themeJson,
+        themeId,
+      });
+    } catch (e) {
+      // 🔴 不回退本机渲染器。回退会产出没有预览链接、排版也可能不同的产物，
+      //    而用户会以为那就是平台排版 —— 宁可红。
+      fail(
+        `${e.message}\n` +
+          "   平台渲染是流水线唯一的渲染方，失败不回退本机渲染器。\n" +
+          "   只想先看排版（无在线链接）：node scripts/render-wechat-html.mjs --md <你的.md>"
+      );
+    }
+    for (const w of rendered.warnings) warn(`渲染告警: ${w}`);
+    renderDetailUrl = rendered.detailUrl;
     processedHtmlPath = args.outputProcessedHtml
       ? path.resolve(args.outputProcessedHtml)
       : path.join(os.tmpdir(), `${path.basename(resolvedMd, path.extname(resolvedMd))}.wechat.html`);
-    await writeFile(processedHtmlPath, html, "utf8");
+    await writeFile(processedHtmlPath, rendered.html, "utf8");
     info(`已渲染公众号内联样式 HTML → ${processedHtmlPath}`);
+    if (rendered.themeSource) info(`排版来源: ${rendered.themeSource}`);
+    if (renderDetailUrl) info(`在线预览（点开就能看到排出来什么样）: ${renderDetailUrl}`);
   } else {
     processedHtmlPath = path.resolve(htmlPath);
     if (!existsSync(processedHtmlPath)) fail(`--html 文件不存在: ${processedHtmlPath}`);
@@ -707,6 +766,7 @@ async function main() {
         `  封面:        ${coverIsLocal ? `已就绪本地封面 ${coverPath}` : `无本地封面 → 走都爆鸭兜底（${config.coverFallback}）`}\n` +
         `  whoami 校验: 通过\n` +
         `  前置检查:    通过\n` +
+        (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
         "  群发:        否（本流水线只存草稿；dry-run 更是什么都不发）\n" +
         "════════════════════════════════════════════════\n"
     );
@@ -744,6 +804,7 @@ async function main() {
       `  正文图上传数: ${imgCount} 张\n` +
       `  封面:        ${withCover ? "已上传本地封面" : `走都爆鸭兜底（${config.coverFallback}）`}\n` +
       `  mediaId:     ${mediaId}\n` +
+      (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
       "  群发:        否（本流水线只存草稿）\n" +
       "  下一步:      去公众号后台亲眼确认草稿，再手动群发。\n" +
       "══════════════════════════════════════════════\n"

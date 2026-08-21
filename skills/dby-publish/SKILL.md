@@ -201,7 +201,7 @@ python3 "$SKILL_PATH/scripts/publish_draft.py" \
 
 > ✅ **接口已上线**，正常拉取即可。拿到 **401** 说明 `DOUBAOYA_API_KEY` 缺失或不对——提示用户检查
 > 密钥配置，别跳过。只有遇到**网络错误或真 404** 时才降级：**跳过这一步**照常写
-> （上面那条 + [正文组件语法](#正文组件语法组件层) 已经够用），别死循环重试、别当故障报给用户。
+> （上面那条 + [提示块](#提示块-note-一类) 已经够用），别死循环重试、别当故障报给用户。
 
 写正文前拉一次，按它组织结构再动笔。它把「什么内容该写成什么 markdown 结构」和「平台会整篇打回 /
 静默丢内容的硬约束」写成一段可直接照做的文字。
@@ -224,70 +224,70 @@ curl -sS https://doubaoya.com/api/wechat/writing-spec \
 规范正文分两块，**成立条件不一样**：
 
 1. **结构建议 + 平台硬约束** —— 与排版无关，**永远成立**，照做。
-2. **本主题的呈现** —— 只在这篇**真用服务端那套排版渲染**时成立。本流水线在你**没有显式钉本机主题**
-   （不带 `--theme`，`config.json` 也没把 `mdTheme` 写成路径）时，会用同一条 `DOUBAOYA_API_KEY`
-   自动拉取**服务端默认排版的编译版**（`GET /api/wechat/theme?format=compiled`）来渲染——
-   此时**第二块适用**，照着写。显式 `--theme` / `config.mdTheme` 钉了本机主题，或没拉到服务端主题
-   而回退本机主题时，第二块**不适用**，只照第一块写（流水线日志会打出本次实际用了哪份主题）。
+2. **本主题的呈现** —— 只在这篇**真用你保存的那套排版渲染**时成立。本流水线在你**没有显式指定主题**
+   （不带 `--theme`，`config.json` 也没把 `mdTheme` 写成路径）时，渲染请求里一个主题字段都不带，
+   服务端直接套你在排版工作室保存的默认排版——此时**第二块适用**，照着写。
+   显式 `--theme <path>` / `config.mdTheme` 钉了另一套主题时第二块**不适用**，只照第一块写
+   （流水线会打出本次的 `排版来源`，看那一行为准）。
 
-#### 主题来源与优先级
+#### 主题从哪来
 
-渲染用哪份主题，按下面顺序取第一个成立的（详见 [`themes/README.md`](./themes/README.md)）：
+**只有一个事实源。** 渲染由**平台**做（`POST /api/wechat/render`），主题也由平台套。流水线不再把服务端主题拉回本机
+再套一遍——那套「本机四级优先级 + 拉取回退」整个退场了，因为服务端自己就有同构的优先级，
+留着等于同一个决策做两遍，一漂移就是「主题双源对不上」。
 
-1. `--theme <path|neutral>`（含 `--design` 折算的主题）——显式指定，永远赢；
-2. `config.json` 里显式写成路径的 `mdTheme`——钉死本机主题，不发任何请求；
-3. **服务端编译主题** `GET /api/wechat/theme?format=compiled`——你在 doubaoya.com 排版工作室设置的
-   默认排版（engine-2 主题服务端已编译成本机渲染器认识的全字面量形状）。拉取带 5s 超时，
-   **拉不到就优雅回退**：401 告警提示检查密钥（不中断），404/网络错误只打一句提示，不重试；
-4. 项目默认主题 `themes/benya-clean.json`。
-
-> **一处例外**：规范里「`:::` 组件语法与 `> [!NOTE]` 提示块渲染器不解析、别写」那条，说的是**服务端
-> 渲染器**。本流水线的 `render-wechat-html.mjs` **解析**这两套语法（见下节），走本流水线时照常用。
-> 排版改过之后**重新拉一次**——别把这段文字当长期事实缓存。
-
-#### 两条渲染路，判据是「有没有本机的东西要处理」
-
-第 5 步 md→HTML 有两条路，**不是随便挑一条**：
-
-| 什么时候走 | 走哪条 |
+| 你怎么写 | 实际用哪套排版 |
 |---|---|
-| 正文里有**本机图片**，或用了上面那套 `:::` 组件语法，或用户**没有密钥**只想先看排版 | **本机渲染器** `scripts/render-wechat-html.mjs`（也就是 `pipeline.mjs` 内部走的那条） |
-| 只是把一段干净 markdown 变成公众号 HTML，没有本机图片、没用组件语法 | **平台渲染能力** `skill.wechat.render`（详情端点 `GET /api/skills/wechat-render`），照上面协议第 2、3 条调 |
+| **什么都不写**（推荐） | 你在 doubaoya.com **排版工作室保存的默认排版**。请求里一个主题字段都不带。 |
+| `--theme <path>` / `config.mdTheme` 写成路径 | 那份本机主题 JSON。流水线**先在本机校验**再整套送出（不合法就当场红，逐条列错——送到服务端只会换回一个更难读的远端 400）。 |
+| `--theme neutral` | 渲染器内置的中性排版，零品牌色。 |
 
-平台渲染那条**不花钱**，而且用的就是用户在 doubaoya.com 排版工作室设的那套排版，**免去主题双源
-对不上的整类问题**；本机渲染器则是在服务端够不着的地方（本机文件、组件语法、无密钥）才不可替代。
-⚠️ 它是**专用路由**：调用地址跟详情端点毫无关系，只能读详情响应里 `execution` 的 `target`。
+**想换默认排版就去排版工作室改**，那是唯一该改它的地方。改完流水线下次跑自动就是新的，
+不需要在本仓改任何文件。跑完看日志里的 `排版来源:` 那一行确认本次实际用了哪套。
 
----
+#### md→HTML 只有一条路：平台渲染
 
-## 正文组件语法（组件层）
+第 5 步 md→HTML **只走平台**（`POST /api/wechat/render`，免费不扣点）。这条路的产物自带一个
+**在线预览链接**（`detailUrl`），点开就能看到排出来什么样——手机宽度的沙箱预览，不是 HTML 源码。
+流水线会在步骤 4 与最终回报里各打一次那个链接，**请把它转达给用户**。
 
-正文 markdown 里可直接用下面这套**组件语法**，渲染时自动套用当前排版主题的配色（主色 / 标题色 / 正文色），不用手写 HTML：
+🔴 **渲染失败一律中止，绝不回退本机渲染器**。静默回退会产出「看起来成功、却没有预览链接、
+排版还可能不是用户设的那套」的东西——那正是这条路存在的理由被抵消掉的样子。
 
-- `:::关注卡` … `:::`（别名 `:::follow`）——引导关注卡片，卡内文案可自定义（留空用默认「点击上方名片，关注我们」）。
-- `> [!NOTE] 标题`、`> [!TIP]`、`> [!WARN]`——三级提示框（信息 / 贴士 / 警示）；标题可选，下面接正文。NOTE 用主题主色，TIP 绿、WARN 橙。
-- `:::金句` … `:::`（别名 `:::quote-card`）——居中大字金句卡，标题色 + 浅主题底。
-- `:::标题 小节标题`（别名 `:::title`）——带徽章 + 底部渐隐线的花式小标题。
-- `:::分割`（别名 `:::divider`）——居中小图标 + 两侧渐隐线的花式分割线。
+⚠️ 它是**专用路由**：调用地址跟能力详情端点毫无关系，只能读详情响应里 `execution` 的 `target`。
 
-示例：
+**本机渲染器 `scripts/render-wechat-html.mjs` 还在，但已退出流水线主干**，只服务两个场景：
+设计工作台 `design-studio.mjs`；以及**用户没有密钥、只想先看这篇排出来什么样**——
 
-    :::关注卡
-    点击上方名片，关注我们
-    :::
+```
+node scripts/render-wechat-html.mjs --md a.md --out a.html
+```
 
-    > [!TIP] 小贴士
-    > 先定选题，再动笔。
+🔴 走那条路**没有在线预览链接**（只能自己打开本地文件看）。要给用户链接就得走平台。
 
-    :::金句
-    真正的高手，都在偷偷做时间的朋友
-    :::
+#### 换渲染方之后，两个构件的观感会变
 
-    :::标题 一、为什么
+实测两个渲染器在**两个构件**上画法不同，其余（段落 / 强调 / 标题 / 列表 / 引用 / 有序列表 /
+行内代码 / 链接）**逐个一致**：
 
-    :::分割
+| 构件 | 平台渲染（现在） | 本机渲染（以前） |
+|---|---|---|
+| `> [!NOTE]` 一类提示块 | 引用块形态，带彩色左边框与标签 | 卡片形态，带一个 SVG 图标 |
+| `---` 分割线 | 装饰性分割块 | 裸 `<hr>` |
 
-未知组件名（如 `:::xxx`）不会报错——原样输出并给出提示。组件产出的 HTML 纯内联样式、无 class / id，符合公众号红线。主题 JSON 可选加 `components` 段覆盖内置模板（进阶）。
+两种都是合法的公众号排版，**不是退化**，只是长得不一样。老稿子重新跑一遍会看到这个变化。
+
+## 提示块（`> [!NOTE]` 一类）
+
+正文里可以直接用 GFM alert 记号，平台渲染器**会解析**：
+
+```
+> [!NOTE]
+> 正文一段。
+```
+
+支持 `NOTE` / `TIP` / `IMPORTANT` / `WARNING` / `CAUTION`，记号后面可以跟一句自定义标签
+（`> [!NOTE] 先看这个`）。产出纯内联样式、无 class / id，符合公众号红线。
 
 ---
 
@@ -298,7 +298,8 @@ curl -sS https://doubaoya.com/api/wechat/writing-spec \
 | 阶段 | 模块 | 说明 |
 |------|------|------|
 | 账号解析 | `scripts/account-verify.mjs` | `resolveAccountKey({account, baseUrl})`：多来源（env / `~/.doubaoya` / Keychain）候选 → 逐个 whoami → 按目标账号挑对 key，key 只在内存。多 key 指向不同账号且未指定 `--account` 时，报出各 key 对应账号并停。 |
-| md→公众号 HTML | `scripts/render-wechat-html.mjs` | `renderWechatHtml(md,{title})`：零依赖内联样式渲染，**原样保留图片 src**。 |
+| md→公众号 HTML | **平台** `POST /api/wechat/render` | `renderViaPlatform({baseUrl,apiKey,markdown,themeJson,themeId})`（在 `pipeline.mjs` 内）：免费不扣点，主题由服务端套，返回 `{html, themeSource, warnings, detailUrl}`。**失败抛错，调用方中止，绝不回退本机渲染器**。 |
+| md→公众号 HTML（本机，已退出主干） | `scripts/render-wechat-html.mjs` | `renderWechatHtml(md,{title,theme})`：零依赖内联样式渲染，**原样保留图片 src**。只服务设计工作台与「无密钥先看排版」，**不产生在线预览链接**。 |
 | 封面/配图生图 | `scripts/gen-image.mjs` | `generateImage({prompt,size,out,styleId,coverGuard,referenceImage})`：零依赖，是能力 `skill.ai.imageGen`（详情端点 `GET /api/skills/gpt-image-gen`）的薄壳，同步返回、计费。传 `referenceImage`（本地路径/URL/`data:`/裸 base64，CLI `--reference-image`）时走 `operation:"edit"` 条件化，**保留参考图里的 IP 形象**；不传则文生图。另导出 `resolveReferenceImage(ref)`（本地图 → `data:` URL 小工具）。风格库 `assets/styles/index.json`，用 env `DOUBAOYA_API_KEY`（无需额外密钥）。产出本地 jpeg → 喂 `--cover` 或以 `<img src>` 落进正文，**不碰发布契约**。由 agent 在引导式设计里调用（不由 pipeline.mjs 机械触发）。 |
 | 配图自动布局 | `scripts/plan-figures.mjs` | `planFigures(markdown,{maxFigures,minChars})` → `{figures[],meta}`：**确定性规则**（不接 LLM）决定在哪些 h2 小节末尾配图 + 画面建议。按小节有效字数过阈值（默认 160）挑，张数按总字数分档（<1800→3、1800–3000→4、>3000→5）封顶。CLI `node plan-figures.mjs --md <文章> [--max-figures N] [--min-chars N] [--json]`。工作台「自动配图」调它，产出直接填 `design-config.images[]`（`afterHeading` 锚点），由现有 pipeline 注入逻辑消费，**不改发布链路**。 |
 | 传图 + 存草稿 | `scripts/preprocess-and-publish.mjs` | 本地图预上传 + >1MB 压缩 + 存草稿（draft/add，无群发）。无本地图/无本地封面场景可换更轻的 `scripts/publish_draft.py`（Python，见[只想存草稿、不要排版](#只想存草稿不要排版)）。 |
@@ -333,9 +334,9 @@ curl -sS https://doubaoya.com/api/wechat/writing-spec \
    ```
    配图落进 Markdown 后**回到第 5 步重渲染**。这些本地图会被现有 `preprocess-and-publish.mjs` 走 `image` 上传，
    **无需改动任何发布链路**。
-4. **排版** — 确认用哪套主题（默认按[主题来源与优先级](#主题来源与优先级)自动取：有 key 时先拉
-   服务端默认排版的编译版，或用 `--theme` / `config.mdTheme` 钉一套本机主题；写主题见下方
-   「复刻参考排版风格」），并**确认渲染器真被调用**。
+4. **排版** — 确认用哪套主题（见[主题从哪来](#主题从哪来)：默认就是用户在排版工作室保存的那套，
+   服务端渲染时直接套；要换才用 `--theme <path>` / `config.mdTheme` 指一份本机主题 JSON；
+   写主题见下方「复刻参考排版风格」）。
 
 > `gen-image.mjs` 生成的本地 jpeg 路径，封面喂 `pipeline.mjs --cover`、配图以 `<img src>` 落进正文——
 > 两者都不触碰微信侧发布契约。上游生图密钥只在 doubaoya 服务端，skill 端只用密钥。
@@ -441,7 +442,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 想让排版长得像某个你欣赏的公众号，或某种描述得出的风格？把它一次性**萃取成一个 `theme.json`**，
 之后**永久复用**（每次渲染只需 `--theme my-theme.json`，见下方 CLI）。主题契约的**权威**是
 [`themes/THEME-SCHEMA.md`](./themes/THEME-SCHEMA.md)（top-level 只有 `meta/palette/page/elements/decorations`）。
-校验器是 `scripts/validate-theme.mjs`，套用器是 `scripts/render-wechat-html.mjs --theme`（或 `pipeline.mjs --theme`）。
+校验器是 `scripts/validate-theme.mjs`。本机预览用 `scripts/render-wechat-html.mjs --theme`；走流水线时 `pipeline.mjs --theme <path>` 会**先在本机校验再整套送去平台渲染**。
 
 > **写主题是一次性的活**；产出的 `theme.json` 之后一直用。默认主题是 `themes/benya-clean.json`
 > （本鸭精品「知识清爽」风，**推荐**）。不想从零写？先从内置主题
@@ -520,13 +521,13 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 
 | 想做的事 | 除 Node 外还需要 | 怎么跑 |
 |---|---|---|
-| md → 公众号内联样式 HTML（本地出稿 / 看排版效果） | 无 | `node scripts/render-wechat-html.mjs --md a.md --theme themes/benya-clean.json --out a.html` |
+| md → 公众号内联样式 HTML（本地出稿 / 看排版效果，**无在线链接**） | 无 | `node scripts/render-wechat-html.mjs --md a.md --theme themes/benya-clean.json --out a.html` |
 | 校主题 / 写主题 / 导入外部主题格式 | 无 | `scripts/validate-theme.mjs`、`scripts/import-theme.mjs`、`scripts/extract-theme.mjs --html ref.html` |
 | 复刻某篇**公开**文章的排版 | 公网（**不要密钥**） | `scripts/fetch-article.mjs --url …`、`scripts/extract-theme.mjs --url …` |
 | 配图自动布局规划（确定性规则，不接 LLM） | 无 | `node scripts/plan-figures.mjs --md a.md` |
 | 起本地设计工作台：实时预览、换肤、自动配图排位、存 `design-config` | 无（**只有页面里点「生成」才要密钥**） | `node scripts/design-studio.mjs --md a.md --title "标题"` |
 | AI 生封面 / 生配图 | 一条 **`DOUBAOYA_API_KEY`**（**花钱**，现价现拉） | `scripts/gen-image.mjs`，或工作台里点生成 |
-| 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`**（拉不到会静默回退本机主题，不中断） | 流水线自动拉 `GET /api/wechat/theme?format=compiled` |
+| 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`** | 跑 `pipeline.mjs` 时**不写 `--theme`** 即可（渲染在平台做，主题也在平台套；失败中止不回退） |
 | **跑 `pipeline.mjs`（含 `--dry-run`）** | **密钥 + 已在 doubaoya.com 绑定公众号** | `node scripts/pipeline.mjs --md a.md --title "标题" --dry-run` |
 | 本地图预上传 / 存草稿 | 同上（**存草稿花钱**，失败自动退回） | `pipeline.mjs`、`scripts/publish_draft.py` |
 
@@ -534,6 +535,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 > （`GET /api/wechat/status`）都排在它**前面**：没有密钥会停在「本地没有可用的 `DOUBAOYA_API_KEY`」，
 > 有密钥但没绑号会停在「目标账号没有已绑定的公众号」。
 > **还没绑号、只想先看这篇排出来什么样**：走 `render-wechat-html.mjs` 或设计工作台（都纯本地）。
+> 🔴 但那两条**都不产生在线预览链接**——在线链接只有走平台渲染（即 `pipeline.mjs`）才有。
 > 注意单跑渲染器时 `--title` 会往正文顶部插一个 `<h1>`（本地预览用），那份产物别拿去发布——见[正文不要写标题](#-正文不要写标题)。
 
 绑好号、配好密钥之后，发布前先跑一次 `--dry-run`，确认身份上下文、目标账号、公众号、本地图扫描都对，再正式存草稿。
@@ -573,11 +575,17 @@ npx skills update dby-publish   # 全局安装的加 -g
 >   调用协议逐字内联（见[调用都爆鸭](#调用都爆鸭协议抄自-dby-gateway)），
 >   **入参规格一律调用前从详情端点现拉**——原来烤在正文里的返回字段表与计价数字已整段删掉
 >   （烤进分发物的契约必然漂，而价格会静默调整）。**十步 SOP 与终态判断一步没动。**
->   同时把第 5 步说清成两条路：干净 markdown 走免费的平台渲染能力，本机图片 / 组件语法 /
->   无密钥才走本机渲染器。
-> - 未显式钉本机主题时，流水线现在会**优先拉取服务端编译主题**（你在 doubaoya.com 设置的默认排版，
->   `GET /api/wechat/theme?format=compiled`；拉不到就优雅回退本机）。想钉死本机主题的，
->   `--theme` 或 `config.mdTheme` 写成路径即可。同时 `validate-theme.mjs` 对 engine-2 主题
->   （`meta.engine:2` / `tokens` / 带点号 token）从告警升级为**硬错误**——这类主题只能用服务端编译版。
+>   （第 5 步当时被说成两条路；**现已收敛为只走平台渲染**，见下条。）
+> - **流水线的 md→HTML 已改为只走平台渲染**（`POST /api/wechat/render`）：主题由服务端套，
+>   产物自带在线预览链接（`detailUrl`），渲染失败一律中止、不回退本机渲染器。
+>   「拉服务端编译主题回本机套用」那套整个退场——主题从此只有一个事实源。
+>   同时那套自定义组件语法（关注卡 / 金句 / 花式标题 / 分割，冒号围栏写法）**已整体移除**，
+>   平台渲染器不解析它。改用普通 Markdown：金句用引用块、小节标题用二级标题、分割用 `---`；
+>   引导关注卡没有等价替代，需要的话在公众号编辑器里手工插。
+>   （这里刻意不写出那套记号的字面形式 —— 写出来就等于把它重新放进上下文，
+>   而它现在写了不会报错、只会原样漏成正文里的几个字符。）
+>   本机渲染器 `render-wechat-html.mjs` 保留，只服务设计工作台与「无密钥先看排版」。
+>   `validate-theme.mjs` 对 engine-2 主题（`meta.engine:2` / `tokens` / 带点号 token）
+>   仍是**硬错误**——这类主题只能用服务端编译版。
 > - 默认 Markdown 排版主题已切为 `benya-clean`（本鸭 · 知识清爽）。想沿用旧版
 >   `magazine`（杂志风）的，在 `config.json` 里把 `mdTheme` 指回 `themes/magazine.json`，或渲染时加 `--theme themes/magazine.json`。

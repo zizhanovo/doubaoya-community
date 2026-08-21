@@ -70,7 +70,8 @@ wechat-article-pipeline/
 └── scripts/
     ├── pipeline.mjs              # 编排者 CLI（心脏）
     ├── account-verify.mjs       # 多来源 key → whoami → 挑对账号
-    ├── render-wechat-html.mjs   # md → 公众号内联样式 HTML
+    ├── render-wechat-html.mjs   # md → 公众号内联样式 HTML（本机；已退出流水线主干，
+    │                             #   只供设计工作台与「无密钥先看排版」，无在线预览链接）
     └── preprocess-and-publish.mjs  # vendored：传图 + 存草稿
 ```
 
