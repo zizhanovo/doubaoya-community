@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T06:41:20.694324+00:00",
+  "generatedAt": "2026-08-21T08:51:35.974786+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -77,6 +77,7 @@
       "fccf378e28ef"
     ],
     "dby-api": [
+      "5b22bb800679",
       "9b9682a7a602",
       "bcf26b4eca1f"
     ],
@@ -94,7 +95,11 @@
     "dby-gateway": [
       "b798cca6be87"
     ],
+    "dby-image": [
+      "c6ca0ad17c66"
+    ],
     "dby-publish": [
+      "032593ba063c",
       "1395aeae698c",
       "487cb9172be9",
       "afeb6e003c90"
