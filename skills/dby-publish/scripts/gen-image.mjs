@@ -48,18 +48,26 @@ const IMAGE_GEN_INVOKE_PATH = "/api/skills/gpt-image-gen/invoke";
 
 // 封面护栏：公众号封面会把 1536x1024 居中裁成约 2.35:1 的宽幅，靠这句提示把主体压在
 // 水平中带、上下留氛围背景，避免关键内容被上下裁掉。
+// 🔴 这里的 "Aspect ratio" 那一句是**唯一真正在控制画面比例的东西**——`size` 参数无效（见下方注释）。
+// 去掉它，封面会退回默认的 1254x1254 正方形，再被微信按 2.35:1 裁掉上下大半。
 export const COVER_GUARD =
+  "Aspect ratio: wide landscape, 16:9. " +
   "Composition: keep the main subject and any text within the central horizontal band; " +
   "leave calm atmospheric background at the top and bottom edges. The image will be " +
   "center-cropped to a wide 2.35:1 banner, so nothing important should touch the top or bottom edge.";
 
-// 🔴 `size` 是**建议不是契约**——上游不保证按请求出图。2026-08-21 实测三次：
-//   1536x1024（横）→ 1254x1254（正方）；1024x1536（竖）→ 1024x1536 ✅；
-//   1536x1024（横，重打）→ 1693x929（横，但尺寸与比例都不对）。
-// 同一个横版请求两次给出两个不同的错误结果，所以它不是固定映射，是不保证。
-// ⇒ 下面这两个常量是**期望值**，不要当成拿到手的尺寸用。真要固定比例就本地裁。
-// 好在 COVER_GUARD 是给模型的**构图**指令（主体压在中央水平带），
-// 即使拿回正方形，被微信按 2.35:1 裁时也还扛得住——但那是缓解，不是保证。
+// 🔴 `size` **完全无效**，上游整个忽略它。2026-08-21 受控实测（固定同一句 prompt、只变 size）：
+//   不传 / 1024x1024 / 1536x1024 / 1024x1536 / 512x512 / 2048x1152 —— **七个用例全部返回 1254x1254**。
+//   （更早那次「竖版精确、横版不准」是实验设计错误：当时 prompt 和 size 一起变了，
+//     而 prompt 里写着「竖直的高塔、仰视构图」——是 prompt 在驱动比例。）
+//
+// 真正管用的是**提示词**。同样不传 size，只在描述里给比例：
+//   「宽幅横版，16:9 比例」→ 1672x941（1.777）；「竖版，9:16 比例」→ 941x1672（0.563）。
+//
+// ⇒ 所以 COVER_GUARD 里那句比例要求**才是封面能用的唯一原因**，SIZE_COVER 一直是死参数。
+// ⇒ 下面两个常量保留只为兼容既有调用签名，**不影响输出**；真要固定比例请写进 prompt。
+// ponytail: 天花板 = 上游哪天开始认 size 了，这里的注释会过期；
+//   升级路径 = 出图后核实宽高（generateImage 已在做），不符时打一句 warn。
 export const SIZE_COVER = "1536x1024";
 export const SIZE_FIGURE = "1024x1024";
 
