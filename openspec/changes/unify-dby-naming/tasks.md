@@ -64,4 +64,4 @@
 
 - [ ] 8.1 ClawHub：按 `tools/clawhub.json` 预览并上架 9 个新 slug，手工下架 7 个老条目。验证：`clawhub_publish.py` 预览无漂移；老条目状态截图 / 记录。
 - [ ] 8.2 与主仓 `skill-update-notice-verdict` 的次序核对：趟 ① 已落、趟 ④ 在本 change 之后。验证：`.WRITER` 与主仓 change 的 tasks 状态一致。
-- [ ] 8.3 收工：`.WRITER` 划掉本会话条目，记录全部 commit、验证结果、未 push 项。验证：`.WRITER` 无持有路径。
+- [x] 8.3 收工：`.WRITER` 划掉本会话条目，记录全部 commit、验证结果、未 push 项。验证：`.WRITER` 无持有路径。
