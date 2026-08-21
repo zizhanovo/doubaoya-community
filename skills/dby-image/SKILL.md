@@ -18,7 +18,7 @@ compatibility: >-
 
 ---
 
-## 🔴 五条先读，出错时读就晚了
+## 🔴 七条先读，出错时读就晚了
 
 ### 一、超时之后，绝不重试
 
@@ -69,6 +69,37 @@ curl --max-time 300 ...     # curl 显式设
 `seedream-lite`（Seedream 5.0 lite）**已于 2026-08-10 下架**，调用一律 503。
 用户点名它时如实告知，改用在架的 `skill.ai.imageGen`。
 
+### 六、`size` 是建议，不是契约 —— 拿到图必须核实真实宽高
+
+上游**不保证**按你请求的尺寸出图。2026-08-21 实测三次：
+
+| 请求 | 实际拿到 |
+|---|---|
+| `1536x1024`（横） | **1254×1254**（正方） |
+| `1024x1536`（竖） | 1024×1536 ✅ |
+| `1536x1024`（横，重打） | **1693×929**（横，但尺寸与比例都不对） |
+
+同一个横版请求两次给出**两个不同的错误结果**——所以它不是固定映射，是**不保证**。
+
+⇒ 落盘之后**核一遍真实宽高**（下面的落盘脚本已经在做）。
+下游要固定比例（比如封面），**自己裁**，别指望请求参数。
+
+### 七、这些事当前后端做不到，别照着别的工具答应用户
+
+外面的生图 skill（如 GPT-Image2 那类直连 OpenAI 的）功能表更长，用户可能照着提要求。
+当前后端 `inputSchema` **只有 `prompt` 与 `referenceImage` 两个字段**：
+
+| 用户可能会要 | 能不能 | 怎么答 |
+|---|---|---|
+| 多张参考图一起融合 | ❌ | 只收**一张** `referenceImage`；建议先把多张拼成一张再传 |
+| 局部重绘 / mask 蒙版 | ❌ | 无 mask 参数；替代方案是**整图改图**，在 prompt 里描述只改哪里 |
+| `quality` 高低档省钱 | ❌ | 无质量档位，每次一个价 |
+| 一次出 N 张候选 | ❌ | 要多次调用，**每次单独计费**——先告诉用户再跑 |
+| 指定精确尺寸 | ⚠️ | 见红线六，只能当建议 |
+
+**如实说不能，别硬凑。** 用户拿着外部工具的功能表来问，答「我们这边是另一条通道，没有这个参数」
+比含糊带过好。
+
 ---
 
 ## 这个包管什么、不管什么
@@ -82,6 +113,20 @@ curl --max-time 300 ...     # curl 显式设
 
 > `dby-publish` 的流水线在第 6 步需要**一张新图**时会点名本包；
 > 但图片的**上传与排布**仍归它，本包只负责把图画出来。
+
+---
+
+## 不知道怎么写提示词？
+
+正文只放红线。**动手前想把图画好，读这两份**：
+
+| 想解决 | 读哪份 |
+|---|---|
+| 需求太模糊、不知道怎么写成 prompt；用户给了参考图要「这种感觉」；要出一组风格统一的系列图 | [`references/prompt-craft.md`](references/prompt-craft.md)：三档写法、`{{变量}}` 模板、**图像反推七项**（不调接口不花钱） |
+| 要做公众号封面 / 文章插图 / IP 主视觉 / 信息图 | [`references/gallery-wechat.md`](references/gallery-wechat.md)：每类一个可直接填的骨架，含裁切安全区与「什么时候不该用生图」 |
+
+**用户说不清要什么时，先去 `prompt-craft.md` 把需求补全再出图**——
+每次调用都计费，用一次对话把需求问清，比出三张废图便宜。
 
 ---
 
@@ -107,7 +152,7 @@ curl --max-time 300 -s -X POST \
   "$DOUBAOYA_BASE_URL/api/skills/gpt-image-gen/invoke" \
   -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"一只戴着耳机的卡通鸭子，坐在书桌前写稿，暖色调，扁平插画风","size":"1024x1024"}' \
+  -d '{"prompt":"一只戴着耳机的卡通鸭子，坐在书桌前写稿，暖色调，扁平插画风"}' \
   > /tmp/img.json
 ```
 
@@ -133,8 +178,24 @@ if not imgs:
     print("成功返回但没有图像数据——如实告诉用户拿不到图，别编一个地址"); sys.exit(1)
 ext = {"image/jpeg": "jpg", "image/png": "png"}.get(imgs[0].get("mime"), "png")
 path = f"./doubaoya-image.{ext}"
-open(path, "wb").write(base64.b64decode(imgs[0]["b64"]))
-print("已保存：", path)
+raw = base64.b64decode(imgs[0]["b64"])
+open(path, "wb").write(raw)
+
+# 红线六：核实真实宽高。size 是建议不是契约，上游可能给你另一个尺寸。
+import struct
+w = h = None
+if raw[:2] == b"\xff\xd8":                       # JPEG：找 SOF 段
+    i = 2
+    while i < len(raw) - 9:
+        if raw[i] != 0xFF: i += 1; continue
+        m = raw[i+1]
+        if m in (0xC0,0xC1,0xC2,0xC3,0xC5,0xC6,0xC7,0xC9,0xCA,0xCB,0xCD,0xCE,0xCF):
+            h, w = struct.unpack(">HH", raw[i+5:i+9]); break
+        if m in (0xD8,0xD9) or 0xD0 <= m <= 0xD7: i += 2; continue
+        i += 2 + struct.unpack(">H", raw[i+2:i+4])[0]
+elif raw[:8] == b"\x89PNG\r\n\x1a\n":              # PNG：IHDR 定长
+    w, h = struct.unpack(">II", raw[16:24])
+print("已保存：", path, f"实际尺寸 {w}x{h}" if w else "（尺寸未识别）")
 PY
 ```
 
@@ -174,7 +235,7 @@ PY
 
 | 方法 | 路径 | 入参 | 返回 | 计费 |
 |---|---|---|---|---|
-| POST | `/api/skills/gpt-image-gen/invoke` | `prompt`（必填）、`size`（如 `1024x1024`；封面常用 `1536x1024`）、`referenceImage`（可选，图片 URL，带上即为改图） | `{source, taskId, status, images:[{b64, mime}]}` | 计费 |
+| POST | `/api/skills/gpt-image-gen/invoke` | `prompt`（必填）、`referenceImage`（可选，图片 URL，带上即为改图）、`size`（**建议值，不保证**，见红线六） | `{source, taskId, status, images:[{b64, mime}]}` | 计费 |
 
 > 🔴 **调用路径是 `/invoke` 不是 `/call`。** 产品化 Skill 一律走 `POST /api/skills/<slug>/invoke`；
 > 拿数据能力的 slug 去打这条路径会 404 `SKILL_NOT_FOUND`。
