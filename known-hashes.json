@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T06:01:31.774836+00:00",
+  "generatedAt": "2026-08-21T06:41:20.694324+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -73,10 +73,12 @@
       "9c4f8edfa780",
       "a4d72b56310c",
       "e0ef82da64ee",
+      "eeb802ec9c70",
       "fccf378e28ef"
     ],
     "dby-api": [
-      "9b9682a7a602"
+      "9b9682a7a602",
+      "bcf26b4eca1f"
     ],
     "dby-banned-words": [
       "f124f3174c56"
@@ -94,7 +96,8 @@
     ],
     "dby-publish": [
       "1395aeae698c",
-      "487cb9172be9"
+      "487cb9172be9",
+      "afeb6e003c90"
     ],
     "dby-rewrite": [
       "db8a6e744f97"
