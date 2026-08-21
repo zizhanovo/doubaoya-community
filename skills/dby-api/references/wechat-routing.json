@@ -6,6 +6,7 @@
       "priority": 95,
       "terminal_skill": "dby-publish",
       "candidate_skills": [
+        "dby-write",
         "dby-api",
         "dby-theme",
         "dby-publish",
@@ -13,6 +14,7 @@
       ],
       "use_when": [
         "user requests a complete Official Account article to be written and delivered",
+        "user asks to review how an already published article performed",
         "user requests title, cover, or compliance work on an article they are writing",
         "user requests layout rendering into Official Account HTML",
         "user requests saving an article into their own draft box",
@@ -20,14 +22,18 @@
       ],
       "target_state_gates": [
         "The user's stated target state decides how far along this route to travel; ask when it is unstated.",
-        "Target state 'a finished draft text' stops at the writing Skill; nothing downstream runs.",
+        "Writing from scratch starts at dby-write; it runs its own mainline internally and pauses only to let the user pick a headline.",
+        "Target state 'a finished draft text' stops at dby-write; nothing downstream runs.",
         "Target state 'laid-out Official Account HTML' or 'the post sitting in my own draft box' travels to dby-publish.",
-        "dby-publish writes into the user's own Official Account backend (draft only, never mass send), so it needs an explicit target state, not an inferred one."
+        "dby-publish writes into the user's own Official Account backend (draft only, never mass send), so it needs an explicit target state, not an inferred one.",
+        "Reviewing an already published article is dby-write's second mode, not a separate route."
       ],
       "auth": {
         "type": "doubaoya-api-key-plus-bound-official-account",
         "requires_doubaoya_api_key": true
-      }
+      },
+      "mainline_owner": "dby-write",
+      "mainline_note": "The seven-step writing mainline is defined once, inside dby-write. Do NOT restate the steps here — a mainline copied into a second place drifts, and a pointer to a place that does not exist is worse than no pointer (the agent looks, fails to find it, then invents its own)."
     },
     {
       "id": "doubaoya-cloud-public-data",
