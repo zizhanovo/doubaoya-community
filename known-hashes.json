@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T08:53:56.587479+00:00",
+  "generatedAt": "2026-08-22T08:54:23.432267+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -99,6 +99,7 @@
       "c3738aab09a9"
     ],
     "dby-gateway": [
+      "64220c7bed79",
       "b798cca6be87",
       "e1dc9e3d282e"
     ],
@@ -123,6 +124,7 @@
       "487cb9172be9",
       "5351f7c56f8f",
       "5e2022f6120b",
+      "76caa2a60c4e",
       "afeb6e003c90",
       "d7c7ce4c8a76",
       "da136cf9613a",
@@ -2233,6 +2235,12 @@
         "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
       },
       {
+        "hash": "64220c7bed79",
+        "version": "1.0.1",
+        "date": "2026-08-22",
+        "subject": "fix(dby-publish,dby-gateway): 撤回我上一轮的违规改动，并给能力索引加可执行的过期自查"
+      },
+      {
         "hash": "e1dc9e3d282e",
         "version": "1.0.0",
         "date": "2026-08-22",
@@ -2379,6 +2387,12 @@
         "version": "2.0.0",
         "date": "2026-08-22",
         "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+      },
+      {
+        "hash": "76caa2a60c4e",
+        "version": "2.0.1",
+        "date": "2026-08-22",
+        "subject": "fix(dby-publish,dby-gateway): 撤回我上一轮的违规改动，并给能力索引加可执行的过期自查"
       }
     ],
     "dby-rewrite": [
