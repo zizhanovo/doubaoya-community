@@ -1,4 +1,4 @@
-# wechat-article-pipeline · 公众号图文流水线（都爆鸭）
+# dby-publish · 公众号图文流水线（都爆鸭）
 
 把一篇**已经写好的** Markdown / HTML，走一串**确定性的机械步骤**，最终存进你自己公众号的**草稿箱**——
 **只存草稿，绝不群发**。存完给你 `mediaId`，你再去公众号后台亲眼确认、手动群发。
@@ -78,3 +78,30 @@ wechat-article-pipeline/
 ## License
 
 MIT — 见 [`LICENSE`](./LICENSE)。
+
+---
+
+## 最近变更
+
+- **合并原「公众号草稿发布」包（已下架）**：`unify-dby-naming` 改名车把本包的老目录名
+  改成 `dby-publish` 的同时吸收了它——原包的 Python 入口 `publish_draft.py` 与「存公众号草稿 /
+  公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add」触发词并入本包，见
+  `SKILL.md` 的「只想存草稿、不要排版」一节。
+- **调用知识改成网关委托形态**：本 Skill 用到的三条能力现在 operationKey 与详情端点一起点名，
+  调用协议逐字内联（该节后来搬进了 [`references/protocol.md`](./references/protocol.md)，正文只留判断类红线），
+  **入参规格一律调用前从详情端点现拉**——原来烤在正文里的返回字段表与计价数字已整段删掉
+  （烤进分发物的契约必然漂，而价格会静默调整）。**十步 SOP 与终态判断一步没动。**
+  （第 5 步当时被说成两条路；**现已收敛为只走平台渲染**，见下条。）
+- **流水线的 md→HTML 已改为只走平台渲染**（`POST /api/wechat/render`）：主题由服务端套，
+  产物自带在线预览链接（`detailUrl`），渲染失败一律中止、不回退本机渲染器。
+  「拉服务端编译主题回本机套用」那套整个退场——主题从此只有一个事实源。
+  同时那套自定义组件语法（关注卡 / 金句 / 花式标题 / 分割，冒号围栏写法）**已整体移除**，
+  平台渲染器不解析它。改用普通 Markdown：金句用引用块、小节标题用二级标题、分割用 `---`；
+  引导关注卡没有等价替代，需要的话在公众号编辑器里手工插。
+  （这里刻意不写出那套记号的字面形式 —— 写出来就等于把它重新放进上下文，
+  而它现在写了不会报错、只会原样漏成正文里的几个字符。）
+  本机渲染器 `render-wechat-html.mjs` 保留，只服务设计工作台与「无密钥先看排版」。
+  `validate-theme.mjs` 对 engine-2 主题（`meta.engine:2` / `tokens` / 带点号 token）
+  仍是**硬错误**——这类主题只能用服务端编译版。
+- 默认 Markdown 排版主题已切为 `benya-clean`（本鸭 · 知识清爽）。想沿用旧版
+  `magazine`（杂志风）的，在 `config.json` 里把 `mdTheme` 指回 `themes/magazine.json`，或渲染时加 `--theme themes/magazine.json`。
