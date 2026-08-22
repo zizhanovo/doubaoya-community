@@ -1,7 +1,7 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、跨平台合规、违禁词检测、敏感词、违规词、限流自查、广告法。
-version: 1.0.0
+version: 1.0.1
 compatibility: >-
   需要 Python 3（`scripts/check_multi.py` 只用标准库，不装任何 pip 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
@@ -90,7 +90,7 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
   "requestId": "req_xxx",
   "data": {
     "source": "contentSafety.sensitiveWords",
-    "content": "这款美白神器<span>三天见效</span>，<span>全网最低价</span>",
+    "content": "这款美白神器三天见效，<span class=\"sensitive-word\">全网</span><span class=\"banned-word\">最低</span>价",
     "originalContent": "这款美白神器三天见效，全网最低价",
     "prohibitedWordsType": ["禁用词", "敏感词"],
     "raw": {}
@@ -105,11 +105,17 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
   | 字段 | 含义 |
   | ---- | ---- |
   | `originalContent` | 未标注的原文 |
-  | `content` | 标注版正文，命中处被 HTML 标签包裹——**唯一**能定位「哪几个词命中」的地方 |
+  | `content` | 标注版正文，命中处被 `<span>` 包裹——**唯一**能定位「哪几个词命中」的地方。类名带信息：`banned-word` = 禁用词，`sensitive-word` = 敏感词，与 `prohibitedWordsType` 里的类别一一对应 ⇒ **能逐词说出它是哪一类**（2026-08-22 实测）|
   | `prohibitedWordsType` | 命中的风险**类别**数组（类别名，不是命中词） |
   | `source` / `raw` | 来源标识与上游原始返回 |
 
 > 🔴 接口**不返回**「风险等级」「命中词清单」「替换建议」这三类字段，别去读不存在的字段。
+> 命中词要靠上面那条从 `content` 的 `<span>` 里取，替换建议由你结合上下文给。
+
+> 🔴 **零命中也照样计费，这是对的，别当成 bug 报给用户。**
+> 平台别处有「查无结果不收费」的口径（`NO_RESULT`），容易让人反推成「没查出违禁词就该免费」——
+> 反了：**检测跑完了、结论是「干净」，那正是用户要买的答案**。
+> 2026-08-22 实测：一段干净文案返回 `prohibitedWordsType: []`、`content` 与 `originalContent` 相等，照常扣费。
 
 ### 每个平台怎么判「有没有命中」
 
