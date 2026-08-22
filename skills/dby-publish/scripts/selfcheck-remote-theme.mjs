@@ -238,6 +238,55 @@ async function main() {
     ok("显式主题 → themeJson / themeId 正确进请求体");
   }
 
+  // ---- 4a2. 🔴 notice 必须被接住并原样带出 -------------------------------
+  // 2026-08-21 实撞：服务端老实在成功信封上挂了「你安装的 skill 有更新」，
+  // 而**本包 17 个脚本里 notice 出现次数是 0** —— 转手就丢，用户永远不知道有更新。
+  // SKILL.md 明写「原样转达给用户」，文档承诺过、代码没实现。
+  // 同一条链上的另一半（服务端三条专用路由传 null）同日已修；只修一半等于没修。
+  {
+    const NOTICE = "你安装的「dby-publish」skill 有更新，运行 /dby-update 获取最新版本。";
+    const stub = await bodyReadingStub((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          requestId: "req_selfcheck",
+          data: { html: "<section>正文</section>", themeSource: "userDefault:t_1" },
+          error: null,
+          notice: NOTICE,
+          detailUrl: "https://doubaoya.com/dashboard/preview?call=req_selfcheck",
+        })
+      );
+    });
+    const out = await renderViaPlatform({ baseUrl: stub.baseUrl, apiKey: "dyh_test", markdown: "x" });
+    stub.close();
+    assert.equal(out.notice, NOTICE, "notice 必须被接住并**逐字**带出（原样转达，一个字不改）");
+
+    // 反面：信封里没有 notice 时不许凭空造一个。
+    const stub2 = await bodyReadingStub((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(okEnvelope());
+    });
+    const out2 = await renderViaPlatform({ baseUrl: stub2.baseUrl, apiKey: "dyh_test", markdown: "x" });
+    stub2.close();
+    assert.equal(out2.notice, null, "信封里没有 notice 时应为 null，不许凭空造");
+
+    // 🔴 接住了还不够 —— 必须真的**打给用户**。判据落在源码上：
+    //    回报里要有它，否则就是"读了但没人看见"（等于没读）。
+    const src = await readFile(path.join(__dirname, "pipeline.mjs"), "utf8");
+    const shown = src.split("\n").filter((l) => /skillNotice/.test(l) && /技能更新/.test(l));
+    assert.ok(shown.length >= 2, `notice 必须出现在**两处回报**里（dry-run 与正式），现在 ${shown.length} 处`);
+    // 🔴 光有"两处提到"还不够 —— 赋值必须是**原样透传**。
+    //    实测过一次漏网：把 `skillNotice = rendered.notice` 改成 `skillNotice = "有更新"`，
+    //    上面那条照样绿（两处回报还在，只是内容被换成了自己编的话）。
+    //    SKILL.md 承诺的是「原样转达」，改一个字都不算。
+    assert.ok(
+      /skillNotice\s*=\s*rendered\.notice\s*;/.test(src),
+      "回报里的那句必须**原样**来自 rendered.notice，不许改写、不许自己编一句"
+    );
+    ok("notice 被接住、逐字带出、并出现在两处回报里");
+  }
+
   // ---- 4b. 没有密钥 → 抛错，并指路本机渲染器（且写明它没有在线链接）--------
   {
     await assert.rejects(
