@@ -34,6 +34,7 @@ ENVELOPE_READERS = [
     "skills/dby-image/scripts/gen.mjs",
     "skills/dby-publish/scripts/gen-image.mjs",
     "skills/dby-publish/scripts/preprocess-and-publish.mjs",
+    "skills/dby-write/scripts/write.mjs",
 ]
 
 
