@@ -2,6 +2,10 @@
 name: dby-charter
 description: >-
   号章程 · 创作 DNA（都爆鸭）——一份 IP 档案管两件事：①**定位问诊**帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），产出结构化「号章程」，之后选题、写作、复盘都按它走（三个入口：L0 三问 5 分钟、L1 十五问完整问诊、老号反推）；②**文风蒸馏**从你的范文里蒸出「创作 DNA」（人设 / 赛道 / 个人产品 / 文风），之后写这个号的文章全程读它，让 AI 写得更像你本人。问诊与蒸馏都在你自己的 agent 侧用你自己的模型跑，doubaoya 只做存储与读写接口，不调 LLM、免费不扣点。触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现、IP 档案、公众号人设、文风 DNA、文风蒸馏、重新蒸馏、更新人设、个人产品、带货话术、IP 头像。
+compatibility: >-
+  需要 Node ≥18（读写章程的 scripts/charter.mjs 用全局 fetch，零依赖不装 npm 包）；
+  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
+  需要能对 https://doubaoya.com 发 HTTPS 请求。章程与档案路由**全部免费**，不调 LLM、不扣点。
 ---
 
 # 号章程 · 创作 DNA（都爆鸭）
@@ -36,6 +40,28 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 先看 `success`，为 `true` 才读 `data`，否则读 `error.code` / `error.message`。
 
 **铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。**
+
+---
+
+## 怎么读写章程
+
+读写走 **`scripts/charter.mjs`**。章程路由有两个**每次都会踩**的坑，脚本里做掉了：
+GET 回来的 `products` 是只读投影、原样 PUT 必 400；PUT 是全量替换不是增量 patch。
+
+```bash
+node scripts/charter.mjs profiles                  # 列出我的档案（id / 是否默认 / 名字）
+node scripts/charter.mjs get                       # 读默认档案的章程（原样）
+node scripts/charter.mjs get --for-edit > c.json   # 读成「可直接改再 PUT」的形态（已剥 products）
+node scripts/charter.mjs put c.json                # 全量替换（无论如何都会再剥一次 products）
+node scripts/charter.mjs selfcheck                 # 离线自检，不联网不需要 key
+```
+
+改一份现有章程的正确姿势就是这三步：`get --for-edit` → 改 `c.json` → `put c.json`。
+**别拿 `get`（不带 `--for-edit`）的输出直接 PUT**——那份带着 `products`。
+
+> 结果打 stdout，提示与更新时间打 stderr，失败以 `[HTTP CODE] message` 非零退出。
+> `CHARTER_INVALID` 的 message 是所有校验问题拼成的完整清单，**逐条改完一次性重 PUT**，
+> 不要一条一条试。
 
 ---
 
@@ -231,12 +257,10 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 
 三条注意，一条都别漏：
 
-- **回环注意（红字级，最常踩）**：GET 响应里的 `charter` 会**附带一个合成的 `products` 字段**（来自档案的
-  `productsJson`，只读投影，方便下游一次 GET 拿到完整语义）。走「**GET → 改 → PUT**」流程时
-  **必须先把 `products` 键剥掉**再 PUT，否则 400——报错信息会直接告诉你「产品请写 `productsJson`
-  （`PUT /api/ip-profile/:id`）；PUT charter 前请先剥掉 products 键」。**改产品走档案那半边**
-  （见 [`references/writing-dna.md`](references/writing-dna.md) 的「六、个人产品」），不走 charter 路由。
-- **PUT 是全量替换**：只改一个字段，也要先 GET 拿全量、改完把**整份**PUT 回去。少传的键会被判「缺失」而 400。
+- **`products` 是只读投影**：GET 回来的 charter 附带一个合成的 `products`（来自档案 `productsJson`），
+  原样 PUT 回去必 400。`scripts/charter.mjs` 已经替你剥了；**只有手写请求时才需要自己剥**。
+  改产品走档案那半边（[`references/writing-dna.md`](references/writing-dna.md) 的「六、个人产品」），不走 charter 路由。
+- **PUT 是全量替换**：只改一个字段，也要先拿全量、改完把**整份**传回去。少传的键判「缺失」而 400。
 - **无默认档案时 `GET /api/ip-profile/charter` 返回 404**。先建档
   （`POST /api/ip-profile`，流程见 [`references/writing-dna.md`](references/writing-dna.md) 的
   「一、第一次建档」），拿到档案 id，再回来存章程。
@@ -262,50 +286,11 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 > **先自查 body 里有没有 `__proto__` 键**——这类 body 在网关层就被拦掉了，拿不到逐条 errors。
 > 章程结构里本来也不该出现这个键。
 
-### curl 示例：PUT 一份 L0 骨架章程
+### 手写请求（一般不用）
 
-```bash
-curl -s -X PUT https://doubaoya.com/api/ip-profile/<id>/charter \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "version": 1,
-    "positioning": {
-      "oneLiner": "带体制内年轻人过晋升答辩这一关",
-      "domain": "",
-      "niche": "",
-      "tag": ""
-    },
-    "audience": {
-      "persona": "28-35 岁体制内科员，卡在职级晋升，答辩前一周最焦虑",
-      "decisionScene": "",
-      "payerNote": ""
-    },
-    "monetization": {
-      "path": "product",
-      "practicalPaths": [],
-      "stage": "",
-      "gapNote": ""
-    },
-    "northStar": {
-      "metric": "",
-      "rationale": ""
-    },
-    "review": {
-      "lastReviewedAt": "",
-      "nextTrigger": ""
-    }
-  }'
-```
-
-成功返回 `data.charter`（落库原样，不含 `products`）与刷新后的 `data.charterUpdatedAt`。
-
-读回来核对：
-
-```bash
-curl -s https://doubaoya.com/api/ip-profile/charter \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY"
-```
+正常走 `scripts/charter.mjs`（见上面「怎么读写章程」）。
+只有在没有 Node、或要把这条路嵌进别的程序时才手写——那时**自己记得剥 `products`**、
+并且 PUT **整份**而不是增量。
 
 ---
 
@@ -331,18 +316,3 @@ curl -s https://doubaoya.com/api/ip-profile/charter \
 - **charter 路由只写章程**。个人产品（`productsJson`）、人设、文风 DNA 走档案路由
   （`PUT /api/ip-profile/:id`），别试图从 charter 写它们——回环那条注意说的就是这件事。
 - **铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 所有请求只发往 **doubaoya.com**。
-
----
-
-## 目录结构
-
-```
-dby-charter/
-├── SKILL.md            # 两件事的入口：教练流程与七条红线 + 全部 API 契约
-└── references/         # 按需加载
-    ├── frameworks.md   # 定位框架
-    ├── monetization.md # 变现路径与硬门槛数据（2026-08 快照）
-    ├── diagnosis.md    # 死法清单与三层脱节诊断
-    ├── intake.md       # 15 问问诊清单与追问技巧
-    └── writing-dna.md  # 文风蒸馏与档案维护（原 ip-profile 包）
-```
