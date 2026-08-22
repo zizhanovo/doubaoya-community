@@ -45,8 +45,26 @@ python3 tools/build_known_hashes.py >/dev/null || {
   exit 1
 }
 
-# 只 add 派生物本身，绝不 git add -A —— 多会话共用同一工作树时，
-# 全量 add 会把别人在途的改动卷进你的提交（本仓已踩过，见 cd8f4e5）。
-git add versions.json known-hashes.json 'skills/*/.version' 2>/dev/null || true
+# 🔴 只 stage **本次暂存区真正涉及的那几个包**的戳。
+#
+# 第一版写的是 `git add 'skills/*/.version'` —— 实测是个真 bug：
+# stamp_versions.py 盖的是**全部**包，于是别人在途（未提交）那些包的戳
+# 也会被一起塞进你的提交，把他的中间状态固化进共享生成物。
+# 造场景实测过：我只暂存 dby-api/README.md，跑完钩子后
+# dby-banned-words/.version（另一个包的在途改动）也进了暂存区。
+# 多会话共用同一工作树时这就是 cd8f4e5 那次「全量 add 卷走他人改动」的翻版。
+touched=$(git diff --cached --name-only --diff-filter=ACMRD \
+  | awk -F/ '$1=="skills" && NF>=2 {print $2}' | sort -u)
+for slug in $touched; do
+  [ -f "skills/$slug/.version" ] && git add "skills/$slug/.version"
+done
+
+# ⚠️ versions.json 与 known-hashes.json 是全仓聚合物，天然无法只带一部分。
+# 它们此刻的内容里可能含别人在途包的哈希 —— 但那是**工作树**的事实，
+# 而闭集读的是**已提交**历史，所以 known-hashes.json 不受影响；
+# versions.json 确实会含在途值。这一条由 tools/tests 的闸兜底：
+# 别人提交他那个包时会把 versions.json 一并纠正回去，而在此之前
+# 「versions.json 与 .version 漂了」那条断言会红，不会静默。
+git add versions.json known-hashes.json 2>/dev/null || true
 
 exit 0

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# 推之前只拦一件事：**戳落后于内容**。
+#
+# 为什么只拦这一条：它是本仓唯一一个「推出去就会伤到用户、而且任何常规检查都不会红」
+# 的产物缺陷 —— 戳落后 ⇒ 用户看到更新提示 → 听话升级 → 装到的还是旧戳 →
+# 提示不消失，永远循环，专打守规矩的人。详见 docs/hooks.md。
+#
+# 🔴 刻意**不**在这里跑全量 pytest / validate。本仓 pre-push 的邻居（主仓）注释里
+#    论证过同一条：阻塞式闸一旦慢或吵，第二次就有人 --no-verify，第三次成肌肉记忆，
+#    然后真该拦的那天它也被跳过。这里只放一条、跑 0.1 秒、零假阳性的。
+#
+# 绕过：git push --no-verify —— 但那样推出去的戳与内容不一致。
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+python3 -m pytest tools/tests/test_version_stamp_consistency.py -q --no-header 2>&1 | tail -5 || {
+  echo "" >&2
+  echo "🔴 版本戳与内容不一致，已拦住这次 push。" >&2
+  echo "   修：python3 tools/stamp_versions.py && python3 tools/build_known_hashes.py，把产物一并提交。" >&2
+  echo "   （启用 git config core.hooksPath .githooks 之后 pre-commit 会自动做，见 docs/hooks.md）" >&2
+  exit 1
+}

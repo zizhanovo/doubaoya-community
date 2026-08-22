@@ -113,3 +113,27 @@ def test_versions_manifest_与各包的_version_一致() -> None:
         and manifest[d.name] != (d / ".version").read_text(encoding="utf-8").strip()
     ]
     assert not drift, "versions.json 与 .version 漂了：\n  " + "\n  ".join(drift)
+
+
+def test_钩子启用状态_只提醒不拦截() -> None:
+    """`core.hooksPath` 没配时提醒一句，但**不判失败**。
+
+    🔴 为什么不红：没配钩子本身不产生任何错误产物 —— 真正会出事的是
+    「戳落后于内容」，那条已经由上面的断言硬拦。在这里红等于用一条
+    与产物无关的理由拦住所有没配钩子的人，而本仓 pre-push 的注释里论证过：
+    **阻塞式闸一旦吵，第二次就有人绕过，第三次成肌肉记忆，然后真该拦的那天它也被跳过。**
+
+    所以这里只 print。判据留给会出事的那一条。
+    """
+    import subprocess
+
+    got = subprocess.run(
+        ["git", "config", "--get", "core.hooksPath"],
+        cwd=ROOT, capture_output=True, text=True,
+    ).stdout.strip()
+    if got != ".githooks":
+        print(
+            "\n⚠️ 本机没启用提交钩子（core.hooksPath 现在是 "
+            f"{got or '(未设)'}）——每次改 skills/ 都要手动跑两个生成器。"
+            "\n   启用：git config core.hooksPath .githooks   （详见 docs/hooks.md）"
+        )
