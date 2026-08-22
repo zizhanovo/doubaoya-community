@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# 内容改动与它的派生物（版本戳 + 历史闭集）**同笔提交**。
+#
+# 为什么有这个钩子：本仓此前每改一次 skill 要落三笔 —— 内容 → 版本戳 → 闭集，
+# 而后两笔全是派生物。两天里两个会话各自重复了五轮以上。
+#
+# 🔴 但真正的理由不是"烦"，是那条**静默**的失败模式：漏掉版本戳那一笔时，
+#    .version 停在旧哈希，而服务端从主仓同步的快照算出的是新哈希；
+#    更新提示的判据是「哈希不等即提示、无新旧概念」⇒
+#      用户看到提示 → 听话升级 → 装到的还是停在旧戳的包 → 提示不消失，永远循环。
+#    **专打守规矩的用户**，而且任何闸都不会因此变红 —— 推完看到的一切都是绿的。
+#    把派生物和内容放进同一笔，这个缝就不存在了。
+#
+# 启用（core.hooksPath 是本机 git config，不随 clone 生效）：
+#     git config core.hooksPath .githooks
+# ⚠️ 没配的人钩子静默不生效 —— 这正是本仓要消灭的那种静默，所以**不能只靠钩子**：
+#    tools/tests/test_version_stamp_consistency.py 是独立的保证层，pytest 与 pre-push 都跑得到。
+#    钩子是便利（不必记得），闸是保证（漏了会红）。
+#
+# 只在 skills/ 真被动过时才跑；其余提交零开销、零输出。
+# 绕过：git commit --no-verify —— 但那样提交出来的戳与内容不一致，
+#      上面那条假更新循环就会发生在你的用户身上。
+set -euo pipefail
+
+# 暂存区里有没有 skills/ 下的改动（含新增/删除/改名）
+if ! git diff --cached --name-only --diff-filter=ACMRD | grep -q '^skills/'; then
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+python3 tools/stamp_versions.py >/dev/null || {
+  echo "🔴 盖版本戳失败。修好再提交；确实要跳过：git commit --no-verify" >&2
+  echo "   ⚠️ 跳过的后果：戳与内容不一致 → 已装该版本的用户陷入" >&2
+  echo "      「看到提示 → 升级 → 装到的仍是旧戳 → 提示不消失」的循环。" >&2
+  exit 1
+}
+
+# 🔴 闭集读的是**已提交**历史，所以它此刻算出来的不含正在提交的这一版 —— 这是对的，
+#    不需要补偿：三值裁决里「等于 latest → 沉默」那一档已经覆盖了最新版用户；
+#    等他们的版本变成"历史版本"（下一版发布）时，那一版早就在闭集里了。
+python3 tools/build_known_hashes.py >/dev/null || {
+  echo "🔴 重建闭集失败。修好再提交；确实要跳过：git commit --no-verify" >&2
+  exit 1
+}
+
+# 只 add 派生物本身，绝不 git add -A —— 多会话共用同一工作树时，
+# 全量 add 会把别人在途的改动卷进你的提交（本仓已踩过，见 cd8f4e5）。
+git add versions.json known-hashes.json 'skills/*/.version' 2>/dev/null || true
+
+exit 0
