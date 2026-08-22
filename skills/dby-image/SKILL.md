@@ -18,7 +18,7 @@ compatibility: >-
 
 ---
 
-## 🔴 七条先读，出错时读就晚了
+## 🔴 八条先读，出错时读就晚了
 
 ### 一、超时之后，绝不重试
 
@@ -53,6 +53,9 @@ curl --max-time 300 ...     # curl 显式设
 这条能力的示例曾经就是那么写的，让调用方一路找不到图。
 
 你要做的是**解码、落盘、把文件路径给用户**。
+
+⚠️ **扩展名按 `mime` 定，别写死。** 实测：文生图返回 `image/jpeg`（约 160–220KB），
+改图返回 `image/png`（可达 1.7MB，差一个量级）。按扩展名做假设的下游会踩空。
 
 ### 四、图里的事实同样不许编造
 
@@ -91,21 +94,72 @@ curl --max-time 300 ...     # curl 显式设
 ⇒ 需要**精确像素尺寸**：上游给不了，只能拿到图之后自己裁 / 缩。
 ⇒ 落盘后核一遍真实宽高（下面的脚本已经在做）。
 
-### 七、这些事当前后端做不到，别照着别的工具答应用户
+### 七、参数看三态，别只问「支不支持」
 
-外面的生图 skill（如 GPT-Image2 那类直连 OpenAI 的）功能表更长，用户可能照着提要求。
-当前后端 `inputSchema` **只有 `prompt` 与 `referenceImage` 两个字段**：
+「这个参数支不支持」这个问法本身会骗人。有的参数**收下了却不起作用**（试一次没损失），
+有的参数**收下了、送出去了、还照收钱，但产物拿不回来**（试一次白付钱）。
+所以每个参数拆成三态看：
 
-| 用户可能会要 | 能不能 | 怎么答 |
-|---|---|---|
-| 多张参考图一起融合 | ❌ | 只收**一张** `referenceImage`；建议先把多张拼成一张再传 |
-| 局部重绘 / mask 蒙版 | ❌ | 无 mask 参数；替代方案是**整图改图**，在 prompt 里描述只改哪里 |
-| `quality` 高低档省钱 | ❌ | 无质量档位，每次一个价 |
-| 一次出 N 张候选 | ❌ | 要多次调用，**每次单独计费**——先告诉用户再跑 |
-| 指定精确像素尺寸 | ❌ | `size` 参数完全无效（红线六）。比例写进 prompt，精确尺寸自己裁 |
+| 参数 | 入参收 | 服务端透传 | 上游生效 | 怎么用 |
+|---|---|---|---|---|
+| `prompt` | ✅ | ✅ | ✅ | **唯一真正控制画面的东西** |
+| `referenceImage` / `imageUrl` / `images[]` | ✅ | ✅ **最多 3 张** | ✅ | 见下面「参考图」一节 |
+| `operation` | ✅ | ✅ | ✅ | 不必传：带了参考图自动走改图 |
+| `quality` | ✅ | ✅ **仅文生图** | ✅ 生效 | 默认 `medium`，要不要改见下 |
+| `n` | ✅ | ✅ | ✅ **按份数计费** | 🔴 **禁传**，见红线八 |
+| `size` | ✅ | ✅ | ❌ 上游忽略 | 无效，比例写进 prompt（红线六） |
+| `background` | ✅ | ❌ 服务端硬编码 | — | 死参数，**做不到透明底** |
+| `outputFormat` | ✅ | ❌ 服务端硬编码 | — | 死参数，文生图恒 jpeg |
+| `modelName` | ✅ | ❌ 服务端用自己的 | — | 死参数，换不了模型 |
 
-**如实说不能，别硬凑。** 用户拿着外部工具的功能表来问，答「我们这边是另一条通道，没有这个参数」
-比含糊带过好。
+**仍然做不到的，如实说不能，别硬凑：**
+
+| 用户可能会要 | 怎么答 |
+|---|---|
+| 局部重绘 / mask 蒙版 | 无 mask 参数；替代是**整图改图**，在 prompt 里描述只改哪里 |
+| 指定精确像素尺寸 | `size` 无效（红线六）；比例写进 prompt，精确尺寸拿到图之后自己裁 |
+| 一次出 N 张候选 | **多次独立调用**，每次单独计费——先把总价告诉用户再跑。🔴 不要用 `n` |
+| 透明底 / 换输出格式 / 换模型 | 三个字段服务端不读，传了等于没传 |
+
+#### `quality`：生效，但默认不动
+
+2026-08-21 受控实测（同一句 prompt，两档交替各 3 张）：
+
+| 档位 | 分辨率 | 文件大小 | 耗时 |
+|---|---|---|---|
+| `medium`（默认） | 1672×941 | 189 / 184 / 185 KB | 53 / 31 / 47 s |
+| `high` | 1672×941 | 213 / 197 / 222 KB | 45 / 32 / 50 s |
+
+⇒ **它确实生效**（与 `size` 不同）：同分辨率下 high 体积一致高出约 13%，三对无重叠。
+⇒ **但「high 更好看」这件事没有被证实**——3 张样本不足以支撑这个结论。
+⇒ **而且改档的代价未知**：上游按 quality 怎么计价查不到，我方每次固定收同样的点数。
+
+**所以默认不要动它。** 用户明确问起时，如实说这三句：生效、更好未证实、代价未知，
+由他决定要不要试。**别自己顺手加 `"quality":"high"`。**
+
+#### 这张表怎么复核（表会过期，端点不会）
+
+```bash
+curl --max-time 30 -s "$DOUBAOYA_BASE_URL/api/skills/gpt-image-gen" \
+  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
+  | python3 -c "import json,sys; print(sorted((json.load(sys.stdin)['data']['inputContract']['jsonSchema'].get('properties') or {}).keys()))"
+```
+
+拉回来的字段集应当与上表「入参收」那一列**一字不差**。对不上说明这张表过期了——
+**以端点为准，并把表改对**，别让两份说法并存。
+
+⚠️ 端点只答得了「字段在不在」，答不了「传了有没有用」——它的 JSON Schema 不带任何字段描述。
+后两列只能靠实测，本表实测日期 **2026-08-21**。
+
+### 八、`n` 绝对不要传——它按份数收钱，只还你一张
+
+`n` **不是**「不支持」。它入参收、服务端照传、上游**按 n 张计费**，
+而取回结果时只返还第一张。传 `n:3` = **付三张的钱拿一张图，全程没有任何报错**。
+
+用户要多张候选，就**多次独立调用**，并在开跑前把总计费告诉他。
+
+> 「做不到」和「会静默多收钱」是两回事。
+> 前者试一次的代价是失败，后者试一次的代价是钱——而且你不会知道。
 
 ---
 
@@ -138,6 +192,7 @@ curl --max-time 300 ...     # curl 显式设
 | **L3** 场景骨架 | 做各平台的封面 / 插图 | 按平台挑：[公众号](references/scenes-wechat.md) / [小红书](references/scenes-xiaohongshu.md) / [抖音·视频号·快手](references/scenes-video.md) |
 | **L4** 改图 | 已经有图要动它 | [`editing.md`](references/editing.md) |
 | **风格** | 用户想看看有什么选择 | [`styles.md`](references/styles.md)（**菜单，不是默认值**） |
+| **验收** | **每次出图之后，必做** | [`visual-review.md`](references/visual-review.md)（不花钱） |
 
 🔴 **一次只加一个维度。** 同时加三个，出来还不对时你无法知道是哪一个没生效，
 下一轮只能全推倒——而每一轮都花钱。
@@ -178,13 +233,48 @@ curl --max-time 300 -s -X POST \
   > /tmp/img.json
 ```
 
-### 图生图 / 改图
+### 图生图 / 改图（参考图 1–3 张）
 
-多带一个 `referenceImage`（图片 URL）：
+带上参考图即为改图，**不用传 `operation`**。三种形态都收：
+
+| 形态 | 写法 |
+|---|---|
+| 公网 URL | `"referenceImage":"https://example.com/ref.png"` |
+| `data:` URI | `"referenceImage":"data:image/png;base64,iVBOR…"` |
+| 裸 base64 | `"referenceImage":"iVBOR…"` |
+
+**本机文件直接就能用**——读盘转成 `data:` URI 送出去，不需要先传图床：
 
 ```bash
--d '{"prompt":"把背景换成夜晚的书房","referenceImage":"https://example.com/ref.png"}'
+python3 - "把背景换成夜晚的书房" ./ref.png > /tmp/req.json <<'PY'
+import base64, json, mimetypes, sys
+prompt, path = sys.argv[1], sys.argv[2]
+mime = mimetypes.guess_type(path)[0] or "image/png"
+b64 = base64.b64encode(open(path, "rb").read()).decode()
+print(json.dumps({"prompt": prompt, "referenceImage": f"data:{mime};base64,{b64}"},
+                 ensure_ascii=False))
+PY
+
+curl --max-time 300 -s -X POST \
+  "$DOUBAOYA_BASE_URL/api/skills/gpt-image-gen/invoke" \
+  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data-binary @/tmp/req.json > /tmp/img.json
 ```
+
+**多张参考图**用 `images` 数组（同样三种形态混着放都行）：
+
+```bash
+-d '{"prompt":"把左边那只鸭子放进右边的场景","images":["data:image/png;base64,…","https://example.com/scene.png"]}'
+```
+
+🔴 **上限 3 张。** 超过 3 张时**告诉用户上限、请他挑**——服务端会静默丢掉多余的，
+你替他选等于让他不知道哪几张真的起了作用。
+
+⚠️ 单张 ≤10MB。服务端只按字节签名认图，改扩展名没用。
+
+> 系列图想保持同一个形象/风格：把**上一张出好的图**当参考图传进去，
+> 配上 `prompt-ladder.md` 的变量骨架。这是让「一个号的图看起来是同一个号的」最省力的办法。
 
 ### 落盘（第三条红线的落地）
 
@@ -223,6 +313,20 @@ PY
 
 把**文件路径**交给用户，不要把 base64 打进对话。
 
+### 🔴 落盘之后还有一步：验收这张图
+
+**别把「调用成功」当成「拿到了对的图」。** 读回刚落盘的那个文件，
+对着这次的请求逐条核一遍，再交给用户。
+
+这一步**不花钱**（读本地文件，零调用），是唯一不加成本就能提升交付质量的位置。
+
+- 核对表**从这次的请求生成**——用户原话里的可数元素、点名的图内文字、你加的 L1 客观约束。
+  用户没说的不进表。
+- **只判可证伪的**，不判好不好看。审美属于用户。
+- **零自动重出**：报告缺陷 + 给一条定向修复提示词 + 问他要不要再花一次钱。
+
+完整做法（含判定写法、常见缺陷、完整实例）：[`references/visual-review.md`](references/visual-review.md)
+
 ---
 
 ## 调用前先说一句
@@ -255,9 +359,13 @@ PY
 
 ## API 契约
 
-| 方法 | 路径 | 入参 | 返回 | 计费 |
-|---|---|---|---|---|
-| POST | `/api/skills/gpt-image-gen/invoke` | `prompt`（必填）、`referenceImage`（可选，图片 URL，带上即为改图）、`size`（**建议值，不保证**，见红线六） | `{source, taskId, status, images:[{b64, mime}]}` | 计费 |
+| 方法 | 路径 | 返回 | 计费 |
+|---|---|---|---|
+| POST | `/api/skills/gpt-image-gen/invoke` | `{source, taskId, status, images:[{b64, mime}]}` | 计费 |
+
+入参：`prompt` 是**唯一必填**。其余字段一律看红线七那张三态表——
+那里分清了「收但没用」（`size`）、「收了还多收钱」（`n`）、「服务端根本不读」
+（`background` / `outputFormat` / `modelName`）三种完全不同的情况。
 
 > 🔴 **调用路径是 `/invoke` 不是 `/call`。** 产品化 Skill 一律走 `POST /api/skills/<slug>/invoke`；
 > 拿数据能力的 slug 去打这条路径会 404 `SKILL_NOT_FOUND`。
