@@ -8,7 +8,7 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.0.1
+version: 2.0.2
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -450,9 +450,19 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 校验器是 `scripts/validate-theme.mjs`。本机预览用 `scripts/render-wechat-html.mjs --theme`；走流水线时 `pipeline.mjs --theme <path>` 会**先在本机校验再整套送去平台渲染**。
 
 > **写主题是一次性的活**；产出的 `theme.json` 之后一直用。默认主题是 `themes/benya-clean.json`
-> （本鸭精品「知识清爽」风，**推荐**）。不想从零写？先从内置主题
-> `themes/benya-clean.json`（默认/推荐）/ `themes/magazine.json` / `themes/minimal.json` / `themes/knowledge.json`
-> 里挑一个最接近的**复制再改**。
+> （本鸭精品「知识清爽」风，**推荐**）。不想从零写？**先看有哪些现成的，别照文档里的名字猜**：
+>
+> ```bash
+> ls themes/*.json          # 包内自带的起手主题，挑一个最接近的复制再改
+> ```
+>
+> 🔴 **这里刻意不列清单**：2026-08-22 实测，包内自带 **15 个**主题，而此处原先只写了 4 个
+> —— 等于把用户的选择从 15 砍到 4（整个 `wewrite-*` 与 `doocs-*` 家族都被藏掉了）。
+> 写死的清单只会往少了漂，而漂了没有任何地方会报错。
+>
+> ⚠️ **服务端的内置目录比包内更全**（实测 19 vs 15，多出 `dark-tech` 等 4 个）。
+> 要挑那几个就走 API 路：`GET /api/wechat/themes` 的 `builtin`，或直接用 `dby-theme`
+> ——它本来就是「列出来再挑」的形态，不写死名字。
 
 ### 路径 A：复刻一篇公众号文章的排版（给 URL）
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T09:44:31.934520+00:00",
+  "generatedAt": "2026-08-22T11:25:20.558263+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -120,6 +120,7 @@
     "dby-publish": [
       "032593ba063c",
       "117097d50326",
+      "134cdd2b4c29",
       "1395aeae698c",
       "14ab4254e81a",
       "351676ef5646",
@@ -2131,6 +2132,12 @@
         "version": "1.0.0",
         "date": "2026-08-21",
         "subject": "fix(dby): 主路由补上 dby-image —— 它是唯一一个主路由从头到尾没提过的包"
+      },
+      {
+        "hash": "54ce465091b2",
+        "version": "1.0.1",
+        "date": "2026-08-22",
+        "subject": "fix(dby): 「配」字在两行里撞车——把「配张封面图」显式判给 dby-image"
       }
     ],
     "dby-api": [
