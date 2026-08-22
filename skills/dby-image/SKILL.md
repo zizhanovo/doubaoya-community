@@ -6,6 +6,7 @@ description: >-
   最长 4 分钟，等待期间别中断也别重试（重试就是为同一张图付两次钱）。出图后落成本地文件给你路径。
   触发词：画张图、帮我画、生成图片、生成一张图、AI 出图、出图、文生图、图生图、改图、
   改一下这张图、P 一下、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画。
+version: 1.0.0
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。零依赖，不用 npm install。
