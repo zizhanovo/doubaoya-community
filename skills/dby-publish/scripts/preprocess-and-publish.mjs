@@ -252,6 +252,10 @@ async function apiRequest(url, apiKey, method, payload) {
     const err = env.error || {};
     return { ok: false, code: err.code || `HTTP_${res.status}`, message: err.message || "请求未成功" };
   }
+  // 🔴「你安装的 skill 有更新」原样转达（SKILL.md 的承诺）。走 stderr，stdout 留给 JSON。
+  //    这条链 2026-08-21 断过三处，每处都是静默的 —— 挂了没人读 == 没挂。
+  //    闸：tools/tests/test_notice_is_consumed.py；样板：dby-api/scripts/doubaoya.mjs
+  if (env.notice) console.error(`[notice] ${env.notice}`);
   return { ok: true, data: env.data || {} };
 }
 
