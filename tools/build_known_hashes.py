@@ -68,7 +68,9 @@ def tree_listing(commit: str) -> str:
 
 
 def collect_filesets() -> tuple[
-    dict[str, set[tuple[tuple[str, str], ...]]], dict[str, str]
+    dict[str, set[tuple[tuple[str, str], ...]]],
+    dict[str, str],
+    dict[tuple[str, tuple[tuple[str, str], ...]], str],
 ]:
     """扫全部 ref 的全部 commit，收集每个 slug 出现过的「文件集」（去重后再算哈希）。
 
@@ -81,6 +83,10 @@ def collect_filesets() -> tuple[
     """
     filesets: dict[str, set[tuple[tuple[str, str], ...]]] = {}
     latest_skill_md: dict[str, str] = {}
+    # (slug, fileset) → 该内容**最早**出现在哪个 commit。
+    # rev-list 默认时间倒序，所以一路覆盖下去，留下的自然是最早那个 ——
+    # 那才是"这一版是什么时候发布的"，用最后一次会把日期记成它被重复出现的那天。
+    first_commit: dict[tuple[str, tuple[tuple[str, str], ...]], str] = {}
     for commit in _git("rev-list", "--all").split():
         listing = tree_listing(commit)
         per_slug: dict[str, list[tuple[str, str]]] = {}
@@ -97,8 +103,10 @@ def collect_filesets() -> tuple[
                 latest_skill_md.setdefault(slug, obj)
             per_slug.setdefault(slug, []).append((rel, obj))
         for slug, files in per_slug.items():
-            filesets.setdefault(slug, set()).add(tuple(sorted(files)))
-    return filesets, latest_skill_md
+            key = tuple(sorted(files))
+            filesets.setdefault(slug, set()).add(key)
+            first_commit[(slug, key)] = commit
+    return filesets, latest_skill_md, first_commit
 
 
 def read_blobs(shas: set[str]) -> dict[str, bytes]:
@@ -177,12 +185,47 @@ def trigger_words(skill_md: str) -> list[str]:
     return sorted(found)
 
 
-def build() -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[str]]]:
-    filesets, latest_skill_md = collect_filesets()
+def commit_meta(shas: set) -> dict:
+    """一次 git log 把需要的 commit 的日期与标题读出来。"""
+    if not shas:
+        return {}
+    out = _git("show", "--no-patch", "--format=%H%x1f%cI%x1f%s", *sorted(shas))
+    meta = {}
+    for line in out.split("\n"):
+        if line.count("\x1f") == 2:
+            sha, date, subject = line.split("\x1f")
+            meta[sha] = {"date": date[:10], "subject": subject}
+    return meta
+
+
+def semver_of(blob: bytes) -> str:
+    """从那一版 SKILL.md 的 frontmatter 里取语义版本；没有就留空。
+
+    🔴 **留空而不是编一个**：早期版本发布时 frontmatter 里根本没有 version，
+    追认一个假的会让「1.4.0 → 2.0.0」这类跨度说明凭空多出没发生过的中间版本。
+    """
+    for line in blob.decode("utf-8", "replace").split("\n")[:40]:
+        t = line.lstrip()
+        if t.startswith("version:"):
+            v = t[len("version:"):].strip()
+            return v if re.fullmatch(r"\d+\.\d+\.\d+", v) else ""
+        if t == "---" and line is not t:
+            break
+    return ""
+
+
+def build() -> tuple[dict, dict, dict, dict]:
+    filesets, latest_skill_md, first_commit = collect_filesets()
     wanted = {sha for sets in filesets.values() for fs in sets for _, sha in fs}
     blobs = read_blobs(wanted | set(latest_skill_md.values()))
 
     known: dict[str, list[str]] = {}
+    # 🔴 versionLog 是**兄弟键**，`skills` 的形状一个字节不动。
+    #    已安装的 dby-update 做的是 knownHashes[name].includes(hash)（reconcile.mjs:121）——
+    #    把数组元素从字符串改成对象，那一行当场失效，所有历史包被判成 foreign，
+    #    **每一台已安装的机器对账全错**。所以新信息只能加在旁边，不能改原地。
+    version_log: dict[str, list[dict]] = {}
+    per_hash_commit: dict[str, dict[str, str]] = {}
     for slug, sets in filesets.items():
         hashes = set()
         for fs in sets:
@@ -190,8 +233,30 @@ def build() -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[
             for rel, sha in fs:
                 digest.update(rel.encode("utf-8"))
                 digest.update(blobs[sha])
-            hashes.add(digest.hexdigest()[:12])
+            h = digest.hexdigest()[:12]
+            hashes.add(h)
+            # 同一份内容可能在多个 commit 出现，取**最早**那个（见 first_commit 的注释）
+            c = first_commit.get((slug, fs))
+            if c and h not in per_hash_commit.setdefault(slug, {}):
+                per_hash_commit[slug][h] = c
+            skill_md = dict(fs).get("SKILL.md")
+            if skill_md:
+                per_hash_commit.setdefault(slug, {})
+                version_log.setdefault(slug, []).append(
+                    {"hash": h, "_sha": c or "", "version": semver_of(blobs[skill_md])}
+                )
         known[slug] = sorted(hashes)
+
+    meta = commit_meta({e["_sha"] for v in version_log.values() for e in v if e["_sha"]})
+    for slug, entries in version_log.items():
+        seen, out = set(), []
+        for e in entries:
+            if e["hash"] in seen:
+                continue
+            seen.add(e["hash"])
+            m = meta.get(e.pop("_sha"), {})
+            out.append({**e, "date": m.get("date", ""), "subject": m.get("subject", "")})
+        version_log[slug] = sorted(out, key=lambda x: (x["date"], x["hash"]))
 
     current = {p.name for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").is_file()}
     endpoints = {
@@ -205,16 +270,19 @@ def build() -> tuple[dict[str, list[str]], dict[str, list[str]], dict[str, list[
         if slug in latest_skill_md
         and (words := trigger_words(blobs[latest_skill_md[slug]].decode("utf-8", "replace")))
     }
-    return dict(sorted(known.items())), endpoints, triggers
+    return dict(sorted(known.items())), endpoints, triggers, dict(sorted(version_log.items()))
 
 
 def main() -> int:
-    known, endpoints, triggers = build()
+    known, endpoints, triggers, version_log = build()
     payload = {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "skills": known,
         "retiredEndpoints": endpoints,
         "retiredTriggerWords": triggers,
+        # 每一版的「什么时候发的、那一笔叫什么、当时的语义版本」。
+        # 供更新提示说出「1.4.0 → 2.0.0，这几版改了什么」——哈希答不了这个问题。
+        "versionLog": version_log,
     }
     (ROOT / "known-hashes.json").write_text(
         json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
