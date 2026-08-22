@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T08:59:32.381990+00:00",
+  "generatedAt": "2026-08-22T09:03:10.666858+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -85,7 +85,8 @@
       "bcf26b4eca1f"
     ],
     "dby-banned-words": [
-      "f124f3174c56"
+      "f124f3174c56",
+      "f2ae13c9d572"
     ],
     "dby-charter": [
       "289a7e8efa11",
@@ -2169,6 +2170,12 @@
         "version": "1.0.0",
         "date": "2026-08-20",
         "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+      },
+      {
+        "hash": "f2ae13c9d572",
+        "version": "1.0.1",
+        "date": "2026-08-22",
+        "subject": "docs(dby-banned-words): 实调校准两处——span 类名带类别信息，零命中照样计费"
       }
     ],
     "dby-charter": [
