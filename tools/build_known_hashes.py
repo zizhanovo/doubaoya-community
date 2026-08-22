@@ -87,7 +87,27 @@ def collect_filesets() -> tuple[
     # rev-list 默认时间倒序，所以一路覆盖下去，留下的自然是最早那个 ——
     # 那才是"这一版是什么时候发布的"，用最后一次会把日期记成它被重复出现的那天。
     first_commit: dict[tuple[str, tuple[tuple[str, str], ...]], str] = {}
-    for commit in _git("rev-list", "--all").split():
+    # 🔴 除了已提交历史，还要把**暂存区**当成"下一个 commit"算进来。
+    #
+    # 缺陷实证（2026-08-22，doubaoyahub-82 发现并复现）：本脚本走 rev-list --all，
+    # 只看**已提交**历史 —— 而它在 pre-commit 里跑，那一刻当前改动还没进历史 ⇒
+    # **钩子在结构上永远收不进自己这一笔的哈希**。
+    # 平时看不出来（下一笔顺手补上），危险的是**发布前的最后一笔**：那一版的哈希永远缺席，
+    # 而闭集是随仓库发到用户机器的（用户那儿没有 git 历史，只能靠这个文件）。
+    # 后果延迟且静默：等下一版发出去，这一版成了"历史版本"却不在闭集 ⇒
+    # 三值裁决判成伪造哈希 ⇒ **停在这一版的用户永远收不到更新提示**。
+    #
+    # `git write-tree` 把索引物化成一棵真 tree，喂给同一个 tree_listing —— 零口径分叉。
+    # 提交后 rev-list 会看到同一棵树，所以重算结果不变（幂等，文件不 churn）。
+    revs = _git("rev-list", "--all").split()
+    staged = ""
+    try:
+        staged = _git("write-tree").strip()
+        if staged:
+            revs = [staged] + revs
+    except Exception:  # noqa: BLE001 —— 非 git 环境/无索引时照旧只走历史，不该因此炸
+        staged = ""
+    for commit in revs:
         listing = tree_listing(commit)
         per_slug: dict[str, list[tuple[str, str]]] = {}
         for line in listing.split("\0"):
@@ -105,7 +125,11 @@ def collect_filesets() -> tuple[
         for slug, files in per_slug.items():
             key = tuple(sorted(files))
             filesets.setdefault(slug, set()).add(key)
-            first_commit[(slug, key)] = commit
+            # 暂存区那棵树**不是 commit**，取不到日期与标题 —— 只让它贡献「哈希进闭集」
+            # （承重的那一半），不进 versionLog。否则会写出一条 date/subject 皆空的记录，
+            # 空日期还会把它排到最前，产出随之不幂等（实测：skills 相同、versionLog 不同）。
+            if commit != staged:
+                first_commit[(slug, key)] = commit
     return filesets, latest_skill_md, first_commit
 
 
@@ -240,7 +264,7 @@ def build() -> tuple[dict, dict, dict, dict]:
             if c and h not in per_hash_commit.setdefault(slug, {}):
                 per_hash_commit[slug][h] = c
             skill_md = dict(fs).get("SKILL.md")
-            if skill_md:
+            if skill_md and c:  # c 为空 = 只来自暂存区，见上面的注释
                 per_hash_commit.setdefault(slug, {})
                 version_log.setdefault(slug, []).append(
                     {"hash": h, "_sha": c or "", "version": semver_of(blobs[skill_md])}
