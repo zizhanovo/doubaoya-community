@@ -299,6 +299,12 @@ export async function renderViaPlatform({
     // 这次结果在 doubaoya.com 上的详情页 —— 点开能**看见**排版效果（手机宽度沙箱预览）。
     // 流水线存在的意义之一就是把它交到用户手里。
     detailUrl: typeof env.detailUrl === "string" ? env.detailUrl : null,
+    // 🔴「你安装的 skill 有更新」。服务端按 User-Agent 判，挂在成功信封上。
+    // 读它不是可选的：SKILL.md 明写「原样转达给用户」，而 2026-08-21 之前
+    // **本包 17 个脚本里 notice 出现次数是 0** —— 服务端老实挂上、流水线转手丢掉，
+    // 于是用户永远不知道有更新。同一条链上的另一半（服务端三条专用路由传 null）
+    // 同日已修；只修一半等于没修。
+    notice: typeof env.notice === "string" && env.notice ? env.notice : null,
   };
 }
 
@@ -640,6 +646,8 @@ async function main() {
   let processedHtmlPath;
   /** 这次渲染在 doubaoya.com 上的详情页；回报时交给用户点开看效果。--html 那条路没有。 */
   let renderDetailUrl = null;
+  /** 服务端捎回来的「本 skill 有更新」提示，原样转达（见 renderViaPlatform 的注释）。 */
+  let skillNotice = null;
   if (mdPath) {
     const resolvedMd = path.resolve(mdPath);
     let mdContent;
@@ -718,6 +726,8 @@ async function main() {
       );
     }
     for (const w of rendered.warnings) warn(`渲染告警: ${w}`);
+    // 原样转达，一个字不改（SKILL.md 的承诺）。它不影响本次结果，也不该被当成错误。
+    if (rendered.notice) skillNotice = rendered.notice;
     renderDetailUrl = rendered.detailUrl;
     processedHtmlPath = args.outputProcessedHtml
       ? path.resolve(args.outputProcessedHtml)
@@ -767,6 +777,7 @@ async function main() {
         `  whoami 校验: 通过\n` +
         `  前置检查:    通过\n` +
         (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
+        (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
         "  群发:        否（本流水线只存草稿；dry-run 更是什么都不发）\n" +
         "════════════════════════════════════════════════\n"
     );
@@ -805,6 +816,7 @@ async function main() {
       `  封面:        ${withCover ? "已上传本地封面" : `走都爆鸭兜底（${config.coverFallback}）`}\n` +
       `  mediaId:     ${mediaId}\n` +
       (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
+      (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
       "  群发:        否（本流水线只存草稿）\n" +
       "  下一步:      去公众号后台亲眼确认草稿，再手动群发。\n" +
       "══════════════════════════════════════════════\n"
