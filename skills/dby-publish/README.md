@@ -9,7 +9,7 @@
 3. **本地图片预上传 + 存草稿**（复用 vendored 的 `preprocess-and-publish.mjs`）。
 并在最前面**加载并回显身份上下文**（IP profile 的 `isNot` 消歧），防止账号名被误读成同名的通用名词。
 
-> 完整的 9 步 SOP 与硬规则见 [`SKILL.md`](./SKILL.md) 与单一事实源 [`pipeline.json`](./pipeline.json)。
+> 完整的 10 步 SOP 与硬规则见 [`SKILL.md`](./SKILL.md) 与单一事实源 [`pipeline.json`](./pipeline.json)。
 
 ## 前置条件
 

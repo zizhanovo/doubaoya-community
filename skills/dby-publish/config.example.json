@@ -1,17 +1,14 @@
 {
-  "targetAccount": null,
-  "publicAccountName": null,
   "appid": null,
   "author": "",
-  "digestTemplate": "",
   "coverDir": "",
   "coverFallback": "doubaoya",
-  "ipProfile": "profiles/example-ip.json",
-  "ipImage": null,
-  "mdTheme": null,
-  "draftsDir": "",
   "defaultStyleId": "magazine-editorial",
-  "coverAutogen": true,
-  "figureAutogen": true,
-  "generatedDir": "assets/generated"
+  "digestTemplate": "",
+  "draftsDir": "",
+  "ipImage": null,
+  "ipProfile": "profiles/example-ip.json",
+  "mdTheme": null,
+  "publicAccountName": null,
+  "targetAccount": null
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T11:25:20.558263+00:00",
+  "generatedAt": "2026-08-22T12:20:28.475378+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -126,6 +126,7 @@
       "351676ef5646",
       "487cb9172be9",
       "5351f7c56f8f",
+      "5784c51d996d",
       "5e2022f6120b",
       "76caa2a60c4e",
       "afeb6e003c90",
@@ -2396,6 +2397,12 @@
         "version": "1.4.0",
         "date": "2026-08-21",
         "subject": "feat(dby-write): 写作规范接进写作流程，不再靠人转达"
+      },
+      {
+        "hash": "134cdd2b4c29",
+        "version": "2.0.2",
+        "date": "2026-08-22",
+        "subject": "fix(dby-publish): 主题清单写死成 4 个，而包里实际有 15 个"
       },
       {
         "hash": "5e2022f6120b",

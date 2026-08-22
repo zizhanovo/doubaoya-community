@@ -23,12 +23,24 @@ cp config.example.json config.json
 | `mdTheme` | Markdown→HTML 默认主题。`null` = **自动**：有 `DOUBAOYA_API_KEY` 时先拉**服务端编译主题**（你在 doubaoya.com 排版工作室设置的默认排版，`GET /api/wechat/theme?format=compiled`），拉不到就回退项目默认 `themes/benya-clean.json`（本鸭精品「知识清爽」风）。写成路径（如 `"themes/magazine.json"`）= **钉死本机主题**、不发请求；相对路径按配置文件所在目录解析。CLI 的 `--theme` 永远优先；填 `"neutral"` 可显式退回中性渲染器。 | `null` |
 | `draftsDir` | 本地草稿/产物目录（可选，供你归档渲染出的 HTML）。`""` = 用临时目录。 | `"./drafts"` |
 | `defaultStyleId` | 逃生舱默认风格 id（用户说「你全权定/我赶时间」时用它自动出图）。取值见 `assets/styles/index.json` 的 6 个 `id`。 | `"magazine-editorial"` |
-| `coverAutogen` | 是否在引导式设计里默认 AI 生成封面。`false` = 不生封面，走 `--cover` 或都爆鸭兜底。 | `true` |
-| `figureAutogen` | 是否在引导式设计里默认 AI 生成正文配图。`false` = 不自动配图。 | `true` |
-| `generatedDir` | 生成图的本地暂存目录（相对本 skill 目录）。封面/配图 jpeg 落在这里，再喂 `--cover` 或以 `<img src>` 放进正文。 | `"assets/generated"` |
 
 > **可视化设计工作台（可选）**：不想用命令行逐步选风格/生图，可起 `node scripts/design-studio.mjs --md <文章.md> --title "<标题>"`（本地 `127.0.0.1` 网页、零依赖），在页面里点完排版主题/封面/配图，「保存配置」产出一个 `design-config.json`（结构见 `schemas/design-config.schema.json`），再 `node scripts/pipeline.mjs --md … --title … --design <json>` 消费（套主题 + 设封面 + 按 h2 锚点注入配图）。`--design` 的主题/封面是默认值，显式 `--theme`/`--cover` 冲突时命令行优先并告警。生成的图落 design-config 同目录的 `.design/assets/`，与上面的字段无关，无需在 `config.json` 里配置。
 
 > **生封面/配图无需额外密钥**：`scripts/gen-image.mjs` 直接用你发布本就在用的密钥 `DOUBAOYA_API_KEY`（Bearer）调 doubaoya.com 的生图接口、扣点数，上游生图密钥只在 doubaoya 服务端、skill 端不接触。密钥只放环境变量（`export DOUBAOYA_API_KEY=…`），绝不落配置/文件。
 
 > 提醒：`config.json` 属于你个人，**不要**提交到公共仓库。仓库里只保留 `config.example.json`（全空/占位）。
+
+---
+
+## 为什么这里比脚本少几个键
+
+2026-08-22 对账：`coverAutogen` / `figureAutogen` / `generatedDir` 曾在这张表里，
+**而脚本与 SKILL.md 都零读取** —— 用户写了它们只会得到沉默：不报错、不生效、没有任何现象。
+已摘掉。
+
+🔴 **加配置项之前先想清楚谁读它。** 本包有**两类读者**：
+- **脚本**（`scripts/*.mjs`、`publish_draft.py`）——grep 得到；
+- **agent**（SKILL.md 教它去读的，例如 `defaultStyleId` 那条逃生舱）——grep 脚本**搜不到**。
+
+⇒ 判一个键死没死，**两边都要查**。只查脚本会把 agent 读的键误判成死键
+（这次就差点误删 `defaultStyleId`）。
