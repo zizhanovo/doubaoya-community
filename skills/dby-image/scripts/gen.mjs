@@ -172,6 +172,13 @@ async function main() {
     die(`失败 [${res.status} ${code}] ${message}\n${hint}`);
   }
 
+  // 🔴「你安装的 skill 有更新」。服务端按 User-Agent 判，挂在**成功**信封上。
+  // 读它不是可选的：SKILL.md 承诺「原样转达给用户」，而这条链断过两次 ——
+  // 2026-08-21 实测服务端三条专用路由压根没挂（主仓 0563fa5 改成钩子统一注入），
+  // 下游 dby-publish 17 个脚本读它 0 次（社区仓 3537e22 补上）。
+  // 挂了没人读 == 没挂。走 stderr，免得污染 stdout 的 JSON（样板：dby-api/scripts/doubaoya.mjs）。
+  if (j.notice) console.error(`[notice] ${j.notice}`);
+
   const img = (j.data?.images || [])[0];
   if (!img?.b64) die("调用成功但没有图像数据。如实告诉用户拿不到图，别编一个地址。");
 

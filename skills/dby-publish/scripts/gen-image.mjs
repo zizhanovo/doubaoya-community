@@ -234,6 +234,11 @@ export async function generateImage(o) {
     throw new Error(`生图失败（doubaoya 密钥接口）：${err}`);
   }
 
+  // 🔴「你安装的 skill 有更新」原样转达（SKILL.md 的承诺）。走 stderr，stdout 留给 JSON。
+  //    这条链 2026-08-21 断过三处，每处都是静默的 —— 挂了没人读 == 没挂。
+  //    闸：tools/tests/test_notice_is_consumed.py；样板：dby-api/scripts/doubaoya.mjs
+  if (j.notice) console.error(`[notice] ${j.notice}`);
+
   const img0 = j.data && Array.isArray(j.data.images) ? j.data.images[0] : null;
   let bytes;
   if (img0 && img0.b64) {
