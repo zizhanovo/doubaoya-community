@@ -10,8 +10,9 @@ description: >-
   帮我起草、这篇怎么写、写作全流程、这篇为什么没人看、复盘、复盘一下、数据怎么样、
   上次那篇效果、阅读量为什么低、文章表现、发出去没人看。
 compatibility: >-
+  需要 Node ≥18（取数与复盘算术走 scripts/write.mjs，零依赖不装 npm 包）；
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
-  需要能对 https://doubaoya.com 发 HTTPS 请求。正文里的示例只用 curl。
+  需要能对 https://doubaoya.com 发 HTTPS 请求。
   档案读取、选题卡、复盘取数均为免费路由，不扣点；违禁词检测按平台计费（走 dby-banned-words）。
 ---
 
@@ -122,18 +123,12 @@ export DOUBAOYA_BASE_URL="https://doubaoya.com" # 可选，默认即此
 ### 第 1 步 · 读档案 + 拉写作规范（无条件，必须早于任何生成动作）
 
 ```bash
-# 默认档案（拿 id）
-curl -s "$DOUBAOYA_BASE_URL/api/ip-profile" -H "Authorization: Bearer $DOUBAOYA_API_KEY"
-
-# 号章程：定位 / 受众 / 变现 / 北极星 / 可信度依据
-curl -s "$DOUBAOYA_BASE_URL/api/ip-profile/<id>/charter" -H "Authorization: Bearer $DOUBAOYA_API_KEY"
-
-# 范文样本（写正文时要的原始细节在这儿，DNA 是蒸馏产物、蒸不出人名场景数字）
-curl -s "$DOUBAOYA_BASE_URL/api/ip-profile/<id>/samples" -H "Authorization: Bearer $DOUBAOYA_API_KEY"
-
-# 写作规范：什么内容写成什么结构 + 平台硬约束（只读免费，不扣点）
-curl -s "$DOUBAOYA_BASE_URL/api/wechat/writing-spec" -H "Authorization: Bearer $DOUBAOYA_API_KEY"
+node scripts/write.mjs prep          # 四样一次拉齐；--json 出机器可读版
 ```
+
+它按 SKILL.md 的降级阶梯替你处理了失败：**401 直接红并说明不许跳过**（跳过等于蒙着写）、
+写作规范拉不到只打一句提示照常往下走（不重试刷屏、不当故障报）、
+**档案为空直接拦下**并让你先去 `dby-charter` 立定位、范文少于 3 篇如实提醒一句。
 
 四样东西要同时拿到手：**号章程**（这个号该做什么）、**创作 DNA**（写起来什么味）、
 **范文样本**（真实细节的唯一合法来源）、**写作规范**（写成什么形状才不会在发布那步出事）。
@@ -174,7 +169,7 @@ doubaoya.com 排版工作室存的那套。稿子要拿去别处用，就只照�
 用户没说时才取候选：
 
 ```bash
-curl -s "$DOUBAOYA_BASE_URL/api/wechat/topics?niche=<赛道>" -H "Authorization: Bearer $DOUBAOYA_API_KEY"
+node scripts/write.mjs topics [赛道]      # 不传赛道则用档案里的
 ```
 
 回 `{ topics: [{ title, angle, why, refs }], notice? }`。它内部已经并进了
@@ -296,43 +291,27 @@ curl -s "$DOUBAOYA_BASE_URL/api/wechat/topics?niche=<赛道>" -H "Authorization:
 ## 模式 B：复盘一篇（四步）
 
 ```bash
-curl -s "$DOUBAOYA_BASE_URL/api/wechat/review" -H "Authorization: Bearer $DOUBAOYA_API_KEY"
+node scripts/write.mjs review
 ```
 
-回 `{ state, account, lastWeek: { articles[], weekReadTotal, prevWeekReadTotal, deltaPct, top },
-nicheDynamics, weeklyTopics, notice? }`。
-`state` 为 `no_account` = 还没绑公众号；`no_articles` = 绑了但没发过。
+它替你做了**算术**那三步：取数 → 按**这个号自己的历史均值**算两轴基准 → 归四象限。
+判断仍归你：**只给一处修复动作**。
 
-### 🔴 先说清楚这次用的是哪一档指标
+### 🔴 脚本替你守住的三条，你仍要照着说
 
-**真实的打开率与分享率在微信数据统计里，需要额外授权，这个接口拿不到。**
-能拿到的只有公开抓取的 `readCount`（阅读数，10w+ 封顶）与 `likeCount`（在看）。
+1. **每次输出都要写明用的是哪一档指标。** 脚本默认打**代理档**（横轴阅读数、纵轴点赞÷阅读）
+   并把差别打在最前面。🔴 **代理档绝不能被说成「打开率 × 分享率」**——
+   真实的打开率与分享率在微信数据统计里、需额外授权，这个接口拿不到。
+   阅读数受推荐流影响、不等于粉丝打开；点赞率反映共鸣，跟分享率相关但不等价。
+   > 记得给升级路径：让用户去公众号后台「内容分析 → 单篇文章」拿真值贴回来，按真值档重跑。
+2. **基准只能是这个号自己的历史均值。** 🔴 **绝不用行业平均值**——
+   那些数字全是二手孤证、且跨了平台的算法时代，拿来当基准会得到系统性错误的判定，
+   而且错得很自信。脚本结构上做不到引入外部常数（把全部阅读数放大十倍，分类结果不变，
+   `selfcheck` 钉着这条）。
+3. **样本少于 5 篇时基准不可靠。** 脚本会打「本次仅供参考」，
+   你**不许照常给结论**，得把这句话带给用户。
 
-所以诊断分两档，**每次输出都要写明本次用的是哪一档**：
-
-| 档 | 横轴 | 纵轴 | 来源 |
-|---|---|---|---|
-| **代理档**（默认，开箱可用） | 阅读数 | 点赞数 ÷ 阅读数 | 接口直接给 |
-| **真值档**（用户提供时） | 打开率 | 分享率 | 用户从公众号后台粘贴 |
-
-🔴 **代理档绝不能被说成"打开率×分享率"。** 它是代理，不是那两个数。
-说清楚差别在哪：阅读数受推荐流影响很大、不等于粉丝打开；
-点赞率反映的是共鸣，跟分享率相关但不等价。
-
-代理档输出之后，**给一条升级路径**：
-
-> 想要更准的判断，去公众号后台「内容分析 → 单篇文章」拿到打开率与分享率，
-> 贴给我，我按真值重跑一遍。
-
-### 四步
-
-1. **拉数据**（上面那条 curl）
-2. **算这个号自己的基准**——两个轴各取该账号历史均值。
-   🔴 **绝不用行业平均值**：那些数字全是二手孤证，且跨了平台的算法时代，
-   拿来当基准会得到系统性错误的判定，而且错得很自信。
-   文章太少（少于 5 篇）算不出稳定均值时，**明说「基准不可靠，本次仅供参考」**，
-   不许照常给结论。
-3. **归四象限**
+### 四象限与处方
 
 | 象限 | 说明 | 该修哪一处 |
 |---|---|---|
@@ -341,8 +320,8 @@ nicheDynamics, weeklyTopics, notice? }`。
 | 高量 · 低共鸣 | 标题成功，内容没给到社交货币 | 修正文，标题别动 |
 | 低 · 低 | 选题就错了 | 回到选题层重做 |
 
-4. **只给一处修复动作**。🔴 **不要对同一篇同时给多个方向的建议**——
-   四象限的全部价值就在于把修改面收敛到一处。
+🔴 **只给一处修复动作。** 不要对同一篇同时给多个方向的建议——
+四象限的全部价值就在于把修改面收敛到一处。
 
 复盘结论会被服务端存下来，**下一轮模式 A 的第 1 步会读到它**。
 
