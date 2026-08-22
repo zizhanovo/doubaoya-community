@@ -23,7 +23,8 @@
 表里给的是**详情端点**（`GET`，免鉴权免费），不是调用地址：拿到详情响应后，
 调用地址读它的 `execution` 的 `target`（SKILL.md §3.3）。这样专用路由那三条也不会被推错。
 
-> 2026-08-18 从发现接口实拉生成，共 94 条。**准数与在架状态以你实拉的发现接口为准**——
+> 2026-08-18 从发现接口实拉生成，共 94 条（2026-08-22 复核：与生产**零漂移**）。
+> **准数与在架状态以你实拉的发现接口为准**——
 > 下架的条目会从发现接口里消失，本表不会自己知道。表里没有你要的能力时，
 > 先拉一遍 `GET /api/skills` 和 `GET /api/apis` 再下结论。
 >
@@ -186,3 +187,29 @@
 | `tool.content.parseDetail` | 解析作品/文章详情 | `/api/apis/tool/parse-content-detail` |
 
 ---
+
+---
+
+## 怎么核这份索引有没有过期
+
+两条发现接口都免鉴权免费，比一遍就知道。**别只比条数**——条数相同也可能一进一出。
+
+```bash
+# ① 生产在架的全部 slug（两个集合各拉一次，合并去重）
+{ curl -s https://doubaoya.com/api/skills | python3 -c "import json,sys;[print(i['slug']) for i in json.load(sys.stdin)['data']['items']]"
+  curl -s https://doubaoya.com/api/apis   | python3 -c "import json,sys;[print(i['slug']) for i in json.load(sys.stdin)['data']['items']]"
+} | sort -u > /tmp/live.txt
+
+# 本表里的 slug（详情端点路径的最后一段）
+grep -o -E '/api/(skills|apis)/[a-z0-9/-]+' capability-index.md | sed -E 's|.*/||' | sort -u > /tmp/idx.txt
+
+comm -13 /tmp/live.txt /tmp/idx.txt   # 表里有、生产没有 = 已下架却还在教
+comm -23 /tmp/live.txt /tmp/idx.txt   # 生产有、表里没有 = 新上但表没跟上
+```
+
+⚠️ **两边格式必须先对齐再比。** 数据能力那半边发现接口给的是 `platform/slug`，
+本表存的是裸 slug —— 不去掉平台前缀直接 `comm`，会比出一份**全是假的**漂移清单
+（2026-08-22 实测：不对齐时报 77 条"漂移"，对齐后是 0 条）。
+
+两个方向都空 = 索引与生产一致。**任一方向非空就回来改表**，别让它继续教已下架的能力。
+
