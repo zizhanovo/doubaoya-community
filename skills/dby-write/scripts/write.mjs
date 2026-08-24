@@ -8,7 +8,7 @@
 //           档案为空要先去立人设、范文少于 3 篇要如实说一句。
 //   topics  选题卡（按赛道取候选；用户已经说了写什么就别调它）
 //   review  复盘取数 + **四象限分类**。分类是算术不是判断：
-//           两轴的基准取**这个账号自己的历史均值**，绝不引入行业平均值
+//           两轴的基准取**这个账号自己的历史中位数**，绝不引入行业平均值
 //           （那些数字是二手孤证、跨了算法时代，拿来当基准会错得很自信）。
 //
 // 🔴 脚本不替你做的事：写正文、选标题、决定该改哪一处。四象限只告诉你每篇落在哪一格，
@@ -29,7 +29,7 @@ import process from "node:process";
 
 const BASE = process.env.DOUBAOYA_BASE_URL || "https://doubaoya.com";
 const MIN_SAMPLES = 3;   // 少于这个数，成稿像不像要如实说
-const MIN_BASELINE = 5;  // 少于这个数，均值不稳，基准不可靠
+const MIN_BASELINE = 5;  // 少于这个数，中位数同样不稳，基准不可靠
 
 function die(msg, code = 1) { console.error(msg); process.exit(code); }
 
@@ -68,8 +68,21 @@ async function api(path, key, { soft = false } = {}) {
 }
 
 /**
+ * 中位数。**不用算术均值**——公众号阅读数是典型长尾分布，一篇爆款就能把均值拉到
+ * 绝大多数文章之上，于是它们全部落进「低量」，而「低·低」的处方是
+ * 「选题就错了，回到选题层重做」⇒ 一篇爆款让这个号其余所有文章都被建议推翻重做，
+ * 越活跃的号被坑得越狠。中位数对单个异常值免疫，这正是这里要的性质。
+ * 偶数个取中间两个的平均，与统计学定义一致。
+ */
+function median(nums) {
+  const xs = [...nums].sort((a, b) => a - b);
+  const mid = xs.length >> 1;
+  return xs.length % 2 ? xs[mid] : (xs[mid - 1] + xs[mid]) / 2;
+}
+
+/**
  * 四象限分类。**纯函数**，selfcheck 直接打它。
- * x 轴 = 阅读数；y 轴 = 点赞率（点赞 ÷ 阅读）。基准 = 这个账号自己在这两轴上的均值。
+ * x 轴 = 阅读数；y 轴 = 点赞率（点赞 ÷ 阅读）。基准 = 这个账号自己在这两轴上的**中位数**。
  * 返回 { tier, baseline, reliable, items[] }；readCount 全空时 items 为空且 reason 说明原因。
  */
 export function classify(articles) {
@@ -80,8 +93,8 @@ export function classify(articles) {
     return { reliable: false, reason: "readCount 全为空（公开数据查不到），拿不到指标", items: [] };
   }
   const rate = (a) => (typeof a.likeCount === "number" ? a.likeCount : 0) / a.readCount;
-  const meanRead = usable.reduce((s, a) => s + a.readCount, 0) / usable.length;
-  const meanRate = usable.reduce((s, a) => s + rate(a), 0) / usable.length;
+  const midRead = median(usable.map((a) => a.readCount));
+  const midRate = median(usable.map(rate));
   const QUAD = {
     "hi-hi": { name: "高·高 成功范式", fix: "沉淀成模板，复制它" },
     "lo-hi": { name: "低量·高共鸣", fix: "**只修标题，正文一个字别动**" },
@@ -89,7 +102,7 @@ export function classify(articles) {
     "lo-lo": { name: "低·低", fix: "选题就错了，回到选题层重做" }
   };
   const items = usable.map((a) => {
-    const k = `${a.readCount >= meanRead ? "hi" : "lo"}-${rate(a) >= meanRate ? "hi" : "lo"}`;
+    const k = `${a.readCount >= midRead ? "hi" : "lo"}-${rate(a) >= midRate ? "hi" : "lo"}`;
     return {
       title: a.title ?? "(无标题)",
       readCount: a.readCount,
@@ -101,7 +114,7 @@ export function classify(articles) {
   });
   return {
     reliable: usable.length >= MIN_BASELINE,
-    baseline: { meanRead: Math.round(meanRead), meanRatePct: +(meanRate * 100).toFixed(2), n: usable.length },
+    baseline: { medianRead: Math.round(midRead), medianRatePct: +(midRate * 100).toFixed(2), n: usable.length },
     items
   };
 }
@@ -219,9 +232,9 @@ async function review(key) {
   console.log("阅读数受推荐流影响、不等于粉丝打开；点赞率反映共鸣，跟分享率相关但不等价。\n");
 
   if (!r.items.length) return console.log(`拿不到指标：${r.reason}。如实告诉用户，别用点赞数单独硬凑一个象限判定。`);
-  console.log(`基准（这个号自己的历史均值，n=${r.baseline.n}）：阅读 ${r.baseline.meanRead}，点赞率 ${r.baseline.meanRatePct}%`);
+  console.log(`基准（这个号自己的历史**中位数**，n=${r.baseline.n}）：阅读 ${r.baseline.medianRead}，点赞率 ${r.baseline.medianRatePct}%`);
   if (!r.reliable)
-    console.log(`⚠️ 只有 ${r.baseline.n} 篇（少于 ${MIN_BASELINE}），**均值不稳、基准不可靠，本次仅供参考** —— 不许照常给结论。`);
+    console.log(`⚠️ 只有 ${r.baseline.n} 篇（少于 ${MIN_BASELINE}），**样本太少、基准不可靠，本次仅供参考** —— 不许照常给结论。`);
   console.log();
   for (const it of r.items)
     console.log(`  ${it.quadrant.padEnd(14)} ${String(it.readCount).padStart(7)} 阅 / ${it.rate}%  ${it.title}\n${" ".repeat(18)}→ ${it.fix}`);
@@ -246,11 +259,32 @@ function selfcheck() {
   if (r.items.find((i) => i.title === "B").fix.indexOf("只修标题") < 0)
     die("🔴 低量·高共鸣的处方必须是「只修标题」");
 
+  // 🔴 长尾偏斜：一篇爆款不许把其余全部打成「低量」。
+  //
+  // 这条抓的是上面那条「放大 10 倍」**抓不到**的东西 —— 等比放大时均值与中位数一起放大，
+  // 分类当然不变，所以那条只证明了「没有绝对阈值」，证明不了「基准选得对」。
+  // 而公众号阅读数是典型长尾：9 篇 500 + 1 篇 50000 时
+  //   算术均值 = 5450  ⇒ 那 9 篇全部 < 基准 ⇒ 全判「低量」
+  //   中位数   = 500   ⇒ 那 9 篇全部 >= 基准 ⇒ 判「高量」
+  // 而「低·低」的处方是「选题就错了，回到选题层重做」——
+  // 用均值等于**让一篇爆款把这个号其余所有文章都判成选题错误**，越活跃的号被坑得越狠。
+  const longTail = [
+    ...Array.from({ length: 9 }, (_, i) => ({ title: `T${i}`, readCount: 500, likeCount: 25 })),
+    { title: "BOOM", readCount: 50000, likeCount: 2500 }   // 点赞率与其余持平，只有阅读量是异常值
+  ];
+  const lt = classify(longTail);
+  const lowVolume = lt.items.filter((i) => i.quadrant.startsWith("低")).length;
+  if (lowVolume > 1)
+    die(
+      `🔴 长尾偏斜：10 篇里有 ${lowVolume} 篇被判「低量」——` +
+      `一篇爆款不该把其余全部打成低量。基准多半用了算术均值而不是中位数。`
+    );
+
   // 基准取自本账号：整体放大 10 倍，分类结果必须完全不变（说明没有绝对阈值）
   const scaled = arts.map((a) => ({ ...a, readCount: a.readCount * 10 }));
   const q2 = Object.fromEntries(classify(scaled).items.map((i) => [i.title, i.quadrant]));
   if (JSON.stringify(q) !== JSON.stringify(q2))
-    die("🔴 放大 10 倍后分类变了 —— 说明用了绝对阈值而不是这个号自己的均值");
+    die("🔴 放大 10 倍后分类变了 —— 说明用了绝对阈值而不是这个号自己的中位数");
 
   // 基准可靠性：门槛两侧都要测，否则测不出门槛在不在
   if (classify(arts.slice(0, 3)).reliable) die("🔴 只有 3 篇却判基准可靠");

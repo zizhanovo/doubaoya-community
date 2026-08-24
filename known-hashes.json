@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T05:44:14.207629+00:00",
+  "generatedAt": "2026-08-24T18:37:13.714239+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -165,6 +165,7 @@
     "dby-write": [
       "38713c695a93",
       "cadb7e558fce",
+      "cfa6a357b46d",
       "e039d2615adb",
       "e75c09cb73fd",
       "fc92fb4bf92f"
@@ -2580,6 +2581,12 @@
         "version": "",
         "date": "2026-08-22",
         "subject": "feat(dby-write): 新增 scripts/write.mjs，把取数与复盘算术做进代码"
+      },
+      {
+        "hash": "cadb7e558fce",
+        "version": "1.0.0",
+        "date": "2026-08-23",
+        "subject": "feat(dby-write): 口吻基准与禁用词接进写作路径——它们此前一次都没被读过"
       }
     ],
     "doubao-websearch": [
