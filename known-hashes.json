@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T21:58:26.684960+00:00",
+  "generatedAt": "2026-08-24T22:21:43.116252+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -211,6 +211,7 @@
       "274536af5420",
       "38713c695a93",
       "388503b769d1",
+      "69a7b400b468",
       "78f1efdf04ad",
       "b40023ac688b",
       "cadb7e558fce",
@@ -2194,6 +2195,12 @@
         "subject": "fix(dby): 「配」字在两行里撞车——把「配张封面图」显式判给 dby-image"
       },
       {
+        "hash": "02a03d78fb1c",
+        "version": "1.3.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+      },
+      {
         "hash": "04545b184f2e",
         "version": "1.1.0",
         "date": "2026-08-24",
@@ -2262,6 +2269,12 @@
         "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
       },
       {
+        "hash": "a59d7a4e7157",
+        "version": "1.2.1",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+      },
+      {
         "hash": "ed6a2f86bffc",
         "version": "1.1.0",
         "date": "2026-08-24",
@@ -2280,6 +2293,12 @@
         "version": "1.0.1",
         "date": "2026-08-22",
         "subject": "docs(dby-banned-words): 实调校准两处——span 类名带类别信息，零命中照样计费"
+      },
+      {
+        "hash": "3b6f51b83da1",
+        "version": "1.2.1",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       },
       {
         "hash": "8967a5bf1cbe",
@@ -2362,6 +2381,12 @@
         "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
       },
       {
+        "hash": "069d68bd5b30",
+        "version": "1.2.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+      },
+      {
         "hash": "8f80d47eb37a",
         "version": "1.1.2",
         "date": "2026-08-24",
@@ -2410,6 +2435,12 @@
         "version": "1.1.0",
         "date": "2026-08-24",
         "subject": "refactor(dby-gateway): 调用协议收敛为 references/protocol.md 单一副本，§3 展开版删除、§5 样例下沉"
+      },
+      {
+        "hash": "7e9d8e2c7fa6",
+        "version": "1.3.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       },
       {
         "hash": "e19a51009f8d",
@@ -2490,6 +2521,12 @@
         "version": "1.2.0",
         "date": "2026-08-24",
         "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+      },
+      {
+        "hash": "2a3ffb3fc5b2",
+        "version": "1.2.1",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       },
       {
         "hash": "73f91dda7bd6",
@@ -2630,6 +2667,12 @@
         "version": "2.2.1",
         "date": "2026-08-24",
         "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+      },
+      {
+        "hash": "ec58027fccdc",
+        "version": "2.4.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       }
     ],
     "dby-rewrite": [
@@ -2644,6 +2687,12 @@
         "version": "1.0.0",
         "date": "2026-08-22",
         "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+      },
+      {
+        "hash": "64eb94c6e436",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       },
       {
         "hash": "de838c0c1b1e",
@@ -2670,6 +2719,12 @@
         "version": "1.1.0",
         "date": "2026-08-21",
         "subject": "fix(dby-publish,dby-theme): engine-2 报错不再教用户做一件不会发生的事"
+      },
+      {
+        "hash": "895210b408a4",
+        "version": "1.3.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       },
       {
         "hash": "9c3df5a11c54",
@@ -2816,6 +2871,12 @@
         "version": "3.2.2",
         "date": "2026-08-24",
         "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+      },
+      {
+        "hash": "b34999536b26",
+        "version": "3.2.3",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       }
     ],
     "dby-write": [
@@ -2848,6 +2909,12 @@
         "version": "1.0.0",
         "date": "2026-08-23",
         "subject": "feat(dby-write): 口吻基准与禁用词接进写作路径——它们此前一次都没被读过"
+      },
+      {
+        "hash": "274536af5420",
+        "version": "1.4.1",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
       },
       {
         "hash": "388503b769d1",

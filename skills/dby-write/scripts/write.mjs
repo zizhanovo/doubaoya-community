@@ -8,6 +8,7 @@
 //           并按 SKILL.md 的降级阶梯处理失败：401 不许跳过、写作规范拉不到照常往下走、
 //           档案为空要先去立人设、范文少于 3 篇要如实说一句。
 //   topics  选题卡（按赛道取候选；用户已经说了写什么就别调它）
+//   articles 第 4 步收素材：自己往期已发文章（授权公众号最近 20 篇，免费）。--q 按关键词筛，--id 取单篇正文。
 //   review  复盘取数 + **四象限分类**。分类是算术不是判断：
 //           两轴的基准取**这个账号自己的历史中位数**，绝不引入行业平均值
 //           （那些数字是二手孤证、跨了算法时代，拿来当基准会错得很自信）。
@@ -22,6 +23,7 @@
 //   node scripts/write.mjs prep                第 1 步四样一次拉齐
 //   node scripts/write.mjs prep --json         同上，输出机器可读的 JSON
 //   node scripts/write.mjs topics [赛道]       选题候选（不传赛道则用档案里的）
+//   node scripts/write.mjs articles [--q 关键词] [--id 序号或文章id]   往期文章清单 / 单篇正文
 //   node scripts/write.mjs review              复盘取数 + 四象限
 //   node scripts/write.mjs selfcheck           离线自检，不联网不需要 key
 // -----------------------------------------------------------------------------
@@ -292,6 +294,49 @@ async function review(key) {
   console.error("升级路径：让用户去公众号后台「内容分析 → 单篇文章」拿真实打开率与分享率贴回来，按真值档重跑。");
 }
 
+/**
+ * 往期文章按关键词筛（标题或正文命中即算，大小写不敏感；不传关键词则全给）。**纯函数**，selfcheck 直接打它。
+ * 服务端已给 `text`（去标签正文）；老返回体只有 `content` 时就地去一次标签。
+ */
+export function filterArticles(list, q) {
+  const kw = String(q ?? "").trim().toLowerCase();
+  const items = (Array.isArray(list) ? list : []).map((a, i) => ({
+    idx: i + 1,
+    id: a?.articleId ?? null,
+    title: a?.title ?? "",
+    url: a?.url ?? null,
+    publishedAt: a?.publishedAt ?? null,
+    text: typeof a?.text === "string" && a.text
+      ? a.text
+      : String(a?.content ?? "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim()
+  }));
+  if (!kw) return items;
+  return items.filter((a) => a.title.toLowerCase().includes(kw) || a.text.toLowerCase().includes(kw));
+}
+
+/**
+ * 第 4 步收素材 · 自己的往期文章。
+ * 🔴 走 /api/ip-profile/wechat-history（密钥可用、免费），**不走 /api/articles** ——
+ *    那条只认登录态，拿密钥调必回 UNAUTHORIZED（2026-08-24 实测）。
+ * ponytail: 天花板 = 上游一次最多 20 篇，--q 只在最近 20 篇里筛；升级路径 = 服务端给 /api/articles 开密钥鉴权后换过去。
+ */
+async function articles(key, { q, id }) {
+  const r = await api("/api/wechat/review", key);
+  const appid = r?.account?.appid;
+  if (r?.state === "no_account" || !appid) die("这个账号还没绑公众号，拉不到往期文章 —— 素材阶梯里这一层跳过，别停下来问。", 3);
+  const d = await api(`/api/ip-profile/wechat-history?authorizerAppid=${encodeURIComponent(appid)}&count=20`, key);
+  const items = filterArticles(d?.articles, id ? "" : q);
+  if (id) {
+    const a = items.find((x) => x.id === id || String(x.idx) === String(id));
+    if (!a) die(`最近 20 篇里没有序号 / id 为 ${id} 的文章。`, 3);
+    console.log(`# ${a.title}\n出处：${a.url ?? "(无链接)"}  发布：${a.publishedAt ?? "?"}\n\n${a.text}`);
+    return;
+  }
+  if (!items.length) return console.log(q ? `最近 20 篇里没有命中「${q}」的。` : `公众号「${r.account?.nickname ?? "?"}」还没有已发文章。`);
+  for (const a of items) console.log(`${a.idx}. ${a.title}  ${String(a.publishedAt ?? "?").slice(0, 10)}  ${a.url ?? ""}`);
+  console.error("\n取正文：node scripts/write.mjs articles --id <序号>。写进素材单时出处写「往期文章《标题》+ 链接」。");
+}
+
 function selfcheck() {
   // 基准必须来自入参本身，不许有任何外部/行业常数
   const arts = [
@@ -406,9 +451,28 @@ function selfcheck() {
     die("🔴 prep 的 out 里没有 charter / samples[].content —— 接线掉了");
   if (!prepSrc.includes("extractHardConstraints(")) die("🔴 prep 文本版没打硬约束节");
 
+  // ── filterArticles：第 4 步收素材的关键词筛 ────────────────────────────────
+  const hist = [
+    { articleId: "a1", title: "公众号打开率怎么算", content: "<p>会话&nbsp;阅读÷送达</p>", url: "https://mp.weixin.qq.com/s/1", publishedAt: "2026-08-01T00:00:00.000Z" },
+    { articleId: "a2", title: "选题", text: "标题党会被降权", url: null, publishedAt: null }
+  ];
+  const all = filterArticles(hist, "");
+  if (all.length !== 2 || all[0].idx !== 1 || all[1].idx !== 2) die("🔴 不传关键词时应全给且序号从 1 起");
+  if (all[0].text !== "会话 阅读÷送达") die(`🔴 老返回体只有 content 时应去标签得纯文本，实为 ${JSON.stringify(all[0].text)}`);
+  if (all[1].text !== "标题党会被降权") die("🔴 服务端已给 text 时应原样用");
+  if (filterArticles(hist, "打开率").map((a) => a.id).join() !== "a1") die("🔴 标题命中应筛出 a1");
+  if (filterArticles(hist, "降权").map((a) => a.id).join() !== "a2") die("🔴 正文命中应筛出 a2");
+  if (filterArticles(hist, "不存在的词").length) die("🔴 无命中应为空");
+  if (filterArticles(null, "x").length || filterArticles(undefined, "").length) die("🔴 非数组输入应降级成空，不能炸");
+  // 🔴 接线元断言：articles 必须走 wechat-history，绝不能走只认登录态的 /api/articles。
+  const artSrc = articles.toString();
+  if (!artSrc.includes("/api/ip-profile/wechat-history")) die("🔴 articles 没走 wechat-history");
+  if (/api\(`\/api\/articles/.test(artSrc) || /api\("\/api\/articles/.test(artSrc)) die("🔴 articles 走了 /api/articles —— 密钥调它必回 UNAUTHORIZED");
+
   console.log("selfcheck ok: classify（四象限 / 基准取自本账号非绝对阈值 / 样本不足标不可靠 / 无阅读数拒判 / 反向可红）");
   console.log("selfcheck ok: extractHardConstraints（切到 / 不截短 / 不过头 / 缺节为 null / prep 接线）");
   console.log("selfcheck ok: readVoice（规范形状 / 三种缺失 / 两种形状漂移 / 接线元断言）");
+  console.log("selfcheck ok: filterArticles（全给 / 标题命中 / 正文命中 / 无命中 / 去标签 / 非数组降级 / 走 wechat-history 不走 /api/articles）");
 }
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -418,4 +482,8 @@ if (!KEY) die("缺 DOUBAOYA_API_KEY。doubaoya.com → 登录 → 密钥中心 �
 if (cmd === "prep") await prep(KEY, rest.includes("--json"));
 else if (cmd === "topics") await topics(KEY, rest.find((a) => !a.startsWith("--")));
 else if (cmd === "review") await review(KEY);
-else die("用法：node scripts/write.mjs prep [--json] | topics [赛道] | review | selfcheck");
+else if (cmd === "articles") {
+  const opt = (name) => { const i = rest.indexOf(name); return i >= 0 ? rest[i + 1] : undefined; };
+  await articles(KEY, { q: opt("--q"), id: opt("--id") });
+}
+else die("用法：node scripts/write.mjs prep [--json] | topics [赛道] | articles [--q 关键词] [--id 序号] | review | selfcheck");
