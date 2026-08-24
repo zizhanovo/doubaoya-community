@@ -5,12 +5,13 @@
 //   node doubaoya.mjs list [--skills|--apis]        拉能力清单（默认两个集合都拉）
 //   node doubaoya.mjs search <query>                按关键词搜（两个集合都搜）
 //   node doubaoya.mjs describe <ref>                看单条能力的入参/出参/调用路径
-//   node doubaoya.mjs invoke <ref> '<json-body>'    调一条能力
+//   node doubaoya.mjs invoke <ref> '<json-body>' [--raw]   调一条能力（默认剥掉响应里与 items/content 重复的 raw，--raw 保留）
 //   node doubaoya.mjs selfcheck                     离线自检（不联网、不需要 key）
 //
-// <ref> 两种写法，都行：
+// <ref> 三种写法，都行：
 //   xiaohongshu-viral-notes        裸 slug —— 先查 skills，查不到再在 apis 里按 slug 找
 //   trend/trending-hub-keyword     platform/slug —— 直指 apis 集合
+//   api.trend.hotSpotKeyword       operationKey —— 在两个集合的清单里反查 slug
 //
 // 🔴 平台有**两个不相交的能力集合**，走两条不同的路由，彼此不回落：
 //      产品化 Skill  → POST /api/skills/<slug>/invoke
@@ -73,6 +74,32 @@ export function resolveTarget(capability) {
   const { method, path } = execution.target;
   if (!method || !path) return { error: "execution.target 缺 method/path，无法发请求" };
   return { method, path, mode: execution.mode };
+}
+
+/** operationKey 形如 `api.trend.hotSpotKeyword` / `skill.wechat.hotSearch` / `tool.content.parseDetail`：带点、不带斜杠。 */
+export function isOperationKey(ref) {
+  return typeof ref === "string" && /^[a-z]+(\.[A-Za-z0-9]+)+$/.test(ref.trim()) && !ref.includes("/");
+}
+
+/** 在两个集合的清单里按 operationKey 反查；同一 key 在两个集合各有一条时全部返回（已知有一处撞名）。 */
+export function matchByOperationKey(skillItems, apiItems, key) {
+  return [...(skillItems ?? []), ...(apiItems ?? [])].filter((item) => item.operationKey === key);
+}
+
+/** 响应 data 里 `raw` 是上游原样回包，和 items/content 重复；默认剥掉，`--raw` 才保留。纯函数，不改入参。 */
+export function stripRaw(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return data;
+  if (!("raw" in data) || !("items" in data || "content" in data)) return data;
+  const { raw: _raw, ...rest } = data;
+  return rest;
+}
+
+/** 计费标签：unitPrice 是 0 / priceClass 是 free ⇒ 免费；否则 N点。清单里没这两个字段就标「?」（价格去 describe 看）。 */
+export function priceLabel(item) {
+  const price = item?.unitPrice;
+  if (price === 0 || item?.priceClass === "free") return "免费";
+  if (typeof price === "number") return `${price}点`;
+  return "?";
 }
 
 /** `platform/slug` → {platform, slug}；裸 `slug` → {slug}。多于一个斜杠视为非法。 */
@@ -152,8 +179,42 @@ async function tryGet(path) {
   return env.data;
 }
 
-/** ref → 能力对象。裸 slug 先查 skills，再查 apis；两边都没有就报「两个集合都查过了」。 */
+/** operationKey → 能力对象：两份清单反查到 slug，再拉详情（清单项不带 inputContract）。 */
+async function resolveByOperationKey(key) {
+  const [skills, apis] = await Promise.all([
+    request("GET", "/api/skills", undefined, { auth: "optional" }),
+    request("GET", "/api/apis", undefined, { auth: "optional" })
+  ]);
+  const hits = matchByOperationKey(skills.items, apis.items, key);
+  if (hits.length > 1) {
+    fail(
+      `「${key}」在两个集合里各有一条，请改用详情端点尾段点名：` +
+        hits.map((item) => (item.platform ? `${item.platform}/${item.slug}` : item.slug)).join(" / "),
+      "AMBIGUOUS_REF"
+    );
+  }
+  if (hits.length === 1) {
+    const hit = hits[0];
+    const detail = await tryGet(
+      hit.platform
+        ? `/api/apis/${encodeURIComponent(hit.platform)}/${encodeURIComponent(hit.slug)}`
+        : `/api/skills/${encodeURIComponent(hit.slug)}`
+    );
+    if (detail) return detail;
+  }
+  return null;
+}
+
+/** ref → 能力对象。operationKey 反查两份清单；裸 slug 先查 skills，再查 apis；都没有就报「两个集合都查过了」。 */
 async function resolveCapability(ref) {
+  if (isOperationKey(ref)) {
+    const byKey = await resolveByOperationKey(ref.trim());
+    if (byKey) return byKey;
+    fail(
+      `两个集合的清单里都没有 operationKey「${ref.trim()}」。跑 \`node doubaoya.mjs list\` 看全部，或 \`search <关键词>\` 按意图找；也可能它已经下架了。`,
+      "NOT_FOUND"
+    );
+  }
   const parsed = parseRef(ref);
   if (parsed.error) fail(parsed.error);
 
@@ -181,7 +242,7 @@ async function resolveCapability(ref) {
     );
   }
   fail(
-    `两个集合都查过了，没有「${parsed.slug}」这条能力。\n` +
+    `两个集合都查过了（operationKey 与 slug 都查过），没有「${parsed.slug}」这条能力。\n` +
       "  · 它可能是**技能包目录名**而不是调用 slug（如 trending-hub / content-parse / image-gen 都不是）\n" +
       "  · 跑 `node doubaoya.mjs search <关键词>` 按意图找，或 `list` 看全部\n" +
       "  · 也可能它已经下架了",
@@ -197,7 +258,7 @@ function callPath(item) {
 function printRows(items) {
   for (const item of items ?? []) {
     const ref = item.platform ? `${item.platform}/${item.slug}` : item.slug;
-    console.log(`${ref.padEnd(44)} ${callPath(item).padEnd(58)} ${item.title ?? ""}`);
+    console.log(`${ref.padEnd(44)} ${callPath(item).padEnd(58)} ${priceLabel(item).padEnd(6)} ${item.title ?? ""}`);
   }
 }
 
@@ -224,12 +285,14 @@ const USAGE = [
   "  node doubaoya.mjs list [--skills|--apis]        拉能力清单（默认两个集合都拉）",
   "  node doubaoya.mjs search <query>                按关键词搜（两个集合都搜）",
   "  node doubaoya.mjs describe <ref>                看单条能力的入参/出参/调用路径",
-  "  node doubaoya.mjs invoke <ref> '<json-body>'    调一条能力",
+  "  node doubaoya.mjs invoke <ref> '<json-body>' [--raw]   调一条能力（默认剥掉与 items/content 重复的 raw）",
   "  node doubaoya.mjs selfcheck                     离线自检",
   "",
-  "  <ref> = <slug> 或 <platform>/<slug>，例:",
+  "  list / search 每行：ref  调用路径  计费（免费 / N点）  标题",
+  "  <ref> = <slug> 或 <platform>/<slug> 或 operationKey，例:",
   "    node doubaoya.mjs invoke xiaohongshu-viral-notes '{\"keyword\":\"减脂早餐\"}'",
   "    node doubaoya.mjs invoke trend/trending-hub-keyword '{\"platforms\":[2,5,8]}'",
+  "    node doubaoya.mjs describe api.trend.hotSpotKeyword",
   "",
   "钥匙: export DOUBAOYA_API_KEY=dyh_...  (doubaoya.com → 密钥中心 → 生成密钥)"
 ].join("\n");
@@ -267,7 +330,33 @@ function selfcheck() {
   assert(matchApisBySlug(items, "search-work").length === 2, "跨平台同名必须全返回，好让调用方要求写全 ref");
   assert(matchApisBySlug(items, "nope").length === 0, "查无");
 
-  console.log("selfcheck ok: parseRef / resolveTarget / matchApisBySlug");
+  assert(isOperationKey("api.trend.hotSpotKeyword"), "operationKey 形状");
+  assert(isOperationKey("skill.wechat.hotSearch"), "skill 侧 operationKey");
+  assert(!isOperationKey("trend/trending-hub-keyword"), "platform/slug 不是 operationKey");
+  assert(!isOperationKey("cn-last30days"), "裸 slug 不是 operationKey");
+  const skillItems = [{ slug: "content-safety-check", operationKey: "tool.contentSafety.checkWords" }];
+  const apiItems = [
+    { platform: "trend", slug: "trending-hub-keyword", operationKey: "api.trend.hotSpotKeyword" },
+    { platform: "tool", slug: "content-safety", operationKey: "tool.contentSafety.checkWords" }
+  ];
+  assert(matchByOperationKey(skillItems, apiItems, "api.trend.hotSpotKeyword").length === 1, "operationKey 唯一命中");
+  assert(matchByOperationKey(skillItems, apiItems, "tool.contentSafety.checkWords").length === 2, "撞名的 operationKey 两条都要返回");
+  assert(matchByOperationKey(skillItems, apiItems, "api.nope").length === 0, "operationKey 查无");
+
+  const withRaw = { total: 1, items: [{ id: 1 }], raw: { upstream: "…" } };
+  const stripped = stripRaw(withRaw);
+  assert(!("raw" in stripped) && stripped.items.length === 1 && stripped.total === 1, "有 items 时剥掉 raw、其余原样");
+  assert("raw" in withRaw, "stripRaw 不改入参");
+  assert(!("raw" in stripRaw({ content: "x", raw: {} })), "有 content 时剥掉 raw");
+  assert("raw" in stripRaw({ raw: {}, other: 1 }), "没有 items/content 时 raw 不动（它可能就是唯一内容）");
+  assert(stripRaw(null) === null && Array.isArray(stripRaw([1])), "非对象原样返回");
+
+  const fakePrice = 1 + 2; // 构造值，不是任何能力的真实价格
+  assert(priceLabel({ unitPrice: fakePrice, priceClass: "standardData" }) === `${fakePrice}点`, "计费标签");
+  assert(priceLabel({ unitPrice: 0, priceClass: "free" }) === "免费", "免费标签");
+  assert(priceLabel({}) === "?", "清单缺价格字段时标 ?");
+
+  console.log("selfcheck ok: parseRef / resolveTarget / matchApisBySlug / isOperationKey / matchByOperationKey / stripRaw / priceLabel");
 }
 
 async function main() {
@@ -275,14 +364,16 @@ async function main() {
 
   switch (cmd) {
     case "invoke": {
-      const ref = rest[0];
-      if (!ref) fail("用法: node doubaoya.mjs invoke <ref> '<json-body>'");
+      const keepRaw = rest.includes("--raw");
+      const args = rest.filter((a) => a !== "--raw");
+      const ref = args[0];
+      if (!ref) fail("用法: node doubaoya.mjs invoke <ref> '<json-body>' [--raw]");
       getKey(); // invoke 必须有 key，早失败早报错
       const capability = await resolveCapability(ref);
       const target = resolveTarget(capability);
       if (target.error) fail(target.error, "CAPABILITY_UNAVAILABLE");
-      const data = await request(target.method, target.path, parseBody(rest[1]));
-      console.log(JSON.stringify(data, null, 2));
+      const data = await request(target.method, target.path, parseBody(args[1]));
+      console.log(JSON.stringify(keepRaw ? data : stripRaw(data), null, 2));
       break;
     }
     case "list": {

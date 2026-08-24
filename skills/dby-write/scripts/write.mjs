@@ -3,7 +3,8 @@
 // -----------------------------------------------------------------------------
 // 这个脚本只做**机械**的那两段，判断仍归你：
 //
-//   prep    第 1 步要的四样一次拉齐（档案 / 号章程 / 范文 / 写作规范），
+//   prep    第 1 步要的四样一次拉齐（档案 / 号章程 / 范文 / 写作规范）。文本版打章程关键字段、
+//           范文清单、口吻基准、禁用清单与规范里的**硬约束整节**；--json 另带章程全文与范文正文。
 //           并按 SKILL.md 的降级阶梯处理失败：401 不许跳过、写作规范拉不到照常往下走、
 //           档案为空要先去立人设、范文少于 3 篇要如实说一句。
 //   topics  选题卡（按赛道取候选；用户已经说了写什么就别调它）
@@ -141,6 +142,38 @@ export function readVoice(profileRow) {
   return { dna, voiceSystemPrompt, taboos };
 }
 
+/**
+ * 从写作规范正文里切出「平台硬约束」那一节（§1.2 或等价标题）。**纯函数**，selfcheck 直接打它。
+ * 只认标题里带「硬约束」的那一节，取到下一个同级或更高级标题为止；找不到返回 null。
+ * 🔴 这一节违反了会整篇发布失败或内容静默丢失，所以文本版 prep 必须把它整段打出来，
+ *    而不是只报一句「已拉到」—— 「已拉到」不等于「进了上下文」。
+ */
+export function extractHardConstraints(specText) {
+  if (typeof specText !== "string") return null;
+  const lines = specText.split("\n");
+  const start = lines.findIndex((l) => /^#{1,6}\s.*硬约束/.test(l));
+  if (start < 0) return null;
+  const level = lines[start].match(/^#+/)[0].length;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s/);
+    if (m && m[1].length <= level) { end = i; break; }
+  }
+  return lines.slice(start, end).join("\n").trim();
+}
+
+/** 章程关键字段一行一个；空串照打「(空)」，让 agent 看见哪里没填而不是猜。 */
+function charterLines(c) {
+  const v = (x) => (typeof x === "string" && x.trim()) ? x.trim() : "(空)";
+  return [
+    `  一句话定位  ${v(c.positioning?.oneLiner)}`,
+    `  赛道/标签   ${v(c.positioning?.niche)} / ${v(c.positioning?.tag)}`,
+    `  写给谁看    ${v(c.audience?.persona)}`,
+    `  变现路径    ${v(c.monetization?.path)}`,
+    `  北极星      ${v(c.northStar?.metric)}`
+  ];
+}
+
 async function prep(key, asJson) {
   const profile = await api("/api/ip-profile", key);
   if (!profile?.profile) {
@@ -163,7 +196,17 @@ async function prep(key, asJson) {
     profileId: id,
     profileName: profile.profile.name ?? null,
     hasCharter: !!(charter && !charter.__soft && charter.charter),
+    // 🔴 给正文不给布尔：hasCharter=true 却不给章程，agent 还得再取一次 —— 而「要现取的东西
+    //    大概率取不到」在这个仓已经反复应验。范文同理，正文就是红线一唯一合法的细节来源。
+    charter: (charter && !charter.__soft && charter.charter) ? charter.charter : null,
+    // 人设与个人产品（含 ctaScript）就在 /api/ip-profile 的返回体里，直接带出，不另开请求。
+    persona: profile.profile.personaJson ?? null,
+    products: Array.isArray(profile.profile.productsJson) ? profile.profile.productsJson : [],
     sampleCount: sampleList.length,
+    samples: sampleList.map((x) => ({
+      id: x.id ?? null, title: x.title ?? null, sourceUrl: x.sourceUrl ?? null,
+      wordCount: x.wordCount ?? null, content: x.content ?? ""
+    })),
     voiceSystemPrompt,
     taboos,
     writingSpec: spec?.__soft ? null : spec,
@@ -181,19 +224,26 @@ async function prep(key, asJson) {
   else if (!voiceSystemPrompt)
     out.warnings.push("文风 DNA 里没有 voiceSystemPrompt —— 口吻只能靠范文和章程推，比蒸好的基准弱一档。");
   if (dna && taboos.length === 0)
-    out.warnings.push("文风 DNA 里没有禁用词（taboos 为空）—— AI 味的词没有硬性拦截，写完自己再过一遍。");
+    out.warnings.push("文风 DNA 里没有禁用清单（taboos 为空）—— AI 味的词没有硬性拦截，写完自己再过一遍。");
 
   if (asJson) return console.log(JSON.stringify(out, null, 2));
   console.log(`档案     ${out.profileName ?? "(未命名)"}  id=${out.profileId}`);
   console.log(`号章程   ${out.hasCharter ? "有" : "无"}`);
-  console.log(`范文     ${out.sampleCount} 篇`);
+  if (out.charter) for (const l of charterLines(out.charter)) console.log(l);
+  console.log(`个人产品 ${out.products.length ? out.products.map((p) => `${p?.name ?? "?"}${p?.ctaScript ? "（有 ctaScript）" : "（无 ctaScript）"}`).join("、") : "(空)"}`);
+  console.log(`范文     ${out.sampleCount} 篇${out.sampleCount ? "（正文用 --json 取 samples[].content）" : ""}`);
+  for (const x of out.samples) console.log(`  · ${x.title ?? "(无标题)"}  ${x.wordCount ?? "?"} 字`);
   console.log(`写作规范 ${out.writingSpec ? "已拉到" : "没拉到"}`);
+  // 硬约束整段打出来：违反会整篇发布失败或内容静默丢失，「已拉到」不等于「进了上下文」。
+  const hard = extractHardConstraints(out.writingSpec?.spec);
+  if (hard) console.log(`\n${hard}`);
+  else if (out.writingSpec) console.log("\n⚠️ 规范里没找到「硬约束」标题的那一节 —— 用 --json 读 writingSpec.spec 全文。");
   // 口吻基准打全文而不是「有/无」—— 它就是要被读进去当写作基准的那段话。
   if (out.voiceSystemPrompt) {
     console.log(`\n口吻基准（写之前先读它，这是这个号的声音）：\n${out.voiceSystemPrompt}`);
   }
   if (out.taboos.length) {
-    console.log(`\n禁用词（硬性，一个都不准出现）：${out.taboos.join("、")}`);
+    console.log(`\n禁用清单（词或规则，硬性）：\n${out.taboos.map((t) => `  - ${t}`).join("\n")}`);
   }
   if (out.warnings.length) {
     console.log("\n注意：");
@@ -336,9 +386,28 @@ function selfcheck() {
   if (!prepSrc.includes("readVoice(")) die("🔴 prep 没有调用 readVoice");
   // 零额外请求：本次接线是「别把已经拿到的东西扔掉」，不该多出一次 api 调用。
   const apiCalls = (prepSrc.match(/api\(/g) ?? []).length;
+  if (!/persona:/.test(prepSrc) || !/products:/.test(prepSrc)) die("🔴 prep 的 out 里没有 persona / products —— ctaScript 取不到");
   if (apiCalls > 4) die(`🔴 prep 的 api 调用变成 ${apiCalls} 次 —— 文风 DNA 应从已有返回体取，不另开请求`);
 
+  // ── extractHardConstraints：硬约束节必须被整段切出来 ────────────────────────
+  const spec = [
+    "# 写作规范", "## 一、结构建议", "### 1.1 什么内容写成什么结构", "- 引用块",
+    "### 1.2 平台硬约束（违反会整篇发布失败）", "- 🔴 标题不要写进正文。", "- 表格最多 3~4 列。",
+    "### 1.3 文章级结构", "- front matter", "## 二、本主题的呈现"
+  ].join("\n");
+  const hard = extractHardConstraints(spec);
+  if (!hard || !hard.startsWith("### 1.2")) die("🔴 没切到硬约束节");
+  if (!hard.includes("表格最多 3~4 列")) die("🔴 硬约束节被截短了");
+  if (hard.includes("1.3") || hard.includes("front matter")) die("🔴 硬约束节切过头，混进了下一节");
+  if (extractHardConstraints("# 无此节\n- 内容") !== null) die("🔴 没有硬约束节时应返回 null");
+  if (extractHardConstraints(null) !== null) die("🔴 非字符串应返回 null");
+  // prep 接线：--json 必须带 charter 与 samples 正文，文本版必须打硬约束
+  if (!/charter:/.test(prepSrc) || !/samples:/.test(prepSrc) || !/content:/.test(prepSrc))
+    die("🔴 prep 的 out 里没有 charter / samples[].content —— 接线掉了");
+  if (!prepSrc.includes("extractHardConstraints(")) die("🔴 prep 文本版没打硬约束节");
+
   console.log("selfcheck ok: classify（四象限 / 基准取自本账号非绝对阈值 / 样本不足标不可靠 / 无阅读数拒判 / 反向可红）");
+  console.log("selfcheck ok: extractHardConstraints（切到 / 不截短 / 不过头 / 缺节为 null / prep 接线）");
   console.log("selfcheck ok: readVoice（规范形状 / 三种缺失 / 两种形状漂移 / 接线元断言）");
 }
 

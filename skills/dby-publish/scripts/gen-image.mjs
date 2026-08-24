@@ -4,8 +4,8 @@
 // 把一段 prompt 交给 doubaoya.com 的生图密钥接口（**同步**返回，单张 10–60s），
 // 拿回一张 jpeg 存到本地。密钥只在 doubaoya 服务端，skill 端只需密钥（DOUBAOYA_API_KEY），
 // 每张扣点数（生图属高价档，比数据类能力贵一个量级；实时价看详情端点的点数字段，
-// 别照这里的注释算钱）。封面（1536x1024）和正文配图（1024x1024）共用它，只是
-// --size 不同。产出的本地 jpeg 路径可以直接：
+// 别照这里的注释算钱）。封面和正文配图共用它；比例只靠 --cover-guard / prompt 控制，
+// --size 无效（见 SIZE_COVER 上方注释）。产出的本地 jpeg 路径可以直接：
 //   * 作为封面喂给 pipeline.mjs 的 --cover（走 thumb 上传）；
 //   * 或以 <img src="本地路径"> 落进 Markdown/HTML 正文，由 preprocess-and-publish.mjs
 //     走 image 上传——**不改动任何发布链路契约**。
@@ -24,12 +24,12 @@
 // 零依赖（Node ≥18 内置 fetch）。
 //
 // 用法（CLI）:
-//   node gen-image.mjs --prompt "画面描述…" --out cover.jpg --size 1536x1024 --cover-guard
-//   node gen-image.mjs --prompt "画面描述…" --out fig1.jpg --size 1024x1024 --style flat-illustration
+//   node gen-image.mjs --prompt "画面描述…" --out cover.jpg --cover-guard
+//   node gen-image.mjs --prompt "画面描述…" --out fig1.jpg --style flat-illustration
 //
 // 用法（import）:
 //   import { generateImage, COVER_GUARD, buildPrompt } from "./gen-image.mjs";
-//   await generateImage({ prompt, size:"1536x1024", out:"cover.jpg", styleId:"magazine-editorial", coverGuard:true });
+//   await generateImage({ prompt, out:"cover.jpg", styleId:"magazine-editorial", coverGuard:true });
 // -----------------------------------------------------------------------------
 
 import { writeFile, readFile } from "node:fs/promises";
@@ -151,7 +151,7 @@ export function buildPrompt({ prompt, styleFragment = "", coverGuard = false }) 
  * @param {object} o
  * @param {string} o.prompt      画面/概念描述（必填）
  * @param {string} o.out         输出 jpeg 路径（必填）
- * @param {string} [o.size]      默认 1024x1024；封面用 1536x1024
+ * @param {string} [o.size]      兼容保留，上游忽略；比例只靠 coverGuard / prompt
  * @param {string} [o.quality]   low|medium|high，默认 medium
  * @param {string} [o.styleId]   风格库里的 id，追加其 promptFragment
  * @param {string} [o.styleFragment] 直接给风格片段（优先于 styleId）
@@ -305,10 +305,10 @@ const HELP = `gen-image.mjs — 都爆鸭 · 公众号封面/配图生图
   --out <file>       输出 jpeg 路径
 
 选项:
-  --size <WxH>       默认 1024x1024；封面用 1536x1024
   --style <id>       风格库 assets/styles/index.json 里的 id，追加其 promptFragment
   --reference-image <path|url|data:>  IP 参考图；提供时走 edit 条件化生成，保留参考图里的 IP 形象
-  --cover-guard      追加封面护栏（把主体压水平中带、上下留白，防 2.35:1 裁切；封面时加）
+  --cover-guard      追加封面护栏（写入 16:9 宽幅 + 主体压水平中带、上下留白，防 2.35:1 裁切；封面时加）
+                     比例只靠它 / prompt 控制，--size 上游忽略（参数保留仅为兼容）
   --quality <lvl>    low|medium|high，默认 medium
   -h, --help         显示帮助
 

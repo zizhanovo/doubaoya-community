@@ -5,7 +5,10 @@
 一个 map 后输出。每个平台是一次独立计费调用。
 
 用法：
-    python3 check_multi.py "<文案>" [--platforms xiaohongshu,douyin,gongzhonghao]
+    python3 check_multi.py "<文案>" [--platforms xiaohongshu,douyin,gongzhonghao] [--raw]
+    python3 check_multi.py --selfcheck        离线自检，不联网不需要 key
+
+默认剥掉 data.raw 里与顶层 content / originalContent 重复的两键（其余键保留），--raw 保留原样。
 
 环境变量：
     DOUBAOYA_API_KEY    必填，密钥形如 dyh_...（绝不打印到任何输出）
@@ -87,11 +90,61 @@ def check_one(platform, content, api_key):
     return body.get("data") or {}
 
 
+DUP_KEYS = ("content", "originalContent")
+
+
+def slim(data):
+    """剥掉 data["raw"] 里与顶层重复的 content / originalContent，其余键原样保留。
+
+    只剥 raw 里的这两键——顶层那两份是判定与取命中词的依据，动不得；raw 的其它键（上游状态码等）
+    也不动。raw 不是 dict（缺失 / null / 字符串）时原样返回。
+    """
+    if not isinstance(data, dict):
+        return data
+    raw = data.get("raw")
+    if not isinstance(raw, dict):
+        return data
+    out = dict(data)
+    out["raw"] = {k: v for k, v in raw.items() if k not in DUP_KEYS}
+    return out
+
+
+def selfcheck():
+    """用构造 JSON 验证 slim；不联网、不计费。"""
+    full = {
+        "source": "contentSafety.sensitiveWords",
+        "content": "全网<span class=\"banned-word\">最低</span>价",
+        "originalContent": "全网最低价",
+        "prohibitedWordsType": ["禁用词"],
+        "raw": {"content": "全网最低价", "originalContent": "全网最低价", "code": 0, "level": "high"},
+    }
+    s = slim(full)
+    assert "content" not in s["raw"] and "originalContent" not in s["raw"], "raw 里的重复键没剥掉"
+    assert s["raw"] == {"code": 0, "level": "high"}, "raw 的其它键被误删"
+    assert s["content"] == full["content"] and s["originalContent"] == full["originalContent"], "顶层字段被动了"
+    assert full["raw"].get("content") == "全网最低价", "slim 改了入参（应返回新对象）"
+    assert slim({"error": {"code": "X"}}) == {"error": {"code": "X"}}, "无 raw 时应原样返回"
+    assert slim({"raw": None})["raw"] is None, "raw 为 null 时应原样返回"
+    assert slim({"raw": "str"})["raw"] == "str", "raw 非 dict 时应原样返回"
+    assert slim(None) is None, "非 dict 入参应原样返回"
+    # 破坏演练：证明断言不是恒真
+    assert "content" in full["raw"], "破坏演练失效"
+    print("selfcheck ok: slim（剥 raw 重复键 / 保留其它键 / 不动顶层 / 不改入参 / 缺 raw 原样）")
+
+
 def main():
+    if "--selfcheck" in sys.argv:
+        selfcheck()
+        return
     parser = argparse.ArgumentParser(
         description="都爆鸭 · 多平台违禁词检测"
     )
     parser.add_argument("content", help="待检测的文案内容")
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="保留 raw 里与顶层重复的 content / originalContent（默认剥掉）",
+    )
     parser.add_argument(
         "--platforms",
         default=",".join(DEFAULT_PLATFORMS),
@@ -115,7 +168,8 @@ def main():
 
     results = {}
     for platform in platforms:
-        results[platform] = check_one(platform, args.content, api_key)
+        result = check_one(platform, args.content, api_key)
+        results[platform] = result if args.raw else slim(result)
 
     print(json.dumps(results, ensure_ascii=False, indent=2))
 
