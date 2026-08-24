@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T22:21:43.116252+00:00",
+  "generatedAt": "2026-08-24T22:44:24.033410+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -209,6 +209,7 @@
     ],
     "dby-write": [
       "274536af5420",
+      "376c6d363adc",
       "38713c695a93",
       "388503b769d1",
       "69a7b400b468",
@@ -2921,6 +2922,12 @@
         "version": "1.3.1",
         "date": "2026-08-24",
         "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+      },
+      {
+        "hash": "69a7b400b468",
+        "version": "1.5.0",
+        "date": "2026-08-24",
+        "subject": "feat(dby-write): 补「第 4 步 · 收素材」——六层素材阶梯与带出处的素材单"
       },
       {
         "hash": "78f1efdf04ad",
