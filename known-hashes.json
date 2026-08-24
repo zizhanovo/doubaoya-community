@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T19:28:04.767664+00:00",
+  "generatedAt": "2026-08-24T20:34:49.036756+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -101,6 +101,7 @@
       "c3738aab09a9"
     ],
     "dby-gateway": [
+      "1d294368f7d7",
       "64220c7bed79",
       "b798cca6be87",
       "e1dc9e3d282e"
@@ -2425,6 +2426,12 @@
         "version": "2.0.1",
         "date": "2026-08-22",
         "subject": "fix(dby-publish,dby-gateway): 撤回我上一轮的违规改动，并给能力索引加可执行的过期自查"
+      },
+      {
+        "hash": "c24c940f04d9",
+        "version": "2.1.0",
+        "date": "2026-08-24",
+        "subject": "feat(dby-publish,dby-write): 加 --render-only —— 只想看排版效果不必先绑公众号"
       }
     ],
     "dby-rewrite": [
@@ -2595,6 +2602,12 @@
         "version": "1.1.0",
         "date": "2026-08-24",
         "subject": "fix(dby-write): 复盘基准改中位数 —— 一篇爆款不该把这个号其余文章全判成选题错误"
+      },
+      {
+        "hash": "dbaa900ce8ae",
+        "version": "1.2.0",
+        "date": "2026-08-24",
+        "subject": "feat(dby-publish,dby-write): 加 --render-only —— 只想看排版效果不必先绑公众号"
       }
     ],
     "doubao-websearch": [
