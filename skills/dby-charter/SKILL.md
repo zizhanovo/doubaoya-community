@@ -2,7 +2,7 @@
 name: dby-charter
 description: >-
   号章程 · 创作 DNA（都爆鸭）——一份 IP 档案管两件事：①**定位问诊**帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），产出结构化「号章程」，之后选题、写作、复盘都按它走（三个入口：L0 三问 5 分钟、L1 十五问完整问诊、老号反推）；②**文风蒸馏**从你的范文里蒸出「创作 DNA」（人设 / 赛道 / 个人产品 / 文风），之后写这个号的文章全程读它，让 AI 写得更像你本人。问诊与蒸馏都在你自己的 agent 侧用你自己的模型跑，doubaoya 只做存储与读写接口，不调 LLM、免费不扣点。触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现、IP 档案、公众号人设、文风 DNA、文风蒸馏、重新蒸馏、更新人设、个人产品、带货话术、IP 头像。
-version: 1.1.1
+version: 1.1.2
 compatibility: >-
   需要 Node ≥18（读写章程的 scripts/charter.mjs 用全局 fetch，零依赖不装 npm 包）；
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
@@ -24,7 +24,8 @@ compatibility: >-
 
 ## 怎么读写章程
 
-⚠️ 先读 `dby-gateway/references/protocol.md` 再发请求。
+章程的 GET / PUT 由 `scripts/charter.mjs` 代发；档案本身的 POST / PUT（建档、存范文、存 DNA）
+要手写 curl，那时才读 `dby-gateway/references/protocol.md`。
 
 读写走 **`scripts/charter.mjs`**。章程路由有两个**每次都会踩**的坑，脚本里做掉了：
 GET 回来的 `products` 是只读投影、原样 PUT 必 400；PUT 是全量替换不是增量 patch。
@@ -60,7 +61,7 @@ node scripts/charter.mjs selfcheck                 # 离线自检，不联网不
 ## 七条红线（教练纪律，逐条照办）
 
 1. **会话开场先读基线**。每次教练会话——含 L0→L1 深化、老号反推、章程回顾——开场先
-   `GET /api/ip-profile/charter`（已知档案 id 时用 `GET /api/ip-profile/:id/charter`）读取已有章程。
+   `node scripts/charter.mjs get`（非默认档案加 `--profile <id>`）读取已有章程。
    **已填字段不重复问**，只问空字段、以及字段文本尾部标注「（待深化）」的字段。
    **进度以服务端章程为准**，不臆测、不谎报「我们上次聊过 X」。
 2. **一次只问一个问题**。用户一口气倒出多维信息时，把信息拆解归位到对应字段再继续，
@@ -94,6 +95,8 @@ node scripts/charter.mjs selfcheck                 # 离线自检，不联网不
 | 这个号写给谁看？（什么人、什么处境） | `audience.persona` |
 | 你希望读者一句话记住你什么？ | `positioning.oneLiner` |
 | 这个号打算怎么赚钱？ | `monetization.path`（按**八种活法**选一档；说不清留空串，不硬逼） |
+
+开场读基线：三个字段**已非空 → 逐条念给用户确认，确认后直接转 L1 只补空字段**，不重问。
 
 **其余字段填空串**（`practicalPaths` 填 `[]`），`version` 填 `1`，五个顶层节的键**必须齐全**——
 **空串 = 未定，允许存**。逐节确认后 `scripts/charter.mjs put c.json` 落库（手写见 `references/api-contract.md`）。

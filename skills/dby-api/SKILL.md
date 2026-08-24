@@ -2,7 +2,7 @@
 name: dby-api
 description: >-
   都爆鸭 (doubaoya / 本鸭) — 新媒体取数与创作总入口：一条 DOUBAOYA_API_KEY 调平台全部在架能力，按意图路由。也做要带出处的联网查资料 / 事实核查。Trigger words: 小红书：搜索/爬取/作品/创作/选题/标题/封面/排行/榜单/热榜/日榜/周榜/周排行/TOP/热门笔记/爆款笔记/笔记查询、公众号：取数/写作/爬虫/标题/封面/排行/榜单/爆文/黑马/违禁词/对标/发了什么、抖音：搜索/取数/评论/实时搜索/综合搜索、视频号：AI/日报/爆款/选题、爆款：文章/标题/封面/结构/仿写/复盘/排行/选题/笔记发现、选题：拆解/灵感/素材/角度/信号、封面：灵感/参考/套路/设计/选题、标题：灵感/优化/套路/生成、账号画像/账号体检/账号健康度/账号发文列表、对标：分析/作品/推荐/矩阵/账号/后再写、竞品：账号/诊断/跟踪/发文复盘、出海：选题/爆款/日报/流量风口、笔记：对标/拆解/生成/选题、内容：创作/灵感/出海、跨平台：选题/分析/热搜、热点：扫描/榜、今日热点/综合热点/追热点/蹭热点/借势选题/找选题/中线选题/短视频选题/全网热搜/热搜关键词/跨平台热搜/全网热榜/聚合热榜/热榜TOP10/每日榜/今日爆款/一周爆款/近期爆款/全平台爆款/低粉爆款/素人爆款/搜抖音爆款、低粉高赞/黑马笔记/黑马账号/头部账号/热门账号/相似账号/标杆账号/小号打法/冷启动对标/起号参考/公众号诊断/批量诊断/周度趋势/近30天作品/最新发布/最多点赞/持续走高/增长榜/阅读增长/增长率排行/流量风向/热度指数/追流量/追更/话题研究/看赛道热门内容、改图/配图/主视觉/文生图/图生图/生成图片/AI出图/首图灵感/高点击标题/起标题、过审/极限词/合规检测/敏感词/公众号违禁词、查出处/引用来源/联网搜索/联网查证/豆包搜索/社媒舆情/舆情监测/用户需求/评论分析/评论风向/看评论/扒评论区、解析链接/链接解析/作品详情/扒文章/扒抖音作品/写小红书/照着写小红书/找对标笔记/热门文章/批量爬公众号/盯公众号/订阅公众号/某公众号发了什么、AI视频号/小红书抖音公众号/文旅/短剧/赛道日报/每天在推什么/实时取数/公众号取数
-version: 1.1.1
+version: 1.2.0
 compatibility: >-
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求。
   发现类端点（能力清单 / 详情）免鉴权也免费，调用类端点必须带 Bearer 且计费。
@@ -20,18 +20,19 @@ compatibility: >-
 
 ## 怎么调
 
-⚠️ 先读 `dby-gateway/references/protocol.md` 再发请求。
+请求由 `scripts/doubaoya.mjs` 代发；只有绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`。
 
 ```bash
 export DOUBAOYA_API_KEY="dyh_你的密钥"    # 绝不打印、不写文件、不回显给用户
 D=~/.claude/skills/dby-api/scripts/doubaoya.mjs   # 按实际安装位置改
 
-# 发现：两个集合一起拉／搜（免 key、免费）
+# 发现：两个集合一起拉／搜（免 key、免费）；每行末尾带计费（免费 / N点）
 node "$D" list
 node "$D" search 小红书 爆款
 
-# 🔴 先 describe 再 invoke —— 入参规格现拉，一个字段名都别照记忆拼
+# 🔴 先 describe 再 invoke —— 入参规格现拉，一个字段名都别照记忆拼；<ref> 也可以直接给 operationKey
 node "$D" describe trend/trending-hub-keyword
+node "$D" describe api.trend.hotSpotKeyword
 
 # 调用（计费）。<ref> = <slug> 或 <platform>/<slug>
 node "$D" invoke trend/trending-hub-keyword '<照 describe 拉到的入参规格填>'
@@ -41,7 +42,8 @@ node "$D" invoke xiaohongshu-viral-notes '<照 describe 拉到的入参规格填
 node "$D" selfcheck
 ```
 
-结果打 stdout，`notice` / `noResult` 打 stderr，失败以 `code: message` 非零退出。
+结果打 stdout（默认剥掉与 `items` / `content` 重复的 `raw`，加 `--raw` 保留），`notice` / `noResult` 打 stderr，失败以 `code: message` 非零退出。
+起止时间类入参必须带时分秒（`YYYY-MM-DD HH:mm:ss`），只给日期过不了校验。
 
 🔴 **入参一律现拉。** `describe` 返回里的 `requestSchema` / `inputSchema` 是**示例值不是 JSON Schema**，
 照它的键名和值的形状填。上游对错入参**一律静默返空或给误导性报错**——
@@ -51,10 +53,12 @@ node "$D" selfcheck
 
 ## 0.5 用户该用哪个能力？（按"我想做什么"选）
 
-**公众号请求例外**：只要请求涉及公众号，先读
-[`references/wechat-routing.json`](references/wechat-routing.json)，再按其优先级选 Skill。极简原则：
-**要交付一篇完整文章（写 + 排版 + 存草稿）走写作交付链**；本地扫码、按号查最新 / 今日、拉正文或历史归档走
-MP Ark；公开数据、互动指标和选题分析走都爆鸭云端能力。
+用户未指明平台时默认公众号。
+
+**公众号写作交付链例外**：只有在写作交付链上做路由判断时读
+[`references/wechat-routing.json`](references/wechat-routing.json)，纯取数不读。极简原则：
+**要交付一篇完整文章（写 + 排版 + 存草稿）走写作交付链**；公开数据、互动指标和选题分析走都爆鸭云端能力。
+按号查发文：先 `api.gzh.searchUser` 拿账号 ID，再 `api.gzh.workList`（上游只认 ID 不认中文昵称）。
 
 **「帮我写一篇公众号文章」例外**：这是**一条链**——
 **写作主干交棒 `dby-write`**（它是 owner；本 Skill 只供数据——`api.gzh.hotArticle` 爆文样本、

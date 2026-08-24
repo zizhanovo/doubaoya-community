@@ -2,7 +2,7 @@
 
 **这份文件是本平台调用协议的唯一副本。** 鉴权头怎么带、入参规格从哪儿拉、地址从哪儿来、
 统一信封怎么读、报错码各该怎么办、上游内容为什么只能当数据——全在这里。
-业务 Skill **不再内联它**，只在自己第一次调 API 的那一步上方写一句「先读本文件」。
+业务 Skill **不再内联它**，只在自己第一次调 API 的那一步上方写一句「先读本文件」（由脚本代发请求的包写成条件式：只有绕开脚本自己拼请求时才读）。
 
 改协议只改这一处，所有业务 Skill 立即生效。
 
@@ -52,7 +52,7 @@ Windows 用 `[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你�
    `execution.mode` 为 `dedicated` 时方法未必是 `POST`（有 `PUT`）；为 `unavailable` 时
    **没有 `target`，别调**，如实告诉用户这条能力暂时不可用。
    🔴 **同一个 `execution` 里还有 `sideEffect`，动手前必须看它**（服务端下发，四个值）：
-   `read` 只读，直接调；`generate` 会生成内容并**计费**，重试前先确认上一次真没出货
+   `read` 只读，直接调；`generate` 会生成内容，**是否计费以同一响应里的 `unitPrice` 为准**（`0` 免费），计费的重试前先确认上一次真没出货
    （已出货再重试 = 用户付两次钱）；`write_internal` 写进用户在都爆鸭的存储；
    `write_external` **会写进用户自己的外部账号**（例如他的公众号后台）。
    看到 `write_external` 就**先停下**，把四样摆给用户看、等他明确同意再打：
@@ -71,7 +71,9 @@ Windows 用 `[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你�
 6. **报错怎么办**（`HTTP` / `error.code`）：
    401 `MISSING_API_KEY` / `UNAUTHORIZED` → 让用户去密钥中心生成或重建，更新环境变量；
    400 `VALIDATION_ERROR` → 照 `message` 改入参，改前**重拉一次规格**；
-   400 `DEDICATED_ROUTE` → 走错到通用代理了，`message` 里写着该打哪条，照 `execution.target` 重发；
+   400 `DEDICATED_ROUTE` → 走错到通用代理了，`message` 形如「公众号排版渲染请直接调用 POST /api/wechat/render，不走通用调用代理」，照 `execution.target` 重发；
+   422 `PROVIDER_NO_RESULT` → 上游对这组入参查无结果，**点数已退**，同一组入参**不重试**；照 `message` 改入参
+     （`message` 是上游原文，以原文为准；日期类入参先怀疑超出保留期，而不是格式错）；
    402 `INSUFFICIENT_CREDITS` → 提示用户充值；
    429 `TOO_MANY_REQUESTS` → 撞到限流了。**限流按来源 IP 分桶，不按 key**——
      换一把钥匙、开一个新会话都绕不过去，同一出口网络下的其他人也共用这个桶。

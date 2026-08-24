@@ -6,7 +6,7 @@
 
 ```
 查阅：dby 路由表 → 写作链
-执行：doubaoya（拉样本 + 写正文）
+执行：dby-api（拉爆文样本）、dby-write（写正文）
 质检：dby-banned-words（命中 2 类，已按标注调整相关表述）
 跳过：dby-publish —— 你这次只要 Markdown 成稿；它会把文章写进你自己的公众号
       草稿箱，要排版好的 HTML 或要进草稿箱再说一声，我接着跑。

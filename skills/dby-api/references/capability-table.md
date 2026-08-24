@@ -49,7 +49,7 @@
 | "公众号热门文章 / 只要真火过的（阅读量有下限那种）"（与上一条是两条能力：这条按阅读量门槛筛，拿的是"确实火过"的样本） | `skill.wechat.hotSearch` | 公众号热门文章查询 | `/api/skills/wechat-search` |
 | "公众号封面怎么做 / 爆款封面 / 起个公众号标题 / 标题套路 / 高点击标题" | `api.gzh.cozeData` | 公众号爆款封面数据（返回同赛道爆款的封面图 + 标题 + 点击量，**给你数据自己提炼**） | `/api/apis/gongzhonghao/gongzhonghao-coze-cover` |
 | "帮我把封面设计出来 / 直接给我一版封面方案"（与上一条是两条能力：那条给**素材数据**，这条直接产出**封面设计方案**） | `skill.wechat.coverDesign` | 公众号封面图制作 | `/api/skills/wechat-cover` |
-| "追更某个号 / 盯公众号 / 订阅公众号 / 账号发文列表 / 竞品发文复盘 / 某公众号发了什么" | `api.gzh.workList` | 公众号账号发文列表 | `/api/apis/gongzhonghao/gongzhonghao-work-list` |
+| "追更某个号 / 盯公众号 / 订阅公众号 / 账号发文列表 / 竞品发文复盘 / 某公众号发了什么" | `api.gzh.workList` | 公众号账号发文列表。🔴 **必须先过 `api.gzh.searchUser` 拿账号 ID**，上游只认 ID 不认中文昵称 | `/api/apis/gongzhonghao/gongzhonghao-work-list` |
 | "公众号 10 万+ / 原创爆文 / 原创热文 / 原创热门榜" | `api.gzh.categoryTime` | 公众号10万+/原创榜 | `/api/apis/gongzhonghao/category-time-hot` |
 | "头部账号 / 公众号排行 / 公众号榜单 / 热度指数 / 热门账号" | `api.gzh.indexRank` | 公众号热门账号榜 | `/api/apis/gongzhonghao/gongzhonghao-index-rank` |
 | "公众号阅读增长 / 增长榜 / 增长率排行 / 持续走高"（要**账号级**的增量与名次） | `api.gzh.raiseRank` | 公众号阅读增长榜 | `/api/apis/gongzhonghao/gongzhonghao-raise-rank` |

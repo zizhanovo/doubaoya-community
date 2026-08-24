@@ -53,8 +53,8 @@
 | 结论信号 | 推荐下一步 | 为什么 |
 |---|---|---|
 | 草稿已存，发布后想看表现 | `dby-api` | 攒几天数据给号做体检 / 看发文表现（`skill.wechat.accountAnalyzer`） |
-| 想盯自己或竞品的发文节奏 | `dby-api` | 拉时段发文做追更复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
-| 已发文想归档正文 | `dby-api` | 按文章链接拉正文（本地扫码归档的 MP Ark 已下架） |
+| 想盯自己或竞品的发文节奏 | `dby-api` | 先 `api.gzh.searchUser` 拿账号 ID，再 `api.gzh.workList` 拉时段发文做追更复盘 |
+| 已发文想归档正文 | `dby-api` | 按文章链接拉正文（`tool.content.parseDetail`） |
 
 #### 复盘 → 反哺 —— 来自 `dby-write`（复盘模式）或 `dby-api`（账号诊断 / 发文列表）
 

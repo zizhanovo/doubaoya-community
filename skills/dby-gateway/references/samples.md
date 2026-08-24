@@ -1,6 +1,6 @@
 # 实拉响应片段（2026-08-18）
 
-> 只在你想核对信封长什么样、或要给用户解释某个报错时读它。日常调用不需要。
+> 只在你想核对信封长什么样、或要解释 `SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` / `CSRF_FORBIDDEN` / `DEDICATED_ROUTE` 时读它。日常调用不需要。
 
 ## 5. 本文档里的响应片段都是实拉的
 
@@ -23,6 +23,11 @@
 // POST /api/skills/recommend 不带 Authorization 头 —— HTTP 403，被 CSRF 闸拦在鉴权之前
 { "success": false, "requestId": "5cf9584d-…", "data": null,
   "error": { "code": "CSRF_FORBIDDEN", "message": "Origin not allowed" } }
+
+// POST /api/skills/wechat-render/invoke —— 专用路由能力打到通用代理（2026-08-24 实拉）
+// HTTP 400
+{ "success": false, "requestId": "831a9765-…", "data": null,
+  "error": { "code": "DEDICATED_ROUTE", "message": "公众号排版渲染请直接调用 POST /api/wechat/render，不走通用调用代理" } }
 ```
 
 `requestId` 每次都不同，上面只留了前缀。**报障时把 `requestId` 一起给用户**，

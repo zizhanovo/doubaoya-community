@@ -27,6 +27,8 @@
 | PUT | `/api/ip-profile/:id` | 改档 / 存蒸好的 DNA | 上面任意字段 + `writingDnaJson, dnaSampleCount, dnaDistilledAt, dnaModel, wechatThemeId, wechatAppid` | `{ profile }` |
 | DELETE | `/api/ip-profile/:id` | 删档 | — | `{ deleted: true, id }` |
 | POST | `/api/ip-profile/:id/samples` | 存一篇范文 | `title?, sourceUrl?, content` | `{ sample, dnaSampleCount }` |
+| GET | `/api/ip-profile/:id/samples` | 读回已存范文（带正文，重蒸时不必重贴） | — | `{ samples: [{ id, title, sourceUrl, content, wordCount }], dnaSampleCount }` |
+| DELETE | `/api/ip-profile/:id/samples/:sampleId` | 删一篇范文（不带 Content-Type） | — | — |
 | POST | `/api/upload` | 上传图片到图床（存头像 / 生图参考图用） | `dataBase64（data URI，png/jpeg/webp，≤2MB）, filename?` | `{ url, key, contentType, size }` |
 
 体积上限：`writingDnaJson` ≤ 32KB（超限 400 `DNA_TOO_LARGE`）；单篇范文 `content` ≤ 50KB（超限 400

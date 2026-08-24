@@ -5,7 +5,7 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger: customize WeChat article theme, change layout / palette / heading style.
-version: 1.2.1
+version: 1.2.2
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
@@ -72,7 +72,7 @@ AUTH="Authorization: Bearer $DOUBAOYA_API_KEY"
 ### 1. 读起点主题
 
 ```bash
-# a) 读我当前的默认主题(有就在它上面改)
+# a) 读我当前的默认主题(有就在它上面改)；主题体在 data.theme.themeJson
 curl -s -H "$AUTH" "$BASE/api/wechat/theme"
 
 # b) 或列出内置主题,挑一个复制起步(推荐 benya-clean——已按红线 1 / 2 改造过)
@@ -107,6 +107,7 @@ curl -s -H "$AUTH" -H 'Content-Type: application/json' \
 open /tmp/preview.html    # macOS;别的平台用浏览器打开
 ```
 
+> `sample.md` 别带 `#` 一级标题：`title` 会被插成 h1，正文再有就显示两个大标题。
 > render 返回的 HTML 与最终存进草稿的正文**逐字一致**。`data.warnings` 若有(如未知 `{{token}}`)一并看一眼。
 
 → 本机已装 `dby-publish` 且想要「改文件即换肤」的实时预览，读 `references/live-preview.md`，

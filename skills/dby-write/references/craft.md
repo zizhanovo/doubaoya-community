@@ -33,9 +33,10 @@
 
 ## 结尾的行动号召（第 5 步）
 
-**结尾的行动号召从档案里取**：`productsJson.ctaScript` 是用户自己写好的话术，
-`positioning.credibility` 是他真实的背书/案例/内容资产。两样都为空 →
-按红线一留占位，**绝不自己编一个背书**。
+**结尾的行动号召从档案里取**：`prep --json` 的 `products[].ctaScript`（每个产品各一条，
+取匹配当前选题那个产品的）。背书 / 案例 / 内容资产**没有专属字段**：档案里叫什么取什么
+（`persona`、`charter.positioning` / `charter.audience`、范文），没有就按红线一留【待补】，
+**绝不自己编一个背书**。
 
 ## 摘要与留言（第 6 步）
 

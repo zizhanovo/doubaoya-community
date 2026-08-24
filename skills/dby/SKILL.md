@@ -4,7 +4,7 @@ description: >-
   都爆鸭（doubaoya / 本鸭）公众号工具箱主入口：新手引导 / 任务前路由 / 任务后导航，把你路由到正确的 skill。
   触发方式：/dby、/dby 新手入门、本鸭、都爆鸭、「帮我看看下一步」「接下来做什么」「先干哪个」「公众号从哪开始」。
   Trigger: /dby, what's next, where do I start.
-version: 1.1.1
+version: 1.2.0
 ---
 
 # dby：都爆鸭公众号工具箱
@@ -47,7 +47,8 @@ version: 1.1.1
 | 用户意图信号 | 路由到 | 一句话说明 |
 |---|---|---|
 | 说「更新 / 升级 本鸭 / doubaoya skill」「检查本鸭更新」 | `dby-update` | 只同步官方 doubaoya-community，不碰你装的其他 skill、不动本地 config |
-| 想挖选题 / 追热点 / 看全网热榜 / 不知道写点啥 | `dby-api` | 总纲：一条密钥挖选题、追热点、出脚本 |
+| 不知道写点啥 / 想写但没思路 | `dby-write` | 先走它的免费选题步再动笔，不用先去 `dby-api` 挖 |
+| 想挖选题 / 追热点 / 看全网热榜（纯挖选题、暂不动笔） | `dby-api` | 总纲：一条密钥挖选题、追热点、出脚本 |
 | 想按主题看同赛道公众号爆文、研究爆款规律 | `dby-api` | 拉同主题爆文带阅读热度，找选题参考 |
 | 要动手写公众号文章 / 写个初稿 / 按我的风格写 | `dby-write` | **写作主干的 owner**：读号章程与创作 DNA，选题→标题→提纲→正文→摘要留言→自检一口气走完 |
 | 想参考爆款仿写、找选题切口（还没到动笔） | `dby-api` | 拉同主题爆文样本；真要动笔了交给 `dby-write` |
@@ -63,10 +64,10 @@ version: 1.1.1
 | 文章写好了要排版 + 封面 + 存进自己公众号草稿箱 | `dby-publish` | md→公众号 HTML→封面→草稿的确定性流水线（只存草稿、不群发） |
 | 已有排好版的图文，只想推进草稿箱 | `dby-publish` | 更轻的 Python 入口 `publish_draft.py`，只存草稿、绝不群发，需先绑定公众号 |
 | 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `dby-api` | 账号诊断（`skill.wechat.accountAnalyzer`）：给账号名，拉粉丝 / 发文 / 阅读等真实运营指标 |
-| 想追更某个号 / 复盘竞品最近发了啥 | `dby-api` | 拉指定时段历史发文做追更复盘：`POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` |
+| 想追更某个号 / 复盘竞品最近发了啥 | `dby-api` | 先 `api.gzh.searchUser` 拿账号 ID，再 `api.gzh.workList` 拉指定时段发文（上游只认 ID 不认中文昵称） |
 | 想找对标账号 / 起号参考 / 搭竞品矩阵 | `dby-api` | 相似账号推荐（`skill.wechat.similarAccount`）：3 层加权匹配，同阶对标号 + 高阶标杆号 |
 | 想看行业头部榜 / 竞品跟踪 | `dby-api` | 日 / 周 / 月热度指数榜：`POST /api/apis/gongzhonghao/gongzhonghao-index-rank/call` |
-| 要把已发布的公众号文章拉正文 / 归档 | `dby-api` | 按文章链接拉正文（本地扫码归档的 MP Ark 已下架） |
+| 要把已发布的公众号文章拉正文 / 归档 | `dby-api` | 按文章链接拉正文（`tool.content.parseDetail`） |
 
 > 跨平台取数（抖音 / 小红书选题、PDF 提取等）→ `dby-api`。
 
@@ -84,7 +85,7 @@ version: 1.1.1
 
 信息仍不足但能缩小范围时，只问一个与已有信息直接相关的问题，别先甩完整目录。
 
-**Step 2：路由。** 确认意图后**直接调对应 skill，不再问第二个问题**。说一句：
+**Step 2：路由。** 确认意图后**直接调对应 skill，不再问第二个问题**；唯一例外：路由目标需要素材而对话里没有（如配封面却无文章 / 主题）时允许问一句。说一句：
 
 > 明白了，这一步交给 `{skill 名称}` 来处理。
 
@@ -123,11 +124,11 @@ version: 1.1.1
 
 回执随交付写，不事后补。
 
-### 先声明终态，再选 skill
+### 终态
 
-选 skill 之前先说清这一次交到哪一档（成稿 / 排版 HTML / 进草稿箱）；终态门以 `dby-api/references/wechat-routing.json` 为准。
+`dby` 不问终态；终态（成稿 / 排版 HTML / 进草稿箱）由 `dby-write` 成稿后问，终态门以 `dby-api/references/wechat-routing.json` 为准。
 **目标停在哪一档，就在哪一档收手**：用户只要成稿时不跑 `dby-publish`（它会写进用户自己的公众号后台）；
-用户要进草稿箱却停在成稿才是断头。终态没说清就问一句，别替用户决定。
+用户要进草稿箱却停在成稿才是断头。用户已说的终态照走，别替他决定。
 
 ### 格式
 

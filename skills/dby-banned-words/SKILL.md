@@ -1,7 +1,7 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、跨平台合规、违禁词检测、敏感词、违规词、限流自查、广告法。
-version: 1.1.1
+version: 1.2.0
 compatibility: >-
   需要 Python 3（`scripts/check_multi.py` 只用标准库，不装任何 pip 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
@@ -16,10 +16,10 @@ compatibility: >-
 ## 流程
 
 1. **收文案**。
-2. **逐平台检测**——对 `xiaohongshu`、`douyin`、`gongzhonghao` 各调用**一次**都爆鸭接口
-   （默认三个全查，用户也可只指定其中几个）。
+2. **逐平台检测**——对 `xiaohongshu`、`douyin`、`gongzhonghao` 各调用**一次**都爆鸭接口。
+   用户没指定平台时先问一句要哪几个，默认三平台各计费一次。
 3. **风险对照**——把各平台结果并排成一张表：平台 / 判定 / 风险类别 / 命中词 / 建议。
-4. **统一改写**——本鸭综合所有平台的命中词，给出**一版改完即可全平台发布**的安全文案。
+4. **统一改写**——本鸭综合所有平台的**营销语境命中**，给出**一版改完即可全平台发布**的安全文案。
 
 > **每个平台是一次独立计费调用**。用户只关心某几个平台时用 `--platforms` 缩小范围。
 
@@ -27,7 +27,7 @@ compatibility: >-
 
 ## 运行脚本
 
-⚠️ 先读 `dby-gateway/references/protocol.md` 再发请求。
+请求由 `scripts/check_multi.py` 代发；只有绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`。
 
 ```bash
 # 默认三平台全查
@@ -38,6 +38,7 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 ```
 
 - 脚本对每个平台 `POST` 一次，把所有平台结果汇成一个 map 后以 JSON（`ensure_ascii=False`，缩进 2）打印。
+  `raw` 里与 `content` / `originalContent` 重复的两键默认剥掉，加 `--raw` 保留。
 - **单个平台失败不影响其它平台**：失败的平台在 map 里记 `error`，其余照常返回。
 
 ---
@@ -77,7 +78,7 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
   | 字段 | 含义 |
   | ---- | ---- |
   | `originalContent` | 未标注的原文 |
-  | `content` | 标注版正文，命中处被 `<span>` 包裹——**唯一**能定位「哪几个词命中」的地方。类名带信息：`banned-word` = 禁用词，`sensitive-word` = 敏感词，与 `prohibitedWordsType` 里的类别一一对应 ⇒ **能逐词说出它是哪一类** |
+  | `content` | 标注版正文，命中处被 `<span>` 包裹——**唯一**能定位「哪几个词命中」的地方。类名带信息：`banned-word` = 禁用词，`sensitive-word` = 敏感词，`industry-banned-word` = 行业禁用词，与 `prohibitedWordsType` 里的类别一一对应 ⇒ **能逐词说出它是哪一类** |
   | `prohibitedWordsType` | 命中的风险**类别**数组（类别名，不是命中词） |
   | `source` / `raw` | 来源标识与上游原始返回 |
 
@@ -85,6 +86,15 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 > 命中词要靠上面那条从 `content` 的 `<span>` 里取，替换建议由你结合上下文给。
 
 > 🔴 零命中照常计费（与 `NO_RESULT` 免费口径无关），别当 bug 报。
+
+### 命中分级：哪些改，哪些只报
+
+上游按子串匹配，不看语境。命中分两档，对照表两档都列，**改写只动第一档**：
+
+- **营销语境命中 → 改**：极限词 / 功效承诺 / 医疗用语等落在卖货、承诺、比较句里的（「全网最低」「三天见效」）。
+- **只报不改**：营销语境外的程度副词（「最后一步」「第一次」「一定要备份」「完全免费开源」里的
+  最后 / 第一 / 一定 / 完全）与英文子串误中（`Assistant` 命中 `ass`）。对照表照列命中词，
+  「建议」一列写「语境不构成广告承诺，保留」。
 
 ### 每个平台怎么判「有没有命中」
 
@@ -125,7 +135,7 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 
 综合**所有平台**的命中词与建议，给出**一版**改完即可在所有目标平台发布的文案：
 
-【安全改写后的整段文案。要求：覆盖各平台所有命中词；语义通顺、语气与风格不变；
+【安全改写后的整段文案。要求：覆盖各平台所有**营销语境命中**（只报不改的那档原样保留）；语义通顺、语气与风格不变；
 不加 emoji、不重写结构、不加引用或代码块，直接输出。改动处可加粗斜体标出。】
 
 ---

@@ -6,8 +6,8 @@
 > **分工**：doubaoya = 存储 + 接口；**你（agent）= 脑子**。文风蒸馏用你自己的模型做——doubaoya 不调
 > LLM、不为蒸馏收费。蒸好后调接口把成品存回去。
 >
-> 鉴权与统一信封见 SKILL.md 的「拿钥匙」一节，这里不重复。接口清单与错误码见 SKILL.md 的
-> 「API 契约」——**档案和章程是同一个资源，契约只有那一张表**。
+> 本文的请求全是手写 curl，先读 `dby-gateway/references/protocol.md`（鉴权与统一信封）。
+> 接口清单与错误码见 `references/api-contract.md`——**档案和章程是同一个资源，契约只有那一张表**。
 
 ---
 
@@ -151,7 +151,8 @@ curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
 ```
 
 **重新蒸馏文风 DNA**（用户觉得现在的文风 DNA 不准，或想用新文章更新它）：
-1. 收集新范文（同上「二、收集范文」，可只用新的，也可新旧混用）。
+1. 收集新范文（同上「二、收集范文」，可只用新的，也可新旧混用）。已存的范文用
+   `GET /api/ip-profile/<id>/samples` 读回（`data.samples[]` 带 `content` 正文），不必让用户重贴。
 2. 按「三、蒸馏文风 DNA」重跑一遍蒸馏，得到新的 `writingDnaJson`。
 3. `PUT` 覆盖：
    ```bash

@@ -5,7 +5,7 @@
 | 方法 | 路径 | 干什么 | 计费 |
 |---|---|---|---|
 | GET | `/api/ip-profile` | 我的默认档案（`{profile:null}` = 还没建） | 免费 |
-| GET | `/api/ip-profile/:id/charter` | 号章程（定位/受众/变现/北极星/可信度） | 免费 |
+| GET | `/api/ip-profile/:id/charter` | 号章程（定位/受众/变现/北极星 + 只读投影 `products`） | 免费 |
 | GET | `/api/ip-profile/:id/samples` | 范文样本（带正文） | 免费 |
 | DELETE | `/api/ip-profile/:id/samples/:sampleId` | 删一篇范文（不带 Content-Type！） | 免费 |
 | GET | `/api/ip-profile/wechat-history?authorizerAppid=&count=` | 从自己授权的号拉历史图文当范文 | 免费 |

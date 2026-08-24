@@ -5,7 +5,7 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和你自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 3.2.1
+version: 3.2.2
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
@@ -80,7 +80,7 @@ compatibility: >-
 ./.agents/skills/dby-update/scripts/reconcile.mjs
 ```
 
-**找不到**说明本机装的是旧版 dby-update（还没有对账能力）。先跑一次下面这条把自己升级上来，然后**重新找一遍**：
+**找不到** = 本机没装、或装的是没有对账脚本的旧版。🔴 **别自动装**：报告「本机未装对账脚本」，把下面这条命令给用户，**等他确认后再跑**，跑完**重新找一遍**：
 
 ```bash
 npx -y skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y
@@ -89,7 +89,7 @@ npx -y skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universa
 🔴 **找到了、跑了、却一个字都没打印（退出码 0、零字节）**：不是「没事可做」，是**本机装的是旧版**。
 上面这张表里 `.claude/skills/…` 那两条通常是**软链**（真目录在 `.agents/skills/…`），而旧版的入口
 守卫经软链调用时整个脚本一步都不跑。**先换 `.agents` 那条真路径重跑一次**（能出东西就说明是这个病），
-再用上面那条命令把自己升级上来，然后重新找一遍路径。
+再把上面那条命令给用户、等他确认后跑，然后重新找一遍路径。
 
 ### 2. 先看清单（🔴 显式给 scope，别靠 auto 猜）
 
@@ -100,6 +100,7 @@ node <上一步找到的路径> --dry-run --scope project --project-dir <项目�
 
 scope 猜错时脚本会打一行 ⚠️ 警告，看到就停下来先确认 scope，别直接执行。
 不确定装在哪，就两个都看一眼（`--scope global` 一次、`--scope project --project-dir <目录>` 一次）。
+两个 scope 都打「这个 scope 现在一个本鸭 skill 都没有」= 本机没装，回到第 1 步的安装命令先问用户，别把「整仓装」当对账跑。
 
 它会联网取上游全集与历史闭集，然后打印**要归档哪些、要装哪些、要刷新几个、以及哪些因为你动过手而不碰**，
 这一步一个字都不会改。把这份清单**原样转述给用户**——尤其是「要归档」和「你改过的」那几个的名字。

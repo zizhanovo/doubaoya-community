@@ -83,6 +83,9 @@ MIT — 见 [`LICENSE`](./LICENSE)。
 
 ## 最近变更
 
+- **2.3.0**：文档去掉「1536x1024 / 1024x1024」——`gen-image.mjs --size` 上游忽略，比例只靠 `--cover-guard` / prompt；
+  SKILL.md 步骤改用步骤名（脚本日志的「步骤 N/9」与 SOP 编号不对应）；`cli.md` 补 `--render-only`；
+  协议引用改成条件式（请求由脚本代发）；`pipeline.json` 版本与 SKILL 对齐。
 - **合并原「公众号草稿发布」包（已下架）**：`unify-dby-naming` 改名车把本包的老目录名
   改成 `dby-publish` 的同时吸收了它——原包的 Python 入口 `publish_draft.py` 与「存公众号草稿 /
   公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add」触发词并入本包，见
