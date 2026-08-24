@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T18:37:13.714239+00:00",
+  "generatedAt": "2026-08-24T19:28:04.767664+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -130,6 +130,7 @@
       "5e2022f6120b",
       "76caa2a60c4e",
       "afeb6e003c90",
+      "c24c940f04d9",
       "d7c7ce4c8a76",
       "da136cf9613a",
       "e6cc1f2a871c",
@@ -166,6 +167,7 @@
       "38713c695a93",
       "cadb7e558fce",
       "cfa6a357b46d",
+      "dbaa900ce8ae",
       "e039d2615adb",
       "e75c09cb73fd",
       "fc92fb4bf92f"
@@ -2587,6 +2589,12 @@
         "version": "1.0.0",
         "date": "2026-08-23",
         "subject": "feat(dby-write): 口吻基准与禁用词接进写作路径——它们此前一次都没被读过"
+      },
+      {
+        "hash": "cfa6a357b46d",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "fix(dby-write): 复盘基准改中位数 —— 一篇爆款不该把这个号其余文章全判成选题错误"
       }
     ],
     "doubao-websearch": [

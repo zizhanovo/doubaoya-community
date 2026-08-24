@@ -76,7 +76,7 @@ const VALUE_FLAGS = new Set([
   "output-processed-html",
   "base-url",
 ]);
-const BOOL_FLAGS = new Set(["dry-run", "help"]);
+const BOOL_FLAGS = new Set(["dry-run", "render-only", "help"]);
 // 任何带这些意图的 flag 都视为"群发"，直接拒绝并解释本流水线只存草稿。
 const MASS_SEND_RE = /(mass[-_]?send|publish[-_]?all|broadcast|send[-_]?all|群发|群發|push[-_]?all|massend)/i;
 
@@ -108,7 +108,7 @@ function parseArgs(argv) {
       );
     }
     if (BOOL_FLAGS.has(key)) {
-      out[key === "dry-run" ? "dryRun" : key] = true;
+      out[key === "dry-run" ? "dryRun" : key === "render-only" ? "renderOnly" : key] = true;
       continue;
     }
     if (VALUE_FLAGS.has(key)) {
@@ -127,7 +127,7 @@ function parseArgs(argv) {
     throw new ArgError(
       `未知参数 --${key}。可用参数：` +
         `--md --html --title --account --appid --cover --digest --config --profile --theme --design ` +
-        `--output-processed-html --base-url --dry-run --help。` +
+        `--output-processed-html --base-url --dry-run --render-only --help。` +
         `（注意：本流水线只存草稿，不存在任何群发参数。）`
     );
   }
@@ -168,6 +168,11 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
                               --cover 与 --design 冲突时命令行优先并告警。
   --output-processed-html <p> 渲染出的 HTML 落地路径（默认写临时文件）
   --base-url <url>            API 基址（默认 $DOUBAOYA_BASE_URL 或 https://doubaoya.com）
+  --render-only               **只渲染，不发布**：产出 HTML + 在线预览链接就结束。
+                              🔴 跳过草稿前置检查 ⇒ **不需要绑定公众号**，有密钥就能用。
+                              与 --dry-run 的分工：dry-run 是「发布前彩排」，故意保留
+                              账号校验与前置检查（那正是它的价值）；render-only 是
+                              「我只想看看排出来什么样」，两个诉求不同，给两个入口。
   --dry-run                   只渲染+校验+扫描本地图，**不发布**（照样走平台渲染，
                               照样给你在线预览链接 —— 渲染免费且无副作用）
   -h, --help                  显示帮助
@@ -584,6 +589,15 @@ async function main() {
   const whoamiOk = true; // 硬门：到这里说明第 2 步成功，才允许后续保存草稿
 
   // ===== 步骤 3：草稿前置检查（skills + status）===========================
+  // 🔴 --render-only 整段跳过：这一段唯一会拦住人的是 3b 的「没有已绑定的公众号」，
+  //    而只渲染根本不碰公众号。跳过它，有密钥、没绑号的人也能拿到在线预览链接。
+  //    ⚠️ 注意**不跳步骤 2**：那一步是解析密钥（resolveAccountKey），渲染本身要用它，
+  //    而它并不检查绑号 —— 所以「跳过 whoami」既做不到也没必要。
+  let nickname = "(未绑定)";
+  let appid = "(未绑定)";
+  if (args.renderOnly) {
+    step(3, "草稿前置检查 —— 已跳过（--render-only 只渲染不发布，不需要绑定公众号）");
+  } else {
   step(3, "草稿前置检查 (skills + status)");
   // 3a. /api/skills → 断言 wechat-draft-publish 存在
   const skillsRes = await apiGet(`${baseUrl}/api/skills`, apiKey);
@@ -638,8 +652,9 @@ async function main() {
       );
     }
   }
-  const nickname = chosen.nickname || "(已绑定公众号)";
-  const appid = chosen.authorizerAppid;
+  nickname = chosen.nickname || "(已绑定公众号)";
+  appid = chosen.authorizerAppid;
+  }   // ← 步骤 3 结束（--render-only 时整段跳过）
 
   // ===== 步骤 4/5：md→HTML 渲染（平台）==================================
   step(4, mdPath ? "md→HTML 渲染（平台 POST /api/wechat/render）" : "使用已排版 HTML（跳过渲染）");
@@ -753,6 +768,29 @@ async function main() {
     coverPath = null;
   }
   const coverIsLocal = coverPath && existsSync(path.resolve(coverPath));
+
+  // ===== --render-only：只渲染，到此为止 =================================
+  // 🔴 出口放在**封面解析之后、dry-run 之前**：封面与本地图扫描都属于「发布准备」，
+  //    只渲染的人不需要。而 dry-run 分支**一个字都不动** —— 它的语义是「发布前彩排」，
+  //    故意包含账号校验与前置检查，那正是它的价值。两个诉求不同，给两个入口。
+  if (args.renderOnly) {
+    step(9, "RENDER-ONLY 回报");
+    if (!renderDetailUrl && mdPath) {
+      warn("这次渲染没拿到在线预览链接（平台未回 detailUrl）——HTML 仍已产出。");
+    }
+    process.stdout.write(
+      "\n══════════ RENDER-ONLY 回报（只渲染，未发布、未碰公众号）══════════\n" +
+        `  标题:        ${title}\n` +
+        `  HTML:        ${processedHtmlPath}\n` +
+        (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "  在线预览:    （无：--html 直传不经平台渲染）\n") +
+        (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
+        "  公众号:      未查询（--render-only 跳过草稿前置检查，不需要绑号）\n" +
+        "  发布:        否（本入口不写任何用户资产）\n" +
+        "  下一步:      要存进公众号草稿箱，去掉 --render-only 重跑（那时需要已绑号）。\n" +
+        "════════════════════════════════════════════════\n"
+    );
+    return;
+  }
 
   // ===== dry-run：渲染+校验+扫描本地图，绝不发布 =========================
   if (args.dryRun) {

@@ -8,7 +8,7 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.0.3
+version: 2.1.0
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -543,13 +543,19 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 | 起本地设计工作台：实时预览、换肤、自动配图排位、存 `design-config` | 无（**只有页面里点「生成」才要密钥**） | `node scripts/design-studio.mjs --md a.md --title "标题"` |
 | AI 生封面 / 生配图 | 一条 **`DOUBAOYA_API_KEY`**（**花钱**，现价现拉） | `scripts/gen-image.mjs`，或工作台里点生成 |
 | 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`** | 跑 `pipeline.mjs` 时**不写 `--theme`** 即可（渲染在平台做，主题也在平台套；失败中止不回退） |
+| **只渲染拿在线预览链接**（`--render-only`，**不绑号也行**） | 一条 **`DOUBAOYA_API_KEY`**（渲染免费） | `node scripts/pipeline.mjs --md a.md --title "标题" --render-only` |
 | **跑 `pipeline.mjs`（含 `--dry-run`）** | **密钥 + 已在 doubaoya.com 绑定公众号** | `node scripts/pipeline.mjs --md a.md --title "标题" --dry-run` |
 | 本地图预上传 / 存草稿 | 同上（**存草稿花钱**，失败自动退回） | `pipeline.mjs`、`scripts/publish_draft.py` |
 
-> ⚠️ **`--dry-run` 不是免密钥预览**。它虽然什么都不发，但 whoami 校验账号与草稿前置检查
-> （`GET /api/wechat/status`）都排在它**前面**：没有密钥会停在「本地没有可用的 `DOUBAOYA_API_KEY`」，
-> 有密钥但没绑号会停在「目标账号没有已绑定的公众号」。
-> **还没绑号、只想先看这篇排出来什么样**：走 `render-wechat-html.mjs` 或设计工作台（都纯本地）。
+> ⚠️ **`--dry-run` 不是免密钥预览，也不是免绑号预览**。它虽然什么都不发，但 whoami 校验账号
+> 与草稿前置检查（`GET /api/wechat/status`）都排在它**前面**：没有密钥会停在「本地没有可用的
+> `DOUBAOYA_API_KEY`」，有密钥但没绑号会停在「目标账号没有已绑定的公众号」。
+> 🔴 **这是刻意的**：`--dry-run` 的语义是「发布前彩排」，它**故意**包含账号校验与前置检查
+> ——那正是它的价值（发布前确认目标账号没搞错）。
+>
+> **有密钥、还没绑号、只想先看这篇排出来什么样** → 用 **`--render-only`**：跳过草稿前置检查，
+> 渲染完直接给你 `doubaoya.com` 的在线预览链接，全程不碰公众号、不写任何用户资产。
+> 纯本地不要密钥的那条路（`render-wechat-html.mjs`、设计工作台）仍然在，代价是**拿不到在线链接**。
 > 🔴 但那两条**都不产生在线预览链接**——在线链接只有走平台渲染（即 `pipeline.mjs`）才有。
 > 注意单跑渲染器时 `--title` 会往正文顶部插一个 `<h1>`（本地预览用），那份产物别拿去发布——见[正文不要写标题](#-正文不要写标题)。
 
