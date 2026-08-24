@@ -106,6 +106,28 @@ export function classify(articles) {
   };
 }
 
+/**
+ * 从档案行里取口吻基准与禁用词。**纯函数**，selfcheck 直接打它。
+ *
+ * 🔴 给**正文**而不是布尔：charter 只报 hasCharter、范文只报 sampleCount，正文都要
+ * agent 自己再取一次 —— 而「要现取的东西大概率取不到」在这个仓已经反复应验。
+ * 口吻基准与禁用词必须在场，否则等于没存：这两项在本次接线之前**一次都没被读过**。
+ *
+ * 形状按最宽处理：蒸馏产物来自用户自己的模型，字段可能缺、可能类型漂移，
+ * 任何一种都只该降级成「没有」，不该让整条写作链炸掉。
+ */
+export function readVoice(profileRow) {
+  const dna = profileRow?.writingDnaJson ?? null;
+  const voiceSystemPrompt =
+    typeof dna?.voiceSystemPrompt === "string" && dna.voiceSystemPrompt.trim()
+      ? dna.voiceSystemPrompt.trim()
+      : null;
+  const taboos = Array.isArray(dna?.taboos)
+    ? dna.taboos.filter((t) => typeof t === "string" && t.trim())
+    : [];
+  return { dna, voiceSystemPrompt, taboos };
+}
+
 async function prep(key, asJson) {
   const profile = await api("/api/ip-profile", key);
   if (!profile?.profile) {
@@ -120,11 +142,17 @@ async function prep(key, asJson) {
     api("/api/wechat/writing-spec", key, { soft: true })
   ]);
   const sampleList = Array.isArray(samples?.samples) ? samples.samples : (Array.isArray(samples) ? samples : []);
+
+  // 文风 DNA 就在上面那次 /api/ip-profile 的返回体里 —— 不额外调接口。
+  const { dna, voiceSystemPrompt, taboos } = readVoice(profile.profile);
+
   const out = {
     profileId: id,
     profileName: profile.profile.name ?? null,
     hasCharter: !!(charter && !charter.__soft && charter.charter),
     sampleCount: sampleList.length,
+    voiceSystemPrompt,
+    taboos,
     writingSpec: spec?.__soft ? null : spec,
     warnings: []
   };
@@ -133,12 +161,27 @@ async function prep(key, asJson) {
   if (spec?.__soft) out.warnings.push(`写作规范没拉到（${spec.__soft}）：按通用 markdown 写，照常往下走，别重试刷屏。`);
   if (out.sampleCount < MIN_SAMPLES)
     out.warnings.push(`范文只有 ${out.sampleCount} 篇（少于 ${MIN_SAMPLES}）—— 跟用户说一句实话：补几篇最像你的旧文，成稿会像得多。少不是不能写，是别假装写得像。`);
+  // 文风 DNA 的三种缺失分开说：没蒸过 / 蒸过但这一项空 / 禁用词空。
+  // 都不是错误，但都要让用户知道成稿会「不像他」，别默默按通用口吻写完交差。
+  if (!dna)
+    out.warnings.push("这个档案还没蒸过文风 DNA —— 成稿会是通用口吻。想写得像本人，去 dby-charter 用范文蒸一份。");
+  else if (!voiceSystemPrompt)
+    out.warnings.push("文风 DNA 里没有 voiceSystemPrompt —— 口吻只能靠范文和章程推，比蒸好的基准弱一档。");
+  if (dna && taboos.length === 0)
+    out.warnings.push("文风 DNA 里没有禁用词（taboos 为空）—— AI 味的词没有硬性拦截，写完自己再过一遍。");
 
   if (asJson) return console.log(JSON.stringify(out, null, 2));
   console.log(`档案     ${out.profileName ?? "(未命名)"}  id=${out.profileId}`);
   console.log(`号章程   ${out.hasCharter ? "有" : "无"}`);
   console.log(`范文     ${out.sampleCount} 篇`);
   console.log(`写作规范 ${out.writingSpec ? "已拉到" : "没拉到"}`);
+  // 口吻基准打全文而不是「有/无」—— 它就是要被读进去当写作基准的那段话。
+  if (out.voiceSystemPrompt) {
+    console.log(`\n口吻基准（写之前先读它，这是这个号的声音）：\n${out.voiceSystemPrompt}`);
+  }
+  if (out.taboos.length) {
+    console.log(`\n禁用词（硬性，一个都不准出现）：${out.taboos.join("、")}`);
+  }
   if (out.warnings.length) {
     console.log("\n注意：");
     for (const w of out.warnings) console.log(`  ⚠️ ${w}`);
@@ -223,7 +266,46 @@ function selfcheck() {
   const bad = { items: [{ title: "A", quadrant: "低·低" }] };
   if (bad.items[0].quadrant.startsWith("高·高")) die("🔴 破坏演练失效");
 
+  // ── readVoice：口吻基准与禁用词的取用 ────────────────────────────────────────
+  // 这两项在接线之前一次都没被读过，所以这一组断言的作用是「防止它再次掉线」。
+  const canonical = {
+    writingDnaJson: {
+      version: 1,
+      language: { highFreqWords: ["说白了"] },
+      taboos: ["赋能", "在当今时代"],
+      voiceSystemPrompt: "你现在以一位十年后端的口吻写作：多用短句，少用感叹号。"
+    }
+  };
+  const v = readVoice(canonical);
+  if (v.voiceSystemPrompt !== canonical.writingDnaJson.voiceSystemPrompt)
+    die("🔴 规范形状的 voiceSystemPrompt 没被取出来");
+  if (v.taboos.join() !== "赋能,在当今时代") die("🔴 规范形状的 taboos 没被取出来");
+
+  // 三种缺失都只该降级成「没有」，不该抛
+  if (readVoice({ writingDnaJson: null }).voiceSystemPrompt !== null) die("🔴 没蒸过 DNA 时应为 null");
+  if (readVoice({}).taboos.length) die("🔴 老档案无该字段时 taboos 应为空");
+  if (readVoice({ writingDnaJson: { voiceSystemPrompt: "   " } }).voiceSystemPrompt !== null)
+    die("🔴 空白串必须当没有 —— 否则会把一段空白当成口吻基准");
+
+  // 形状漂移：蒸馏产物来自用户自己的模型，类型不对只能降级，不能炸
+  if (readVoice({ writingDnaJson: { taboos: "赋能" } }).taboos.length)
+    die("🔴 taboos 非数组时必须降级成空，不能让 join 炸掉整条写作链");
+  if (readVoice({ writingDnaJson: { taboos: ["赋能", "", "  ", 42, null] } }).taboos.join() !== "赋能")
+    die("🔴 taboos 里的空串与非字符串没被滤掉");
+
+  // 🔴 接线元断言：prep 的输出里必须真的带上这两项。
+  // 光有 readVoice 正确没用 —— 它不被 prep 输出就等于没接线，而那正是这次要修的病。
+  // 读 prep 自己的源码（函数对象自带 toString，不必读文件、不引依赖）。
+  const prepSrc = prep.toString();
+  if (!/voiceSystemPrompt,/.test(prepSrc) || !/taboos,/.test(prepSrc))
+    die("🔴 prep 的 out 里没有 voiceSystemPrompt / taboos —— 接线掉了");
+  if (!prepSrc.includes("readVoice(")) die("🔴 prep 没有调用 readVoice");
+  // 零额外请求：本次接线是「别把已经拿到的东西扔掉」，不该多出一次 api 调用。
+  const apiCalls = (prepSrc.match(/api\(/g) ?? []).length;
+  if (apiCalls > 4) die(`🔴 prep 的 api 调用变成 ${apiCalls} 次 —— 文风 DNA 应从已有返回体取，不另开请求`);
+
   console.log("selfcheck ok: classify（四象限 / 基准取自本账号非绝对阈值 / 样本不足标不可靠 / 无阅读数拒判 / 反向可红）");
+  console.log("selfcheck ok: readVoice（规范形状 / 三种缺失 / 两种形状漂移 / 接线元断言）");
 }
 
 const [cmd, ...rest] = process.argv.slice(2);

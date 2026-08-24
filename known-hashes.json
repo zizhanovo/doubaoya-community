@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-22T12:20:28.475378+00:00",
+  "generatedAt": "2026-08-24T05:44:14.207629+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -164,6 +164,7 @@
     ],
     "dby-write": [
       "38713c695a93",
+      "cadb7e558fce",
       "e039d2615adb",
       "e75c09cb73fd",
       "fc92fb4bf92f"
@@ -2403,6 +2404,12 @@
         "version": "2.0.2",
         "date": "2026-08-22",
         "subject": "fix(dby-publish): 主题清单写死成 4 个，而包里实际有 15 个"
+      },
+      {
+        "hash": "5784c51d996d",
+        "version": "2.0.3",
+        "date": "2026-08-22",
+        "subject": "fix(dby-publish): 清掉两处真过期——README 的步数、三个没人读的配置项"
       },
       {
         "hash": "5e2022f6120b",
