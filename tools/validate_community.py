@@ -1405,6 +1405,39 @@ HOST_LEGACY_SOFT_LIMIT = 250
 SHARED_DESCRIPTION_BUDGET = 8000
 
 
+# ── SKILL.md 主体体积闸 ──────────────────────────────────────────────────────
+# 🔴 **SKILL.md 是「命中就整份进上下文」的必读面，references/ 才是按需加载的那一半。**
+#
+# 判据：`wc -m`（含 frontmatter，汉字按 1 个字符算）不得超过 6000。为什么是硬闸而不是 code review：
+# 一次「写一篇公众号文章」会把 dby-write + dby-banned-words（冷启动再加 dby-charter）整份拉进来，
+# 而膨胀是**一段一段长出来的**——每一次单看都合理，没有任何一处会报错，直到某一天这条链
+# 自己就占掉几万字符。体积是唯一能机械判定、且和「必读 / 按需读分没分开」强相关的量。
+#
+# 超限的处置**不是删内容**，是把「只服务单一意图分支」的段落搬进同包 `references/`，
+# 主体留一句触发条件 + 文件路径（判据见 openspec/changes/skill-context-diet 的 design D4）。
+#
+# ponytail: 天花板 = 它只管 SKILL.md，把冷门分支塞进一份 3 万字的 references 它看不见——
+# 但那份 references 只在触发时才读，成本模型不同，所以现在不管。
+# 升级路径是给 references/ 单独立一条更宽的上限，而不是把这条放宽。
+SKILL_BODY_LIMIT = 6000
+
+
+def validate_skill_size(root: Path = ROOT) -> None:
+    """🔴 SKILL.md 是必读面，超过 6000 字符就该把冷门分支搬进 references/。判据见上面那段注释。"""
+    directories = discover_skill_dirs(root)
+    require(directories, "体积闸一个 Skill 都没扫到，扫描面八成断了")
+    for directory in directories:
+        skill_md = directory / "SKILL.md"
+        size = len(skill_md.read_text(encoding="utf-8"))
+        require(
+            size <= SKILL_BODY_LIMIT,
+            f"{directory.name}/SKILL.md 有 {size} 字符 > {SKILL_BODY_LIMIT}："
+            "SKILL.md 命中就整份进上下文，它只该装本次任务的必读知识。"
+            "把只服务单一意图分支的段落搬进本包 `references/`，主体留一句"
+            "「→ 需要 X 时读 `references/<file>.md`，不需要就别读」——搬迁要逐字剪切，别顺手改写。",
+        )
+
+
 def validate_description_budget(root: Path = ROOT) -> list[str]:
     """单条长度 + 全库合计。返回黄灯列表；硬限直接 raise。"""
     warnings: list[str] = []
@@ -1816,6 +1849,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_gate_registration(root)
     validate_skill_inventory(root)
     validate_skill_slug_prefix(root)
+    validate_skill_size(root)
     validate_readme(root)
     validate_clawhub_manifest(root)
     validate_renames_table(root)
