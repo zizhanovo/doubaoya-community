@@ -36,6 +36,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import fs, { realpathSync } from "node:fs";
+import { checkDraftLimits } from "./lib/draft-limits.mjs";
 
 const BASE_URL = (process.env.DOUBAOYA_BASE_URL || "https://doubaoya.com").replace(/\/+$/, "");
 const STATUS_ENDPOINT = BASE_URL + "/api/wechat/status";
@@ -347,6 +348,12 @@ async function main() {
   // ---- 正式流程：需要密钥 ----
   const title = args.title;
   if (!title || title === true) die("缺少 --title <标题>");
+  // 微信 draft/add 字段上限：花钱传图之前先拦（正文长度按上传前的 HTML 估，改写 src 后只会更短或相当）
+  {
+    const lim = checkDraftLimits({ title, digest: args.digest && args.digest !== true ? args.digest : undefined, contentHtml: html });
+    for (const w of lim.warnings) process.stderr.write(`[warn] ${w}\n`);
+    if (lim.errors.length) die("VALIDATION_ERROR: " + lim.errors.join(" "));
+  }
 
   const apiKey = process.env.DOUBAOYA_API_KEY;
   if (!apiKey) {

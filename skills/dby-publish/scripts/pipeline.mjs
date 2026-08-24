@@ -37,6 +37,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolveAccountKey } from "./account-verify.mjs";
 import { validateTheme } from "./validate-theme.mjs";
 import { printArchivedConfigHint } from "./lib/archived-config-hint.mjs";
+import { checkDraftLimits } from "./lib/draft-limits.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -475,6 +476,12 @@ async function main() {
   }
   const title = args.title;
   if (!title) fail("缺少 --title <标题>。");
+  {
+    // 微信 draft/add 字段上限，渲染 / 传图之前就拦
+    const lim = checkDraftLimits({ title, digest: args.digest });
+    lim.warnings.forEach(warn);
+    if (lim.errors.length) fail(lim.errors.join(" "));
+  }
 
   const baseUrl =
     (args.baseUrl && args.baseUrl.replace(/\/+$/, "")) ||

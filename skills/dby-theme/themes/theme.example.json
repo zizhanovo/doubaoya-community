@@ -15,7 +15,7 @@
     "link": "#a8501a"
   },
   "page": {
-    "fontFamily": "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif",
+    "fontFamily": "'mp-quote', 'PingFang SC', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', Arial, sans-serif",
     "fontSize": "16px",
     "lineHeight": "1.8",
     "letterSpacing": "0.01em",

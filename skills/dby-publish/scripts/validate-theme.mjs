@@ -287,6 +287,19 @@ export function validateTheme(theme) {
     }
   }
 
+  // 5c. 微信编辑器兼容 warning（官方《编辑器插件开发规范》：这些不被服务端拒，但手机端 / Dark Mode 会走样）。
+  const WECHAT_COMPAT_WARNINGS = [
+    { re: /position\s*:\s*(absolute|fixed)/i, label: 'position:absolute/fixed —— 会被编辑器过滤，Dark Mode 按 DOM 顺序着色会错位' },
+    { re: /text-align\s*:\s*(start|end)\b/i, label: 'text-align:start/end —— iOS 与安卓对齐不一致，改 left/center/right' },
+    { re: /line-height\s*:\s*0(?![.\d])/i, label: 'line-height:0 —— 文字叠行' },
+    { re: /(?:^|[\s;'"])width\s*:\s*(?:[3-9]\d{2,}|\d{4,})px/i, label: '容器固定像素宽 ≥300px —— 窄屏溢出、宽屏留白，改 max-width:100% 或百分比' },
+  ];
+  walkStrings(theme, '', (str, where) => {
+    for (const { re, label } of WECHAT_COMPAT_WARNINGS) {
+      if (re.test(str)) warnings.push(`微信兼容 at ${where || '(root)'}: ${label}.`);
+    }
+  });
+
   // 6. Safety scan across ALL string values (公众号 constraints + src-verbatim).
   // Also scan a CSS-comment-stripped copy of each string: a real CSS tokenizer
   // removes /* ... */ before it ever looks for `--x:` or `url(data:` — so

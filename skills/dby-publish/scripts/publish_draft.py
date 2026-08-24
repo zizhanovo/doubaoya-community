@@ -190,6 +190,20 @@ def main() -> int:
     else:
         content_html = args.content
 
+    # 微信 draft/add 官方上限（见 docs/research/dby-publish/01）：标题 ≤32 字（后台放宽到 64）、
+    # 摘要 ≤120 字、正文 <2 万字符且 <1MB。与 scripts/lib/draft-limits.mjs 同口径。
+    if len(args.title) > 64:
+        sys.stderr.write("[error] VALIDATION_ERROR: 标题 %d 字，超过公众号上限 64 字符\n" % len(args.title))
+        return 1
+    if len(args.title) > 32:
+        sys.stderr.write("[warn] 标题 %d 字，超过 draft/add 文档写的 32 字，可能被拒\n" % len(args.title))
+    if args.digest and len(args.digest) > 120:
+        sys.stderr.write("[error] VALIDATION_ERROR: 摘要 %d 字，超过公众号上限 120 字\n" % len(args.digest))
+        return 1
+    if content_html and (len(content_html) >= 20000 or len(content_html.encode("utf-8")) >= 1024 * 1024):
+        sys.stderr.write("[error] VALIDATION_ERROR: 正文须少于 2 万字符且小于 1MB\n")
+        return 1
+
     if not content_html or not content_html.strip():
         sys.stderr.write("[error] VALIDATION_ERROR: 正文 contentHtml 不能为空\n")
         return 1

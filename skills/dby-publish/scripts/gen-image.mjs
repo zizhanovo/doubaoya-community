@@ -46,15 +46,17 @@ const STYLES_INDEX = path.join(SKILL_ROOT, "assets", "styles", "index.json");
 const DEFAULT_BASE = "https://doubaoya.com";
 const IMAGE_GEN_INVOKE_PATH = "/api/skills/gpt-image-gen/invoke";
 
-// 封面护栏：公众号封面会把 1536x1024 居中裁成约 2.35:1 的宽幅，靠这句提示把主体压在
-// 水平中带、上下留氛围背景，避免关键内容被上下裁掉。
+// 封面护栏：公众号封面被裁两次——消息列表按 2.35:1 裁掉上下，历史消息 / 转发卡片再从 2.35:1
+// 图的**正中**裁出 1:1（900×383 里只剩居中的 383×383），左右也会没。所以主体和文字要压进
+// 画面中央的正方形安全区，四边都留氛围背景（依据：draft/add cover_info 只认 2.35_1 / 1_1 两种裁法）。
 // 🔴 这里的 "Aspect ratio" 那一句是**唯一真正在控制画面比例的东西**——`size` 参数无效（见下方注释）。
 // 去掉它，封面会退回默认的 1254x1254 正方形，再被微信按 2.35:1 裁掉上下大半。
 export const COVER_GUARD =
   "Aspect ratio: wide landscape, 16:9. " +
-  "Composition: keep the main subject and any text within the central horizontal band; " +
-  "leave calm atmospheric background at the top and bottom edges. The image will be " +
-  "center-cropped to a wide 2.35:1 banner, so nothing important should touch the top or bottom edge.";
+  "Composition: keep the main subject and any text inside the central square of the frame " +
+  "(roughly the middle 40% of the width, vertically centered); leave calm atmospheric background " +
+  "on all four edges. The image will be center-cropped to a wide 2.35:1 banner and again to a 1:1 " +
+  "square for share cards, so nothing important should touch any edge.";
 
 // 🔴 `size` **完全无效**，上游整个忽略它。2026-08-21 受控实测（固定同一句 prompt、只变 size）：
 //   不传 / 1024x1024 / 1536x1024 / 1024x1536 / 512x512 / 2048x1152 —— **七个用例全部返回 1254x1254**。
@@ -307,7 +309,7 @@ const HELP = `gen-image.mjs — 都爆鸭 · 公众号封面/配图生图
 选项:
   --style <id>       风格库 assets/styles/index.json 里的 id，追加其 promptFragment
   --reference-image <path|url|data:>  IP 参考图；提供时走 edit 条件化生成，保留参考图里的 IP 形象
-  --cover-guard      追加封面护栏（写入 16:9 宽幅 + 主体压水平中带、上下留白，防 2.35:1 裁切；封面时加）
+  --cover-guard      追加封面护栏（写入 16:9 宽幅 + 主体压进居中正方形安全区、四边留白，防 2.35:1 与 1:1 两次裁切；封面时加）
                      比例只靠它 / prompt 控制，--size 上游忽略（参数保留仅为兼容）
   --quality <lvl>    low|medium|high，默认 medium
   -h, --help         显示帮助
