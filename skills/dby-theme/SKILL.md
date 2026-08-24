@@ -5,7 +5,7 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger: customize WeChat article theme, change layout / palette / heading style.
-version: 1.2.0
+version: 1.2.1
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
@@ -14,13 +14,10 @@ compatibility: >-
 
 # 公众号排版主题工作室（都爆鸭）
 
-帮用户把公众号文章的**排版样式**（配色 / 标题条 / 引用卡 / 图注 / 分割线…）按口语描述改成想要的样子，
-本地即时预览,最后**存回服务端设为默认**,按需再落一份**本机 theme 文件**。
-各自的生效范围见 §5 与 `references/deploy-scope.md`。
-
-> 排版是一份声明式的 **`themeJson`**（配色 palette + 每个标签的 inline-style 模板），渲染器按它把
-> Markdown 确定性地渲成公众号内联样式 HTML。你（agent）的活是**按描述生成 / 修改合法的 themeJson**，
-> 本地自检 + 预览，再**存回服务端**。
+排版是一份声明式的 **`themeJson`**（配色 palette + 每个标签的 inline-style 模板），渲染器按它把
+Markdown 确定性地渲成公众号内联样式 HTML。你（agent）的活是**按描述生成 / 修改合法的 themeJson**，
+本地自检 + 预览，再**存回服务端设为默认**，按需再落一份本机 theme 文件（生效范围见 §5）。
+渲染 / 存主题都**免费不扣点**。
 
 ---
 
@@ -28,22 +25,20 @@ compatibility: >-
 
 ### 红线 1 · 微信兼容:标题装饰只能挂在有文字的元素自身
 
-公众号编辑器会 **strip 掉「没有文字、纯靠 inline-block 宽高 + background 撑色块的空 `<section>`/`<span>`」**。
-所以标题引导条 / 强调竖条 / 下划线这类装饰**必须作为 inline style 直接写在标题元素自身**，
-**绝不**用独立的空装饰块（如在 h2 前塞一个空的 `<section style='width:32px;height:4px;background:…'>`——发到公众号会消失）。
+公众号编辑器会 **strip 掉没有文字、纯靠 inline-block 宽高 + background 撑色块的空 `<section>`/`<span>`**。
+标题引导条 / 强调竖条 / 下划线**必须作为 inline style 直接写在标题元素自身**，**绝不**用独立的空装饰块。
 
 - ✅ 对:`elements.h2.style` 里直接写 `border-left:4px solid {{accent}};border-bottom:1px solid {{border}};padding:0 0 8px 11px;`
-  （竖条 + 发丝下划线长在 h2 身上,h2 有文字,编辑器保留）。
-- ❌ 错:用 `wrapBefore` 注入一个空的 `<section>` 当色条（无文字 → 被 strip）。
+- ❌ 错:用 `wrapBefore` 注入一个空的 `<section style='width:32px;height:4px;background:…'>` 当色条（无文字 → 被 strip）。
 
 ### 红线 2 · 微信兼容:别给整篇套 `decorations.articleWrap` 外框
 
-**不要**用 `decorations.articleWrap` 给整篇正文包一个浅底 + 圆角的卡片外框——公众号正文里它会变成一道**突兀的边框**。
-`articleWrap.before` / `after` 留空字符串。想要「呼吸感」用段间距（`margin` / `line-height`）和局部卡片（如 blockquote 圆角卡）实现。
+`decorations.articleWrap` 包整篇正文的浅底圆角卡片在公众号里会变成一道**突兀的边框**。
+`articleWrap.before` / `after` 留空字符串；「呼吸感」用段间距（`margin` / `line-height`）和局部卡片（如 blockquote 圆角卡）实现。
 
 ### 红线 3 · 安全:themeJson 会内联进公众号草稿,服务端会拒收不合法主题
 
-`themeJson` 用户可控、会内联进最终 HTML,所以服务端 `POST/PUT/render` 都会 `validateTheme`,不过直接 **400**。
+服务端 `POST/PUT/render` 都会 `validateTheme`,不过直接 **400**。
 生成的主题**必须**满足（详见 [`scripts/validate-theme.mjs`](./scripts/validate-theme.mjs) 与下文 schema）:
 
 - top-level 只允许 `meta` / `palette` / `page` / `elements` / `decorations` / `components`,其余键 = 硬错。
@@ -52,8 +47,6 @@ compatibility: >-
 - `elements.<tag>.style` 是 inline CSS,**不能含 `<` 或 `>`**（markup 放 `wrapBefore`/`wrapAfter`/`hr.html`）。
 - **六条硬红线**:任何字符串都不得出现 `<script` / `<style` / `class=` / `src=` / `javascript:` / `onX=`（如 `onclick=`）。
 - 整个 themeJson **≤ 64KB**。
-
-> **生成后务必先本地自检**（见 §3），过了再往服务端提交,省一次 400 往返。
 
 ---
 
@@ -70,7 +63,7 @@ BASE="${DOUBAOYA_BASE_URL:-https://doubaoya.com}"
 AUTH="Authorization: Bearer $DOUBAOYA_API_KEY"
 ```
 
-两条要点先记住：**render 的主题解析优先级** `themeJson`（传了就用这份）> `themeId` >
+**render 的主题解析优先级** `themeJson`（传了就用这份）> `themeId` >
 我的默认主题 > 兜底 `benya-clean`，所以**预览编辑中的主题就传 `themeJson`**；
 **一人一默认**，`isDefault:true` 时服务端在事务里把我其他主题的 `isDefault` 置反。
 
@@ -78,25 +71,22 @@ AUTH="Authorization: Bearer $DOUBAOYA_API_KEY"
 
 ### 1. 读起点主题
 
-从当前默认或某个内置主题起步:
-
 ```bash
 # a) 读我当前的默认主题(有就在它上面改)
 curl -s -H "$AUTH" "$BASE/api/wechat/theme"
 
-# b) 或列出内置主题,挑一个复制起步(推荐 benya-clean——已是微信兼容范本)
+# b) 或列出内置主题,挑一个复制起步(推荐 benya-clean——已按红线 1 / 2 改造过)
 curl -s -H "$AUTH" "$BASE/api/wechat/themes"
 ```
 
-> **推荐从 `benya-clean` 起步**:它已按红线 1 / 2 改造过,是最省心的微信兼容底板。本 skill 也自带一个
-> WeChat-safe 起手模板 [`themes/theme.example.json`](./themes/theme.example.json)（暖橘编辑风,复制改配色即可）。
+> 本 skill 也自带一个 WeChat-safe 起手模板 [`themes/theme.example.json`](./themes/theme.example.json)（暖橘编辑风,复制改配色即可）。
 
 ### 2. 按用户口语描述改 themeJson
 
 把「换成暖橘色 / 标题要竖条 / 引用做成卡片 / 字再大一点 / 排版长得像某某号」翻译成合法 themeJson。
 字段全貌见 `references/theme-schema.md`;守住上面三条红线。改配色最省事:**只动 `palette` 八个键**。
 
-### 3. 本地先自检（省一次 400 往返）
+### 3. 本地先自检
 
 把生成的主题写成本地文件,过本 skill 自带的零依赖校验器:
 
@@ -104,12 +94,9 @@ curl -s -H "$AUTH" "$BASE/api/wechat/themes"
 node scripts/validate-theme.mjs /tmp/my-theme.json   # 有硬错误按提示改;exit 0 = 合法
 ```
 
-> 这份 `validate-theme.mjs` 与服务端的安全边界**同源同规则**;本地过了,服务端基本就过。
-> （若本机也装了 `dby-publish`,它的 `scripts/validate-theme.mjs` 完全等价。）
-
 ### 4. 预览（改一版看一版）
 
-**API 渲染 → 存本地 .html 打开**（无需其他 skill,只要 curl,最稳）:
+**API 渲染 → 存本地 .html 打开**:
 
 ```bash
 # 用编辑中的 themeJson 渲染样例文章,拿回 HTML 存本地打开肉眼看
@@ -120,8 +107,7 @@ curl -s -H "$AUTH" -H 'Content-Type: application/json' \
 open /tmp/preview.html    # macOS;别的平台用浏览器打开
 ```
 
-> render 返回的 HTML 与最终存进草稿的正文**逐字一致**——这是最可靠的把关:预览什么样,发文就什么样。
-> `data.warnings` 若有(如未知 `{{token}}`)一并看一眼。
+> render 返回的 HTML 与最终存进草稿的正文**逐字一致**。`data.warnings` 若有(如未知 `{{token}}`)一并看一眼。
 
 → 本机已装 `dby-publish` 且想要「改文件即换肤」的实时预览，读 `references/live-preview.md`，
 不需要就别读。改 themeJson 本身以上面 API 渲染那条路为准。
@@ -143,20 +129,14 @@ open /tmp/preview.html    # macOS;别的平台用浏览器打开
 `elements` 支持的标签、`{{token}}` 插值、`li.marker` / `img.figureStyle` / `hr.html` 这些位置），
 不需要就别读。**只换配色的话改 `palette` 八个键就够**，其余用 `{{token}}` 自动跟随。
 
-> 主题契约的权威文档在 `dby-publish/themes/THEME-SCHEMA.md`（若已装）。
+> 主题契约的权威文档在 `dby-publish/themes/THEME-SCHEMA.md`（若已装）；
 > 本 skill 的 `references/theme-schema.md` + `themes/theme.example.json` 足够独立完成一次改主题。
-
-## 前置条件
-
-- Node **≥ 18**（内置 `fetch`）、`curl`、`jq`（拼 JSON 用;不想用 jq 也可手写 JSON body）。
-- 一个 **doubaoya.com** 账号 + 一条 **`DOUBAOYA_API_KEY`**（怎么拿见 `dby-gateway/references/protocol.md`）。
-- 渲染 / 存主题都**免费不扣点**。真正发文（把套好主题的文章推进草稿箱）走 `dby-publish`。
 
 ---
 
 ## 下一步（先看用户要的终态是什么）
 
-本 skill 交付的是**一套排版主题**，它决定「以后每篇长什么样」。终态决定这里是不是终点——**别默认往下推**：
+终态门以 `dby-api/references/wechat-routing.json` 为准，**别默认往下推**：
 
 | 用户要的终态 | 到这一步够不够 | 下一步 |
 |---|---|---|

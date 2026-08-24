@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T20:34:51.078330+00:00",
+  "generatedAt": "2026-08-24T21:08:41.601571+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -61,6 +61,7 @@
     "dby": [
       "02380dfa3f98",
       "04545b184f2e",
+      "1c068c859c03",
       "259fd3762f29",
       "2db0a55a86c2",
       "3012327e9323",
@@ -81,6 +82,7 @@
     ],
     "dby-api": [
       "50cdd6a062be",
+      "596f05f4d505",
       "5b22bb800679",
       "94592136ac90",
       "9b9682a7a602",
@@ -88,6 +90,7 @@
       "ed6a2f86bffc"
     ],
     "dby-banned-words": [
+      "b3b6c7500194",
       "edadb15db5ad",
       "f124f3174c56",
       "f2ae13c9d572"
@@ -102,9 +105,11 @@
       "a85067a32ed9",
       "a9eaab1fad23",
       "c3738aab09a9",
+      "d4483ee94803",
       "d9423fc38116"
     ],
     "dby-gateway": [
+      "0a3b3433cbe5",
       "1d294368f7d7",
       "64220c7bed79",
       "b798cca6be87",
@@ -117,6 +122,7 @@
       "25fcd0d0d1ba",
       "47bee0597b99",
       "6a04472552de",
+      "73f91dda7bd6",
       "c1227d1f5988",
       "c6ca0ad17c66",
       "d096f50d3a79",
@@ -135,6 +141,7 @@
       "53d58f1d50df",
       "5784c51d996d",
       "5e2022f6120b",
+      "693ee316248d",
       "76caa2a60c4e",
       "afeb6e003c90",
       "c24c940f04d9",
@@ -145,9 +152,11 @@
     ],
     "dby-rewrite": [
       "db8a6e744f97",
-      "dbc228e09916"
+      "dbc228e09916",
+      "e6f18ded0432"
     ],
     "dby-theme": [
+      "9c3df5a11c54",
       "af370a32f818",
       "b1b4f5ebb9e6",
       "ebb4a6128d51"
@@ -161,6 +170,7 @@
       "3a1ce2acce36",
       "4bbc2e85239b",
       "53d92b2192de",
+      "60aec394ab7b",
       "6f72e665fa97",
       "78d16ebe4793",
       "89126d451b03",
@@ -180,6 +190,7 @@
       "dbaa900ce8ae",
       "e039d2615adb",
       "e75c09cb73fd",
+      "f61cb9659a4a",
       "fc92fb4bf92f"
     ],
     "doubao-websearch": [
@@ -2153,6 +2164,12 @@
         "version": "1.0.1",
         "date": "2026-08-22",
         "subject": "fix(dby): 「配」字在两行里撞车——把「配张封面图」显式判给 dby-image"
+      },
+      {
+        "hash": "04545b184f2e",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-api": [
@@ -2185,6 +2202,12 @@
         "version": "1.0.0",
         "date": "2026-08-22",
         "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+      },
+      {
+        "hash": "ed6a2f86bffc",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-banned-words": [
@@ -2199,6 +2222,12 @@
         "version": "1.0.1",
         "date": "2026-08-22",
         "subject": "docs(dby-banned-words): 实调校准两处——span 类名带类别信息，零命中照样计费"
+      },
+      {
+        "hash": "edadb15db5ad",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-charter": [
@@ -2255,6 +2284,12 @@
         "version": "1.0.0",
         "date": "2026-08-22",
         "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+      },
+      {
+        "hash": "d9423fc38116",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-gateway": [
@@ -2343,6 +2378,12 @@
         "version": "1.0.0",
         "date": "2026-08-22",
         "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+      },
+      {
+        "hash": "000e1d567391",
+        "version": "1.1.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-publish": [
@@ -2443,6 +2484,12 @@
         "subject": "fix(dby-publish,dby-gateway): 撤回我上一轮的违规改动，并给能力索引加可执行的过期自查"
       },
       {
+        "hash": "53d58f1d50df",
+        "version": "2.2.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+      },
+      {
         "hash": "c24c940f04d9",
         "version": "2.1.0",
         "date": "2026-08-24",
@@ -2475,6 +2522,12 @@
         "version": "1.1.0",
         "date": "2026-08-21",
         "subject": "fix(dby-publish,dby-theme): engine-2 报错不再教用户做一件不会发生的事"
+      },
+      {
+        "hash": "ebb4a6128d51",
+        "version": "1.2.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-update": [
@@ -2579,6 +2632,12 @@
         "version": "3.1.0",
         "date": "2026-08-20",
         "subject": "fix(dby-update): 经软链调用不再静默空跑，入口守卫两边先解软链再比"
+      },
+      {
+        "hash": "3a1ce2acce36",
+        "version": "3.2.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       }
     ],
     "dby-write": [
@@ -2611,6 +2670,12 @@
         "version": "1.0.0",
         "date": "2026-08-23",
         "subject": "feat(dby-write): 口吻基准与禁用词接进写作路径——它们此前一次都没被读过"
+      },
+      {
+        "hash": "b40023ac688b",
+        "version": "1.3.0",
+        "date": "2026-08-24",
+        "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
       },
       {
         "hash": "cfa6a357b46d",
