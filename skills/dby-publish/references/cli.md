@@ -32,5 +32,11 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 `--config`、`--profile`、`--theme <path> | neutral`、`--design`、`--output-processed-html`、`--base-url`、`--render-only`、`--dry-run`、`--help`。
 本机多条 key 对应不同账号时，账号校验会停下要 `--account`，按报错列出的账号补上。
 
+**微信 draft/add 字段上限**（脚本在渲染 / 传图之前就拦，`scripts/lib/draft-limits.mjs`）：
+`--title` ≤ 32 字（官方接口文档口径；后台编辑器放宽到 64 字符，32–64 只警告，>64 拒绝）；
+`--digest` ≤ 120 字，仅单图文有摘要，不传则微信默认抓正文前 54 字；正文 HTML 少于 2 万字符且小于 1MB；
+正文图 jpg/png 且 <1MB（超了本包自动压）。封面在微信侧是永久素材 `thumb_media_id`，
+后台会按 2.35:1（列表）与 1:1（转发卡片，取正中）两种比例裁。
+
 > **只存草稿**：本流水线**没有**任何群发参数。传 `--mass-send`/`--broadcast`/带「群发」字样的 flag 会被**直接拒绝**。
 

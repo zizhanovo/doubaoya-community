@@ -14,6 +14,8 @@ python3 "$SKILL_PATH/scripts/publish_draft.py" \
 脚本行为：先 `GET /api/wechat/status`（恰好 1 个绑定自动选用；多个且没给 `--appid` 会列出让你重跑指定；
 0 个提示先去绑定），再 `POST /api/wechat/publish` 存草稿，成功打印 `mediaId`。参数：`--title`（必填）、
 `--content` 或 `--content-file`（二选一必填）、`--appid`（可选）、`--digest`（可选）。
+微信侧上限（脚本先拦再花钱）：标题 ≤ 32 字（后台放宽到 64，32–64 只警告）、摘要 ≤ 120 字（不传默认抓正文前 54 字）、
+正文少于 2 万字符且小于 1MB。
 
 计费：**只在成功时扣点**——存草稿成功了才扣；发布失败（`502 WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED`）服务端会
 **自动把已扣的点数退回**，参数被前置拦下的 `400 VALIDATION_ERROR` 则压根不扣。（具体扣多少以详情端点的实时点数字段为准，别照文档里的数字替用户算钱。）

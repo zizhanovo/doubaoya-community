@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-24T21:58:23.246540+00:00",
+  "generatedAt": "2026-08-24T21:58:26.684960+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -60,6 +60,7 @@
     ],
     "dby": [
       "02380dfa3f98",
+      "02a03d78fb1c",
       "04545b184f2e",
       "1c068c859c03",
       "259fd3762f29",
@@ -89,10 +90,12 @@
       "94592136ac90",
       "9b545f2f647a",
       "9b9682a7a602",
+      "a59d7a4e7157",
       "bcf26b4eca1f",
       "ed6a2f86bffc"
     ],
     "dby-banned-words": [
+      "3b6f51b83da1",
       "8967a5bf1cbe",
       "9875773c9a77",
       "b3b6c7500194",
@@ -101,6 +104,7 @@
       "f2ae13c9d572"
     ],
     "dby-charter": [
+      "069d68bd5b30",
       "289a7e8efa11",
       "5c113e2fefe3",
       "7d8ce219936b",
@@ -118,6 +122,7 @@
       "0a3b3433cbe5",
       "1d294368f7d7",
       "64220c7bed79",
+      "7e9d8e2c7fa6",
       "b798cca6be87",
       "e19a51009f8d",
       "e1dc9e3d282e"
@@ -128,6 +133,7 @@
       "098a5bb943f2",
       "219886ee0a77",
       "25fcd0d0d1ba",
+      "2a3ffb3fc5b2",
       "47bee0597b99",
       "6a04472552de",
       "73f91dda7bd6",
@@ -159,15 +165,18 @@
       "da136cf9613a",
       "e6cc1f2a871c",
       "e7a976940e02",
+      "ec58027fccdc",
       "fdf279bc684e"
     ],
     "dby-rewrite": [
+      "64eb94c6e436",
       "db8a6e744f97",
       "dbc228e09916",
       "de838c0c1b1e",
       "e6f18ded0432"
     ],
     "dby-theme": [
+      "895210b408a4",
       "9c3df5a11c54",
       "a1b7ed58c9fe",
       "af370a32f818",
@@ -191,6 +200,7 @@
       "89126d451b03",
       "8b15b3b187e6",
       "9a2708863bc4",
+      "b34999536b26",
       "bb1c48d2428f",
       "c51a1f7c37be",
       "c8fc00825fa8",
@@ -198,6 +208,7 @@
       "e88f976ec4bb"
     ],
     "dby-write": [
+      "274536af5420",
       "38713c695a93",
       "388503b769d1",
       "78f1efdf04ad",
@@ -2591,6 +2602,12 @@
         "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
       },
       {
+        "hash": "4d2cafc48bca",
+        "version": "2.3.0",
+        "date": "2026-08-24",
+        "subject": "feat(dby-publish,dby-theme): 微信 draft/add 字段上限前置校验；主题校验器按官方编辑器规范加四条 warning"
+      },
+      {
         "hash": "53d58f1d50df",
         "version": "2.2.0",
         "date": "2026-08-24",
@@ -2659,6 +2676,12 @@
         "version": "1.2.1",
         "date": "2026-08-24",
         "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+      },
+      {
+        "hash": "a1b7ed58c9fe",
+        "version": "1.2.2",
+        "date": "2026-08-24",
+        "subject": "feat(dby-publish,dby-theme): 微信 draft/add 字段上限前置校验；主题校验器按官方编辑器规范加四条 warning"
       },
       {
         "hash": "c5cfbb362507",

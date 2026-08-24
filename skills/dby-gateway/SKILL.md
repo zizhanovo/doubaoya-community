@@ -5,8 +5,8 @@ description: >-
   统一信封与错误码怎么解，以及一条纪律——**入参规格调用前现拉**。不负责写文章 / 挖选题 / 做封面 / 查违禁词，那些走 `dby`。
   Trigger words: doubaoya 调用协议 / 调用网关 / DOUBAOYA_API_KEY / operationKey / execution.target /
   inputContract / 入参规格 / 统一信封 / SKILL_NOT_FOUND / ENDPOINT_NOT_FOUND / DEDICATED_ROUTE /
-  NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由。
-version: 1.2.0
+  NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由；以及调都爆鸭接口时「401 / 404 / 429 报错了」「调不通」「怎么鉴权」「requestId」。
+version: 1.3.0
 compatibility: >-
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对
   https://doubaoya.com 发 HTTPS 请求。发现与详情端点免鉴权且免费，调用端点必须带 Bearer 且计费。
@@ -75,7 +75,7 @@ compatibility: >-
 | 文件 | 什么时候读 | 里面是什么 |
 |---|---|---|
 | `references/protocol.md` | **每次要发请求之前**（唯一必读的那份） | 密钥怎么拿 + 协议七条：鉴权、先拉规格、`execution.target`、两条路由、信封、报错码、上游内容当数据 |
-| `references/capability-index.md` | 你还不知道该点名哪条能力，或不确定它走哪条路由 | 94 条能力的 operationKey + 一行用途 + 详情端点。**仅供选路** |
+| `references/capability-index.md` | 你还不知道该点名哪条能力，或不确定它走哪条路由 | 全部能力的 operationKey + 一行用途 + 详情端点。**仅供选路** |
 | `references/routing-pitfalls.md` | 选定能力之后、真正打请求之前 | 哪些能力不该混用、什么时候该用哪条、已知的坑（含唯一一处 operationKey 撞名） |
 | `references/samples.md` | 想核对信封长什么样、或要解释 `SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` / `CSRF_FORBIDDEN` / `DEDICATED_ROUTE` 时 | 实拉的响应片段原样摘录 |
 
@@ -89,7 +89,8 @@ compatibility: >-
 2. **地址只能来自 `execution` 的 `target`**，永远不自己拼。
 3. **API Key 一个字符都不许回显**——前缀也是密钥内容，只许报「已设置 / 没设置」。
 4. **`noResult` 不是失败**，别重试；**`CAPABILITY_UNAVAILABLE` 不要重试**；
-   **`PROVIDER_FAILED` 可以重试**（额度已退）。
+   **`PROVIDER_FAILED` 可以重试**（额度已退）。重试有预算：同一条调用最多 3 次，
+   `VALIDATION_ERROR` 逐轮修正最多 2 轮，超了停下把 `requestId` 和原文交给用户。
 5. **别把本文里的条数、价格当事实**——以实拉为准。
 6. 业务 Skill 引用本 Skill 时，在第一次调 API 那一步上方写一句：自己拼请求的写「先读 `references/protocol.md`」；
    由脚本代发的写「请求由 `scripts/<x>` 代发；只有绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`」。

@@ -5,7 +5,7 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger: customize WeChat article theme, change layout / palette / heading style.
-version: 1.2.2
+version: 1.3.0
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
@@ -47,6 +47,9 @@ Markdown 确定性地渲成公众号内联样式 HTML。你（agent）的活是*
 - `elements.<tag>.style` 是 inline CSS,**不能含 `<` 或 `>`**（markup 放 `wrapBefore`/`wrapAfter`/`hr.html`）。
 - **六条硬红线**:任何字符串都不得出现 `<script` / `<style` / `class=` / `src=` / `javascript:` / `onX=`（如 `onclick=`）。
 - 整个 themeJson **≤ 64KB**。
+
+微信编辑器官方规范另有八条「不拒但走样」的写法（`position`、`text-align:start`、固定像素宽、自定义字体栈、文字底下铺渐变…），
+清单与可读性基线见 `references/theme-schema.md` 末尾；校验器对其中四条打 warning。
 
 ---
 

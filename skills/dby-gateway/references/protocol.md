@@ -70,20 +70,22 @@ Windows 用 `[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你�
    - `detailUrl`：这次结果在 doubaoya.com 上的详情页，可以给用户点。
 6. **报错怎么办**（`HTTP` / `error.code`）：
    401 `MISSING_API_KEY` / `UNAUTHORIZED` → 让用户去密钥中心生成或重建，更新环境变量；
-   400 `VALIDATION_ERROR` → 照 `message` 改入参，改前**重拉一次规格**；
+   400 `VALIDATION_ERROR` → 照 `message` 改入参，改前**重拉一次规格**；**最多修正 2 轮**，还错就停，把 `message` 原文和 `requestId` 给用户；
    400 `DEDICATED_ROUTE` → 走错到通用代理了，`message` 形如「公众号排版渲染请直接调用 POST /api/wechat/render，不走通用调用代理」，照 `execution.target` 重发；
    422 `PROVIDER_NO_RESULT` → 上游对这组入参查无结果，**点数已退**，同一组入参**不重试**；照 `message` 改入参
      （`message` 是上游原文，以原文为准；日期类入参先怀疑超出保留期，而不是格式错）；
    402 `INSUFFICIENT_CREDITS` → 提示用户充值；
    429 `TOO_MANY_REQUESTS` → 撞到限流了。**限流按来源 IP 分桶，不按 key**——
      换一把钥匙、开一个新会话都绕不过去，同一出口网络下的其他人也共用这个桶。
-     退避后重试，别加大并发。
+     退避后重试（有 `Retry-After` 头就按它等，没有就 5s → 15s → 45s），**最多 3 次**，别加大并发。
    404 `SKILL_NOT_FOUND` / `ENDPOINT_NOT_FOUND` → 见第 4 条，**去另一个集合的发现接口找**，别猜 slug；
      发现接口里也没有这条能力时，**多半是本机 skill 已经过期**（它点名的能力早就下架了）：
      跟用户说一句「你的本鸭 skill 可能过期了」，让他跑一次 `/dby-update`（或说「更新都爆鸭」），
      然后**只重试这一次**。🔴 重试仍是 404 就如实告知能力已下架，**不许再更新、不许成环**。
    503 `CAPABILITY_UNAVAILABLE` → **别重试**，换能力或如实告知；
-   502 `PROVIDER_FAILED` → 上游临时失败，**额度已自动退回**，可以直接重试。
+   502 `PROVIDER_FAILED` → 上游临时失败，**额度已自动退回**，可以直接重试，**最多 3 次**。
+   分类只有两种：**瞬时**（429、502、网络超时）才重试；**其余全是终止**（400 / 401 / 402 / 404 / 422 / 503），重试只烧预算，改入参 / 换钥匙 / 充值 / 换能力才是出路。
+   重试超预算一律停下，把 `error.code`、`message` 原文和 `requestId` 交给用户，不自己绕。
    🔴 只有上面这条 404 走「先更新再重试」，**别的错一律不许触发更新**——
    401 是钥匙问题、400 是入参问题、402 是余额问题，更新 skill 一个都治不了，
    把它们也当成「该更新了」只会让每次失败都多跑一遍安装。

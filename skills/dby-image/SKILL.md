@@ -7,7 +7,7 @@ description: >-
   触发词：画张图、帮我画、生成图片、生成一张图、AI 出图、出图、文生图、图生图、改图、
   改一下这张图、P 一下、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图。
-version: 1.2.0
+version: 1.2.1
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。零依赖，不用 npm install。
@@ -77,7 +77,7 @@ node "$GEN" --describe
 
 `size` 参数上游**完全忽略**（七个用例全返回 1254×1254）。要什么比例就在描述里
 直接写数字：「宽幅横版，16:9 比例」→ 实测 1672×941。各平台该写什么比例查
-[`prompt-ladder.md` 的「比例速查」](references/prompt-ladder.md)（公众号封面：16:9，且按 2.35:1 裁切上下留余量）。
+[`prompt-ladder.md` 的「比例速查」](references/prompt-ladder.md)（公众号封面：16:9，主体进居中正方形——微信按 2.35:1 与正中 1:1 各裁一次）。
 需要精确像素只能拿到图之后自己裁。脚本每次都打印实测宽高，**核一眼**。
 
 ---

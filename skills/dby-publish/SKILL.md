@@ -8,7 +8,7 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.3.0
+version: 2.4.0
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -106,7 +106,8 @@ compatibility: >-
 
 → 真要动手做视觉时读 `references/guided-design.md`（选风格 → 封面加 `--cover-guard`
 → 配图落进 Markdown 源后回「md→HTML」重渲染 → 确认排版），走逃生舱就不必读。
-比例只靠 `--cover-guard` / prompt 控制，`--size` 无效。`--cover` 收本地 jpeg / png 都行（>1MB 自动压成 jpg）。
+比例只靠 `--cover-guard` / prompt 控制，`--size` 无效；封面主体要进**居中正方形安全区**（微信按 2.35:1 与 1:1 各裁一次）。
+`--cover` 收本地 jpeg / png 都行（>1MB 自动压成 jpg）。标题 / 摘要 / 正文长度上限脚本先拦再花钱，数字见 `references/cli.md`。
 
 → 想改成**在网页里一次点完**（可视化工作台，产出 `design-config.json` 给 `pipeline.mjs --design`）
 读 `references/design-studio.md`，与命令行引导等价，二选一。

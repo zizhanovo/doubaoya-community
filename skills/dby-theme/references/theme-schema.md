@@ -26,3 +26,25 @@ top-level 五段（+ 进阶 `components`）:
 
 ---
 
+## 微信编辑器官方兼容清单（写 style 时对照）
+
+依据微信《公众平台编辑器插件开发规范》（`docs/research/dby-theme/01`），违反的会被编辑器删结构、或在手机端 / Dark Mode 下走样。
+校验器 `scripts/validate-theme.mjs` 对前四条打 **warning**（不算硬错，服务端不拒）。
+
+| 别写 | 后果 | 改成 |
+|---|---|---|
+| `position:absolute/fixed`、`transform` 挪结构 | 被过滤；Dark Mode 算法按 DOM 顺序着色，错位文字配错底色 | 顺着文档流排 |
+| `text-align:start/end` | iOS 与安卓一边居中一边居左 | `left/center/right` |
+| `line-height:0`、容器 `height:0` | 文字叠成一行 / 手机端整段不可见 | 删掉 |
+| 容器固定 `width:586px` 这种像素宽 | 宽屏居左留白、窄屏溢出 | `max-width:100%` 或百分比 |
+| `page.fontFamily` 自定义字体栈 | 同一页映射到不同版本字体，iOS 17+ 字号字距不一 | 用官方默认栈（`theme.example.json` 那句），别再加别的家族 |
+| 文字底下铺 `linear-gradient` | Dark Mode 先把渐变压成纯色再变换；纯装饰渐变（下面没字）不受影响 | 文字用纯色底，渐变只做分割线 / 色条 |
+| `<pre>` 包普通段落 | `white-space:pre` 手机端横向截断 | `<p>` / `<section>` |
+| 同名标签嵌套 >15 层 | 编辑器直接删 | 扁平化 |
+
+Dark Mode 只调「看不清」的文字 / 背景对比度，彩色不动；正文黑底 `#191919`——透明底 PNG 里的黑字会消失。
+
+## 可读性基线（用户没指定时的默认）
+
+正文 15–16px、行高 1.75–1.8、正文色 `#3f3f3f`/`#444`（别纯黑）、全篇 ≤3 种颜色（主色 + 深灰正文 + 浅灰辅助 `#e5e5e5` 级）；
+标题 22–24 / 18 / 16px 加粗。来源：`docs/research/dby-theme/02`、`03`。

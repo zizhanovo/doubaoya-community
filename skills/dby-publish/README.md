@@ -83,6 +83,10 @@ MIT — 见 [`LICENSE`](./LICENSE)。
 
 ## 最近变更
 
+- **2.4.0**：按微信 draft/add 官方文档补字段上限前置校验（`scripts/lib/draft-limits.mjs`，三条入口共用：
+  标题 >64 拒 / 32–64 警告、摘要 >120 拒、正文 ≥2 万字符或 ≥1MB 拒）；封面护栏 `COVER_GUARD` 改成
+  「主体进居中正方形安全区」——公众号封面除 2.35:1 外还会从正中裁 1:1，原来只防上下。调研见 `docs/research/dby-publish/`。
+
 - **2.3.0**：文档去掉「1536x1024 / 1024x1024」——`gen-image.mjs --size` 上游忽略，比例只靠 `--cover-guard` / prompt；
   SKILL.md 步骤改用步骤名（脚本日志的「步骤 N/9」与 SOP 编号不对应）；`cli.md` 补 `--render-only`；
   协议引用改成条件式（请求由脚本代发）；`pipeline.json` 版本与 SKILL 对齐。

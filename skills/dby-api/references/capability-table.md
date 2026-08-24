@@ -85,6 +85,8 @@
 
 - **"A股公众号 / 股市大V / 股票公众号榜单"** —— 三步：`api.gzh.searchUser` 搜号 →
   `api.gzh.workList`（或 `api.gzh.dailyPublish`）拉发文 → `api.gzh.hotArticle` 找爆文。
+- **"我是不是被限流了 / 阅读量掉了 / 推荐流量没了"** —— 不是取数能算的：`skill.wechat.accountAnalyzer`
+  只看公开体量；限流判定走后台「账号检测」，官方口径见 `references/gotchas.md`。
 - **"把这条爆款改写成我的文案"** —— 不调接口：Skill `dby-rewrite` 一个包管七个平台
   （公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎，也能一稿多发），纯本地、不要 key。
   没装就用搜来的素材由你合成。

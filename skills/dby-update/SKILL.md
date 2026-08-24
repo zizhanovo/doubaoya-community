@@ -5,7 +5,7 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和你自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 3.2.2
+version: 3.2.3
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
@@ -30,7 +30,8 @@ compatibility: >-
 > 「本机已经和上游一致」时，结论是**无需任何操作**——一个包都不会重下。
 > 真想把某个包重装一遍（比如文件坏了），用 `--force-refresh` 全量重下。
 
-> ⚠️ 别用 `npx skills update`：它只更新「已经装了的」，**永远删不掉上游已下架的那些**。
+> ⚠️ 别用 `npx skills update`：它只比对 `~/.agents/.skill-lock.json` 里已装包的目录哈希，上游已改名 / 下架的包会被**静默跳过、永远留在本机**；
+> 而且那份 lock 只记全局安装，**项目级（`--scope project`）的包它根本看不见**。
 
 ### 怎么判断「这包是不是本鸭发的」
 
@@ -160,4 +161,4 @@ doubaoya.com 连不连得通），最后打印一份结果，并告诉用户归�
 - 不创建后台任务、定时任务或 Agent Hook。
 - 用户只问「有什么更新 / 现在什么版本 / 要不要更」→ **先回答，不执行**（`--dry-run` 正好用来回答这个）。
   明确要实际同步时才跑第 3 步。
-- 只想更新某一个 skill：`npx -y skills update <skill 名> -g`，只碰点名那个（但它不会做对账）。
+- 只想更新某一个**全局**skill：`npx -y skills update <skill 名> -g`，只碰点名那个（不做对账；项目级安装它看不见，仍走本脚本）。
