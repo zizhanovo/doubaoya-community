@@ -74,7 +74,12 @@ Windows 用 `[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你�
    400 `DEDICATED_ROUTE` → 走错到通用代理了，`message` 形如「公众号排版渲染请直接调用 POST /api/wechat/render，不走通用调用代理」，照 `execution.target` 重发；
    422 `PROVIDER_NO_RESULT` → 上游对这组入参查无结果，**点数已退**，同一组入参**不重试**；照 `message` 改入参
      （`message` 是上游原文，以原文为准；日期类入参先怀疑超出保留期，而不是格式错）；
-   402 `INSUFFICIENT_CREDITS` → 提示用户充值；
+   402 `INSUFFICIENT_CREDITS` / `NO_CREDIT_ACCOUNT` → 别只说"提示用户充值"这种空话。
+     `error.extra` 带着 `balance`（现在还剩多少点）、`required`（这次调用要多少点）、
+     `rechargeUrl`（充值页绝对地址，直接可点）——**原样念给用户**：「都爆鸭余额只剩
+     `balance` 点，这次调用需要 `required` 点，还差 `required - balance` 点，去 `rechargeUrl` 充值」。
+     `NO_CREDIT_ACCOUNT` 是「这个账号还没开通额度账户」，`extra.balance` 恒为 0，
+     其余两个字段同上，处置一样：把 `rechargeUrl` 给用户；
    429 `TOO_MANY_REQUESTS` → 撞到限流了。**限流按来源 IP 分桶，不按 key**——
      换一把钥匙、开一个新会话都绕不过去，同一出口网络下的其他人也共用这个桶。
      退避后重试（有 `Retry-After` 头就按它等，没有就 5s → 15s → 45s），**最多 3 次**，别加大并发。
