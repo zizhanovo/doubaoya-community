@@ -8,7 +8,7 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.4.0
+version: 2.4.1
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -61,8 +61,10 @@ compatibility: >-
 | `skill.wechat.draftPublish` ⚠️专用 | `GET /api/skills/wechat-draft-publish` | 「保存草稿」 |
 
 请求由 `scripts/pipeline.mjs`（及它调用的 `gen-image.mjs`、`preprocess-and-publish.mjs`）代发；
-只有绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`（鉴权、密钥怎么拿、
-先拉规格再拼参数、`execution.target`、信封与报错码全在那一份）。
+绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`（鉴权、密钥怎么拿、
+先拉规格再拼参数、`execution.target`、信封格式）。
+🔴 **报错码是例外，走脚本一样要读**：脚本原样抛错零解读，撞上就读该文件第 6 条
+（429 按 IP 分桶，换 key、开新会话都没用，退避≤3 次且别加并发）。
 🔴 两条**专用路由**的调用地址只在 `target` 里，从详情端点**推不出来**。
 
 > **存草稿与生图都花钱、服务端排版渲染不花钱**；现价从详情响应现拉现说，花钱的两步动手前先问用户。
