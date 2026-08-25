@@ -207,3 +207,78 @@ def test_营销腔范例已换掉() -> None:
         assert "你的死工资正在拖垮你" not in t, (
             f"{name} 仍拿营销腔标题当正面范例 —— 它本身就是要治的那种腔调"
         )
+
+
+# ─────────────────────────────────────────────────────────────
+# genre 手艺层（genre-craft-references）：六份体裁文件 + 字面替换路由
+#
+# 🔴 诚实边界：下面这几条只能保证「文件在、指针在、编的数字不在」，
+#    **不能保证 agent 真去读**（按需读取无法在文本层强制），
+#    也不能保证内容写得好（那需要真实产出对比）。别把绿灯读成后两者。
+#
+# ⚠️ 读中文文件名别用 `git ls-files | grep 中文` —— git 默认把非 ASCII 路径
+#    输出成八进制转义（\345…），grep -c 会得 0 而文件其实在（实测踩过）。
+#    统一用 pathlib.glob，不经 shell 转义。
+# ─────────────────────────────────────────────────────────────
+
+GENRE_DIR = PKG / "references" / "genre"
+
+# 🔴 与 SKILL.md 第 3 步、goals.md 取值表同一套值。文件名必须逐字等于取值（设计 D7：
+#    路由是字面替换 —— 声明近义改写 → file-not-found 响亮卡住；查表方案则静默错路由）。
+MATERIAL_FORMS = (
+    "可复现步骤", "并列多项", "可核实的具体事件",
+    "待解释的现象或机制", "带转折的真实经历", "被访者原话",
+)
+GENRE_SECTIONS = ("这类文章长什么样", "动笔前必须有什么", "开头与结尾", "写砸的样子", "容易串到哪去")
+
+
+def _genres() -> dict[str, str]:
+    return {p.stem: p.read_text(encoding="utf-8") for p in GENRE_DIR.glob("*.md")}
+
+
+def test_genre_六份都在且五节齐全() -> None:
+    g = _genres()
+    assert len(g) >= 6, f"genre/ 只扫到 {len(g)} 份，多半是目录解析退化了"  # 元断言防空跑
+    for form in MATERIAL_FORMS:
+        assert form in g, f"缺 references/genre/{form}.md —— 声明这个形态的 agent 会在第 5 步撞 file-not-found"
+        body = g[form]
+        assert len(body) > 800, f"{form}.md 太短（{len(body)} 字符），像是占位不是内容"
+        for sec in GENRE_SECTIONS:
+            assert f"## {sec}" in body, f"{form}.md 缺「{sec}」一节 —— 五节骨架统一了空缺才会显形"
+
+
+def test_genre_双向路由_形态与文件一一对应() -> None:
+    """🔴 只查一边会漏掉「多出一份没人指向的死文件」—— 一份没有形态指向它的文件与不存在等价。"""
+    files = {p.stem for p in GENRE_DIR.glob("*.md")}
+    forms = set(MATERIAL_FORMS)
+    assert forms - files == set(), f"有形态没有文件：{sorted(forms - files)}"
+    assert files - forms == set(), f"有文件没有形态指向它（死文件）：{sorted(files - forms)}"
+    # 防本文件的常量自己漂：六个取值必须同时出现在 goals.md 的取值表里
+    g = _refs()["goals.md"]
+    for form in MATERIAL_FORMS:
+        assert form in g, f"goals.md 取值表里没有「{form}」—— 三处取值（本常量 / SKILL.md / goals.md）漂了"
+    assert "六取值" in g, "goals.md 的取值表标题没跟着改成六取值"
+
+
+def test_genre_路由指针是字面模式且前置不可绕() -> None:
+    s = _skill()
+    assert "references/genre/<你声明的素材形态>.md" in s, (
+        "主干没有字面替换路由 —— 六份 genre 文件等于被藏了（产物没进它唯一的入口）"
+    )
+    assert "没读不列提纲" in s, "第 5 步缺不可绕前置（设计 D9：分支文件不配硬闸等于白建）"
+    assert "改声明" in s, "缺时序改判（第 4 步收完素材发现与声明不符 → 改声明，不许将错就错）"
+    # 🔴 字面替换的完整性：主体不许内联任何一份的具体路径（那是对照表复活的第一步）
+    for form in MATERIAL_FORMS:
+        assert f"genre/{form}" not in s, f"主体出现了具体路径 genre/{form} —— 对照表在复活"
+    # 第 3 步取值与 goals.md 六项逐项一致
+    for form in MATERIAL_FORMS:
+        assert form in s, f"SKILL.md 第 3 步取值缺「{form}」—— 与 goals.md 漂了"
+
+
+def test_genre_不许出现无依据的效果数字() -> None:
+    """调研两路独立印证：不存在带样本量的体裁效果数据 ⇒ 任何「N% / N 倍」都是编的。"""
+    bad = []
+    for form, body in _genres().items():
+        for m in re.finditer(r"[0-9]+(?:\.[0-9]+)?%|[0-9]+ ?倍", body):
+            bad.append(f"{form}.md: …{body[max(0, m.start()-20):m.end()+10]}…")
+    assert not bad, "genre 文件出现效果数字（调研实证这类数据不存在，出现即编造）：\n  " + "\n  ".join(bad)
