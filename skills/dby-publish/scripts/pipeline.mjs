@@ -45,6 +45,38 @@ const SKILL_ROOT = path.resolve(__dirname, "..");
 const VENDORED_PUBLISH = path.join(__dirname, "preprocess-and-publish.mjs");
 const DEFAULT_BASE_URL = "https://doubaoya.com";
 export const DEFAULT_MARKDOWN_THEME = "themes/benya-clean.json";
+/** `--theme default` 指的这个 id。与 DEFAULT_MARKDOWN_THEME 的文件名同名，但走服务端那份。 */
+export const DEFAULT_THEME_ID = "benya-clean";
+
+/**
+ * 主题引用分类：**裸 id 交服务端解析，路径才读本机文件**。
+ *
+ * 🔴 为什么裸 id 不再当路径找：包里 `themes/` 那 15 份是服务端主题的**旧副本，已经漂了**。
+ *    2026-08-25 实测 `benya-clean`：包内 4282 字节（engine-1，无 meta.engine）
+ *    vs 服务端 8471 字节（engine-2，extends base-17@1），`meta.name` 同为
+ *    「本鸭·知识清爽」，diff 152 行。⇒ **传 --theme 与不传 --theme 拿到两种排版，而名字一样。**
+ *    不传的那条路早就没有双源了（什么都不送、服务端套账号默认，见下方主流程注释），
+ *    这次把显式那条路也收进同一份真相。
+ *    顺带：服务端 19 个公开主题里有 4 个是 engine-2 独有的，包里结构上做不出
+ *    ⇒ `--theme dark-tech` 这类到今天为止是**必然失败**的，改走 themeId 才第一次可用。
+ *
+ * ⚠️ **路径写法一个字不动**：自定义主题（不在服务端目录里的）仍然只能靠本机文件。
+ *    包内路径也照旧读本机 —— 只是会告警说明它是旧副本。扩大来源可以，夺走既有行为不行。
+ *
+ * @returns {{kind:"none"}|{kind:"id",id:string}|{kind:"path"}}
+ */
+export function classifyThemeRef(ref) {
+  if (typeof ref !== "string" || ref.length === 0) return { kind: "none" };
+  if (ref === "neutral") return { kind: "id", id: "neutral" };
+  if (ref === "default") return { kind: "id", id: DEFAULT_THEME_ID };
+  // 带目录分隔符 / 扩展名 / 绝对路径 —— 一律当路径。
+  if (ref.includes("/") || ref.includes("\\") || ref.endsWith(".json") || path.isAbsolute(ref)) {
+    return { kind: "path" };
+  }
+  // 服务端 themeId 的字面形状；不匹配就退回按路径处理，让原有报错照常出。
+  if (/^[a-z0-9][a-z0-9-]*$/i.test(ref)) return { kind: "id", id: ref };
+  return { kind: "path" };
+}
 
 export const BUILTIN_CONFIG = {
   targetAccount: null,
@@ -158,12 +190,18 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --digest <str>              摘要
   --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
   --profile <path>            IP/身份 profile（默认取 config.ipProfile）
-  --theme <path>              显式覆盖 Markdown 主题：本机先校验，再把整套 JSON 作为
-                              themeJson 送去平台渲染。**不指定**（且 config 未写 mdTheme
-                              路径）时一个主题字段都不传，由服务端套你在 doubaoya.com
-                              排版工作室保存的默认排版 —— 想换默认排版去那里改，
-                              那是唯一该改它的地方。
+  --theme <id>                服务端主题 id（如 benya-clean、dark-tech）：本机不读文件，
+                              交服务端解析，与不传 --theme 时是同一份真相。可用 id 见
+                              GET /api/wechat/themes；未知 id 服务端返 400 并列出来。
+  --theme <path>              自定义主题文件（含 / 或 .json）：本机先校验，再把整套 JSON
+                              作为 themeJson 送去平台渲染。⚠️ 指到包内 themes/ 的路径是
+                              服务端主题的**旧副本**（engine-1，已与服务端漂开），会告警；
+                              改用裸 id 走服务端那份。
+                              **不指定**（且 config 未写 mdTheme）时一个主题字段都不传，
+                              由服务端套你在 doubaoya.com 排版工作室保存的默认排版 ——
+                              想换默认排版去那里改，那是唯一该改它的地方。
   --theme neutral             显式要求中性排版（themeId=neutral，零品牌色）
+  --theme default             项目默认主题的服务端那份（等价 --theme benya-clean）
   --design <json>             设计工作台产出的 design-config.json：套主题 + 设封面 + 按 h2
                               锚点注入配图。由 scripts/design-studio.mjs 生成。显式 --theme/
                               --cover 与 --design 冲突时命令行优先并告警。
@@ -698,17 +736,40 @@ async function main() {
         configHasTheme,
       })
     ) {
-      const themePath = resolveMarkdownThemePath({
-        cliTheme: effectiveCliTheme,
-        configuredTheme: config.mdTheme,
-        configHasTheme,
-        configDir: path.dirname(configPath),
-      });
-      if (themePath === null) {
-        // "neutral" —— 渲染器内置的零品牌色默认，平台侧同名 themeId，语义一致。
-        themeId = "neutral";
-        info("已显式要求中性排版（themeId=neutral，零品牌色）。");
+      // 显式值取自 --theme，其次 config.mdTheme（与 hasExplicitLocalTheme 同构）。
+      const themeRef =
+        typeof effectiveCliTheme === "string" && effectiveCliTheme.length > 0
+          ? effectiveCliTheme
+          : config.mdTheme;
+      const themeClass = classifyThemeRef(themeRef);
+      if (themeClass.kind === "id") {
+        // 裸 id / neutral / default → 交服务端解析，本机不读任何文件。见 classifyThemeRef。
+        themeId = themeClass.id;
+        info(
+          themeId === "neutral"
+            ? "已显式要求中性排版（themeId=neutral，零品牌色）。"
+            : `主题交服务端解析：themeId=${themeId}（与不传 --theme 时同一份真相；` +
+              `未知 id 服务端返 400 并指向 GET /api/wechat/themes）。`,
+        );
       } else {
+        const themePath = resolveMarkdownThemePath({
+          cliTheme: effectiveCliTheme,
+          configuredTheme: config.mdTheme,
+          configHasTheme,
+          configDir: path.dirname(configPath),
+        });
+        // classifyThemeRef 已经把 "neutral" 拦在上面，这里理论上拿不到 null；留一道防御，
+        // 免得将来有人改了分类却让 readJsonMaybe(null) 去炸一个看不懂的错。
+        if (themePath === null) fail("主题解析异常：既不是 id 也解析不出路径。");
+        // 🔴 指到包内 themes/ 的路径 = 服务端主题的旧副本（engine-1），排版会与账号默认不一致。
+        //    不夺走既有行为（照旧读本机），但必须说出来，否则「同名不同版」是静默的。
+        if (path.resolve(themePath).startsWith(path.join(SKILL_ROOT, "themes") + path.sep)) {
+          const bare = path.basename(themePath, ".json");
+          warn(
+            `主题 ${themePath} 是包内旧副本（engine-1），与服务端同名主题已漂开；` +
+              `改用 --theme ${bare} 可走服务端那份（也是不传 --theme 时用的那份）。`,
+          );
+        }
         const themeObj = await readJsonMaybe(themePath);
         if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
         // 🔴 本机先校验再送：不合法的主题送到服务端只会换回一个更难读的远端 400，

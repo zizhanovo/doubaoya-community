@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T02:36:08.173636+00:00",
+  "generatedAt": "2026-08-25T03:20:46.142606+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -168,6 +168,7 @@
       "da136cf9613a",
       "e6cc1f2a871c",
       "e7a976940e02",
+      "e88557062157",
       "ec58027fccdc",
       "fdf279bc684e"
     ],
@@ -2671,6 +2672,12 @@
         "version": "2.2.1",
         "date": "2026-08-24",
         "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+      },
+      {
+        "hash": "93bdab968731",
+        "version": "2.4.1",
+        "date": "2026-08-24",
+        "subject": "fix(dby-publish): 报错码被划进「绕开脚本才读」——走脚本的 agent 撞上 429 只会重试"
       },
       {
         "hash": "c24c940f04d9",

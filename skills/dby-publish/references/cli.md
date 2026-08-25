@@ -29,7 +29,18 @@ node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dr
 ```
 
 参数：`--md | --html`（二选一）、`--title`（必填）、`--account`、`--appid`、`--cover`（本地 jpeg/png，>1MB 自动压成 jpg）、`--digest`、
-`--config`、`--profile`、`--theme <path> | neutral`、`--design`、`--output-processed-html`、`--base-url`、`--render-only`、`--dry-run`、`--help`。
+`--config`、`--profile`、`--theme <id> | <path> | neutral | default`、`--design`、`--output-processed-html`、`--base-url`、`--render-only`、`--dry-run`、`--help`。
+
+`--theme` 的两种写法**去处不同**：
+
+- **裸 id**（`benya-clean`、`dark-tech`）→ 本机不读文件，送 `themeId` 交服务端解析，
+  与**不写 `--theme`** 时是同一份真相。可用 id 见 `GET /api/wechat/themes`；未知 id
+  服务端返 400 并列出来。服务端有 19 个公开主题，包内只有 15 个镜像，**那 4 个只能靠裸 id 拿到**。
+- **路径**（含 `/` 或 `.json`）→ 读本机文件、本机先校验、整套作为 `themeJson` 送出。
+  自定义主题走这条。
+  ⚠️ 指到**包内** `themes/` 的路径是服务端同名主题的旧副本（engine-1，实测 `benya-clean`
+  包内 4282 字节 vs 服务端 8471 字节、diff 152 行）⇒ 排版会与账号默认不一致。
+  这种写法仍然可用但会告警，改用裸 id 即可。
 本机多条 key 对应不同账号时，账号校验会停下要 `--account`，按报错列出的账号补上。
 
 **微信 draft/add 字段上限**（脚本在渲染 / 传图之前就拦，`scripts/lib/draft-limits.mjs`）：

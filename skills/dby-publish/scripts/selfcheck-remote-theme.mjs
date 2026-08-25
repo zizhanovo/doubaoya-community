@@ -12,6 +12,7 @@
 //   5. engine-2 主题（meta.engine:2 / top-level tokens / 带点号 token）→ validator 硬错误；
 //   6. 「编译形态」fixture（engine-1 形状全字面量）走完整**本机**渲染 → HTML 零 "{{"；
 //   7. 两份 validate-theme.mjs（pipeline 与 theme-studio）字节相同。
+//   8. 主题引用分类：裸 id → 交服务端 themeId；路径 → 读本机文件（自定义主题）。
 //
 // 🔴 1–3c 合起来守的是一条红线：**平台渲染失败一律中止，绝不静默回退本机渲染器**。
 //    回退会产出「看起来成功、却没有预览链接、排版还可能不是用户设的那套」的产物。
@@ -29,7 +30,14 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { hasExplicitLocalTheme, normalizeDraftMarkdown, renderViaPlatform } from "./pipeline.mjs";
+import {
+  DEFAULT_MARKDOWN_THEME,
+  DEFAULT_THEME_ID,
+  classifyThemeRef,
+  hasExplicitLocalTheme,
+  normalizeDraftMarkdown,
+  renderViaPlatform,
+} from "./pipeline.mjs";
 import { renderWechatHtml } from "./render-wechat-html.mjs";
 import { validateTheme } from "./validate-theme.mjs";
 
@@ -369,6 +377,47 @@ async function main() {
     const b = await readFile(path.resolve(__dirname, "../../dby-theme/scripts/validate-theme.mjs"));
     assert.ok(a.equals(b), "两份 validate-theme.mjs 必须字节相同（改一份要同步另一份）");
     ok("两份 validate-theme.mjs 字节相同");
+  }
+
+  // ---- 8. 主题引用分类：裸 id 交服务端，路径才读本机 -------------------------
+  // 🔴 这一项守的是「同名不同版」：包内 themes/benya-clean.json 是 engine-1 旧副本
+  //    （2026-08-25 实测 4282 字节），服务端同名那份是 engine-2（8471 字节，diff 152 行）。
+  //    在此之前 `--theme benya-clean` 会去找 <cwd>/benya-clean 然后失败，
+  //    而 `--theme themes/benya-clean.json` 会送出旧副本 ⇒ 与不传 --theme 排版不一致。
+  {
+    // 裸 id → 交服务端
+    for (const id of ["benya-clean", "dark-tech", "a1", "x-y-z"]) {
+      assert.deepEqual(classifyThemeRef(id), { kind: "id", id }, `裸 id "${id}" 应交服务端解析`);
+    }
+    // 两个保留字
+    assert.deepEqual(classifyThemeRef("neutral"), { kind: "id", id: "neutral" });
+    assert.deepEqual(
+      classifyThemeRef("default"),
+      { kind: "id", id: DEFAULT_THEME_ID },
+      "default 应指向服务端的项目默认主题，而不是包内那份旧副本",
+    );
+    // 路径 → 读本机（自定义主题唯一的活路，一个字不能动）
+    for (const p of [
+      "themes/benya-clean.json",
+      "./my-theme.json",
+      "../shared/theme.json",
+      "/abs/path/theme.json",
+      "my-theme.json",
+    ]) {
+      assert.deepEqual(classifyThemeRef(p), { kind: "path" }, `"${p}" 应按路径读本机文件`);
+    }
+    // 空/缺省
+    for (const v of ["", undefined, null, 0]) {
+      assert.deepEqual(classifyThemeRef(v), { kind: "none" }, "空值不算显式指定");
+    }
+    // 🔴 元断言：DEFAULT_THEME_ID 必须真的是 DEFAULT_MARKDOWN_THEME 的裸名，
+    //    否则 `--theme default` 与包内默认指的是两个不同主题，而这条歧义是静默的。
+    assert.equal(
+      DEFAULT_THEME_ID,
+      path.basename(DEFAULT_MARKDOWN_THEME, ".json"),
+      "DEFAULT_THEME_ID 与 DEFAULT_MARKDOWN_THEME 的文件名必须同名",
+    );
+    ok("主题引用分类：裸 id → themeId、路径 → 本机文件、default/neutral 各归各位");
   }
 
   process.stdout.write(`\n全绿：${passed} 项自检通过。\n`);
