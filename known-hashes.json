@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T03:20:46.142606+00:00",
+  "generatedAt": "2026-08-25T03:27:26.875627+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -164,6 +164,7 @@
       "93bdab968731",
       "afeb6e003c90",
       "c24c940f04d9",
+      "ccf7d50a327d",
       "d7c7ce4c8a76",
       "da136cf9613a",
       "e6cc1f2a871c",
@@ -2690,6 +2691,12 @@
         "version": "2.2.1",
         "date": "2026-08-24",
         "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+      },
+      {
+        "hash": "e88557062157",
+        "version": "2.4.1",
+        "date": "2026-08-24",
+        "subject": "fix(dby-publish): --theme 裸 id 交服务端解析——显式路径那半的主题双源没被消掉"
       },
       {
         "hash": "ec58027fccdc",
