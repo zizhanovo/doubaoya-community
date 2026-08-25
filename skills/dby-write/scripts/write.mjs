@@ -25,6 +25,10 @@
 //   node scripts/write.mjs topics [赛道]       选题候选（不传赛道则用档案里的）
 //   node scripts/write.mjs articles [--q 关键词] [--id 序号或文章id]   往期文章清单 / 单篇正文
 //   node scripts/write.mjs review              复盘取数 + 四象限
+//   node scripts/write.mjs material list                 素材卡索引（proof 一行一条）
+//   node scripts/write.mjs material get <id>             单卡全文
+//   node scripts/write.mjs material save '<json>'        存卡（先给用户看卡面、确认后才调；也可 --stdin）
+//   node scripts/write.mjs material del <id>             删卡（硬删）
 //   node scripts/write.mjs selfcheck           离线自检，不联网不需要 key
 // -----------------------------------------------------------------------------
 
@@ -77,6 +81,31 @@ async function api(path, key, { soft = false } = {}) {
  * 越活跃的号被坑得越狠。中位数对单个异常值免疫，这正是这里要的性质。
  * 偶数个取中间两个的平均，与统计学定义一致。
  */
+/** 带 body 的写请求（POST/DELETE）。与 api() 同一信封纪律。 */
+async function apiWrite(path, key, { method = "POST", body = undefined, soft = false } = {}) {
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${key}`, ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(60_000)
+    });
+  } catch (e) {
+    if (soft) return { __soft: `网络错误：${e.message}` };
+    die(`请求失败：${e.message}`);
+  }
+  const env = await res.json().catch(() => null);
+  if (!env) { if (soft) return { __soft: `${res.status} 返回不是 JSON` }; die(`${res.status} 返回不是 JSON`); }
+  if (env.notice) console.error(`\n⚠️ ${env.notice}\n`);
+  if (!env.success) {
+    const msg = `${env.error?.code ?? res.status}：${env.error?.message ?? "未知错误"}`;
+    if (soft) return { __soft: msg };
+    die(msg, res.status === 401 ? 2 : 1);
+  }
+  return env.data;
+}
+
 function median(nums) {
   const xs = [...nums].sort((a, b) => a - b);
   const mid = xs.length >> 1;
@@ -176,6 +205,25 @@ function charterLines(c) {
   ];
 }
 
+/**
+ * 素材库索引的文本行。**纯函数**，selfcheck 直接打它。
+ * 🔴 三态必须可区分：有卡打清单；空库明说「是空的」并给存法；拉取失败降级说一句、
+ *    不阻断写作（同写作规范的降级纪律）——「空」与「坏」外部长得一样时，坏会被当成空忽略。
+ */
+function materialLines(matData) {
+  if (matData?.__soft) return [`素材库   没拉到（${matData.__soft}）：跳过这一层照常写，别重试刷屏。`];
+  const cards = Array.isArray(matData?.materials) ? matData.materials : [];
+  const rcs = Array.isArray(matData?.reviewConclusions) ? matData.reviewConclusions : [];
+  const lines = [];
+  if (!cards.length) lines.push("素材库   是空的（写完这篇若收到真经历，交付后可提议存卡：material save）");
+  else {
+    lines.push(`素材库   ${cards.length} 张卡（A 组缺锚点先查这里；全文 material get <id>，用前向用户核实还作数吗）`);
+    for (const c of cards) lines.push(`  · [${c.kind === "feedback" ? "反馈" : "素材"}] ${c.proof}（适用：${(c.forms ?? []).join("/") || "?"}）#${c.id}`);
+  }
+  for (const r of rcs) lines.push(`  · [复盘快照] ${r.title}`);
+  return lines;
+}
+
 async function prep(key, asJson) {
   const profile = await api("/api/ip-profile", key);
   if (!profile?.profile) {
@@ -184,10 +232,11 @@ async function prep(key, asJson) {
         "   没有靶子写出来的东西「哪句都对但不知道给谁看」，那正是本包要根治的病。", 3);
   }
   const id = profile.profile.id;
-  const [charter, samples, spec] = await Promise.all([
+  const [charter, samples, spec, materials] = await Promise.all([
     api(`/api/ip-profile/${id}/charter`, key, { soft: true }),
     api(`/api/ip-profile/${id}/samples`, key, { soft: true }),
-    api("/api/wechat/writing-spec", key, { soft: true })
+    api("/api/wechat/writing-spec", key, { soft: true }),
+    api("/api/materials", key, { soft: true })   // 第五样：素材卡索引（免费）
   ]);
   const sampleList = Array.isArray(samples?.samples) ? samples.samples : (Array.isArray(samples) ? samples : []);
 
@@ -212,8 +261,11 @@ async function prep(key, asJson) {
     voiceSystemPrompt,
     taboos,
     writingSpec: spec?.__soft ? null : spec,
+    materials: materials?.__soft ? [] : (materials?.materials ?? []),
+    reviewConclusions: materials?.__soft ? [] : (materials?.reviewConclusions ?? []),
     warnings: []
   };
+  if (materials?.__soft) out.warnings.push(`素材索引没拉到（${materials.__soft}）：这一层跳过照常写，别重试刷屏。`);
   if (charter?.__soft) out.warnings.push(`号章程没拉到：${charter.__soft}`);
   else if (!out.hasCharter) out.warnings.push("这个档案还没有号章程 —— 定位不清，建议先去 dby-charter 立一份。");
   if (spec?.__soft) out.warnings.push(`写作规范没拉到（${spec.__soft}）：按通用 markdown 写，照常往下走，别重试刷屏。`);
@@ -236,6 +288,7 @@ async function prep(key, asJson) {
   console.log(`范文     ${out.sampleCount} 篇${out.sampleCount ? "（正文用 --json 取 samples[].content）" : ""}`);
   for (const x of out.samples) console.log(`  · ${x.title ?? "(无标题)"}  ${x.wordCount ?? "?"} 字`);
   console.log(`写作规范 ${out.writingSpec ? "已拉到" : "没拉到"}`);
+  for (const l of materialLines(materials)) console.log(l);
   // 硬约束整段打出来：违反会整篇发布失败或内容静默丢失，「已拉到」不等于「进了上下文」。
   const hard = extractHardConstraints(out.writingSpec?.spec);
   if (hard) console.log(`\n${hard}`);
@@ -337,6 +390,40 @@ async function articles(key, { q, id }) {
   console.error("\n取正文：node scripts/write.mjs articles --id <序号>。写进素材单时出处写「往期文章《标题》+ 链接」。");
 }
 
+async function material(key, args) {
+  const [sub, ...rest2] = args;
+  if (sub === "list") {
+    const d = await api("/api/materials", key);
+    for (const l of materialLines(d)) console.log(l);
+    return;
+  }
+  if (sub === "get") {
+    const id = rest2[0] || die("用法：material get <id>");
+    const d = await api(`/api/materials/${encodeURIComponent(id)}`, key);
+    const c = d.card;
+    console.log(`proof   ${c.proof}\nkind    ${c.kind}\n时间    ${c.event?.time ?? "?"}\n地点    ${c.event?.place ?? "?"}\n后果    ${c.event?.outcome ?? "?"}\n出处    ${c.evidence ?? "?"}\n适用    ${(c.forms ?? []).join("/")}${c.label ? `\n标签    ${c.label.pattern} → ${c.label.quadrant}` : ""}\n更新    ${c.updatedAt}`);
+    console.error("\n⚠️ 卡是写入那刻的快照 —— 用前向用户核实「这卡还作数吗」；写进正文要进素材单（出处写「素材卡 #id」）。");
+    return;
+  }
+  if (sub === "save") {
+    // 🔴 只在用户确认卡面之后调用。stdin 或参数收卡面 JSON，agent 侧先蒸馏。
+    let raw = rest2.find((x) => !x.startsWith("--"));
+    if (!raw && rest2.includes("--stdin")) raw = await new Promise((r) => { let b = ""; process.stdin.on("data", (d) => b += d); process.stdin.on("end", () => r(b)); });
+    if (!raw) die("用法：material save '<卡面JSON>' 或 material save --stdin（字段：proof/event{time,place,outcome}/evidence/forms[]；feedback 另需 kind/label/articleId）");
+    let body; try { body = JSON.parse(raw); } catch (e) { die(`卡面不是合法 JSON：${e.message}`); }
+    const d = await apiWrite("/api/materials", key, { body });
+    console.log(d.created ? `已存：${d.card.proof}  #${d.card.id}` : `已存在（幂等命中，未重复写入）：#${d.card.id}`);
+    return;
+  }
+  if (sub === "del") {
+    const id = rest2[0] || die("用法：material del <id>");
+    await apiWrite(`/api/materials/${encodeURIComponent(id)}`, key, { method: "DELETE" });
+    console.log(`已删除 #${id}（硬删，索引即时不含）`);
+    return;
+  }
+  die("用法：material list | get <id> | save '<json>'|--stdin | del <id>");
+}
+
 function selfcheck() {
   // 基准必须来自入参本身，不许有任何外部/行业常数
   const arts = [
@@ -429,10 +516,12 @@ function selfcheck() {
   if (!/voiceSystemPrompt,/.test(prepSrc) || !/taboos,/.test(prepSrc))
     die("🔴 prep 的 out 里没有 voiceSystemPrompt / taboos —— 接线掉了");
   if (!prepSrc.includes("readVoice(")) die("🔴 prep 没有调用 readVoice");
-  // 零额外请求：本次接线是「别把已经拿到的东西扔掉」，不该多出一次 api 调用。
+  // 请求数上限：文风 DNA / persona / products 必须从已有返回体取（那次接线的原判据），
+  // 素材索引（material-bank）是**新的第五样**、有自己的路由，合法占一次 ⇒ 上限 4 → 5。
+  // 🔴 这个数不是「随手加」：每抬一次都要能指出新请求对应哪一样必备物，否则就是在偷懒开请求。
   const apiCalls = (prepSrc.match(/api\(/g) ?? []).length;
   if (!/persona:/.test(prepSrc) || !/products:/.test(prepSrc)) die("🔴 prep 的 out 里没有 persona / products —— ctaScript 取不到");
-  if (apiCalls > 4) die(`🔴 prep 的 api 调用变成 ${apiCalls} 次 —— 文风 DNA 应从已有返回体取，不另开请求`);
+  if (apiCalls > 5) die(`🔴 prep 的 api 调用变成 ${apiCalls} 次 —— 已有返回体里的东西不许另开请求（5 = 档案+章程+范文+规范+素材索引）`);
 
   // ── extractHardConstraints：硬约束节必须被整段切出来 ────────────────────────
   const spec = [
@@ -473,6 +562,34 @@ function selfcheck() {
   console.log("selfcheck ok: extractHardConstraints（切到 / 不截短 / 不过头 / 缺节为 null / prep 接线）");
   console.log("selfcheck ok: readVoice（规范形状 / 三种缺失 / 两种形状漂移 / 接线元断言）");
   console.log("selfcheck ok: filterArticles（全给 / 标题命中 / 正文命中 / 无命中 / 去标签 / 非数组降级 / 走 wechat-history 不走 /api/articles）");
+
+  // ── materialLines：素材库索引的三态（material-bank 2.1/2.3）────────────────
+  // 🔴 三态必须可区分：空库、拉取失败、有卡各有各的话——「空」与「坏」长一样时，
+  //    坏会被当成空忽略（执行者不可观测的老毛病）。
+  const withCards = materialLines({
+    materials: [{ id: "ki_1", proof: "被拒 37 次仍能成单", kind: "material", forms: ["带转折的真实经历"] }],
+    reviewConclusions: [{ title: "上周表现最佳《X》" }]
+  });
+  if (!withCards.some((l) => l.includes("被拒 37 次仍能成单") && l.includes("#ki_1")))
+    die("🔴 有卡时索引行没打 proof 与 id");
+  if (!withCards.some((l) => l.includes("[复盘快照]") && l.includes("《X》")))
+    die("🔴 review_conclusion 行没带出 —— 它的第一个读取端又掉线了");
+  if (!withCards.some((l) => l.includes("还作数吗")))
+    die("🔴 索引没提醒「卡是快照、用前核实」");
+  const empty = materialLines({ materials: [], reviewConclusions: [] });
+  if (!empty.some((l) => l.includes("是空的"))) die("🔴 空库必须明说「是空的」");
+  if (empty.some((l) => l.includes("没拉到"))) die("🔴 空库与拉取失败混成一态了");
+  const soft = materialLines({ __soft: "网络错误：boom" });
+  if (!soft.some((l) => l.includes("没拉到") && l.includes("照常写"))) die("🔴 拉取失败必须降级说一句、不阻断写作");
+  if (soft.some((l) => l.includes("是空的"))) die("🔴 拉取失败与空库混成一态了");
+  // 🔴 接线元断言：prep 必须真调 materialLines 与 /api/materials，material 子命令必须已注册。
+  //    没有这两条，上面全绿也可能是「函数对但没人调」（写了等于没写）。
+  if (!prepSrc.includes("materialLines(") || !prepSrc.includes("/api/materials"))
+    die("🔴 prep 没接素材索引 —— 第五样掉线");
+  if (!/materials:/.test(prepSrc)) die("🔴 prep 的 --json 没带 materials[]");
+  const matSrc = material.toString();
+  if (!matSrc.includes("/api/materials") || !matSrc.includes("DELETE")) die("🔴 material 子命令没打真路由");
+  console.log("selfcheck ok: materialLines（有卡 / 空库 / 拉取失败三态可区分 + prep 与 material 子命令接线元断言）");
 }
 
 const [cmd, ...rest] = process.argv.slice(2);
@@ -482,8 +599,9 @@ if (!KEY) die("缺 DOUBAOYA_API_KEY。doubaoya.com → 登录 → 密钥中心 �
 if (cmd === "prep") await prep(KEY, rest.includes("--json"));
 else if (cmd === "topics") await topics(KEY, rest.find((a) => !a.startsWith("--")));
 else if (cmd === "review") await review(KEY);
+else if (cmd === "material") await material(KEY, rest);
 else if (cmd === "articles") {
   const opt = (name) => { const i = rest.indexOf(name); return i >= 0 ? rest[i + 1] : undefined; };
   await articles(KEY, { q: opt("--q"), id: opt("--id") });
 }
-else die("用法：node scripts/write.mjs prep [--json] | topics [赛道] | articles [--q 关键词] [--id 序号] | review | selfcheck");
+else die("用法：node scripts/write.mjs prep [--json] | topics [赛道] | articles [--q 关键词] [--id 序号] | material <list|get|save|del> | review | selfcheck");

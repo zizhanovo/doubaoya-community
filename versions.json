@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T14:31:18.118735+00:00",
+  "generatedAt": "2026-08-25T15:41:31.586977+00:00",
   "skills": {
     "dby": "doubaoya-skill/dby@02a03d78fb1c",
     "dby-api": "doubaoya-skill/dby-api@ce8326e3dbd2",
@@ -11,6 +11,6 @@
     "dby-rewrite": "doubaoya-skill/dby-rewrite@64eb94c6e436",
     "dby-theme": "doubaoya-skill/dby-theme@895210b408a4",
     "dby-update": "doubaoya-skill/dby-update@b34999536b26",
-    "dby-write": "doubaoya-skill/dby-write@563e4254655a"
+    "dby-write": "doubaoya-skill/dby-write@7091f1189cf1"
   }
 }

@@ -115,8 +115,11 @@ def test_锚点处置阶梯三级有序且排除生成场景() -> None:
     assert "锚点" in s and "停下" in s, "主体没留「A 组拿不到锚点就停下」这个必经判断"
     assert "materials.md" in s, "主体没留取处置阶梯的指针 ⇒ 阶梯等于被藏了"
     seg = refs["materials.md"]
-    for k in ("向用户要", "不需要第一人称", "改方向"):
+    # material-bank：阶梯升四档，「查素材库」排第一（免费零打扰，且查到也要向用户核实新鲜度）
+    for k in ("先查素材库", "向用户要", "不需要第一人称", "改方向"):
         assert k in seg, f"materials.md 的处置阶梯缺一级：{k}"
+    assert seg.index("先查素材库") < seg.index("向用户要"), "查素材库必须排在问用户之前（免费零打扰先行）"
+    assert "还作数吗" in seg, "查到卡没有要求向用户核实新鲜度 —— 卡是快照，直接用会把过期事实写进正文"
     assert "不在这三条里" in seg or "不在选项" in seg, (
         "没有明确排除「先写个通用场景过渡」—— 那正是要堵的出口"
     )
@@ -282,3 +285,60 @@ def test_genre_不许出现无依据的效果数字() -> None:
         for m in re.finditer(r"[0-9]+(?:\.[0-9]+)?%|[0-9]+ ?倍", body):
             bad.append(f"{form}.md: …{body[max(0, m.start()-20):m.end()+10]}…")
     assert not bad, "genre 文件出现效果数字（调研实证这类数据不存在，出现即编造）：\n  " + "\n  ".join(bad)
+
+
+# ─────────────────────────────────────────────────────────────
+# 素材库（material-bank）：接线与格式一致性
+#
+# 🔴 诚实边界：这几条只保证「表里有素材库层、阶梯先查库、提议句在主体、
+#    文档示例的字段没漂」。**不保证 agent 真去查库**（按需读取无法在文本层强制），
+#    不保证卡的内容质量，也不保证服务端行为（那在主仓 materials.routes.test.ts）。
+# ─────────────────────────────────────────────────────────────
+
+# 与主仓 materials.ts 的 validateCard 同一套字段。两处硬编码是刻意的（跨仓无法互读）：
+# 服务端对不认识的字段/形态直接 400，是响的；本闸钉住文档示例不悄悄发明新字段。
+CARD_FIELDS = {"proof", "kind", "event", "evidence", "forms", "label", "articleId"}
+EVENT_FIELDS = {"time", "place", "outcome"}
+
+
+def test_素材库层在素材表且提议句在主体() -> None:
+    s = _skill()
+    assert "素材库" in s, "第 4 步素材表没有素材库层 —— 服务端建好了但写作路径看不见（存了没人读）"
+    assert "prep 已带索引" in s, "素材表没说明索引已随 prep 在场 —— agent 会以为要现取而永远想不起来"
+    assert "确认才写" in s and "一次即止" in s and "连拒两次" in s, (
+        "提议存卡的约束句不在主体 —— 约束要在 agent 不觉得自己需要指导时生效，住 references 等于不存在"
+    )
+    assert "七层" in s, "A 组停下判据没跟着素材表从六层改成七层 —— 层数漂了"
+
+
+def test_素材卡文档示例字段与服务端契约一致() -> None:
+    """materials.md / review-mode.md 里的 save 示例 JSON 不许发明服务端不认识的字段。"""
+    import json as _json
+
+    refs = _refs()
+    found = 0
+    for name in ("materials.md", "review-mode.md"):
+        for m in re.finditer(r"material save '(\{.*?\})'", refs[name], re.S):
+            found += 1
+            card = _json.loads(m.group(1))
+            extra = set(card) - CARD_FIELDS
+            assert not extra, f"{name} 的 save 示例含服务端不认识的字段 {extra} —— 服务端会 400"
+            assert set(card["event"]) == EVENT_FIELDS, f"{name} 示例的 event 三要素漂了：{set(card['event'])}"
+            assert "proof" in card and "evidence" in card and "forms" in card, f"{name} 示例缺必填字段"
+    assert found >= 2, f"只解析到 {found} 个 save 示例 —— 正则多半退化了（元断言防空跑）"
+
+
+def test_素材单与阶梯接上了素材卡() -> None:
+    seg = _refs()["materials.md"]
+    assert "素材卡 #" in seg, "素材单出处枚举没有「素材卡 #id」—— 卡进正文就绕开了红线一的来源核对"
+    assert "不用于任何模型训练" in seg, "skill 文档缺「不训练」承诺 —— 它是用户敢填素材层的信任前提"
+    assert "material list" in seg and "material get" in seg, "阶梯没给查库的具体命令 —— 会退化成「建议查一下」"
+
+
+def test_反馈卡措辞纪律在场() -> None:
+    rm = _refs()["review-mode.md"]
+    assert "相关不是因果" in rm, "反馈卡没标「相关非因果」—— 单篇归因会被当成规律"
+    assert "仅供参考" in rm, "样本 < 5 的降级措辞缺失（与四象限基准同一条纪律）"
+    assert "这个号自己的历史归因" in rm or "自己的历史归因" in rm, "没写明是本号历史归因、非普适规律"
+    tp = _refs()["topic.md"]
+    assert "不是普适规律" in tp, "选题侧没有反馈卡的措辞纪律 —— 读取端少一半"
