@@ -32,8 +32,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const BASE_URL = "https://doubaoya.com";
 
 // 🔴 客户端超时必须晚于服务端，否则用户被扣点却拿不到服务端超时那条「已退款」响应。
-//   - Node 全局 fetch（undici）不传 signal 时，等待响应头的默认上限是 300s
-//     （undici `client.js` 的 `kHeadersTimeout` 默认值），比服务端还先掐线。
+//   - Node 全局 fetch（undici）不传 signal 时，等待响应头的实际上限是 ~300s——两条
+//     互证的判据，不是"默认是 300s"这句话本身：
+//     ①源码常量：`node_modules/undici/lib/dispatcher/client.js:262`
+//       `this[kHeadersTimeout] = headersTimeout != null ? headersTimeout : 300e3`
+//       （undici 7.29.0）；
+//     ②端到端实测：起一个故意不发响应头的本地 http server，用全局 fetch 打它，
+//       Node v22.22.3 下 elapsed_s=301.1 才失败，err.name=TypeError，
+//       err.cause.code=UND_ERR_HEADERS_TIMEOUT（"Headers Timeout Error"）。
+//       这个 code 也是将来排障「用户说超时了但我们日志没记录」时的判据。
+//     比服务端还先掐线。
 //   - 服务端目前可达能力里最长的超时预算是 skill.search.doubaoWeb 的 360s
 //     （主仓 apps/api/.../invocation/routes.ts 的 OPERATION_TIMEOUT_MS；
 //     skill.ai.seedreamLite 420s 更长，但它已下架 availability.status=hidden，不可达，不用照它抬）。

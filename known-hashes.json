@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T02:31:15.429448+00:00",
+  "generatedAt": "2026-08-25T02:33:24.758721+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -93,6 +93,7 @@
       "9b9682a7a602",
       "a59d7a4e7157",
       "bcf26b4eca1f",
+      "ce8326e3dbd2",
       "ed6a2f86bffc"
     ],
     "dby-banned-words": [
@@ -2263,6 +2264,12 @@
         "version": "1.2.0",
         "date": "2026-08-24",
         "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+      },
+      {
+        "hash": "96330502a048",
+        "version": "1.3.0",
+        "date": "2026-08-24",
+        "subject": "fix(dby-api): 通用网关脚本 fetch 补显式超时，客户端不再抢在服务端前掐线"
       },
       {
         "hash": "9b545f2f647a",
