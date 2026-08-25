@@ -10,6 +10,10 @@ sha256 哈希，取前 12 位十六进制，写成 "doubaoya-skill/<name>@<hash>
 幂等：.version 自身被排除在哈希输入之外，所以重复运行、或 .version 已存在，
 都不会把上一次盖的戳喂回这一次的哈希计算（不会自我引用）。
 
+同时写顶层 `ref`（`release-YYYYMMDD-HHMM`）：dby-update 对账器拿它把安装源固定到
+`zizhanovo/doubaoya-community#<ref>`。它只是声明——发布者提交后必须真的 `git tag <ref> && git push origin <ref>`，
+脚本会在 ref 变化时打这句提醒。哈希一个没变就沿用上一次的 ref（别凭空造一个没人打过的 tag 名）。
+
 跑法（本仓库根目录）：python3 tools/stamp_versions.py
 发布前（push 到 GitHub 前）必须手动跑一次，否则 .version 会滞后于真实改动。
 ponytail: 暂无 CI 钩子自动跑；升级路径 = push 时的 CI 步骤自动跑 + 提交。
@@ -62,6 +66,15 @@ def compute_skill_hash(skill_dir: Path) -> str:
     return digest.hexdigest()[:12]
 
 
+REF_PATTERN = re.compile(r"^release-\d{8}-\d{4}$")
+
+
+def make_ref(now: datetime) -> str:
+    """安装源固定用的 release tag 名：对账器拿它拼 `owner/repo#<ref>` 去 `skills add`。
+    skills CLI 底层是 `git clone --branch`，只认 branch/tag，所以固定单位是 tag，不是 commit。"""
+    return now.strftime("release-%Y%m%d-%H%M")
+
+
 def stamp_all(skills_dir: Path, versions_file: Path) -> dict[str, str]:
     skill_dirs = sorted(
         (p for p in skills_dir.iterdir() if p.is_dir() and (p / "SKILL.md").is_file()),
@@ -74,12 +87,36 @@ def stamp_all(skills_dir: Path, versions_file: Path) -> dict[str, str]:
         (skill_dir / ".version").write_text(value + "\n", encoding="utf-8")
         versions[name] = value
 
+    now = datetime.now(timezone.utc)
+    # 幂等：哈希一个没变就沿用上一次的 ref——否则每重跑一次就换一个 tag 名，而那个 tag 谁也没打过。
+    previous_ref = read_manifest_ref(versions_file)
+    unchanged = read_manifest_skills(versions_file) == versions
+    ref = previous_ref if (unchanged and previous_ref) else make_ref(now)
     manifest = {
-        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "generatedAt": now.isoformat(),
+        "ref": ref,
         "skills": versions,
     }
     versions_file.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return versions
+
+
+def read_manifest_ref(versions_file: Path) -> str | None:
+    """读 versions.json 顶层的 ref；文件不在、读不动、格式不对都当没有。"""
+    try:
+        parsed = json.loads(versions_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    ref = parsed.get("ref")
+    return ref if isinstance(ref, str) and REF_PATTERN.match(ref) else None
+
+
+def tag_reminder(ref: str) -> str:
+    """ref 写进版本表只是声明，tag 得发布者真打出来，否则对账器 `skills add repo#<ref>` 会 clone 失败。"""
+    return (
+        f"🏷  安装源固定到 ref = {ref}。提交这次改动之后**必须**打 tag 并推上去，否则用户端 skills add 会找不到它：\n"
+        f"    git tag {ref} && git push origin {ref}"
+    )
 
 
 def read_manifest_skills(versions_file: Path) -> dict[str, str]:
@@ -151,11 +188,15 @@ def drift_reminder(
 def main() -> int:
     versions_file = ROOT / "versions.json"
     previous = read_manifest_skills(versions_file)
+    previous_ref = read_manifest_ref(versions_file)
     versions = stamp_all(ROOT / "skills", versions_file)
     print(f"stamped {len(versions)} skills -> versions.json")
     reminder = drift_reminder(previous, versions, locate_generated_table())
     if reminder:
         print(reminder)
+    ref = read_manifest_ref(versions_file)
+    if ref and ref != previous_ref:
+        print(tag_reminder(ref))
     return 0
 
 

@@ -79,6 +79,49 @@ class StampVersionsTests(unittest.TestCase):
             second = stamp_versions.stamp_all(root / "skills", versions_file)
             self.assertEqual(first, second, "内容不变时重复盖戳必须产出相同结果")
 
+    def test_manifest_carries_release_ref(self):
+        """对账器靠顶层 ref 把安装源固定到 repo#<tag>；字段永远为空 = 永远不固定。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._make_skill(root, "alpha", "# alpha\n", "print('a')\n")
+            versions_file = root / "versions.json"
+            stamp_versions.stamp_all(root / "skills", versions_file)
+            manifest = json.loads(versions_file.read_text(encoding="utf-8"))
+            self.assertRegex(manifest["ref"], r"^release-\d{8}-\d{4}$")
+            self.assertEqual(stamp_versions.read_manifest_ref(versions_file), manifest["ref"])
+
+    def test_ref_is_kept_when_nothing_changed_and_rotated_when_hash_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            skill_dir = self._make_skill(root, "alpha", "# alpha\n", "print('a')\n")
+            versions_file = root / "versions.json"
+            stamp_versions.stamp_all(root / "skills", versions_file)
+            # 把上一次的 ref 换成一个明显不同的合法值，看它是否被沿用
+            manifest = json.loads(versions_file.read_text(encoding="utf-8"))
+            manifest["ref"] = "release-20000101-0000"
+            versions_file.write_text(json.dumps(manifest), encoding="utf-8")
+            stamp_versions.stamp_all(root / "skills", versions_file)
+            self.assertEqual(stamp_versions.read_manifest_ref(versions_file), "release-20000101-0000", "哈希没变时不该凭空换一个没人打过的 tag 名")
+            (skill_dir / "scripts" / "run.py").write_text("print('b')\n", encoding="utf-8")
+            stamp_versions.stamp_all(root / "skills", versions_file)
+            self.assertNotEqual(stamp_versions.read_manifest_ref(versions_file), "release-20000101-0000", "哈希变了必须换新 ref")
+
+    def test_make_ref_format_and_tag_reminder(self):
+        from datetime import datetime, timezone
+
+        ref = stamp_versions.make_ref(datetime(2026, 8, 25, 15, 41, tzinfo=timezone.utc))
+        self.assertEqual(ref, "release-20260825-1541")
+        reminder = stamp_versions.tag_reminder(ref)
+        self.assertIn(f"git tag {ref}", reminder)
+        self.assertIn(f"git push origin {ref}", reminder)
+
+    def test_read_manifest_ref_rejects_garbage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            versions_file = Path(tmp) / "versions.json"
+            self.assertIsNone(stamp_versions.read_manifest_ref(versions_file))
+            versions_file.write_text(json.dumps({"ref": "main", "skills": {}}), encoding="utf-8")
+            self.assertIsNone(stamp_versions.read_manifest_ref(versions_file), "ref 只认 release-YYYYMMDD-HHMM 这一种形态")
+
 
 class DriftReminderTests(unittest.TestCase):
     """漂移**产生**的那一刻就提醒：主仓那份生成表读的是 versions.json，哈希一变它就过期了。"""
