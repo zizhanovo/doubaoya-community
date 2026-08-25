@@ -31,6 +31,18 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const BASE_URL = "https://doubaoya.com";
 
+// 🔴 客户端超时必须晚于服务端，否则用户被扣点却拿不到服务端超时那条「已退款」响应。
+//   - Node 全局 fetch（undici）不传 signal 时，等待响应头的默认上限是 300s
+//     （undici `client.js` 的 `kHeadersTimeout` 默认值），比服务端还先掐线。
+//   - 服务端目前可达能力里最长的超时预算是 skill.search.doubaoWeb 的 360s
+//     （主仓 apps/api/.../invocation/routes.ts 的 OPERATION_TIMEOUT_MS；
+//     skill.ai.seedreamLite 420s 更长，但它已下架 availability.status=hidden，不可达，不用照它抬）。
+//   - 生产 nginx proxy_read_timeout=480s 是外墙，客户端墙超过它没有意义（nginx 会先 504）。
+//   ⇒ 450s：> 360s 留 90s 余量，且在 480s 之内留 30s 余量。
+//   ⚠️ 别拿"成功样本"反推这个数字——本仓已在生图超时链上吃过两次同一个错（拿被自己墙
+//   截断的样本去推下一堵墙）。450s 是从链路上下两端的硬预算倒推的，不是从耗时分布估的。
+const CLIENT_TIMEOUT_MS = 450_000;
+
 function getKey({ required = true } = {}) {
   const key = process.env.DOUBAOYA_API_KEY;
   if (!key && required) {
@@ -51,6 +63,24 @@ function keyPresence() {
 function fail(message, code = "") {
   console.error(code ? `[${code}] ${message}` : message);
   process.exit(1);
+}
+
+/**
+ * fetch 因 `AbortSignal.timeout()` 触发而失败时，err.name 是 "TimeoutError"（DOMException，
+ * Node 18+ 实测行为）。这类失败必须和普通网络错误分开措辞：调用可能已经打到了服务端、
+ * 服务端可能仍在处理甚至已经计费/扣点——本地只是等不到响应头。
+ * 🔴 别建议无脑重试：本仓红线「超时类永不重试」——上游可能已出图/已计费，重试=付两次钱。
+ */
+function describeFetchError(err) {
+  if (err?.name === "TimeoutError") {
+    return (
+      `本地等待响应超过 ${CLIENT_TIMEOUT_MS / 1000}s，已放弃等待。这次调用服务端可能仍在` +
+      "进行、也可能已经计费——不是「本地已知失败」。别立刻重试（上游若已出结果或已计费，" +
+      "重试=再付一次）；先等一会儿用 doubaoya.com 后台或调用记录确认这次到底有没有成功/扣点，" +
+      "确认失败后再决定要不要重试。"
+    );
+  }
+  return `网络请求失败: ${err.message}`;
 }
 
 /**
@@ -127,10 +157,11 @@ async function request(method, path, body, { auth = "required" } = {}) {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS)
     });
   } catch (err) {
-    fail(`网络请求失败: ${err.message}`);
+    fail(describeFetchError(err));
   }
 
   let env;
@@ -164,9 +195,9 @@ async function tryGet(path) {
   const headers = key ? { Authorization: `Bearer ${key}` } : {};
   let res;
   try {
-    res = await fetch(`${BASE_URL}${path}`, { headers });
+    res = await fetch(`${BASE_URL}${path}`, { headers, signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS) });
   } catch (err) {
-    fail(`网络请求失败: ${err.message}`);
+    fail(describeFetchError(err));
   }
   if (res.status === 404) return null;
   let env;
