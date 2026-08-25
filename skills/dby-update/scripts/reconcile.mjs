@@ -466,6 +466,17 @@ function surveyScope(scope, currentHashes, knownHashes) {
 
 // ---------------------------------------------------------------- 上游
 
+/**
+ * 🔴 只给 api.github.com 带令牌（Contents API 匿名配额 60 次/小时，公司出口 IP 一会儿就撞 403）；
+ *    raw.githubusercontent.com 不需要，也少一处泄漏面。令牌只进请求头，**任何日志/报错/JSON 都不许出现它**：
+ *    这里返回的对象只在 fetch 调用点展开，报错文案全部只拼 label 和 URL。
+ */
+export function githubAuthHeader(url, env = process.env) {
+  if (!/^https:\/\/api\.github\.com\//.test(url)) return {};
+  const token = env.GITHUB_TOKEN || env.GH_TOKEN;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function fetchJson(url, label) {
   if (!/^https?:/.test(url)) {
     try {
@@ -477,7 +488,7 @@ async function fetchJson(url, label) {
   let res;
   try {
     res = await fetch(url, {
-      headers: { "User-Agent": "dby-update-reconcile", Accept: "application/json" },
+      headers: { "User-Agent": "dby-update-reconcile", Accept: "application/json", ...githubAuthHeader(url) },
       signal: AbortSignal.timeout(25_000),
     });
   } catch (err) {
@@ -515,11 +526,23 @@ async function fetchRenames(notes) {
 }
 
 /**
- * 上游四件套：当前全集名单、当前版哈希、历史闭集、改名表。
- * 名单以 GitHub 目录列表为准（`skills add` 装的就是这些目录），
- * 哈希以 versions.json 为准；目录列表拉不到时退回 versions.json 的键。
+ * `skills add` 的包参数：版本表声明了 `ref`（一个 release tag）就固定到它，
+ * 否则退回默认分支（skills CLI 底层是 `git clone --branch <ref>`，只认 branch/tag）。
  */
-async function fetchUpstream() {
+export function installSource(ref) {
+  return ref ? `${REPO}#${ref}` : REPO;
+}
+
+/**
+ * 上游四件套 + 两个元信息：当前全集名单、当前版哈希、历史闭集、改名表；
+ * `namesSource` 说名单从哪来（`contents-api` / `versions` / `override`），`ref` 是版本表声明的安装 tag（可为 null）。
+ * 名单以 GitHub 目录列表为准（`skills add` 装的就是这些目录），
+ * 哈希以 versions.json 为准；目录列表拉不到时退回 versions.json 的键——但这时结论**不许**说
+ * 「与上游目录完全一致」，因为目录压根没核到，所以 namesSource 得跟着名单一起带出去。
+ *
+ * `opts.rawOverridden` 只给自检注入用：默认取模块常量（由 DBY_RAW_BASE 决定）。
+ */
+async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
   const notes = [];
   const versions = await fetchJson(VERSIONS_URL, "拉取上游版本表");
   const known = await fetchJson(KNOWN_URL, "拉取历史版本闭集");
@@ -531,14 +554,24 @@ async function fetchUpstream() {
   );
   const knownHashes = known.skills;
 
+  // 安装源固定：缺字段按老版本表兼容处理（fail-open 到默认分支），但必须说出来。
+  const ref = typeof versions.ref === "string" && versions.ref.trim() ? versions.ref.trim() : null;
+  if (!ref) notes.push("安装源未固定：版本表没有 ref 字段，这次按默认分支 main 安装（装到的是 main 此刻的内容，不一定等于版本表那份快照）。");
+
   let names = null;
-  if (RAW_OVERRIDDEN) notes.push(`用的是 DBY_RAW_BASE 指定的上游（${RAW}），名单以版本表为准。`);
-  else {
+  let namesSource = "versions";
+  if (rawOverridden) {
+    namesSource = "override";
+    notes.push(`用的是 DBY_RAW_BASE 指定的上游（${RAW}），名单以版本表为准。`);
+  } else {
     try {
       const items = await fetchJson(CONTENTS_API, "拉取上游 skill 目录");
-      if (Array.isArray(items)) names = items.filter((x) => x.type === "dir").map((x) => x.name).sort();
+      if (Array.isArray(items)) {
+        names = items.filter((x) => x.type === "dir").map((x) => x.name).sort();
+        namesSource = "contents-api";
+      }
     } catch (err) {
-      notes.push(`目录列表拉不到（${err.message}），改用版本表的名单。`);
+      notes.push(`目录列表拉不到（${err.message}），改用版本表的名单——上游目录这一跑没核到，结论会照实标注。`);
     }
   }
   if (!names) names = Object.keys(currentHashes).sort();
@@ -547,7 +580,17 @@ async function fetchUpstream() {
     if (unstamped.length) notes.push(`上游有 ${unstamped.length} 个包还没盖版本戳（${unstamped.join(", ")}），它们只会被装上、不参与新旧判定。`);
   }
   if (!names.length) throw new Friendly("上游清单是空的，这不正常，先不动你本机的任何东西。");
-  return { names, currentHashes, knownHashes, renames, notes };
+  return { names, namesSource, ref, currentHashes, knownHashes, renames, notes };
+}
+
+/**
+ * 「无需任何操作」那句结论，按名单来源分三种说法：结论不许高于证据——
+ * 目录列表没核到就不能说「与上游当前全集完全一致」。
+ */
+export function convergedConclusion(namesSource) {
+  if (namesSource === "contents-api") return "结论：无需任何操作——本机已经和上游当前全集完全一致。";
+  if (namesSource === "override") return "结论：无需任何操作——按 DBY_RAW_BASE 指定上游的版本表名单对账一致。";
+  return "结论：无需任何操作——按版本表名单对账一致，上游目录未能核对（目录列表没拉到，上游若有还没盖版本戳的新包会漏掉）。";
 }
 
 // ---------------------------------------------------------------- 归档
@@ -560,8 +603,15 @@ function doubaoyaHome(scope) {
   return join(scope.kind === "global" ? homedir() : scope.dir, ".doubaoya");
 }
 
+/**
+ * 归档根按秒级时间戳命名。同一跑里 archivePackages 会被叫好几次（下架归档、改名归档、遗留副本归档），
+ * 同一秒内落到同一个根就会互相覆盖 manifest.json——复原命令只剩最后一份。撞上就加序号。
+ */
 function archiveRoot(scope) {
-  return join(doubaoyaHome(scope), "archive", timestamp());
+  const base = join(doubaoyaHome(scope), "archive", timestamp());
+  let root = base;
+  for (let i = 2; existsSync(root); i++) root = `${base}-${i}`;
+  return root;
 }
 
 /**
@@ -616,14 +666,7 @@ function archivePackages(scope, names, survey, opts = {}) {
       // 去掉开头的点：归档目录是给人看的，藏成隐藏目录等于 ls 一眼看不见。
       const to = join(root, dir.label.replace(/^\./, "").replace(/\//g, "_"), name);
       try {
-        mkdirSync(join(to, ".."), { recursive: true });
-        try {
-          renameSync(from, to);
-        } catch (err) {
-          if (err.code !== "EXDEV") throw err;
-          cpSync(from, to, { recursive: true }); // 跨设备时退回「先拷再删」
-          rmSync(from, { recursive: true, force: true });
-        }
+        moveDir(from, to);
         moved.push({ skill: name, from, to, hash: entry?.hash, ...(opts.perPackage?.[name] || {}) });
       } catch (err) {
         throw explainFsError(err, "归档 skill", from);
@@ -642,6 +685,40 @@ function archivePackages(scope, names, survey, opts = {}) {
   };
   writeFileSync(join(root, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return { root, count: moved.length };
+}
+
+/** 一次目录搬运：先 rename，跨设备（EXDEV）退回「先拷再删」。归档与复原共用，两边对称。 */
+function moveDir(from, to) {
+  mkdirSync(dirname(to), { recursive: true });
+  try {
+    renameSync(from, to);
+  } catch (err) {
+    if (err.code !== "EXDEV") throw err;
+    cpSync(from, to, { recursive: true });
+    rmSync(from, { recursive: true, force: true });
+  }
+}
+
+/**
+ * 按 manifest 把一个归档根里的包**逆向**搬回原处——`skills add` 挂掉时用它把本轮刚归档的目录复原，
+ * 让磁盘回到跑之前的样子（skills CLI 的安装记录不归它管，重跑补齐）。
+ * 已经不在归档里的条目（用户手动搬回过）跳过；原处已被占（同名目录又出现了）时不覆盖、记进 skipped，
+ * 这种情形宁可留在归档里让用户自己看，也不能拿归档物盖掉一个现在在场的目录。
+ */
+export function restoreArchive(root) {
+  const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf-8"));
+  const restored = [];
+  const skipped = [];
+  for (const it of manifest.packages || []) {
+    if (!existsSync(it.to)) continue;
+    if (existsSync(it.from)) {
+      skipped.push({ skill: it.skill, from: it.from, to: it.to, reason: "原处已有同名目录，不覆盖" });
+      continue;
+    }
+    moveDir(it.to, it.from);
+    restored.push(it.skill);
+  }
+  return { root, restored, skipped };
 }
 
 // ---------------------------------------------------------------- 改名迁移
@@ -795,26 +872,34 @@ function runSkills(args, cwd) {
 }
 
 /**
- * 🔴 半迁移态的提示语：归档已经落盘、拉取却挂了（实测最常撞上的是 github clone 抖动，
- * skills CLI 每装一次都要 clone 整仓）。这时磁盘**已经被改了一半**——N 个包移进了归档目录，
- * 要拉的那批一个没落。
+ * 🔴 拉取挂了之后的提示语：归档已经落盘、`skills add` 却挂了（实测最常撞上的是 github clone 抖动，
+ * skills CLI 每装一次都要 clone 整仓）。这时对账器已经**自动把本轮归档的目录按 manifest 搬回原处**，
+ * 磁盘回到跑之前的样子；只有 skills CLI 自己的安装记录（`skills remove` 已经跑过）还没补回来。
  *
  * 只说一句「没跑完，常见原因是断网」等于把用户丢在半路：他不知道自己机器现在是什么状态，
- * 更不敢重跑（会不会归档两遍？会不会把刚归档的又搬一次？）。所以这句必须说清三件事：
- * **已经做了什么、磁盘现在是半变更态、重跑同一条命令即可续上且归档不会重复**。
+ * 更不敢重跑。所以这句必须说清三件事：**复原了几个、磁盘现在什么状态、重跑同一条命令即可补齐**。
  *
- * 「归档不会重复」不是安慰话，是机制：对账每一跑都以磁盘现状重算，已归档的包早就不在安装
- * 目录里了，下一跑连扫都扫不到它们，自然不会再进归档单。
+ * 复原本身也可能挂（磁盘满、权限……）：那部分归档根照实列出来，附上可粘贴的复原命令，**原始拉取错误不吞**。
+ * `installRef` 非空时多说一句：版本表固定到的 tag 可能不存在（发布者忘打 tag），这不是用户的网络问题。
  */
-export function partialMigrationHint(archivedCount, archiveRoots, wantCount) {
-  const done = archivedCount
-    ? `已经归档 ${archivedCount} 个（原样躺在 ${archiveRoots.join("、")}），`
-    : "";
-  return (
-    `${done}但要拉的 ${wantCount} 个一个都没落 —— 你的磁盘现在是**改了一半**的状态。\n` +
-    `   直接重跑同一条命令就能续上：对账每一跑都以磁盘现状重算，已归档的包不会再归档一遍。\n` +
-    `   要是反复卡在这一步，多半是 git clone 那条路不通（skills CLI 每装一次都要 clone 整仓），换个网络再试。`
-  );
+export function partialMigrationHint({ restoredCount = 0, restoredRoots = [], failed = [], wantCount = 0, installRef = null } = {}) {
+  const lines = [];
+  if (restoredCount) {
+    lines.push(`本轮刚归档的 ${restoredCount} 个已自动复原回原处（归档根 ${restoredRoots.join("、")} 可以删了），要拉的 ${wantCount} 个一个都没落。`);
+  } else if (!failed.length) {
+    lines.push(`本轮没归档任何东西，要拉的 ${wantCount} 个一个都没落，你的磁盘和跑之前一样。`);
+  }
+  for (const f of failed) {
+    lines.push(`⚠️ 有一份归档没能自动复原（${f.error}），原样躺在 ${f.root}，手动复原照抄这条：`);
+    lines.push(`   ${restoreCommand(f.root)}`);
+  }
+  lines.push("直接重跑同一条命令即可：对账每一跑都以磁盘现状重算；skills CLI 的安装记录已经清掉，重跑会一并补齐。");
+  if (installRef) {
+    lines.push(`这次是固定到版本表声明的 ref「${installRef}」安装的；要是日志里是 clone 报 "Remote branch ... not found"，是这个 tag 不存在，联系维护者补打 tag，不是你的网络问题。`);
+  } else {
+    lines.push("要是反复卡在这一步，多半是 git clone 那条路不通（skills CLI 每装一次都要 clone 整仓），换个网络再试。");
+  }
+  return lines.join("\n   ");
 }
 
 // ---------------------------------------------------------------- 自检
@@ -936,31 +1021,36 @@ function resolveScopes(opts, knownHashes) {
 }
 
 /**
- * 存量污染点名（只报不删）。故意不并进 printPlan：它说的不是「这次要做什么」，
- * 是「上一版给你留了什么」，混进计划栏会被当成待办动作。
+ * 存量污染点名。故意不并进 printPlan 的几栏：它说的不是「上游变了」，是「上一版给你留了什么」。
+ * 🔴 不打任何删除命令：我方那几份副本走**归档**（执行模式下移进归档目录、写 manifest，可复原），
+ *    不是我们的东西原地不动。dry-run 只报告。
  */
-function printStray(stray) {
+function printStray(stray, opts = {}) {
   if (!stray) return;
   console.log(
     `\n   🧹 发现旧版留下的重复副本：${stray.path}\n` +
       `      里面有 ${stray.ours.length} 个包是我方发的、且和上面那套是**同一批东西的另一份真实副本**` +
       `（${stray.ours.join(", ")}）。\n` +
       `      来历：旧版对账用了 \`-a '*'\`，把包装进了 skills CLI 注册表里**每一个** agent，\n` +
-      `      其中 eve 的目录就是 \`agent/skills\` 且落真副本。我们从不读它，它也不会自己更新——\n` +
-      `      纯占地方，可以安全删掉。现在的版本已经不会再往这儿装了。`
+      `      其中 eve 的目录就是 \`agent/skills\` 且落真副本。我们从不读它，它也不会自己更新，现在的版本已经不会再往这儿装了。\n` +
+      (opts.dryRun
+        ? `      执行时会把这 ${stray.ours.length} 个移进归档目录（不删，可复原）；这次是 --dry-run，磁盘不动。`
+        : `      执行时会把这 ${stray.ours.length} 个移进归档目录（不删，可复原），跑完会打印归档位置和复原命令。`)
   );
   if (stray.others.length) {
     console.log(
-      `      ⚠️ 但这个目录里还有 ${stray.others.length} 个**不是我们的**东西（${stray.others.join(", ")}）——\n` +
-        `      别整个目录端了，不然会连它们一起删。`
+      `      ⚠️ 这个目录里还有 ${stray.others.length} 个**不是我们的**东西（${stray.others.join(", ")}），原地不动，不归档。`
     );
   }
-  console.log(`      要删就你自己来（我不代删）：`);
-  console.log(
-    stray.others.length
-      ? `        ${stray.ours.map((n) => `rm -rf ${JSON.stringify(join(stray.path, n))}`).join(" \\\n        ")}`
-      : `        rm -rf ${JSON.stringify(stray.root)}`
-  );
+}
+
+/** 遗留副本归档：借 archivePackages 的壳——造一条假 survey 条目指向 agent/skills，manifest / 复原命令同一套。 */
+function archiveStray(scope, stray) {
+  const dirs = [{ label: "agent/skills", path: stray.path, agent: "eve" }];
+  const survey = stray.ours.map((name) => ({ name, dirs }));
+  return archivePackages(scope, stray.ours, survey, {
+    reason: "旧版对账 `-a '*'` 遗留在 agent/skills 的重复副本，由 dby-update 归档；正式那份仍在受管安装目录里",
+  });
 }
 
 function printPlan(scope, survey, plan, opts, upstreamCount) {
@@ -1032,8 +1122,10 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     console.log(
       opts.forceRefresh
         ? `   ♻️  要刷新 ${plan.refresh.length} 个（--force-refresh：不分新旧，全部重下一遍）`
-        : `   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版，或者少了一处落位）`
+        : `   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版，或者少了一处落位）：`
     );
+    // 🔴 逐项列名：刷新是覆盖安装，用户确认的必须是具体清单，不是一个数字。
+    for (const n of plan.refresh) console.log(`        ↻ ${n}`);
   }
   // 🔴 单说一句「缺落位」，否则用户看到「内容明明是最新的还要重下」只会以为工具在空转。
   if (plan.misplaced?.length) {
@@ -1115,22 +1207,26 @@ async function main() {
   // 🔴 刷新一样是「往用户磁盘上写文件」的动作（`skills add` 会原地覆写），不该比归档少一道门。
   //    改名迁移同样要写磁盘（搬文件 + 归档老目录），也计进这个唯一真相来源：
   //    totalChanges === 0 必须真的等于「一个动作都没有」。
+  //    遗留副本归档同样是搬用户磁盘上的目录，也计进来——否则「只有遗留副本要归档」那一跑会绕过确认门。
   const totalChanges = report.reduce(
-    (n, r) => n + r.plan.archive.length + r.plan.add.length + r.plan.refresh.length + r.plan.renamed.length,
+    (n, r) => n + r.plan.archive.length + r.plan.add.length + r.plan.refresh.length + r.plan.renamed.length + (r.stray?.ours.length || 0),
     0
   );
+  // 🔴 自更新提示靠名单判定：本进程没法知道刚落地的新脚本长什么样，「dby-update 在本轮安装名单里」是唯一可靠信号。
+  const selfUpdated = report.some((r) => r.plan.add.includes("dby-update") || r.plan.refresh.includes("dby-update"));
+  const meta = { namesSource: upstream.namesSource, installRef: upstream.ref };
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
     for (const { scope, survey, plan, stray } of report) {
       printPlan(scope, survey, plan, opts, upstream.names.length);
-      printStray(stray);
+      printStray(stray, opts);
     }
-    if (totalChanges === 0) console.log(`\n结论：无需任何操作——本机已经和上游当前全集完全一致。`);
+    if (totalChanges === 0) console.log(`\n${convergedConclusion(upstream.namesSource)}`);
   }
 
   if (opts.dryRun) {
     // notes 并进 JSON（不是丢掉）：它是「上游名单从哪来」的唯一线索，机器也该读得到。
-    if (opts.json) console.log(JSON.stringify({ notes: upstream.notes, names: upstream.names, report: report.map(stripScope), executed: false }, null, 2));
+    if (opts.json) console.log(JSON.stringify({ ...meta, notes: upstream.notes, names: upstream.names, report: report.map(stripScope), executed: false }, null, 2));
     return 0;
   }
 
@@ -1152,14 +1248,17 @@ async function main() {
   // ---- 执行
   const archived = [];
   const renameOutcomesByScope = new Map();
-  for (const { scope, survey, plan } of report) {
+  for (const { scope, survey, plan, stray } of report) {
     const cwd = scope.kind === "global" ? undefined : scope.dir;
     const scopeFlag = scope.kind === "global" ? ["-g"] : [];
+    // 本 scope 这一轮落的归档根：拉取挂了就按 manifest 原路搬回。上一个 scope 的已经完整跑完，不动。
+    const scopeArchived = [];
 
     if (plan.archive.length) {
       say(`\n归档 ${plan.archive.length} 个上游已下架的 skill（移走，不删）…`);
       const res = archivePackages(scope, plan.archive, survey);
       archived.push({ scope: scope.label, packages: plan.archive.length, ...res });
+      scopeArchived.push(res);
       say(`   已移到 ${res.root}`);
       // 目录已经移走，这一步只是让 skills CLI 把自己的安装记录也清掉。
       // 不传 -a：remove 省略 -a 时打到全部 agent；别照 --help 写 -a '*'，remove 不认星号。
@@ -1176,16 +1275,29 @@ async function main() {
       say(`\n拉取上游 ${want.length} 个 skill…`);
       const agentsToo = targetAgents(scope);
       say(`   装给：${agentsToo.join(", ")}`);
+      if (upstream.ref) say(`   安装源固定到版本表声明的 ref：${upstream.ref}`);
       try {
-        runSkills(["add", REPO, ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
+        runSkills(["add", installSource(upstream.ref), ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
       } catch (err) {
-        // 🔴 归档已经落盘、拉取挂了 ⇒ 半迁移态。把「你现在在哪、怎么续上」换掉那句泛泛的断网提示。
+        // 🔴 归档已经落盘、拉取挂了 ⇒ 先把本 scope 这一轮归档的目录按 manifest 搬回原处，再报错。
+        //    复原自己也可能挂：那份归档根照实列出来、附复原命令，原始错误不吞。
+        let restoredCount = 0;
+        const restoredRoots = [];
+        const failed = [];
+        for (const a of scopeArchived) {
+          if (!a?.root) continue;
+          try {
+            const r = restoreArchive(a.root);
+            restoredCount += r.restored.length;
+            restoredRoots.push(a.root);
+            for (const s of r.skipped) failed.push({ root: a.root, error: `${s.skill}：${s.reason}` });
+          } catch (restoreErr) {
+            failed.push({ root: a.root, error: restoreErr?.message || String(restoreErr) });
+          }
+        }
+        if (restoredCount) say(`   拉取失败，已把本轮刚归档的 ${restoredCount} 个复原回原处。`);
         if (err instanceof Friendly) {
-          err.hint = partialMigrationHint(
-            archived.reduce((n, a) => n + (a?.packages || 0), 0),
-            archived.map((a) => a?.root).filter(Boolean),
-            want.length
-          );
+          err.hint = partialMigrationHint({ restoredCount, restoredRoots, failed, wantCount: want.length, installRef: upstream.ref });
         }
         throw err;
       }
@@ -1233,6 +1345,14 @@ async function main() {
       }
       renameOutcomesByScope.set(scope, outcomes);
     }
+
+    // ---- 遗留副本：我方那几份移进归档（不删、可复原），不是我们的原地不动。放在最后：拉取挂了它就不动，少一样要回滚的。
+    if (stray?.ours.length) {
+      say(`\n归档 ${stray.ours.length} 个旧版遗留在 ${stray.path} 的重复副本（移走，不删）…`);
+      const res = archiveStray(scope, stray);
+      archived.push({ scope: scope.label, packages: stray.ours.length, stray: true, ...res });
+      say(`   已移到 ${res.root}` + (stray.others.length ? `；不是我们的 ${stray.others.length} 个原地没动` : ""));
+    }
   }
 
   // ---- 复核 + 自检
@@ -1265,7 +1385,7 @@ async function main() {
   const renameFailed = results.some((r) => r.renameResults.some((o) => !o.skipped && !o.ok));
 
   if (opts.json) {
-    console.log(JSON.stringify({ notes: upstream.notes, results: results.map(stripScope), archived, executed: true }, null, 2));
+    console.log(JSON.stringify({ ...meta, selfUpdated, notes: upstream.notes, results: results.map(stripScope), archived, executed: true }, null, 2));
     return results.every((r) => r.checks.every((c) => c.ok)) && !renameFailed ? 0 : 3;
   }
 
@@ -1328,7 +1448,7 @@ async function main() {
   //    等于把复原门槛推给用户自己在终端里翻 JSON——那道门槛高到等于没有复原路径。
   for (const a of archived) {
     if (!a?.count) continue;
-    console.log(`\n归档的 ${a.count} 份原样躺在 ${a.root}`);
+    console.log(`\n${a.stray ? "旧版遗留副本" : "归档的"} ${a.count} 份原样躺在 ${a.root}`);
     console.log(`   确认没问题 → 整个目录删掉即可。`);
     console.log(`   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：\n`);
     console.log(`   ${restoreCommand(a.root)}\n`);
@@ -1352,6 +1472,13 @@ async function main() {
       ? `\n全部通过。当前对话如果还没读到新能力，新建一次对话就能用。`
       : `\n对账做完了，但自检有没过的项（上面标 ❌ 的），按提示处理完再用。`
   );
+  if (upstream.namesSource === "versions") {
+    console.log(`   （这一跑上游目录列表没拉到，名单以版本表为准；上游若有还没盖版本戳的新包，这次没核到。）`);
+  }
+  // 🔴 自己被刷新了：本进程跑的仍是旧版逻辑（不 re-exec，见文件头），新逻辑要下一跑才生效。
+  if (selfUpdated) {
+    console.log(`\n🔁 本轮把 dby-update 自己也更新了：这次对账仍由旧版逻辑完成，建议再跑一次 /dby-update，让新版逻辑重新核一遍。`);
+  }
   return allOk ? 0 : 3;
 }
 
@@ -1615,43 +1742,70 @@ function targetAgentsCheck() {
 }
 
 /**
- * 存量污染只报不删：造一个「我方包的重复副本」躺在 `agent/skills` 里，
- * 断言它被点名、给了复原……不，给了**删除**命令，而且目录一个字都没被动过。
+ * 存量污染走归档不走删除：造一个 `agent/skills` 里既有我方副本又有别人包的 fixture，
+ *   dry-run：只报告，磁盘一个字不动，输出里不许出现 rm；
+ *   真跑：我方副本移进归档目录并记进 manifest，别人的原地不动，输出里同样不许出现 rm。
+ * 全程离线（DBY_RAW_BASE 指向 fixture、npx 是假的）。
  */
 function strayEveDirCheck() {
   const fails = [];
   const root = mkdtempSync(join(tmpdir(), "dby-stray-selfcheck-"));
+  const { bin } = stubNpxDir();
   const pkg = join(root, "agent", "skills", "some-skill");
+  const otherPkg = join(root, "agent", "skills", "someone-else");
   mkdirSync(pkg, { recursive: true });
+  mkdirSync(otherPkg, { recursive: true });
   writeFileSync(join(pkg, "SKILL.md"), "---\nname: some-skill\n---\n");
+  writeFileSync(join(otherPkg, "SKILL.md"), "---\nname: someone-else\n---\n");
   const mine = computeSkillHash(pkg);
   const known = { "some-skill": [mine] };
+  try {
+    const stray = surveyStrayEveDir({ kind: "project", dir: root }, { "some-skill": mine }, known);
+    if (!stray) return ["存量污染 · agent/skills 里躺着我方包的副本，却没被点名"];
+    if (!stray.ours.includes("some-skill")) fails.push(`存量污染 · 没点到名：${JSON.stringify(stray.ours)}`);
+    if (!stray.others.includes("someone-else")) fails.push(`存量污染 · 别人的包该记进 others：${JSON.stringify(stray.others)}`);
+    // global scope 没有这个目录的概念，别误报
+    if (surveyStrayEveDir({ kind: "global" }, { "some-skill": mine }, known) !== null) fails.push("存量污染 · global scope 不该报 agent/skills");
+    // 只有别人的东西不算我们的污染
+    if (surveyStrayEveDir({ kind: "project", dir: root }, {}, {}) !== null) fails.push("存量污染 · 把别人的包也算成了我们的重复副本");
 
-  const stray = surveyStrayEveDir({ kind: "project", dir: root }, { "some-skill": mine }, known);
-  if (!stray) {
-    fails.push("存量污染 · agent/skills 里躺着我方包的副本，却没被点名");
+    // 正式那份就位（收敛态），于是整份计划只剩「遗留副本归档」这一个动作
+    const proper = join(root, ".claude", "skills", "some-skill");
+    mkdirSync(proper, { recursive: true });
+    writeFileSync(join(proper, "SKILL.md"), "---\nname: some-skill\n---\n");
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "some-skill": `doubaoya-skill/some-skill@${mine}` } }));
+    writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: known }));
+    const run = (args) =>
+      spawnSync(process.execPath, [SELF_PATH, "--scope", "project", "--project-dir", root, ...args], {
+        encoding: "utf-8",
+        env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` },
+      });
+
+    const dry = run(["--dry-run"]);
+    const dryOut = `${dry.stdout}\n${dry.stderr}`;
+    if (!dryOut.includes("some-skill")) fails.push(`存量污染 · dry-run 没点名：${JSON.stringify(dryOut.slice(-300))}`);
+    if (/\brm\b/.test(dryOut)) fails.push(`🔴 存量污染 · 输出里出现了删除命令：${JSON.stringify(dryOut.match(/.*\brm\b.*/)?.[0])}`);
+    if (!existsSync(join(pkg, "SKILL.md")) || !existsSync(join(otherPkg, "SKILL.md"))) fails.push("🔴 存量污染 · dry-run 动了磁盘");
+    // 遗留副本归档也是往用户磁盘上动目录：非交互、不给 --yes 必须停在确认门
+    if (run([]).status !== 2) fails.push("🔴 存量污染 · 只有遗留副本要归档时没停在确认门（退出码应为 2）");
+
+    const real = run(["--yes"]);
+    const realOut = `${real.stdout}\n${real.stderr}`;
+    if (/\brm\b/.test(realOut)) fails.push(`🔴 存量污染 · 真跑输出里出现了删除命令：${JSON.stringify(realOut.match(/.*\brm\b.*/)?.[0])}`);
+    if (existsSync(pkg)) fails.push(`🔴 存量污染 · 真跑后我方副本还在 agent/skills 里（没归档）：${JSON.stringify(realOut.slice(-400))}`);
+    if (!existsSync(join(otherPkg, "SKILL.md"))) fails.push("🔴 存量污染 · 别人的包被动了——只许归档我方副本");
+    if (!existsSync(join(proper, "SKILL.md"))) fails.push("🔴 存量污染 · 正式那份被动了");
+    const archiveDir = join(root, ".doubaoya", "archive");
+    const roots = existsSync(archiveDir) ? readdirSync(archiveDir) : [];
+    const manifest = roots.length ? JSON.parse(readFileSync(join(archiveDir, roots[0], "manifest.json"), "utf-8")) : null;
+    const entry = manifest?.packages?.find((p) => p.skill === "some-skill");
+    if (!entry) fails.push(`🔴 存量污染 · 归档 manifest 里没有副本条目：${JSON.stringify(manifest)}`);
+    else if (!existsSync(join(entry.to, "SKILL.md"))) fails.push(`存量污染 · manifest 记的归档位置里没有东西：${entry.to}`);
+    if (!/复原/.test(realOut) || !/manifest/.test(realOut)) fails.push(`存量污染 · 真跑没打印归档位置与复原方式：${JSON.stringify(realOut.slice(-400))}`);
+  } finally {
     rmSync(root, { recursive: true, force: true });
-    return fails;
+    rmSync(bin, { recursive: true, force: true });
   }
-  if (!stray.ours.includes("some-skill")) fails.push(`存量污染 · 没点到名：${JSON.stringify(stray.ours)}`);
-  // 🔴 只报不删：跑完之后那个目录必须原封不动还在。
-  if (!existsSync(pkg)) fails.push("存量污染 · 目录被删了——这一步只许报告，绝不许代删");
-
-  // global scope 没有这个目录的概念，别误报
-  if (surveyStrayEveDir({ kind: "global" }, { "some-skill": mine }, known) !== null) {
-    fails.push("存量污染 · global scope 不该报 agent/skills");
-  }
-  // 别人的东西不算我们的污染
-  const other = mkdtempSync(join(tmpdir(), "dby-stray-other-"));
-  const otherPkg = join(other, "agent", "skills", "someone-else");
-  mkdirSync(otherPkg, { recursive: true });
-  writeFileSync(join(otherPkg, "SKILL.md"), "---\nname: someone-else\n---\n");
-  if (surveyStrayEveDir({ kind: "project", dir: other }, {}, known) !== null) {
-    fails.push("存量污染 · 把别人的包也算成了我们的重复副本");
-  }
-
-  rmSync(root, { recursive: true, force: true });
-  rmSync(other, { recursive: true, force: true });
   return fails;
 }
 
@@ -1930,14 +2084,41 @@ function partialMigrationCheck() {
       { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` } }
     );
     const out = `${res.stdout || ""}\n${res.stderr || ""}`;
-    const tail = () => JSON.stringify(out.slice(-500));
-    // 先确认这条自检**真踩在**半迁移态上，否则下面三条断言等于在空气里跑
-    if (existsSync(pkg)) fails.push(`半迁移 fixture 前提不成立：归档那一步没执行 ${tail()}`);
+    const tail = () => JSON.stringify(out.slice(-600));
+    // 先确认这条自检**真踩在**拉取失败上，否则下面的断言等于在空气里跑
     if (res.status === 0) fails.push(`半迁移 fixture 前提不成立：拉取那一步没失败（退出码 ${res.status}）`);
-    if (!/已经归档 1 个/.test(out)) fails.push(`🔴 半迁移提示没说「已经归档了几个」，用户不知道自己机器现在什么状态：${tail()}`);
-    if (!/改了一半/.test(out)) fails.push(`🔴 半迁移提示没说磁盘已经是半变更态：${tail()}`);
-    if (!/重跑同一条命令/.test(out) || !/不会再归档一遍/.test(out)) {
-      fails.push(`🔴 半迁移提示没说「重跑即可续上、归档不会重复」，用户不敢重跑：${tail()}`);
+    if (!/已移到/.test(out)) fails.push(`半迁移 fixture 前提不成立：归档那一步没执行 ${tail()}`);
+    if (!/skills add/.test(out)) fails.push(`🔴 原始拉取错误被吞了：${tail()}`);
+    // 🔴 拉取挂了 ⇒ 本轮归档的目录必须已经自动搬回原处，磁盘回到跑之前的样子
+    if (!existsSync(join(pkg, "SKILL.md"))) fails.push(`🔴 拉取失败后本轮归档的目录没有自动复原回原处：${tail()}`);
+    if (!/已自动复原回原处/.test(out) || !/复原/.test(out)) fails.push(`🔴 提示没说「已复原了几个」，用户不知道自己机器现在什么状态：${tail()}`);
+    if (!/直接重跑同一条命令/.test(out) || !/安装记录/.test(out)) {
+      fails.push(`🔴 提示没说「重跑即可、skills CLI 安装记录需重跑补齐」，用户不敢重跑：${tail()}`);
+    }
+    if (/改了一半/.test(out)) fails.push(`复原之后不该再说磁盘「改了一半」：${tail()}`);
+    // 归档根还在（manifest 留着），但包已经不在里面了
+    const archiveDir = join(root, ".doubaoya", "archive");
+    const roots = existsSync(archiveDir) ? readdirSync(archiveDir) : [];
+    if (!roots.length) fails.push("半迁移 · 归档根不见了（复原只该把包搬回去，manifest 该留着）");
+    else if (existsSync(join(archiveDir, roots[0], "claude_skills", "retired-skill"))) fails.push("半迁移 · 归档目录里还留着包（复原没有搬走）");
+
+    // 🔴 复原本身失败：把归档目录里的包换成一个已经在原处出现的同名目录（不覆盖），必须报出归档路径 + 复原命令，且原始拉取错误不吞。
+    const res2 = spawnSync(
+      process.execPath,
+      [SELF_PATH, "--yes", "--scope", "project", "--project-dir", root],
+      { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` } }
+    );
+    // 第二跑等同第一跑（幂等）；这里再单独用 restoreArchive 直接钉「原处被占就不覆盖」：
+    const root2 = existsSync(archiveDir) ? readdirSync(archiveDir).sort().pop() : null;
+    if (res2.status === 0 || !root2) fails.push(`半迁移 · 第二跑前提不成立（退出码 ${res2.status}）`);
+    else {
+      const manifest = JSON.parse(readFileSync(join(archiveDir, root2, "manifest.json"), "utf-8"));
+      const it = manifest.packages[0];
+      mkdirSync(it.to, { recursive: true }); // 假装归档里还有一份，而原处已被复原占着
+      const r = restoreArchive(join(archiveDir, root2));
+      if (r.restored.length || !r.skipped.length) fails.push(`🔴 restoreArchive 在原处已有同名目录时覆盖了它：${JSON.stringify(r)}`);
+      const hint = partialMigrationHint({ restoredCount: 0, failed: [{ root: join(archiveDir, root2), error: "x" }], wantCount: 1 });
+      if (!hint.includes(join(archiveDir, root2)) || !hint.includes("manifest.json")) fails.push(`🔴 复原失败的提示没带归档路径 + 复原命令：${hint}`);
     }
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -2219,7 +2400,227 @@ function renameMigrationCheck() {
   return fails;
 }
 
-function runSelfCheck() {
+/**
+ * 🔴 预检刷新栏必须逐项列名：刷新是覆盖安装，用户确认的得是具体清单。造一份 refresh 非空的计划打出来，
+ * 断言每个名字都在输出里；顺带钉 --json 里 refresh 是数组（jsonPurityCheck 的 fixture 是收敛态，这里单独造）。
+ */
+function refreshListCheck() {
+  const fails = [];
+  const lines = [];
+  const original = console.log;
+  console.log = (...args) => lines.push(args.join(" "));
+  try {
+    printPlan(
+      { label: "自检 scope" },
+      [],
+      { archive: [], add: [], refresh: ["pkg-one", "pkg-two"], upToDate: [], untouched: [], blocked: [], gitTracked: [], gitUnknown: [] },
+      {},
+      0
+    );
+  } finally {
+    console.log = original;
+  }
+  const head = lines.findIndex((l) => l.includes("要刷新 2 个"));
+  if (head < 0) return [`预检列名 · 没有「要刷新 N 个」抬头：${JSON.stringify(lines)}`];
+  for (const n of ["pkg-one", "pkg-two"]) {
+    if (!lines.slice(head + 1).some((l) => l.trim().endsWith(n))) fails.push(`🔴 预检列名 · 刷新栏只报了数、没列出 ${n}：${JSON.stringify(lines.slice(head))}`);
+  }
+  return fails;
+}
+
+/**
+ * 🔴 名单来源三态 + 令牌：不 mock 我们自己的代码，只把 `globalThis.fetch` 换成一个假服务器，让 fetchUpstream 真跑：
+ *   ① Contents API 403 ⇒ namesSource=versions，notes 说清目录没核到；
+ *   ② Contents API 正常 ⇒ namesSource=contents-api；
+ *   ③ rawOverridden ⇒ namesSource=override，且根本不请求 Contents API；
+ *   ④ 有 GITHUB_TOKEN 时只有 api.github.com 那一发带 Authorization，raw 不带；没令牌一发都不带；
+ *   ⑤ 令牌字符串不许出现在 notes / 报错 / 结论里。
+ * 前提：进程里没设 DBY_RAW_BASE（设了 fetchJson 会走读文件那条路，假 fetch 挂不上）。
+ */
+async function namesSourceAndTokenCheck() {
+  const fails = [];
+  if (RAW_OVERRIDDEN) return ["名单来源 · 这条自检要在没设 DBY_RAW_BASE 的环境下跑"];
+  const token = "ghp_selfcheck_FAKE_TOKEN_0123456789";
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  const serve = (contentsStatus) => async (url, init) => {
+    calls.push({ url, auth: init?.headers?.Authorization || null });
+    if (url === CONTENTS_API) {
+      return contentsStatus === 200
+        ? new Response(JSON.stringify([{ type: "dir", name: "dby" }, { type: "file", name: "README.md" }]), { status: 200 })
+        : new Response("rate limited", { status: contentsStatus });
+    }
+    if (url === VERSIONS_URL) return new Response(JSON.stringify({ ref: "release-20260101-0000", skills: { dby: "doubaoya-skill/dby@aaaaaaaaaaaa" } }), { status: 200 });
+    if (url === KNOWN_URL) return new Response(JSON.stringify({ skills: { dby: ["aaaaaaaaaaaa"] } }), { status: 200 });
+    return new Response("nope", { status: 404 });
+  };
+  const savedToken = { GITHUB_TOKEN: process.env.GITHUB_TOKEN, GH_TOKEN: process.env.GH_TOKEN };
+  try {
+    process.env.GITHUB_TOKEN = token;
+    delete process.env.GH_TOKEN;
+
+    // ① 403 ⇒ versions
+    globalThis.fetch = serve(403);
+    const degraded = await fetchUpstream();
+    if (degraded.namesSource !== "versions") fails.push(`🔴 名单来源 · Contents API 403 时应为 versions，实际 ${degraded.namesSource}`);
+    if (!degraded.notes.some((n) => n.includes("目录列表拉不到"))) fails.push(`名单来源 · 降级没进 notes：${JSON.stringify(degraded.notes)}`);
+    if (degraded.ref !== "release-20260101-0000") fails.push(`安装源 · 没读到版本表的 ref：${JSON.stringify(degraded.ref)}`);
+    const conclusion = convergedConclusion(degraded.namesSource);
+    if (conclusion.includes("完全一致") || !conclusion.includes("未能核对")) fails.push(`🔴 名单来源 · 降级态的结论仍在说「完全一致」：${conclusion}`);
+    if (!convergedConclusion("contents-api").includes("完全一致")) fails.push("名单来源 · 正常态的结论丢了「完全一致」");
+    // ④⑤ 令牌只进 api.github.com 那一发；任何输出里不许出现
+    const apiCall = calls.find((c) => c.url === CONTENTS_API);
+    if (apiCall?.auth !== `Bearer ${token}`) fails.push(`🔴 令牌 · api.github.com 的请求没带 Authorization: Bearer：${JSON.stringify(apiCall)}`);
+    for (const c of calls.filter((c) => c.url !== CONTENTS_API)) {
+      if (c.auth) fails.push(`🔴 令牌 · raw 请求也带上了令牌（多一处泄漏面）：${c.url}`);
+    }
+    const leak = JSON.stringify([degraded.notes, conclusion]);
+    if (leak.includes(token)) fails.push(`🔴 令牌 · 出现在输出里：${leak}`);
+
+    // ② 正常 ⇒ contents-api
+    calls.length = 0;
+    globalThis.fetch = serve(200);
+    const fine = await fetchUpstream();
+    if (fine.namesSource !== "contents-api") fails.push(`🔴 名单来源 · Contents API 正常时应为 contents-api，实际 ${fine.namesSource}`);
+    if (JSON.stringify(fine.names) !== JSON.stringify(["dby"])) fails.push(`名单来源 · 目录名单不对：${JSON.stringify(fine.names)}`);
+
+    // ③ override ⇒ 不碰 Contents API
+    calls.length = 0;
+    const over = await fetchUpstream({ rawOverridden: true });
+    if (over.namesSource !== "override") fails.push(`🔴 名单来源 · rawOverridden 时应为 override，实际 ${over.namesSource}`);
+    if (calls.some((c) => c.url === CONTENTS_API)) fails.push("名单来源 · override 态不该请求 Contents API");
+
+    // 没令牌 ⇒ 一发都不带；GH_TOKEN 也认
+    delete process.env.GITHUB_TOKEN;
+    if (githubAuthHeader(CONTENTS_API).Authorization) fails.push("令牌 · 没设令牌却带了 Authorization");
+    if (githubAuthHeader(CONTENTS_API, { GH_TOKEN: "x" }).Authorization !== "Bearer x") fails.push("令牌 · GH_TOKEN 没被认");
+    if (githubAuthHeader(VERSIONS_URL, { GITHUB_TOKEN: "x" }).Authorization) fails.push("令牌 · raw 域名不该带令牌");
+  } catch (err) {
+    fails.push(`名单来源 · 自检自身抛错：${err?.message || err}`);
+  } finally {
+    globalThis.fetch = realFetch;
+    for (const [k, v] of Object.entries(savedToken)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
+
+  // 子进程整条链路：假令牌在环境里，dry-run 的 stdout/stderr 里一个字都不许有它
+  const root = mkdtempSync(join(tmpdir(), "dby-token-selfcheck-"));
+  try {
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ skills: { "some-skill": "doubaoya-skill/some-skill@aaaaaaaaaaaa" } }));
+    writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: { "some-skill": ["aaaaaaaaaaaa"] } }));
+    const res = spawnSync(
+      process.execPath,
+      [SELF_PATH, "--dry-run", "--json", "--scope", "project", "--project-dir", root],
+      { encoding: "utf-8", env: { ...process.env, DBY_RAW_BASE: root, GITHUB_TOKEN: token, GH_TOKEN: token } }
+    );
+    const out = `${res.stdout}\n${res.stderr}`;
+    if (out.includes(token)) fails.push("🔴 令牌 · 子进程输出里出现了令牌");
+    const parsed = res.status === 0 ? JSON.parse(res.stdout) : null;
+    if (parsed?.namesSource !== "override") fails.push(`名单来源 · --json 顶层 namesSource 应为 override，实际 ${JSON.stringify(parsed?.namesSource)}`);
+    if (parsed && parsed.installRef !== null) fails.push(`安装源 · 版本表没 ref 时 installRef 应为 null，实际 ${JSON.stringify(parsed.installRef)}`);
+    if (parsed && !parsed.notes.some((n) => n.includes("安装源未固定"))) fails.push(`安装源 · 没 ref 时 notes 该标「安装源未固定」：${JSON.stringify(parsed?.notes)}`);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 安装源固定 + 自更新提示，整条链路真跑（假 npx 记下收到的参数）：
+ *   有 ref ⇒ `skills add` 的包参数是 `<repo>#<ref>`、--json 带 installRef；无 ref ⇒ 包参数是裸 repo。
+ *   刷新名单含 dby-update ⇒ selfUpdated=true 且文案提示重跑；不含 ⇒ false 且无提示。
+ */
+function installRefAndSelfUpdateCheck() {
+  const fails = [];
+  if (installSource("release-1") !== `${REPO}#release-1`) fails.push(`安装源 · 有 ref 时包参数应为 ${REPO}#release-1，实际 ${installSource("release-1")}`);
+  if (installSource(null) !== REPO) fails.push(`安装源 · 无 ref 时包参数应为 ${REPO}，实际 ${installSource(null)}`);
+
+  const { bin, marker } = stubNpxDir();
+  const build = (name, ref) => {
+    const root = mkdtempSync(join(tmpdir(), "dby-ref-selfcheck-"));
+    const pkg = join(root, ".claude", "skills", name);
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "SKILL.md"), `---\nname: ${name}\n---\n`);
+    const mine = computeSkillHash(pkg);
+    const other = mine === "0".repeat(12) ? "1".repeat(12) : "0".repeat(12);
+    writeFileSync(join(root, "versions.json"), JSON.stringify({ ...(ref ? { ref } : {}), skills: { [name]: `doubaoya-skill/${name}@${other}` } }));
+    writeFileSync(join(root, "known-hashes.json"), JSON.stringify({ skills: { [name]: [mine, other] } }));
+    return root;
+  };
+  const run = (root, args) =>
+    spawnSync(process.execPath, [SELF_PATH, "--yes", "--scope", "project", "--project-dir", root, ...args], {
+      encoding: "utf-8",
+      env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` },
+    });
+  const parse = (res, label) => {
+    try {
+      return JSON.parse(res.stdout);
+    } catch (err) {
+      fails.push(`${label} · stdout 不是 JSON（${err.message}）：${(res.stderr || "").trim().split("\n").pop()}`);
+      return null;
+    }
+  };
+  const withRef = build("dby-update", "release-20260101-0000");
+  const noRef = build("other-skill", null);
+  try {
+    const a = parse(run(withRef, ["--json"]), "安装源·有 ref");
+    const called = existsSync(marker) ? readFileSync(marker, "utf-8") : "";
+    if (!called.includes(`add ${REPO}#release-20260101-0000`)) fails.push(`🔴 安装源 · 有 ref 时 skills add 没固定到 tag：${JSON.stringify(called.trim())}`);
+    if (a && a.installRef !== "release-20260101-0000") fails.push(`安装源 · --json installRef 不对：${JSON.stringify(a?.installRef)}`);
+    if (a && a.selfUpdated !== true) fails.push(`🔴 自更新 · 刷新名单含 dby-update 时 selfUpdated 应为 true：${JSON.stringify(a?.selfUpdated)}`);
+    const text = run(withRef, []);
+    if (!/再跑一次/.test(text.stdout)) fails.push(`🔴 自更新 · 结尾没提示重跑：${JSON.stringify(text.stdout.slice(-300))}`);
+
+    rmSync(marker, { force: true });
+    const b = parse(run(noRef, ["--json"]), "安装源·无 ref");
+    const called2 = existsSync(marker) ? readFileSync(marker, "utf-8") : "";
+    if (!called2.includes(`add ${REPO} `)) fails.push(`🔴 安装源 · 无 ref 时包参数该是裸 repo：${JSON.stringify(called2.trim())}`);
+    if (b && b.installRef !== null) fails.push(`安装源 · 无 ref 时 installRef 应为 null：${JSON.stringify(b?.installRef)}`);
+    if (b && b.selfUpdated !== false) fails.push(`自更新 · 名单不含 dby-update 时 selfUpdated 应为 false：${JSON.stringify(b?.selfUpdated)}`);
+    const text2 = run(noRef, []);
+    if (/再跑一次/.test(text2.stdout)) fails.push("自更新 · 名单不含 dby-update 却提示了重跑");
+  } finally {
+    for (const d of [withRef, noRef, bin]) rmSync(d, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/** restoreArchive 直接钉：归档 → 复原，目录回到原处，跨设备退回那条走 moveDir 与归档同一段代码。 */
+function restoreArchiveCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-restore-selfcheck-"));
+  try {
+    const skillsDir = join(root, ".claude", "skills");
+    for (const name of ["a-pkg", "b-pkg"]) {
+      mkdirSync(join(skillsDir, name), { recursive: true });
+      writeFileSync(join(skillsDir, name, "SKILL.md"), `---\nname: ${name}\n---\n`);
+    }
+    const scope = { kind: "project", dir: root, label: "自检" };
+    const dirs = [{ label: ".claude/skills", path: skillsDir }];
+    const survey = ["a-pkg", "b-pkg"].map((name) => ({ name, hash: "x", state: "historical", dirs }));
+    const archived = archivePackages(scope, ["a-pkg", "b-pkg"], survey);
+    if (existsSync(join(skillsDir, "a-pkg"))) return ["复原 · fixture 前提不成立：归档没搬走"];
+    const r = restoreArchive(archived.root);
+    if (JSON.stringify(r.restored.sort()) !== JSON.stringify(["a-pkg", "b-pkg"])) fails.push(`🔴 复原 · 没把两个都搬回来：${JSON.stringify(r)}`);
+    for (const name of ["a-pkg", "b-pkg"]) {
+      if (!existsSync(join(skillsDir, name, "SKILL.md"))) fails.push(`🔴 复原 · ${name} 没回到原处`);
+    }
+    // 幂等：再复原一次没东西可搬，不报错
+    const again = restoreArchive(archived.root);
+    if (again.restored.length || again.skipped.length) fails.push(`复原 · 二次复原不该再动：${JSON.stringify(again)}`);
+    // 同一秒内两次归档不许撞同一个根（manifest 会被盖掉）
+    const r1 = archivePackages(scope, ["a-pkg"], survey);
+    const r2 = archivePackages(scope, ["b-pkg"], survey);
+    if (r1.root === r2.root) fails.push(`🔴 归档根 · 同一秒内两次归档撞到同一个根，manifest 互相覆盖：${r1.root}`);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+async function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
     const a = JSON.stringify(got);
@@ -2301,6 +2702,10 @@ function runSelfCheck() {
   fails.push(...partialMigrationCheck());
   fails.push(...jsonPurityCheck());
   fails.push(...symlinkEntryCheck());
+  fails.push(...refreshListCheck());
+  fails.push(...(await namesSourceAndTokenCheck()));
+  fails.push(...installRefAndSelfUpdateCheck());
+  fails.push(...restoreArchiveCheck());
 
   // 🔴 改名迁移（renames.json）：纯函数层先钉 extractRenames / splitRenameGitTracked，
   // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
@@ -2363,7 +2768,11 @@ function runSelfCheck() {
       "只有刷新也过确认门、--json 的 stdout 真能被 JSON.parse、" +
       "经软链调用（skills CLI 装出来的常态形态）照常干活而不是静默空跑、" +
       "装的 agent 面收窄到本机真有的安装目录且与查的目录同源（不出现星号）、" +
-      "agent/skills 存量副本只点名不代删、" +
+      "agent/skills 存量副本走归档不打 rm（我方副本进归档并写 manifest、别人的原地不动、dry-run 不动盘）、" +
+      "预检刷新栏逐项列名、上游目录拉不到时 namesSource=versions 且结论不说「完全一致」、" +
+      "api.github.com 请求带 GITHUB_TOKEN/GH_TOKEN 而 raw 不带且令牌不进任何输出、" +
+      "版本表有 ref 时 skills add 固定到 repo#ref 否则裸 repo 并标「未固定」、拉取挂了自动按 manifest 复原本轮归档且原处被占不覆盖、" +
+      "刷新名单含 dby-update 时 selfUpdated=true 并提示重跑、同一秒内多次归档不撞根、" +
       "改名迁移 renames.json：空表/缺表/非法表退化一致、historical 与 modified 老包都能摘进改名候选、" +
       "to 未上线时不贸然搬家、受跟踪与判不出的改名候选单列不动、" +
       "真实文件系统上 config.json / profiles 逐字节搬对、上游新包自带的同名文件不被覆盖、" +
@@ -2409,7 +2818,7 @@ function isMainModule() {
 
 if (isMainModule()) {
   if (process.argv.includes("--self-check")) {
-    process.exit(runSelfCheck());
+    runSelfCheck().then((code) => process.exit(code));
   } else {
     main()
       .then((code) => process.exit(code))

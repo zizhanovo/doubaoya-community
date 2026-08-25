@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T15:41:33.485432+00:00",
+  "generatedAt": "2026-08-25T17:09:40.068389+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -202,6 +202,7 @@
       "60aec394ab7b",
       "6d90a69f9f2b",
       "6f72e665fa97",
+      "72d2d98f5f23",
       "78d16ebe4793",
       "89126d451b03",
       "8b15b3b187e6",
@@ -3015,6 +3016,12 @@
         "version": "1.8.0",
         "date": "2026-08-25",
         "subject": "feat(dby-write): 六份体裁手艺文件，素材形态即路由 —— 声明什么形态，列提纲前读哪一份"
+      },
+      {
+        "hash": "7091f1189cf1",
+        "version": "1.9.0",
+        "date": "2026-08-25",
+        "subject": "feat(dby-write): 素材库接线 —— 用户讲过的真事沉淀成蒸馏卡，缺锚点先查库再问人"
       },
       {
         "hash": "acc07fe1a5e9",
