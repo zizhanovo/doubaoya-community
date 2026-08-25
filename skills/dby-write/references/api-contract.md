@@ -15,3 +15,27 @@
 档案的**写入**（建档 / 改人设 / 存范文 / 蒸 DNA / 立章程）不在本包，走 `dby-charter`。
 
 🔴 `GET /api/articles`（微信同步的已发文章）**只认登录态**，拿 `dyh_` 密钥调必回 `UNAUTHORIZED`——往期文章走上面的 `wechat-history`。
+
+
+## 交棒给 dby-publish 的两条命令行（SKILL.md 交棒节）
+
+**② 只要排版好的 HTML**（渲染免费，**不需要绑公众号**）：
+```bash
+node scripts/pipeline.mjs --md 稿子.md --title "标题" --render-only
+```
+
+**③ 存进公众号草稿箱**（**这一步才需要已绑号**）：
+```bash
+node scripts/pipeline.mjs --md 稿子.md --title "标题" --digest "<摘要>"
+```
+
+⚠️ 第 8 步的留言流水线没有地方放，随成稿交给用户手动贴。
+
+
+## 违禁词自检的命令行（第 9 步自检第 1 项）
+
+```bash
+python3 <dby-banned-words>/scripts/check_multi.py "<标题+摘要+成稿>" --platforms gongzhonghao
+```
+
+🔴 平台写死一个（只查公众号），标题、摘要、正文一起查。**任何终态都要跑。**
