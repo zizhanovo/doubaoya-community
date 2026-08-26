@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T02:09:37.486625+00:00",
+  "generatedAt": "2026-08-26T02:36:11.294655+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -221,6 +221,7 @@
       "aec11ba4ae73",
       "b34999536b26",
       "b4198f5ec4a3",
+      "bb0453139bd3",
       "bb1c48d2428f",
       "c51a1f7c37be",
       "c8fc00825fa8",
@@ -2993,6 +2994,12 @@
         "version": "3.2.3",
         "date": "2026-08-24",
         "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+      },
+      {
+        "hash": "002803c47757",
+        "version": "3.4.1",
+        "date": "2026-08-25",
+        "subject": "fix(dby-update): 发布后头几分钟 GitHub raw 缓存滞后于 Gitee，不再误判镜像不齐"
       },
       {
         "hash": "72d2d98f5f23",

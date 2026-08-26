@@ -1887,7 +1887,7 @@ async function main() {
 
   // ---- 复核 + 自检
   const results = [];
-  for (const { scope, plan, lock } of report) {
+  for (const { scope, plan, lock, survey } of report) {
     let after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
     // 🔴 origin 补录：不是对账器装的（用户手跑 skills add、或本机是 origin 机制之前装的）就没有 origin，
     //    但只要目录哈希能在索引里对上某一版，这一版是什么就是确定的——补一份，下一跑就能用 origin 判「改过」，
@@ -1921,7 +1921,7 @@ async function main() {
     const expect = [...plan.add, ...plan.refresh, ...(plan.upToDate || [])];
     const checks = await selfTest(scope, expect);
     const renameResults = renameOutcomesByScope.get(scope) || [];
-    results.push({ scope, plan, after, stillStale, keptModified, keptForeign, checks, renameResults });
+    results.push({ scope, plan, survey, after, stillStale, keptModified, keptForeign, checks, renameResults });
   }
 
   // 改名迁移里「搬运失败、老目录没归档」的，必须让整体退出码反映出来——它不是自检项，
@@ -1941,6 +1941,15 @@ async function main() {
       `   归档 ${r.plan.archive.length}，新增 ${r.plan.add.length}，刷新 ${r.plan.refresh.length}，` +
         `本来就是当前版没动 ${r.plan.upToDate.length}`
     );
+    // 🔴 做了什么要逐项点名（用户实证：跑完只看到「刷新 1」，不知道刷的是谁、从几到几）。
+    //    刷新/新增按「slug 旧 → 新  changelog」列，与预检同一格式；收敛态列一行各包版本，回答「现在都是几」。
+    for (const n of r.plan.archive) console.log(`        📦 ${n}  已归档`);
+    for (const d of describeRefresh(r.plan.add, [], upstream)) console.log(`        + ${d.slug}  ${d.to}  ${d.changelog}`);
+    for (const d of describeRefresh(r.plan.refresh, r.survey || [], upstream)) {
+      console.log(`        ↻ ${d.slug}  ${d.from} → ${d.to}  ${d.changelog}${d.changelogSource === "auto" ? "［auto］" : ""}`);
+    }
+    const current = r.after.filter((s) => s.state === "current").map((s) => `${s.name} ${versionOfHash(upstream, s.name, s.hash) ?? "?"}`);
+    if (current.length) console.log(`   版本：${current.join(" · ")}`);
     if (r.plan.gitTracked.length) {
       console.log(
         `   🔒 另有 ${r.plan.gitTracked.length} 个上游已下架、但在你 git 仓库里受跟踪（你自己版本化的包），没动：${r.plan.gitTracked.join(", ")}`
