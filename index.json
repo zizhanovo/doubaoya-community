@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T10:04:44.460271+00:00",
-  "ref": "release-20260826-1004",
+  "generatedAt": "2026-08-26T10:25:45.420390+00:00",
+  "ref": "release-20260826-1025",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -1381,6 +1381,12 @@
           "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         },
         {
+          "hash": "5a21a05f4764",
+          "version": "1.6.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
+        },
+        {
           "hash": "a807c7cef9be",
           "version": "1.4.0",
           "date": "2026-08-26",
@@ -1659,6 +1665,12 @@
           "version": "2.5.1",
           "date": "2026-08-26",
           "subject": "fix(dby-publish): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
+        },
+        {
+          "hash": "c3582315f2c5",
+          "version": "4.0.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
         }
       ]
     },
@@ -1882,6 +1894,12 @@
           "version": "1.4.1",
           "date": "2026-08-26",
           "subject": "fix(dby-theme): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
+        },
+        {
+          "hash": "ffbf27bdc3ec",
+          "version": "1.4.3",
+          "date": "2026-08-26",
+          "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
         }
       ]
     },
@@ -1909,6 +1927,7 @@
         "6f72e665fa97",
         "72d2d98f5f23",
         "78d16ebe4793",
+        "7fc8162f40ea",
         "82a83c0cbd94",
         "89126d451b03",
         "8b15b3b187e6",
@@ -1926,6 +1945,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "3.5.0",
+          "hash": "7fc8162f40ea",
+          "ref": "release-20260826-1025",
+          "releasedAt": "2026-08-26T10:25:04.821226+00:00",
+          "changelog": "装完重扫盘核对，该刷新的没刷到就如实报「没装上」并让退出码非 0——此前安装器报了失败却以退出码 0 收场时，对账会跟着说「全部通过」",
+          "changelogSource": "user"
+        },
         {
           "version": "3.4.5",
           "hash": "080aed4c835c",

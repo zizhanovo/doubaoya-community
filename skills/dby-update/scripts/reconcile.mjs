@@ -1929,6 +1929,18 @@ async function main() {
     const stillStale = after
       .filter((s) => s.state === "historical" && shouldBeGone(s.name) && !kept.has(s.name))
       .map((s) => s.name);
+    // 🔴 「装完之后真的到位了吗」——这条判据用的是**我们自己重扫磁盘**的结果，
+    //    不解析 `skills add` 的输出。实证（2026-08-26 用户现场）：安装器打了
+    //    `Failed to install 3` 却以退出码 0 收场，而 runSkills 只看退出码 ⇒ 失败被整个吞掉。
+    //    解析别人的措辞是脆的（CLI 改一次文案就失灵），重扫盘不会骗人。
+    //    注意与 stillStale 的区别：那条问「上游已下架的归档掉没有」，这条问「该刷新的刷到没有」。
+    const stillBehind = [...plan.add, ...plan.refresh]
+      .filter((name) => {
+        const now = after.find((a) => a.name === name);
+        if (!now) return true;                       // 计划装它、扫不到 ⇒ 没装上
+        return now.state !== "current";              // 还停在旧版 / 状态不对 ⇒ 没刷到
+      })
+      .sort();
     const keptModified = plan.untouched
       .filter((u) => u.state === "modified")
       .filter((u) => after.find((a) => a.name === u.name)?.state === "modified").length;
@@ -1941,7 +1953,7 @@ async function main() {
     const expect = [...plan.add, ...plan.refresh, ...(plan.upToDate || [])];
     const checks = await selfTest(scope, expect);
     const renameResults = renameOutcomesByScope.get(scope) || [];
-    results.push({ scope, plan, survey, after, stillStale, keptModified, keptForeign, checks, renameResults });
+    results.push({ scope, plan, survey, after, stillStale, stillBehind, keptModified, keptForeign, checks, renameResults });
   }
 
   // 改名迁移里「搬运失败、老目录没归档」的，必须让整体退出码反映出来——它不是自检项，
@@ -1950,7 +1962,8 @@ async function main() {
 
   if (opts.json) {
     console.log(JSON.stringify({ ...meta, selfUpdated, notes: upstream.notes, results: results.map(stripScope), archived, executed: true }, null, 2));
-    return results.every((r) => r.checks.every((c) => c.ok)) && !renameFailed ? 0 : 3;
+    const behind = results.some((r) => r.stillBehind.length) || results.some((r) => r.stillStale.length);
+    return results.every((r) => r.checks.every((c) => c.ok)) && !renameFailed && !behind ? 0 : 3;
   }
 
   let allOk = true;
@@ -1979,6 +1992,12 @@ async function main() {
       );
     }
     console.log(`   现在：当前版 ${counts.current || 0}、你改过的 ${counts.modified || 0}（原样保留 ${r.keptModified}）、别人的 ${counts.foreign || 0}（原样保留 ${r.keptForeign}）`);
+    if (r.stillBehind.length) {
+      allOk = false;
+      console.log(`   ❌ 有 ${r.stillBehind.length} 个没装上，还是旧版：${r.stillBehind.join(", ")}`);
+      console.log(`      安装器可能报了失败却以退出码 0 收场。重跑一次 /dby-update；`);
+      console.log(`      仍然装不上就把上面安装器的日志贴出来——这不是「更新完成」。`);
+    }
     if (r.stillStale.length) {
       allOk = false;
       console.log(`   ⚠️ 还有 ${r.stillStale.length} 个没归档掉：${r.stillStale.join(", ")}`);
@@ -3894,6 +3913,57 @@ async function runSelfCheck() {
   const splitNone = splitRenameGitTracked(filled, { tracked: [], unknown: [] });
   eq("git 都干净时两条都进 renamed", splitNone.renamed.map((r) => r.from).sort(), ["old-pkg-a", "old-pkg-b"]);
   eq("git 都干净时 renamedSkipped 为空", splitNone.renamedSkipped, []);
+
+  // ── stillBehind：装完重扫，该刷的没刷到就必须让退出码说实话 ──
+  // 背景（2026-08-26 用户现场）：`skills add` 打了 `Failed to install 3` 却以退出码 0 收场，
+  // 而 runSkills 只看退出码 ⇒ 3 个包没装上，对账却报「全部通过」。判据改成我们自己重扫盘，
+  // 不解析安装器的措辞（CLI 改一次文案，解析就失灵）。
+  {
+    const behindOf = (plan, after) =>
+      [...plan.add, ...plan.refresh]
+        .filter((name) => {
+          const now = after.find((a) => a.name === name);
+          if (!now) return true;
+          return now.state !== "current";
+        })
+        .sort();
+    const plan = { add: ["new-pkg"], refresh: ["a", "b", "c"] };
+    eq(
+      "装完全都到位 ⇒ stillBehind 为空",
+      behindOf(plan, [
+        { name: "new-pkg", state: "current" },
+        { name: "a", state: "current" },
+        { name: "b", state: "current" },
+        { name: "c", state: "current" },
+      ]),
+      []
+    );
+    eq(
+      "两个还停在旧版 ⇒ 逐个列出来",
+      behindOf(plan, [
+        { name: "new-pkg", state: "current" },
+        { name: "a", state: "historical" },
+        { name: "b", state: "current" },
+        { name: "c", state: "historical" },
+      ]),
+      ["a", "c"]
+    );
+    eq(
+      "计划装它却压根扫不到 ⇒ 算没装上，不是忽略",
+      behindOf({ add: ["ghost"], refresh: [] }, []),
+      ["ghost"]
+    );
+    // 🔴 反向断言：用户改过的包本来就不在 add/refresh 里（planReconcile 把它们摘进 untouched），
+    //    所以不该因为它 state=modified 就把退出码顶成 3——那会让「你改过的」变成永久报错源。
+    eq(
+      "用户改过的包不在计划里 ⇒ 不算 behind",
+      behindOf({ add: [], refresh: ["a"] }, [
+        { name: "a", state: "current" },
+        { name: "mine", state: "modified" },
+      ]),
+      []
+    );
+  }
 
   fails.push(...renamesFallbackCheck());
   fails.push(...renameMigrationCheck());

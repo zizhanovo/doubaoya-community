@@ -5,8 +5,8 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和用户自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 3.4.5
-changelog: 补文档——raw 缓存滞后不再误说联系维护者、notes 降级提示不受静音清单管、补折叠/between/--help 说明
+version: 3.5.0
+changelog: 装完重扫盘核对，该刷新的没刷到就如实报「没装上」并让退出码非 0——此前安装器报了失败却以退出码 0 收场时，对账会跟着说「全部通过」
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。

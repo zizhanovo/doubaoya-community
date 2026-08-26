@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T10:04:44.460271+00:00",
+  "generatedAt": "2026-08-26T10:25:45.420390+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -239,6 +239,7 @@
       "6f72e665fa97",
       "72d2d98f5f23",
       "78d16ebe4793",
+      "7fc8162f40ea",
       "82a83c0cbd94",
       "89126d451b03",
       "8b15b3b187e6",
@@ -2710,6 +2711,12 @@
         "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
       },
       {
+        "hash": "5a21a05f4764",
+        "version": "1.6.0",
+        "date": "2026-08-26",
+        "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
+      },
+      {
         "hash": "a807c7cef9be",
         "version": "1.4.0",
         "date": "2026-08-26",
@@ -2902,6 +2909,12 @@
         "version": "2.5.1",
         "date": "2026-08-26",
         "subject": "fix(dby-publish): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
+      },
+      {
+        "hash": "c3582315f2c5",
+        "version": "4.0.0",
+        "date": "2026-08-26",
+        "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
       }
     ],
     "dby-rewrite": [
@@ -3014,6 +3027,12 @@
         "version": "1.4.1",
         "date": "2026-08-26",
         "subject": "fix(dby-theme): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
+      },
+      {
+        "hash": "ffbf27bdc3ec",
+        "version": "1.4.3",
+        "date": "2026-08-26",
+        "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
       }
     ],
     "dby-update": [
