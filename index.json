@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:00:23.914251+00:00",
+  "generatedAt": "2026-08-26T08:00:55.267798+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -691,6 +691,12 @@
           "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
         },
         {
+          "hash": "71cd62a50402",
+          "version": "1.4.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby): 路由判据归位到本包，并补出岔子怎么办 —— 此前 dby 把自己的判据托管在 dby-api 里"
+        },
+        {
           "hash": "d5cfe53c21dd",
           "version": "1.3.2",
           "date": "2026-08-26",
@@ -709,6 +715,7 @@
       "status": "active",
       "knownHashes": [
         "50cdd6a062be",
+        "53d2c3fb1e80",
         "596f05f4d505",
         "5b22bb800679",
         "6c0cb11d4b3b",
