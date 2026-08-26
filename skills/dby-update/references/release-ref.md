@@ -13,7 +13,8 @@
 
 1. `python3 tools/stamp_versions.py`——盖版本戳，同时把 `ref` 写进 `index.json`（及生成的 `versions.json`；哈希一个没变就沿用上一次的 ref，不凭空造 tag 名）。
 2. 提交、push。
-3. 🔴 **打 tag 并推上去**：`git tag <ref> && git push origin <ref>`（脚本在 ref 变化时会打印这条）。
+3. 🔴 **打 tag 并推上去，两个远端都推**：`git tag <ref> && git push origin <ref> && git push gitee <ref>`（脚本在 ref 变化时会打印这条）。
+   Gitee 镜像是对账器的备源，回退只在同一 tag 下发生；只推 GitHub 会让撞上限流的用户被「镜像落后或超前」拦住（`references/index-and-lock.md`）。
    不打，用户端 `skills add …#<ref>` 会 clone 报 "Remote branch … not found"；对账器不预检 tag 是否存在，只在失败提示里点明。
 
 回滚：删掉 `index.json`（与生成的 `versions.json`）的 `ref` 字段即退回默认分支安装。

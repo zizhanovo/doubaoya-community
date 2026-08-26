@@ -25,6 +25,27 @@
 本轮**一个都不归档**（含改名迁移里的归档老目录、旧版遗留副本归档），归档候选单列进「⏸ 本轮不归档」栏（`plan.archiveHeld`）；
 刷新 / 新增照常，依据是索引本身。结论文案固定是「按索引对账，上游目录未能核对，本轮不归档」——照实转述，目录能拉到时再跑一次。
 `DBY_RAW_BASE` 指定上游时 `namesSource: "override"`，名单以索引 active 为准。
+有 `GITHUB_TOKEN` / `GH_TOKEN` 时只有 api.github.com 那一发带上（不进任何输出）。
+
+## Gitee 镜像：备源，不是第二个主源
+
+上游在 Gitee 有一份镜像（`https://gitee.com/zizhan66/doubaoya-community.git`，发布时 tag 两边都推，同 tag 内容哈希一致）。
+对账器以 GitHub 为主源、Gitee 为备源，**三处各自独立回退**，`--json` 顶层 `sources: {meta, names, install}` 各取 `github | gitee | override`：
+
+| 步骤 | 主源 | 备源（同一 ref） | 回退成功的标志 |
+| --- | --- | --- | --- |
+| `meta` 索引 / 旧三文件 | raw.githubusercontent.com `main` | API v5 `contents/<path>?ref=`（base64 解码） | 提示「仅镜像」，`sources.meta: "gitee"` |
+| `names` 目录列表 | api.github.com Contents API | API v5 `contents/skills?ref=main` | `namesSource` 仍是 `contents-api`，`sources.names: "gitee"`，归档不压制 |
+| `install` clone | `skills add zizhanovo/doubaoya-community#<ref>` | `skills add https://gitee.com/zizhan66/doubaoya-community.git#<ref>` | `sources.install: "gitee"` |
+
+- **只有 403 / 429、网络错误、超时才换源**；404 不换（文件真不存在时两边一样，且 404 是退回旧三文件的既有信号）。
+  备源也失败就落回既有降级路径（目录拉不到 ⇒ `archiveSuppressed`；索引拉不到 ⇒ legacy），不比现状更差。
+- **同一 ref 才回退**：Gitee 取索引先取 `main`，取到后按其 `ref` 再取同 tag 那份复核两者 `ref` 相同；GitHub 索引已在场、只是目录要用镜像时，
+  先核镜像 `main` 索引的 `ref` 与 GitHub 相同。clone 只在有 `ref` 时回退（无 ref 两边默认分支无法保证同一内容，宁可失败）。
+- 🔴 **主备 `ref` 不一致 = 镜像落后或超前**：fail-closed，在拉取阶段就退出非 0，不写盘、不打清单，`--json` 只含
+  `{mirrorMismatch: {github, gitee}, executed: false}`；提示「联系维护者」——这是发布时 tag 没两边都推，不是用户的问题。
+- `DBY_RAW_BASE` 覆盖态是验证用的单源，不回退，`sources` 三项都是 `override`。
+- Gitee 取文件只走 API v5（匿名 `/raw/` 路径 404）；镜像匿名 API 也有限流，所以只在主源失败时才碰，每轮最多 2 次请求。
 
 ## 安装记录：origin 与 lock
 

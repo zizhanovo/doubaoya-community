@@ -75,6 +75,43 @@ const RENAMES_URL = `${RAW}/renames.json`;
 const CONTENTS_API = `https://api.github.com/repos/${REPO}/contents/skills`;
 const HEALTH_URL = "https://doubaoya.com/api/health";
 
+// 🔴 Gitee 镜像只是备源，不是第二个主源：GitHub 403/429/断网/超时时用**同一 ref** 再试一次，404 不换源
+//    （文件真不存在时两边一样，且 404 是索引退回旧文件的既有信号）。取文件只走 API v5 的 contents 接口
+//    （返回 base64），`/raw/` 路径匿名 404，禁用。DBY_RAW_BASE 覆盖态是验证用的单源，不回退。
+const MIRROR_REPO = "zizhan66/doubaoya-community";
+const GITEE_GIT_URL = `https://gitee.com/${MIRROR_REPO}.git`;
+const GITEE_API = `https://gitee.com/api/v5/repos/${MIRROR_REPO}/contents`;
+
+/** Gitee contents 接口的文件响应 `{encoding:"base64", content}` → JSON；形状不对就抛，按「备源失败」处理。 */
+export function decodeGiteeContent(body) {
+  if (!body || body.encoding !== "base64" || typeof body.content !== "string") {
+    throw new Friendly("Gitee 镜像返回的不是 base64 文件内容（接口形状变了？）。");
+  }
+  return JSON.parse(Buffer.from(body.content, "base64").toString("utf-8"));
+}
+
+/**
+ * 上游源表（design D1）：每个源提供三件事——按 ref 取文件、列 `skills/` 目录、`skills add` 的包参数。
+ * 回退散落三处 try/catch 的话，三处的回退条件会各自漂；所以条件只写在 withFallback 一处。
+ * github 的 file 走 raw（main，或 DBY_RAW_BASE）；gitee 的 file 走 API v5 `contents/<path>?ref=`。
+ */
+export const SOURCES = [
+  {
+    id: "github",
+    file: (path) => ({ url: `${RAW}/${path}` }),
+    listDir: () => ({ url: CONTENTS_API }),
+    install: (ref) => (ref ? `${REPO}#${ref}` : REPO),
+  },
+  {
+    id: "gitee",
+    file: (path, ref = "main") => ({ url: `${GITEE_API}/${path}?ref=${encodeURIComponent(ref)}`, decode: decodeGiteeContent }),
+    listDir: () => ({ url: `${GITEE_API}/skills?ref=main` }),
+    // D5：无 ref 不回退 clone——两边默认分支无法保证同一内容，宁可失败。
+    install: (ref) => (ref ? `${GITEE_GIT_URL}#${ref}` : null),
+  },
+];
+const GITEE = SOURCES[1];
+
 // ---------------------------------------------------------------- 内容哈希
 
 // 必须与 tools/stamp_versions.py 的 compute_skill_hash 逐位一致：
@@ -384,6 +421,51 @@ class Friendly extends Error {
   }
 }
 
+/** 标成「可换源重试」：只有 403/429、网络错、超时、clone 失败这几类才配得上（design D4）。 */
+function retryable(err) {
+  err.retryable = true;
+  return err;
+}
+
+/**
+ * 🔴 主备索引 `ref` 不一致 = 镜像落后或超前，fail-closed：在 fetchUpstream 阶段就退出，
+ *    不写盘、不打清单（design D6）。`mirrorMismatch` 原样进 `--json`。
+ */
+class MirrorMismatch extends Friendly {
+  constructor(github, gitee, detail) {
+    super(
+      `镜像落后或超前：GitHub 索引 ref 为 ${github ?? "（未取到）"}，Gitee 镜像索引 ref 为 ${gitee ?? "（无）"}${detail ? `（${detail}）` : ""}，联系维护者。本轮没动你本机任何东西。`,
+      "两边 tag 没推齐（发布惯例是 GitHub 与 Gitee 都推）。等维护者补推后重跑；或先只用 GitHub：等限流过去再跑。"
+    );
+    this.mirrorMismatch = { github: github ?? null, gitee: gitee ?? null };
+  }
+}
+
+const STEP_LABELS = { meta: "上游索引", names: "上游目录列表", install: "安装 clone" };
+
+/**
+ * 逐源尝试（design D1/D4）：`attempts = [{source, run}]`，主源失败且错误是 `retryable` 才碰下一个；
+ * 404 / 格式不对这类不换源，原错直接抛。回退成功把「改用 Gitee 镜像」写进 notes；备源也失败就把
+ * 两边原因合成一条抛——用户得知道是自己的网还是上游的事。MirrorMismatch 永远直接穿透。
+ */
+export async function withFallback(step, attempts, notes) {
+  let primaryErr = null;
+  for (let i = 0; i < attempts.length; i++) {
+    const { source, run } = attempts[i];
+    try {
+      const value = await run();
+      if (primaryErr) notes.push(`${STEP_LABELS[step] || step}在 GitHub 失败（${primaryErr.message}），改用 Gitee 镜像。`);
+      return { value, source };
+    } catch (err) {
+      if (err?.mirrorMismatch) throw err;
+      if (primaryErr) throw new Friendly(`${primaryErr.message}；改用 Gitee 镜像也失败：${err?.message || err}`, primaryErr.hint);
+      if (!err?.retryable || i === attempts.length - 1) throw err;
+      primaryErr = err;
+    }
+  }
+  throw primaryErr;
+}
+
 function explainFsError(err, what, path) {
   if (err?.code === "EACCES" || err?.code === "EPERM") {
     return new Friendly(
@@ -689,7 +771,8 @@ export function githubAuthHeader(url, env = process.env) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function fetchJson(url, label) {
+/** `decode`（design D2）：Gitee contents 接口把文件包成 `{content: base64}`，这里解回 JSON；GitHub raw 不需要。 */
+async function fetchJson(url, label, { decode = null } = {}) {
   if (!/^https?:/.test(url)) {
     try {
       return JSON.parse(readFileSync(url, "utf-8"));
@@ -704,17 +787,51 @@ async function fetchJson(url, label) {
       signal: AbortSignal.timeout(25_000),
     });
   } catch (err) {
-    throw explainNetError(err, label);
+    throw retryable(explainNetError(err, label));
   }
+  const host = /^https:\/\/gitee\.com\//.test(url) ? "Gitee" : "GitHub";
   if (res.status === 403 || res.status === 429) {
-    throw new Friendly(`${label}被 GitHub 限流了（HTTP ${res.status}）。`, "等几分钟再跑。");
+    throw retryable(new Friendly(`${label}被 ${host} 限流了（HTTP ${res.status}）。`, "等几分钟再跑。"));
   }
   if (!res.ok) throw new Friendly(`${label}失败：HTTP ${res.status}`);
   try {
-    return await res.json();
-  } catch {
+    const body = await res.json();
+    return decode ? decode(body) : body;
+  } catch (err) {
+    if (err instanceof Friendly) throw err;
     throw new Friendly(`${label}返回的不是合法 JSON。`);
   }
+}
+
+/**
+ * 按 `path` 取一份上游 JSON 文件，GitHub 失败（可重试类）就换 Gitee 同名文件（main）。
+ * 覆盖态（DBY_RAW_BASE）只有一个源。备源命中时把 `sources.meta` 记成 gitee。
+ */
+async function fetchUpstreamFile(up, path, label) {
+  const attempts = [{ source: up.sources.meta === "override" ? "override" : "github", run: () => fetchJson(`${RAW}/${path}`, label) }];
+  if (!up.rawOverridden) attempts.push({ source: "gitee", run: () => fetchJson(GITEE.file(path).url, `从 Gitee 镜像${label}`, GITEE.file(path)) });
+  const r = await withFallback("meta", attempts, up.notes);
+  if (r.source === "gitee") up.sources.meta = "gitee";
+  return r.value;
+}
+
+/**
+ * D3：取索引前不知道 ref，Gitee 先取 main；取到后按其 `ref` 再取同 tag 那份复核 `ref` 相同——
+ * 镜像 main 领先 / 落后于 tag 时在这儿被拦住。`githubRef` 给了（GitHub 索引已取到、只是别的步骤要用镜像）
+ * 就直接比主备 `ref`，不必再复核 tag（tag 内容由 git 保证一致）。每轮最多 2 次 Gitee 请求。
+ */
+async function fetchGiteeIndex(up, githubRef = null) {
+  if (up.giteeIndex) return up.giteeIndex; // 同一跑里只取一次
+  const main = await fetchJson(GITEE.file("index.json").url, "从 Gitee 镜像拉取上游索引", GITEE.file("index.json"));
+  const ref = typeof main?.ref === "string" && main.ref.trim() ? main.ref.trim() : null;
+  if (githubRef !== null && ref !== githubRef) throw new MirrorMismatch(githubRef, ref);
+  if (githubRef === null && ref) {
+    const atTag = await fetchJson(GITEE.file("index.json", ref).url, `从 Gitee 镜像复核 ${ref} 的索引`, GITEE.file("index.json", ref));
+    const tagRef = typeof atTag?.ref === "string" ? atTag.ref.trim() : null;
+    if (tagRef !== ref) throw new MirrorMismatch(null, ref, `镜像 main 声明 ${ref}，而 tag ${ref} 上的索引写的是 ${tagRef ?? "空"}，镜像 main 领先或落后`);
+  }
+  up.giteeIndex = main;
+  return main;
 }
 
 /**
@@ -722,16 +839,16 @@ async function fetchJson(url, label) {
  * Scenario 的硬要求。不认识的 schema_version 同样退化：以后表结构真的要改版，老对账器
  * 撞见新 schema 也不该直接崩，而是当没有表继续跑。
  */
-async function fetchRenames(notes) {
+async function fetchRenames(up) {
   let table;
   try {
-    table = await fetchJson(RENAMES_URL, "拉取改名表");
+    table = await fetchUpstreamFile(up, "renames.json", "拉取改名表");
   } catch (err) {
-    notes.push(`上游没有可用的改名表（${err.message}），按无改名处理`);
+    up.notes.push(`上游没有可用的改名表（${err.message}），按无改名处理`);
     return {};
   }
   if (!table || typeof table !== "object" || table.schema_version !== 1 || typeof table.renames !== "object" || table.renames === null) {
-    notes.push("上游没有可用的改名表（格式不对或 schema_version 不认识），按无改名处理");
+    up.notes.push("上游没有可用的改名表（格式不对或 schema_version 不认识），按无改名处理");
     return {};
   }
   return table.renames;
@@ -740,9 +857,10 @@ async function fetchRenames(notes) {
 /**
  * `skills add` 的包参数：版本表声明了 `ref`（一个 release tag）就固定到它，
  * 否则退回默认分支（skills CLI 底层是 `git clone --branch <ref>`，只认 branch/tag）。
+ * `source` 为 gitee 时给镜像的完整 git URL；镜像无 ref 返回 null（不回退，design D5）。
  */
-export function installSource(ref) {
-  return ref ? `${REPO}#${ref}` : REPO;
+export function installSource(ref, source = "github") {
+  return (SOURCES.find((s) => s.id === source) || SOURCES[0]).install(ref);
 }
 
 /**
@@ -752,14 +870,18 @@ export function installSource(ref) {
  * 哈希以 versions.json 为准；目录列表拉不到时退回 versions.json 的键——但这时结论**不许**说
  * 「与上游目录完全一致」，因为目录压根没核到，所以 namesSource 得跟着名单一起带出去。
  *
+ * `sources: {meta, names, install}` 各记 `github | gitee | override`：三处回退互相独立，`--json` 顶层原样带出。
  * `opts.rawOverridden` 只给自检注入用：默认取模块常量（由 DBY_RAW_BASE 决定）。
  */
 async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
   const notes = [];
+  const one = rawOverridden ? "override" : "github";
+  const up = { rawOverridden, notes, sources: { meta: one, names: one, install: one }, giteeIndex: null };
   // 🔴 索引优先，旧三文件兜底。两条路统一成同一个内部结构，后面的代码不再关心元信息从哪来：
   //    currentHashes / knownHashes / renames 与旧文件语义逐字段一致，status / versions 只有索引那条路有。
-  const meta = (await fetchIndex(notes)) || (await fetchLegacy(notes));
+  const meta = (await fetchIndex(up)) || (await fetchLegacy(up));
   const { currentHashes, knownHashes, renames, status, versions, metaSource } = meta;
+  if (up.sources.meta === "gitee") notes.push(`仅镜像：GitHub 这一跑没取到上游元信息，本轮以 Gitee 镜像为准${meta.ref ? `（已复核镜像 main 与 tag ${meta.ref} 一致）` : ""}。`);
 
   // 安装源固定：缺字段按老版本表兼容处理（fail-open 到默认分支），但必须说出来。
   const ref = meta.ref;
@@ -775,12 +897,29 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
     notes.push(`用的是 DBY_RAW_BASE 指定的上游（${RAW}），名单以${status ? "索引" : "版本表"}为准。`);
   } else {
     try {
-      const items = await fetchJson(CONTENTS_API, "拉取上游 skill 目录");
+      const { value: items, source } = await withFallback(
+        "names",
+        [
+          { source: "github", run: () => fetchJson(CONTENTS_API, "拉取上游 skill 目录") },
+          {
+            source: "gitee",
+            run: async () => {
+              // 镜像 main 的目录只在「镜像 main 与 GitHub 同一 ref」时才顶得上 GitHub main 的目录：
+              // 先核 Gitee 索引 ref（元信息已经取自镜像的话，这一步早在 fetchIndex 里核过了）。
+              if (up.sources.meta !== "gitee" && metaSource === "index") await fetchGiteeIndex(up, ref ?? null);
+              return fetchJson(GITEE.listDir().url, "从 Gitee 镜像拉取上游 skill 目录");
+            },
+          },
+        ],
+        notes
+      );
       if (Array.isArray(items)) {
         names = items.filter((x) => x.type === "dir").map((x) => x.name).sort();
         namesSource = "contents-api";
+        up.sources.names = source;
       }
     } catch (err) {
+      if (err?.mirrorMismatch) throw err;
       if (status) {
         // 🔴 fail-closed 只压归档不压刷新：刷新 / 新增的依据是索引本身，目录列表只是"缺席推断"的证据。
         archiveSuppressed = true;
@@ -802,18 +941,25 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
     if (unstamped.length) notes.push(`上游有 ${unstamped.length} 个包还没盖版本戳（${unstamped.join(", ")}），它们只会被装上、不参与新旧判定。`);
   }
   if (!names.length) throw new Friendly("上游清单是空的，这不正常，先不动你本机的任何东西。");
-  return { names, namesSource, archiveSuppressed, metaSource, ref, currentHashes, knownHashes, renames, status, versions, notes };
+  return { names, namesSource, archiveSuppressed, metaSource, ref, currentHashes, knownHashes, renames, status, versions, notes, sources: up.sources };
 }
 
 /**
  * 读 `index.json`：slug 为键，每条 `status / knownHashes / versions[]（versions[0] 是当前版）/ redirectTo / userFiles`。
  * 拉不到或格式不认识返回 null（由调用方退回旧文件），**不中止**——过渡期上游可能还没发索引。
+ * GitHub 403/429/网络错时换 Gitee（先 main、再按 ref 复核，见 fetchGiteeIndex）；404 不换源。
  */
-async function fetchIndex(notes) {
+async function fetchIndex(up) {
+  const notes = up.notes;
   let index;
   try {
-    index = await fetchJson(INDEX_URL, "拉取上游索引");
+    const attempts = [{ source: up.sources.meta === "override" ? "override" : "github", run: () => fetchJson(INDEX_URL, "拉取上游索引") }];
+    if (!up.rawOverridden) attempts.push({ source: "gitee", run: () => fetchGiteeIndex(up) });
+    const r = await withFallback("meta", attempts, notes);
+    index = r.value;
+    if (r.source === "gitee") up.sources.meta = "gitee";
   } catch (err) {
+    if (err?.mirrorMismatch) throw err;
     notes.push(`上游索引拉不到（${err.message}），退回旧版三文件对账（metaSource: legacy）——这次看不到版本号与变更说明。`);
     return null;
   }
@@ -821,6 +967,7 @@ async function fetchIndex(notes) {
     notes.push("上游索引格式不对或 schemaVersion 不认识，退回旧版三文件对账（metaSource: legacy）。");
     return null;
   }
+
   const currentHashes = {};
   const knownHashes = {};
   const renames = {};
@@ -844,11 +991,11 @@ async function fetchIndex(notes) {
 }
 
 /** 过渡期兜底：`versions.json` + `known-hashes.json` + `renames.json`，语义与索引出现之前完全一样。 */
-async function fetchLegacy(notes) {
-  const versionsFile = await fetchJson(VERSIONS_URL, "拉取上游版本表");
-  const known = await fetchJson(KNOWN_URL, "拉取历史版本闭集");
+async function fetchLegacy(up) {
+  const versionsFile = await fetchUpstreamFile(up, "versions.json", "拉取上游版本表");
+  const known = await fetchUpstreamFile(up, "known-hashes.json", "拉取历史版本闭集");
   if (!versionsFile?.skills || !known?.skills) throw new Friendly("上游版本表格式不对，先不动你本机的任何东西。");
-  const renames = await fetchRenames(notes);
+  const renames = await fetchRenames(up);
   const currentHashes = Object.fromEntries(
     Object.entries(versionsFile.skills).map(([k, v]) => [k, String(v).split("@").pop()])
   );
@@ -860,11 +1007,13 @@ async function fetchLegacy(notes) {
  * 「无需任何操作」那句结论，按名单来源分四种说法：结论不许高于证据——
  * 目录列表没核到就不能说「与上游当前全集完全一致」。
  */
-export function convergedConclusion(namesSource) {
-  if (namesSource === "contents-api") return "结论：无需任何操作——本机已经和上游当前全集完全一致。";
+export function convergedConclusion(namesSource, sources = null) {
+  // 元信息取自镜像时结论跟着标「仅镜像」：证据来自备源，不能装成主源核过的。
+  const suffix = sources?.meta === "gitee" ? "（仅镜像：本轮上游元信息取自 Gitee 镜像）" : "";
+  if (namesSource === "contents-api") return `结论：无需任何操作——本机已经和上游当前全集完全一致。${suffix}`;
   if (namesSource === "override") return "结论：无需任何操作——按 DBY_RAW_BASE 指定上游的名单对账一致。";
-  if (namesSource === "index") return "结论：无需任何操作——按索引对账，上游目录未能核对，本轮不归档。";
-  return "结论：无需任何操作——按版本表名单对账一致，上游目录未能核对（目录列表没拉到，上游若有还没盖版本戳的新包会漏掉）。";
+  if (namesSource === "index") return `结论：无需任何操作——按索引对账，上游目录未能核对，本轮不归档。${suffix}`;
+  return `结论：无需任何操作——按版本表名单对账一致，上游目录未能核对（目录列表没拉到，上游若有还没盖版本戳的新包会漏掉）。${suffix}`;
 }
 
 /**
@@ -1158,11 +1307,35 @@ function runSkills(args, cwd) {
     throw new Friendly(`跑 npx skills 失败：${res.error.message}`);
   }
   if (res.status !== 0) {
-    throw new Friendly(
-      `\`skills ${args[0]}\` 没跑成功（退出码 ${res.status}）。`,
-      "常见原因就两个：安装目录没写权限，或者中途断网。上面的日志会写明是哪个。"
+    // 退出码非 0 归「网络 / clone」一类（skills CLI 每装一次都 clone 整仓）：这类才允许换镜像重试；npx 不在则不算。
+    throw retryable(
+      new Friendly(
+        `\`skills ${args[0]}\` 没跑成功（退出码 ${res.status}）。`,
+        "常见原因就两个：安装目录没写权限，或者中途断网。上面的日志会写明是哪个。"
+      )
     );
   }
+}
+
+/**
+ * `skills add`：GitHub 失败且有 ref 时用 Gitee 镜像 URL 加同一 ref 重试一次（spec「安装 clone 回退到镜像」）；
+ * 无 ref / 覆盖态只试 GitHub。回退成功把 `sources.install` 记成 gitee。
+ */
+async function installWithFallback(upstream, want, scopeFlag, agentsToo, cwd) {
+  const args = (pkg) => ["add", pkg, ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"];
+  const attempts = [{ source: upstream.sources.install, run: async () => runSkills(args(installSource(upstream.ref, "github")), cwd) }];
+  const mirror = upstream.sources.install === "override" ? null : installSource(upstream.ref, "gitee");
+  if (mirror) {
+    attempts.push({
+      source: "gitee",
+      run: async () => {
+        say(`   GitHub clone 失败，改用 Gitee 镜像重试：${mirror}`);
+        runSkills(args(mirror), cwd);
+      },
+    });
+  }
+  const { source } = await withFallback("install", attempts, upstream.notes);
+  if (source === "gitee") upstream.sources.install = "gitee";
 }
 
 /**
@@ -1176,7 +1349,7 @@ function runSkills(args, cwd) {
  * 复原本身也可能挂（磁盘满、权限……）：那部分归档根照实列出来，附上可粘贴的复原命令，**原始拉取错误不吞**。
  * `installRef` 非空时多说一句：版本表固定到的 tag 可能不存在（发布者忘打 tag），这不是用户的网络问题。
  */
-export function partialMigrationHint({ restoredCount = 0, restoredRoots = [], failed = [], wantCount = 0, installRef = null } = {}) {
+export function partialMigrationHint({ restoredCount = 0, restoredRoots = [], failed = [], wantCount = 0, installRef = null, mirrorTried = false } = {}) {
   const lines = [];
   if (restoredCount) {
     lines.push(`本轮刚归档的 ${restoredCount} 个已自动复原回原处（归档根 ${restoredRoots.join("、")} 可以删了），要拉的 ${wantCount} 个一个都没落。`);
@@ -1190,6 +1363,7 @@ export function partialMigrationHint({ restoredCount = 0, restoredRoots = [], fa
   lines.push("直接重跑同一条命令即可：对账每一跑都以磁盘现状重算；skills CLI 的安装记录已经清掉，重跑会一并补齐。");
   if (installRef) {
     lines.push(`这次是固定到版本表声明的 ref「${installRef}」安装的；要是日志里是 clone 报 "Remote branch ... not found"，是这个 tag 不存在，联系维护者补打 tag，不是你的网络问题。`);
+    if (mirrorTried) lines.push("GitHub 与 Gitee 镜像两边都试过了，多半不是单个站点抽风：检查本机网络，或等一会儿再跑。");
   } else {
     lines.push("要是反复卡在这一步，多半是 git clone 那条路不通（skills CLI 每装一次都要 clone 整仓），换个网络再试。");
   }
@@ -1546,14 +1720,15 @@ async function main() {
   );
   // 🔴 自更新提示靠名单判定：本进程没法知道刚落地的新脚本长什么样，「dby-update 在本轮安装名单里」是唯一可靠信号。
   const selfUpdated = report.some((r) => r.plan.add.includes("dby-update") || r.plan.refresh.includes("dby-update"));
-  const meta = { namesSource: upstream.namesSource, metaSource: upstream.metaSource, archiveSuppressed: upstream.archiveSuppressed, installRef: upstream.ref };
+  // sources 传引用不拷贝：执行阶段 clone 回退会把 install 改成 gitee，结尾那份 JSON 要看到改后的值。
+  const meta = { namesSource: upstream.namesSource, metaSource: upstream.metaSource, archiveSuppressed: upstream.archiveSuppressed, installRef: upstream.ref, sources: upstream.sources };
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
     for (const { scope, survey, plan, stray } of report) {
       printPlan(scope, survey, plan, opts, upstream.names.length);
       printStray(stray, opts);
     }
-    if (totalChanges === 0) console.log(`\n${convergedConclusion(upstream.namesSource)}`);
+    if (totalChanges === 0) console.log(`\n${convergedConclusion(upstream.namesSource, upstream.sources)}`);
   }
 
   if (opts.dryRun) {
@@ -1609,7 +1784,7 @@ async function main() {
       say(`   装给：${agentsToo.join(", ")}`);
       if (upstream.ref) say(`   安装源固定到版本表声明的 ref：${upstream.ref}`);
       try {
-        runSkills(["add", installSource(upstream.ref), ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
+        await installWithFallback(upstream, want, scopeFlag, agentsToo, cwd);
         // 装完立刻写 origin：下一跑「用户改过没有」就以它为准，不再只靠闭集猜。
         for (const slug of want) {
           for (const dir of uniqueRealDirs(installDirs(scope).map((d) => join(d.path, slug)))) writeOrigin(dir, slug, upstream);
@@ -1633,7 +1808,7 @@ async function main() {
         }
         if (restoredCount) say(`   拉取失败，已把本轮刚归档的 ${restoredCount} 个复原回原处。`);
         if (err instanceof Friendly) {
-          err.hint = partialMigrationHint({ restoredCount, restoredRoots, failed, wantCount: want.length, installRef: upstream.ref });
+          err.hint = partialMigrationHint({ restoredCount, restoredRoots, failed, wantCount: want.length, installRef: upstream.ref, mirrorTried: Boolean(installSource(upstream.ref, "gitee")) && upstream.sources.install !== "override" });
         }
         throw err;
       }
@@ -3271,6 +3446,234 @@ function originLockPinCheck() {
   return fails;
 }
 
+/**
+ * 🔴 Gitee 镜像回退（spec `mirror-fallback-gitee`），只换 `globalThis.fetch` 让 fetchUpstream 真跑：
+ *   ① GitHub 三处正常 ⇒ 一次都不碰 gitee.com，sources 三项 github；
+ *   ② 目录 403、Gitee 目录正常（镜像索引 ref 与 GitHub 相同）⇒ namesSource=contents-api、sources.names=gitee、不压归档、提示含「改用 Gitee 镜像」；
+ *   ③ 索引在 GitHub 拉不到（网络错）⇒ 先 main 再按 ref 复核，metaSource=index、sources.meta=gitee、结论标「仅镜像」；
+ *   ④ 两源目录都失败 ⇒ archiveSuppressed=true，与现状一致；
+ *   ⑤ 404 不换源（索引 404 直接退 legacy，不请求 Gitee 索引）；
+ *   ⑥ 主备 ref 不同 ⇒ 抛 mirrorMismatch {github:A, gitee:B}；镜像 main 与 tag 不一致同样拦住。
+ * 再起子进程（`--import` 预载假 fetch）钉全链路：mismatch 时退出非 0、stdout 纯 JSON 带 mirrorMismatch、磁盘不动；
+ * clone 回退：假 npx 第一次（GitHub）抛错、第二次（Gitee URL#ref）成功，sources.install=gitee 且 origin.hash = 索引当前版；无 ref 不重试。
+ */
+async function mirrorFallbackCheck() {
+  const fails = [];
+  if (RAW_OVERRIDDEN) return ["镜像回退 · 这条自检要在没设 DBY_RAW_BASE 的环境下跑"];
+  const eq = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`镜像回退 · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  };
+  const REF = "release-20260825-0000";
+  const index = (ref) => ({
+    schemaVersion: 1,
+    ref,
+    skills: { dby: { status: "active", knownHashes: ["aaaaaaaaaaaa"], versions: [{ version: "1.0.0", hash: "aaaaaaaaaaaa" }] }, gone: { status: "retired", knownHashes: ["dddddddddddd"], versions: [] } },
+  });
+  const b64 = (obj) => ({ encoding: "base64", content: Buffer.from(JSON.stringify(obj)).toString("base64") });
+  const GITEE_INDEX_MAIN = GITEE.file("index.json").url;
+  const GITEE_INDEX_TAG = GITEE.file("index.json", REF).url;
+  const GITEE_DIR = GITEE.listDir().url;
+  // routes: url → {status, body} | {throw:true}；没配的一律 404
+  const serve = (routes, calls) => async (url) => {
+    calls.push(url);
+    const r = routes[url];
+    if (!r) return new Response("nope", { status: 404 });
+    if (r.throw) throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
+    return new Response(JSON.stringify(r.body ?? ""), { status: r.status ?? 200 });
+  };
+  const ghOk = {
+    [INDEX_URL]: { body: index(REF) },
+    [CONTENTS_API]: { body: [{ type: "dir", name: "dby" }, { type: "dir", name: "gone" }] },
+  };
+  const giteeOk = {
+    [GITEE_INDEX_MAIN]: { body: b64(index(REF)) },
+    [GITEE_INDEX_TAG]: { body: b64(index(REF)) },
+    [GITEE_DIR]: { body: [{ type: "dir", name: "dby" }, { type: "dir", name: "mirror-only" }] },
+  };
+  const realFetch = globalThis.fetch;
+  try {
+    // ① GitHub 正常 ⇒ 不碰 Gitee
+    let calls = [];
+    globalThis.fetch = serve({ ...ghOk, ...giteeOk }, calls);
+    const fine = await fetchUpstream();
+    eq("GitHub 正常时 sources 三项 github", fine.sources, { meta: "github", names: "github", install: "github" });
+    if (calls.some((u) => u.includes("gitee.com"))) fails.push(`🔴 镜像回退 · GitHub 正常却请求了 Gitee：${JSON.stringify(calls)}`);
+
+    // ② 目录 403 ⇒ 名单取自 Gitee（先核镜像索引 ref 与 GitHub 同）
+    calls = [];
+    globalThis.fetch = serve({ ...ghOk, [CONTENTS_API]: { status: 403 }, ...giteeOk }, calls);
+    const names = await fetchUpstream();
+    eq("🔴 目录 403 ⇒ namesSource 仍是 contents-api", names.namesSource, "contents-api");
+    eq("目录 403 ⇒ sources.names=gitee，其余 github", names.sources, { meta: "github", names: "gitee", install: "github" });
+    eq("目录 403 ⇒ 归档不压制", names.archiveSuppressed, false);
+    eq("名单来自 Gitee 目录（retired 的照样剔除）", names.names, ["dby", "mirror-only"]);
+    if (!names.notes.some((n) => n.includes("改用 Gitee 镜像"))) fails.push(`镜像回退 · 目录回退没在提示里标「改用 Gitee 镜像」：${JSON.stringify(names.notes)}`);
+    if (!calls.includes(GITEE_INDEX_MAIN)) fails.push("镜像回退 · 用镜像目录前没核镜像索引 ref");
+    if (calls.includes(GITEE_INDEX_TAG)) fails.push("镜像回退 · GitHub 索引已在场时不该再去复核镜像 tag（多一次请求）");
+
+    // ③ 索引在 GitHub 网络错 ⇒ 先 main 再按 ref 复核，仅镜像
+    calls = [];
+    globalThis.fetch = serve({ ...ghOk, [INDEX_URL]: { throw: true }, ...giteeOk }, calls);
+    const meta = await fetchUpstream();
+    eq("🔴 索引回退 ⇒ metaSource=index", meta.metaSource, "index");
+    eq("索引回退 ⇒ sources.meta=gitee", meta.sources, { meta: "gitee", names: "github", install: "github" });
+    eq("索引回退 ⇒ ref 取自镜像索引", meta.ref, REF);
+    if (!calls.includes(GITEE_INDEX_MAIN) || !calls.includes(GITEE_INDEX_TAG)) fails.push(`🔴 镜像回退 · 镜像索引没按「先 main 再按 ref 复核」取：${JSON.stringify(calls)}`);
+    if (!meta.notes.some((n) => n.includes("仅镜像"))) fails.push(`🔴 镜像回退 · 元信息取自镜像却没标「仅镜像」：${JSON.stringify(meta.notes)}`);
+    if (!convergedConclusion("contents-api", meta.sources).includes("仅镜像")) fails.push("镜像回退 · 结论没标「仅镜像」");
+    if (convergedConclusion("contents-api", fine.sources).includes("仅镜像")) fails.push("镜像回退 · GitHub 正常的结论不该标「仅镜像」");
+
+    // ④ 两源目录都失败 ⇒ 与现状一致
+    globalThis.fetch = serve({ ...ghOk, [CONTENTS_API]: { status: 403 }, ...giteeOk, [GITEE_DIR]: { status: 429 } }, []);
+    const both = await fetchUpstream();
+    eq("🔴 两源目录都失败 ⇒ archiveSuppressed", [both.namesSource, both.archiveSuppressed, both.sources.names], ["index", true, "github"]);
+
+    // ⑤ 404 不换源
+    calls = [];
+    globalThis.fetch = serve({ ...ghOk, [INDEX_URL]: { status: 404 }, [VERSIONS_URL]: { body: { ref: REF, skills: { dby: "x/dby@aaaaaaaaaaaa" } } }, [KNOWN_URL]: { body: { skills: { dby: ["aaaaaaaaaaaa"] } } }, ...giteeOk }, calls);
+    const legacy = await fetchUpstream();
+    eq("索引 404 ⇒ 退 legacy 而不是换源", [legacy.metaSource, legacy.sources.meta], ["legacy", "github"]);
+    if (calls.includes(GITEE_INDEX_MAIN)) fails.push("🔴 镜像回退 · 404 也去换源了（404 两边一样，且是 legacy 回退的既有信号）");
+
+    // ⑥ 主备 ref 不同 ⇒ fail-closed
+    globalThis.fetch = serve({ ...ghOk, [CONTENTS_API]: { status: 403 }, ...giteeOk, [GITEE_INDEX_MAIN]: { body: b64(index("release-older")) } }, []);
+    let thrown = null;
+    try {
+      await fetchUpstream();
+    } catch (err) {
+      thrown = err;
+    }
+    eq("🔴 主备 ref 不同 ⇒ 抛 mirrorMismatch {github, gitee}", thrown?.mirrorMismatch, { github: REF, gitee: "release-older" });
+    if (thrown && !/落后或超前/.test(thrown.message)) fails.push(`镜像回退 · mismatch 文案没说「落后或超前」：${thrown.message}`);
+    // 镜像 main 声明 ref，tag 上那份却不是它 ⇒ 同样拦住
+    globalThis.fetch = serve({ ...ghOk, [INDEX_URL]: { status: 403 }, ...giteeOk, [GITEE_INDEX_TAG]: { body: b64(index("release-older")) } }, []);
+    thrown = null;
+    try {
+      await fetchUpstream();
+    } catch (err) {
+      thrown = err;
+    }
+    eq("🔴 镜像 main 与 tag 不一致 ⇒ 抛 mirrorMismatch", thrown?.mirrorMismatch, { github: null, gitee: REF });
+
+    // 解码：形状不对按备源失败处理
+    eq("base64 解码", decodeGiteeContent(b64({ a: 1 })), { a: 1 });
+    let decodeErr = null;
+    try {
+      decodeGiteeContent({ content: "x" });
+    } catch (err) {
+      decodeErr = err;
+    }
+    if (!(decodeErr instanceof Friendly)) fails.push("镜像回退 · Gitee 返回形状不对时应抛 Friendly");
+    // 安装源
+    eq("镜像安装源 = 完整 git URL#ref", installSource(REF, "gitee"), `${GITEE_GIT_URL}#${REF}`);
+    eq("🔴 无 ref 时镜像安装源为 null（不回退 clone）", installSource(null, "gitee"), null);
+  } catch (err) {
+    fails.push(`镜像回退 · 自检自身抛错：${err?.stack || err}`);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+
+  // ── 子进程全链路：`--import` 预载一个按 DBY_FAKE_ROUTES 应答的假 fetch，其余全是真代码 ──
+  const bin = mkdtempSync(join(tmpdir(), "dby-mirror-npx-"));
+  const marker = join(bin, "called.log");
+  const preload = join(bin, "fake-fetch.mjs");
+  writeFileSync(
+    preload,
+    `const routes = JSON.parse(process.env.DBY_FAKE_ROUTES);
+globalThis.fetch = async (url) => {
+  const r = routes[url];
+  if (!r) return new Response("nope", { status: 404 });
+  if (r.throw) throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNRESET" } });
+  return new Response(JSON.stringify(r.body ?? ""), { status: r.status ?? 200 });
+};
+`
+  );
+  const health = { [HEALTH_URL]: { body: { success: true, data: { status: "ok" } } } };
+  const run = (root, routes, args) =>
+    spawnSync(process.execPath, ["--import", pathToFileURL(preload).href, SELF_PATH, "--scope", "project", "--project-dir", root, ...args], {
+      encoding: "utf-8",
+      env: { ...process.env, DBY_FAKE_ROUTES: JSON.stringify({ ...health, ...routes }), PATH: `${bin}:${process.env.PATH}` },
+    });
+  const mkPkg = (root, name, body) => {
+    const pkg = join(root, ".claude", "skills", name);
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "SKILL.md"), body);
+    return pkg;
+  };
+  const OLD = "---\nname: some-skill\n---\nv1\n";
+  const NEW = "---\nname: some-skill\n---\nv2\n";
+
+  // (a) mismatch：退出非 0、stdout 纯 JSON 带 mirrorMismatch、磁盘不动（本该归档的 retired 包原地不动、不写 lock）
+  const mmRoot = mkdtempSync(join(tmpdir(), "dby-mirror-mm-"));
+  try {
+    const retired = mkPkg(mmRoot, "gone-skill", "---\nname: gone-skill\n---\n");
+    const retiredHash = computeSkillHash(retired);
+    const idx = { schemaVersion: 1, ref: REF, skills: { dby: { status: "active", knownHashes: ["aaaaaaaaaaaa"], versions: [{ version: "1.0.0", hash: "aaaaaaaaaaaa" }] }, "gone-skill": { status: "retired", knownHashes: [retiredHash], versions: [] } } };
+    writeFileSync(join(bin, "npx"), `#!/bin/sh\necho "$@" >> '${marker}'\nexit 0\n`, { mode: 0o755 });
+    const res = run(mmRoot, { [INDEX_URL]: { body: idx }, [CONTENTS_API]: { status: 403 }, [GITEE_INDEX_MAIN]: { body: b64({ ...idx, ref: "release-older" }) } }, ["--yes", "--json"]);
+    if (res.status === 0) fails.push("🔴 镜像回退 · 主备 ref 不同时退出码应非 0");
+    let parsed = null;
+    try {
+      parsed = JSON.parse(res.stdout);
+    } catch (err) {
+      fails.push(`🔴 镜像回退 · mismatch 时 --json 的 stdout 不是纯 JSON（${err.message}）：${JSON.stringify(res.stdout.slice(0, 80))}`);
+    }
+    eq("--json 带 mirrorMismatch", parsed?.mirrorMismatch, { github: REF, gitee: "release-older" });
+    if (!existsSync(join(retired, "SKILL.md"))) fails.push("🔴 镜像回退 · mismatch 时本该 fail-closed，却把 retired 包归档走了");
+    if (existsSync(join(mmRoot, ".doubaoya")) || existsSync(join(mmRoot, ".dby"))) fails.push("🔴 镜像回退 · mismatch 时写盘了（.doubaoya / .dby 出现）");
+    if (existsSync(marker)) fails.push(`🔴 镜像回退 · mismatch 时还调了 npx：${readFileSync(marker, "utf-8")}`);
+    if (!/落后或超前/.test(res.stderr || "")) fails.push(`镜像回退 · mismatch 的人话提示没走 stderr：${JSON.stringify((res.stderr || "").slice(-200))}`);
+  } finally {
+    rmSync(mmRoot, { recursive: true, force: true });
+  }
+
+  // (b) clone 回退：第一次（GitHub）挂、第二次（Gitee URL#ref）成功并落盘
+  const cloneRoot = mkdtempSync(join(tmpdir(), "dby-mirror-clone-"));
+  try {
+    const pkg = mkPkg(cloneRoot, "some-skill", OLD);
+    const oldHash = computeSkillHash(pkg);
+    writeFileSync(join(pkg, "SKILL.md"), NEW);
+    const newHash = computeSkillHash(pkg);
+    writeFileSync(join(pkg, "SKILL.md"), OLD);
+    const idx = (ref) => ({ schemaVersion: 1, ...(ref ? { ref } : {}), skills: { "some-skill": { status: "active", knownHashes: [oldHash, newHash], versions: [{ version: "1.1.0", hash: newHash }, { version: "1.0.0", hash: oldHash }] } } });
+    // 假 npx：add 的包参数是 GitHub 就模拟 clone 挂掉；是 Gitee URL 就把新版内容写进目录
+    writeFileSync(
+      join(bin, "npx"),
+      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add ${REPO}"*) echo "fatal: unable to access github.com" >&2; exit 1;; *" add https://gitee.com/"*) printf -- '${NEW.replace(/\n/g, "\\n")}' > '${join(pkg, "SKILL.md")}';; esac\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    const routes = { [INDEX_URL]: { body: idx(REF) }, [CONTENTS_API]: { body: [{ type: "dir", name: "some-skill" }] } };
+    const res = run(cloneRoot, routes, ["--yes", "--json"]);
+    let parsed = null;
+    try {
+      parsed = JSON.parse(res.stdout);
+    } catch (err) {
+      fails.push(`镜像回退·clone · stdout 不是 JSON（${err.message}）：${(res.stderr || "").trim().split("\n").pop()}`);
+    }
+    // 假 npx 记的是 `-y skills add <pkg> …`：取 add 后面那个 token 当包参数
+    const addCalls = () => (existsSync(marker) ? readFileSync(marker, "utf-8").split("\n") : []).map((l) => l.split(" ")).filter((t) => t.includes("add")).map((t) => t.slice(t.indexOf("add") + 1));
+    const called = addCalls();
+    eq("🔴 clone 回退 · 先 GitHub 后 Gitee，同一 ref", called.map((t) => t[0]), [`${REPO}#${REF}`, `${GITEE_GIT_URL}#${REF}`]);
+    if (called[1] && called[1].slice(1).join(" ") !== called[0].slice(1).join(" ")) fails.push(`clone 回退 · 两次 add 除包参数外其余参数应一致：${JSON.stringify(called)}`);
+    eq("clone 回退 ⇒ sources.install=gitee", parsed?.sources, { meta: "github", names: "github", install: "gitee" });
+    eq("🔴 clone 回退后 origin.hash = 索引当前版", readOrigin(pkg)?.hash, newHash);
+    if (!(parsed?.notes || []).some((n) => n.includes("改用 Gitee 镜像"))) fails.push(`clone 回退 · notes 没标「改用 Gitee 镜像」：${JSON.stringify(parsed?.notes)}`);
+
+    // (c) 无 ref ⇒ 只试 GitHub，不回退
+    rmSync(marker, { force: true });
+    writeFileSync(join(pkg, "SKILL.md"), OLD);
+    rmSync(join(pkg, ".dby"), { recursive: true, force: true });
+    const res2 = run(cloneRoot, { ...routes, [INDEX_URL]: { body: idx(null) } }, ["--yes", "--json"]);
+    eq("🔴 无 ref ⇒ 只试 GitHub 默认分支，不回退 Gitee", addCalls().map((t) => t[0]), [REPO]);
+    if (res2.status === 0) fails.push("镜像回退·clone · 无 ref 且 GitHub 挂了应当失败退出");
+    if (/两边都试过/.test(res2.stderr || "")) fails.push("镜像回退·clone · 无 ref 没试镜像，提示却说两边都试过");
+  } finally {
+    rmSync(cloneRoot, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
 async function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
@@ -3359,6 +3762,7 @@ async function runSelfCheck() {
   fails.push(...restoreArchiveCheck());
   fails.push(...(await indexFetchCheck()));
   fails.push(...originLockPinCheck(), ...backfillOriginCheck());
+  fails.push(...(await mirrorFallbackCheck()));
 
   // 🔴 改名迁移（renames.json）：纯函数层先钉 extractRenames / splitRenameGitTracked，
   // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
@@ -3434,7 +3838,9 @@ async function runSelfCheck() {
       "索引 active 而目录缺失只出提示、目录列表拉不到时 archiveSuppressed 且 archive 为空而刷新新增照常、" +
       "刷新栏每行「slug 旧 → 新 + changelog」且 auto 标注、--json refresh 为对象数组、" +
       "装完写 <skill>/.dby/origin.json 且目录哈希不变、scope 根 .dby/lock.json 与 origin 一致、" +
-      "origin 在场时改回闭集历史版仍判 modified、--pin 后预检单列且执行不动、--unpin 后恢复刷新）"
+      "origin 在场时改回闭集历史版仍判 modified、--pin 后预检单列且执行不动、--unpin 后恢复刷新、" +
+      "Gitee 镜像回退：GitHub 正常不碰镜像、403/网络错才换源而 404 不换、索引先 main 再按 ref 复核、" +
+      "主备 ref 不同 fail-closed（退出非 0、不写盘、--json 带 mirrorMismatch）、clone 回退用同一 ref 且无 ref 不回退、sources 三项进 --json）"
   );
   return 0;
 }
@@ -3481,6 +3887,8 @@ if (isMainModule()) {
     main()
       .then((code) => process.exit(code))
       .catch((err) => {
+        // 🔴 镜像 ref 不一致：`--json` 下 stdout 仍只许是一份纯 JSON，mirrorMismatch 原样带出；磁盘此时一个字没动。
+        if (err?.mirrorMismatch && jsonMode) console.log(JSON.stringify({ mirrorMismatch: err.mirrorMismatch, executed: false }, null, 2));
         if (err instanceof Friendly) {
           console.error(`\n没做完：${err.message}`);
           if (err.hint) console.error(`→ ${err.hint}`);

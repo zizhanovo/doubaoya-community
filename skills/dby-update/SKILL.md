@@ -5,8 +5,8 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和你自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 3.3.3
-changelog: 手装包补 origin
+version: 3.4.0
+changelog: GitHub 限流时回退 Gitee 镜像
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
@@ -28,8 +28,7 @@ compatibility: >-
 > `.claude/skills`，包只落进 `.agents/skills` 时对它**根本不存在**。
 > 对账判据是「内容 **且** 落位」：本机任一受管安装目录缺落位，这个包就重装一遍补齐，计划里用 🩹 单列。
 
-> 「本机已经和上游一致」时，结论是**无需任何操作**——一个包都不会重下。
-> 真想把某个包重装一遍（比如文件坏了），用 `--force-refresh` 全量重下。
+> 本机已和上游一致时结论是**无需任何操作**，一个包都不重下；想重装某个坏了的包用 `--force-refresh`。
 
 > ⚠️ 别用 `npx skills update`：上游已改名 / 下架的包会被它**静默跳过、永远留在本机**，项目级安装它也看不见。
 
@@ -45,7 +44,7 @@ compatibility: >-
 | 别人家的 | slug 根本不在索引里 | 不碰 |
 | 已固定 | 你 `--pin` 过 | 不刷新、不归档、不迁移，预检单列并带原因 |
 
-→ origin / lock / pin、索引拉不到时的 legacy 回退：`references/index-and-lock.md`。
+→ origin / lock / pin、legacy 回退、Gitee 镜像：`references/index-and-lock.md`。
 
 ### 删除一律做成「归档」
 
@@ -87,8 +86,8 @@ compatibility: >-
 npx -y skills add zizhanovo/doubaoya-community -g -s '*' -a claude-code universal -y
 ```
 
-🔴 **跑了却零输出（退出码 0）** ≠ 没事可做，是本机旧版脚本经软链（`.claude/skills/…`）调用时一步不跑：
-先换 `.agents` 那条真路径重跑；仍如此就把上面那条安装命令给用户、确认后跑，再重新找路径。
+🔴 **零输出且退出码 0** ≠ 没事可做，是旧版脚本经软链（`.claude/skills/…`）调用时一步不跑：先换 `.agents` 那条真路径重跑；
+仍如此就按上面那条安装命令重装（确认后跑），再重新找路径。
 
 ### 2. 先看清单（🔴 显式给 scope，别靠 auto 猜）
 
@@ -100,12 +99,13 @@ node <上一步找到的路径> --dry-run --scope project --project-dir <项目�
 scope 猜错时脚本会打 ⚠️ 警告，看到就先确认 scope；不确定装在哪就两个 scope 都看一眼。
 两个 scope 都打「一个本鸭 skill 都没有」= 本机没装，回到第 1 步先问用户，别把「整仓装」当对账跑。
 
-它会联网取上游索引，然后打印**要归档哪些、要装哪些、要刷新哪些（逐行 `slug 旧版 → 新版 changelog`；标 `auto` 的是占位文案，不是作者写的）、以及哪些因为你动过手 / 固定而不碰**，
-这一步一个字都不会改。把这份清单**原样转述给用户**——尤其是「要归档」「要刷新」「你改过的」的名字与 changelog（刷新是覆盖安装，确认的得是具体清单）。
+它会联网取上游索引，打印**要归档哪些、要装哪些、要刷新哪些（逐行 `slug 旧版 → 新版 changelog`；标 `auto` 的是占位文案）、以及哪些因你动过手 / 固定而不碰**，一个字都不会改。把这份清单**原样转述给用户**——尤其是「要归档」「要刷新」「你改过的」的名字与 changelog（刷新是覆盖安装，确认的得是具体清单）。
 
 > 🔴 **结论不高于证据。** 上游目录列表拉不到时：**本轮不做任何归档**，刷新 / 新增仍按索引进行，结论改说「按索引对账，
 > **上游目录未能核对，本轮不归档**」（`--json` 里 `namesSource: "index"`、`archiveSuppressed: true`；正常是 `"contents-api"`）。
-> 索引本身拉不到 → 退回旧三文件（`metaSource: "legacy"`），刷新栏没有版本号与 changelog——都照实转述。有 `GITHUB_TOKEN`/`GH_TOKEN` 时请求会带上（不进输出）。
+> 索引本身拉不到 → 退回旧三文件（`metaSource: "legacy"`），刷新栏没有版本号与 changelog——都照实转述。
+> 🪞 GitHub 403 / 断网时自动改用 **Gitee 镜像同一 tag**（`--json` 里 `sources: {meta,names,install}` 各 `github|gitee|override`）；
+> `mirrorMismatch` = 两边 tag 没推齐：退出非 0、不写盘，找维护者。
 
 > 🧹 **旧版遗留副本**（项目根 `agent/skills/`）：执行时只把**我方发的**移进归档目录（可复原），别人的不动，不打删除命令；`--dry-run` 只报告。
 
@@ -126,7 +126,7 @@ doubaoya.com 连不连得通），最后打印一份结果，并告诉用户归�
 > 对账跑完 `git status` 会多出这一行。转述时主动说明它是预期改动、照常提交即可。
 
 > ⚠️ **跑挂在「拉取上游」**（多是 clone 抖动）：脚本已**自动把本轮归档按 manifest 移回原处**，只剩 skills CLI 安装记录没补——
-> **重跑同一条命令即可**，转述后直接重跑。复原也失败时报错附归档路径和复原命令。clone 报 "Remote branch … not found" = tag 没打，找维护者。
+> **重跑同一条命令即可**。复原也失败时报错附归档路径和复原命令。clone 报 "Remote branch … not found" = tag 没打，找维护者。
 
 > 🔁 **本轮名单含 `dby-update` 自己**：本进程跑的仍是旧代码，结尾会提示再跑一次（`--json` 里 `selfUpdated: true`）——照实转述，**再跑一次 `/dby-update`**。
 
@@ -148,7 +148,7 @@ doubaoya.com 连不连得通），最后打印一份结果，并告诉用户归�
 | --- | --- |
 | `--dry-run` | 只看清单，绝不执行 |
 | `--yes` | 跳过确认直接执行（**只在用户已经看过清单之后用**） |
-| `--force-refresh` | 连「已经是当前版**且落位齐全**」的包也重下一遍。默认只刷新落后的和缺落位的；这个旗标留给「我这个包坏了想重装」 |
+| `--force-refresh` | 连「已经是当前版且落位齐全」的包也重下一遍（留给「包坏了想重装」） |
 | `--verbose` | 连「别人家的」和「你改过的」一起列名字 |
 | `--scope auto\|global\|project` | 🔴 **每次都显式给**。默认 `auto` 是按 cwd 猜的，猜错会静默变成「整仓重装」。当初带 `-g` 装的就是 `global` |
 | `--project-dir <目录>` | 项目级安装在别的目录时指定 |
@@ -158,9 +158,8 @@ doubaoya.com 连不连得通），最后打印一份结果，并告诉用户归�
 
 ## 边界
 
-- **只碰本鸭发过的包**，判据是上面那张三态表（内容哈希命中闭集）。
-  **别人家的、以及你自己动过手的，一个字都不动。**
-- 🔴 git 探测跑不通、判不出来的包，同样保守跳过，宁可少归档一个；脚本会把它和「受 git 跟踪」**分两栏**打出来，因为处置不同（自己 `git rm` vs 先修 git）。
+- **只碰本鸭发过的包**（判据是上面那张三态表）；别人家的、你改过的一个字都不动。
+- 🔴 git 探测跑不通、判不出来的包同样保守跳过；脚本把它和「受 git 跟踪」**分两栏**打出来，处置不同。
 - **不动你的本地数据 / 配置**（`dby-publish` 的 `config.json`、创作 DNA、封面 / 草稿等产出）——对账只覆盖 skill 目录里受版本管理的文件。
 - 不创建后台任务、定时任务或 Agent Hook。
 - 用户只问「有什么更新 / 现在什么版本 / 要不要更」→ **先回答，不执行**（`--dry-run` 正好用来回答这个）。

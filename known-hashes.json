@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T01:28:27.810948+00:00",
+  "generatedAt": "2026-08-26T02:06:41.234894+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -217,6 +217,7 @@
       "8b15b3b187e6",
       "912ad0771767",
       "9a2708863bc4",
+      "aec11ba4ae73",
       "b34999536b26",
       "b4198f5ec4a3",
       "bb1c48d2428f",
@@ -3009,6 +3010,12 @@
         "version": "3.3.2",
         "date": "2026-08-25",
         "subject": "fix(dby-update): 不是对账器装的包也补 origin —— 用户手跑 skills add 之后，收敛态那一跑给能对上索引某一版的目录补 .dby/origin.json"
+      },
+      {
+        "hash": "d89ef52b1bf2",
+        "version": "3.3.3",
+        "date": "2026-08-25",
+        "subject": "fix(dby-update): 3.3.3 —— changelog 一句缩到 6000 字上限内，重新盖戳"
       }
     ],
     "dby-write": [
