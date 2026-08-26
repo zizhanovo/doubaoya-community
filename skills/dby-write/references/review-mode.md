@@ -3,7 +3,7 @@
 > 用户说「这篇为什么没人看 / 复盘一下 / 数据怎么样 / 上次那篇效果」时读它。写一篇（模式 A）不需要读。
 
 ```bash
-node scripts/write.mjs review
+node "$W" review     # $W = write.mjs 安装全路径，见 SKILL.md 第 1 步
 ```
 
 它替你做了**算术**那三步：取数 → 按**这个号自己的历史中位数**算两轴基准 → 归四象限。
@@ -63,7 +63,7 @@ node scripts/write.mjs review
 把卡面给用户看，确认后存：
 
 ```bash
-node scripts/write.mjs material save '{"proof":"教程体+无缺口标题，这个号照样高打开","kind":"feedback","event":{"time":"2026-08 复盘","place":"公众号后台","outcome":"打开率居自身历史上四分位"},"evidence":"链接:<文章url>","forms":["可复现步骤"],"label":{"pattern":"教程体·标题无缺口","quadrant":"高打开高互动"},"articleId":"<文章id>"}'
+node "$W" material save '{"proof":"教程体+无缺口标题，这个号照样高打开","kind":"feedback","event":{"time":"2026-08 复盘","place":"公众号后台","outcome":"打开率居自身历史上四分位"},"evidence":"链接:<文章url>","forms":["可复现步骤"],"label":{"pattern":"教程体·标题无缺口","quadrant":"高打开高互动"},"articleId":"<文章id>"}'
 ```
 
 下一轮写作 `prep` 的素材库索引就带着它——第 2/3 步选题定目标时自然在场。三条措辞纪律：

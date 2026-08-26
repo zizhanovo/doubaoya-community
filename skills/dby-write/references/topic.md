@@ -7,7 +7,7 @@
 用户没说时才取候选：
 
 ```bash
-node scripts/write.mjs topics [赛道]      # 不传赛道则用档案里的
+node "$W" topics [赛道]      # 不传赛道则用档案里的；$W = write.mjs 安装全路径，见 SKILL.md 第 1 步
 ```
 
 候选用号章程筛：够不够热、人设的真实视角接不接得住；**接不住的再热也放掉**。

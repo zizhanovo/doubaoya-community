@@ -19,17 +19,22 @@
 
 ## 交棒给 dby-publish 的两条命令行（SKILL.md 交棒节）
 
-**② 只要排版好的 HTML**（渲染免费，**不需要绑公众号**）：
+终态门以 `dby-api/references/wechat-routing.json` 为准。
+② ③ 都先把成稿落盘 `.md`（正文，不含标题）再交棒。
+
+**② 只要排版好的 HTML**（`--render-only`：渲染免费，**不需要绑公众号**）：
 ```bash
-node scripts/pipeline.mjs --md 稿子.md --title "标题" --render-only
+node <dby-publish>/scripts/pipeline.mjs --md 稿子.md --title "标题" --render-only
 ```
 
-**③ 存进公众号草稿箱**（**这一步才需要已绑号**）：
+**③ 存进公众号草稿箱**（完整流水线，**这一步才需要已绑号**）：
 ```bash
-node scripts/pipeline.mjs --md 稿子.md --title "标题" --digest "<摘要>"
+node <dby-publish>/scripts/pipeline.mjs --md 稿子.md --title "标题" --digest "<摘要>"
 ```
 
 ⚠️ 第 8 步的留言流水线没有地方放，随成稿交给用户手动贴。
+
+交棒后的回执四行：**查阅 / 执行 / 质检 / 跳过**——没走的步写进「跳过」并说明原因。
 
 
 ## 违禁词自检的命令行（第 9 步自检第 1 项）

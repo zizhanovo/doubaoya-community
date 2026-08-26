@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T06:12:26.326389+00:00",
+  "generatedAt": "2026-08-26T06:12:45.470969+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1992,6 +1992,12 @@
           "subject": "fix(dby-update): 发布后头几分钟 GitHub raw 缓存滞后于 Gitee，不再误判镜像不齐"
         },
         {
+          "hash": "080aed4c835c",
+          "version": "3.4.5",
+          "date": "2026-08-25",
+          "subject": "docs(dby-update): raw 缓存滞后那次只改了 version 和 changelog，文档层把刚修好的误报原样放了回去"
+        },
+        {
           "hash": "269a56ceb3b9",
           "version": "3.4.4",
           "date": "2026-08-25",
@@ -2053,6 +2059,7 @@
       "knownHashes": [
         "274536af5420",
         "376c6d363adc",
+        "37ae6db8310f",
         "38713c695a93",
         "388503b769d1",
         "3cf369dcb74d",

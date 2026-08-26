@@ -43,9 +43,10 @@ node <dby-api>/scripts/doubaoya.mjs invoke tool.content.parseDetail '{"url":"<�
 ## 3. 自己的往期文章（免费）
 
 ```bash
-node scripts/write.mjs articles                 # 最近 20 篇：序号 标题 日期 链接
-node scripts/write.mjs articles --q 关键词       # 标题或正文命中的
-node scripts/write.mjs articles --id 3           # 第 3 篇正文（去标签纯文本）
+# $W = write.mjs 的安装全路径，见 SKILL.md 第 1 步
+node "$W" articles                 # 最近 20 篇：序号 标题 日期 链接
+node "$W" articles --q 关键词       # 标题或正文命中的
+node "$W" articles --id 3           # 第 3 篇正文（去标签纯文本）
 ```
 
 走 `GET /api/ip-profile/wechat-history`（授权公众号最近 20 篇，免费）。
@@ -58,8 +59,8 @@ node scripts/write.mjs articles --id 3           # 第 3 篇正文（去标签�
 全文按需取：
 
 ```bash
-node scripts/write.mjs material list          # 索引：proof + 适用形态 + id
-node scripts/write.mjs material get <id>      # 单卡全文（时间/地点/后果/出处）
+node "$W" material list          # 索引：proof + 适用形态 + id
+node "$W" material get <id>      # 单卡全文（时间/地点/后果/出处）
 ```
 
 🔴 **卡是存卡那一刻的快照** —— 用之前把卡面念给用户核实「这卡还作数吗」，
@@ -71,7 +72,7 @@ node scripts/write.mjs material get <id>      # 单卡全文（时间/地点/后
 交付后用户口述了新经历、或用户主动说「记住这件事」时，先蒸馏再展示卡面，确认后：
 
 ```bash
-node scripts/write.mjs material save '{"proof":"…","event":{"time":"…","place":"…","outcome":"…"},"evidence":"亲历","forms":["带转折的真实经历"]}'
+node "$W" material save '{"proof":"…","event":{"time":"…","place":"…","outcome":"…"},"evidence":"亲历","forms":["带转折的真实经历"]}'
 ```
 
 蒸馏三问（缺一样就不入库，如实告诉用户缺哪样）：
@@ -98,7 +99,6 @@ node scripts/write.mjs material save '{"proof":"…","event":{"time":"…","plac
 判定：宿主的 skill 列表里有 `ima-skills`，**或** `IMA_OPENAPI_APIKEY` 与 `IMA_OPENAPI_CLIENTID` 都非空且 `~/.claude/skills/ima-skills/SKILL.md` 存在 → 加载它，按它的 `knowledge-base` 子模块做「搜索知识库」；两者都没有 → 跳过，不问用户要不要装。
 检索到的条目出处写「ima 知识库「库名」/ 条目标题」。
 🔴 本包不写 ima 的 HTTP 调用方式——接口形状由那个 skill 维护；它在就用它，不在就没有这一层。
-调研留存：`docs/research/dby-write/ima-official-skill.md`、`ima-mcp-csdn.md`。
 
 ### 5b. 本地 wiki / 笔记目录（Obsidian、llm-wiki 之类 md 目录）
 
@@ -153,6 +153,17 @@ rg -il "<关键词>" "$DBY_WIKI_DIR" --glob '*.md'    # 命中的文件，再 Re
 
 
 ## 红线一的两类实证：编造具体值 / 不可核对的通用场景
+
+🔴 **场景最容易漏**：它不含数字也不含品牌名，看着没什么可核对的就被跳过。判据一视同仁 ——
+这段场景里**有没有任何一个**能指出来源的东西（时间 / 数字 / 引语 / 可查证的对象）？
+一个都没有 ⇒ 违反红线一，改占位或回第 4 步走锚点阶梯。
+⚠️ **不误伤**：细节都能指回素材单的场景，不因「读起来像模板」被拦 —— 判的是能不能核对。
+
+占位就长这样，别美化它：
+
+```
+【待补：本鸭的品牌主色 —— 档案里没有这个字段，请你给一个真值】
+```
 
 > 「报告写到一半，要分析一份表格……刚准备继续，发现内置积分不够了」
 
