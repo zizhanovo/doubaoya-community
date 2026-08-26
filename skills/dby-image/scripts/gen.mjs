@@ -30,6 +30,7 @@
 import { writeFile, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import process from "node:process";
 
 const BASE = process.env.DOUBAOYA_BASE_URL || "https://doubaoya.com";
@@ -185,7 +186,25 @@ async function main() {
   const buf = Buffer.from(img.b64, "base64");
   const ext = { "image/jpeg": "jpg", "image/png": "png" }[img.mime] || "png";
   const file = out || `doubaoya-image.${ext}`;
-  await writeFile(file, buf);
+
+  // 🔴 落盘失败也不能让 buf 随进程蒸发：此时费已经扣了（上面 j.success 已确认），
+  //    图像数据只在内存里，SKILL.md 的红线又不许重试——用户会停在这一步什么都拿不到。
+  //    先兜底写到 tmpdir，再报错，让用户至少能去捡。
+  try {
+    await writeFile(file, buf);
+  } catch (e) {
+    const fallback = path.join(os.tmpdir(), `doubaoya-image-${Date.now()}.${ext}`);
+    try {
+      await writeFile(fallback, buf);
+      die(`落盘失败：${file} —— ${e.message}\n` +
+          `🔴 这次已经扣费，图已经生成，别重试。已兜底写到：${fallback}\n` +
+          `去把它捡回来（或换个能写的路径用 --out 重新指定）。`);
+    } catch (e2) {
+      die(`落盘失败：${file} —— ${e.message}\n` +
+          `兜底写入 ${fallback} 也失败：${e2.message}\n` +
+          `🔴 这次已扣费但图没能保住，图像数据已随进程退出丢失，没有文件可捡。如实告诉用户。`);
+    }
+  }
 
   const { w, h } = measure(buf);
   const ratio = w && h ? (w / h).toFixed(3) : "?";
