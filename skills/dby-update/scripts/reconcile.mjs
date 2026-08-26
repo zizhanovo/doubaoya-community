@@ -824,7 +824,26 @@ async function fetchGiteeIndex(up, githubRef = null) {
   if (up.giteeIndex) return up.giteeIndex; // 同一跑里只取一次
   const main = await fetchJson(GITEE.file("index.json").url, "从 Gitee 镜像拉取上游索引", GITEE.file("index.json"));
   const ref = typeof main?.ref === "string" && main.ref.trim() ? main.ref.trim() : null;
-  if (githubRef !== null && ref !== githubRef) throw new MirrorMismatch(githubRef, ref);
+  if (githubRef !== null && ref !== githubRef) {
+    // 🔴 先分辨「真没推齐」和「GitHub main 的 raw 缓存还没刷新」（实证 2026-08-26：发布后一分钟内
+    //    raw 仍吐上一版索引，而 Gitee 已是新版，硬判 mismatch 会把每次发布后的头几分钟都拦死）。
+    //    ref 是 release-YYYYMMDD-HHMM，字符串序即时间序：镜像更新、且那个 tag 在 GitHub 上已存在
+    //    （按 tag 取 raw 不走 main 的缓存）⇒ 只是滞后：本轮按 GitHub main 说的旧 ref 对账（那也是真发过的版），
+    //    镜像目录不用，几分钟后重跑自然到新版。其余情形才是 mismatch。
+    if (ref && ref > githubRef) {
+      let atGithubTag = null;
+      try {
+        atGithubTag = await fetchJson(`https://raw.githubusercontent.com/${REPO}/${encodeURIComponent(ref)}/index.json`, `复核 GitHub 上 tag ${ref} 的索引`);
+      } catch {
+        /* 取不到就按 mismatch 走 */
+      }
+      if (atGithubTag && typeof atGithubTag.ref === "string" && atGithubTag.ref.trim() === ref) {
+        up.notes.push(`GitHub main 的索引缓存滞后（仍是 ${githubRef}，tag ${ref} 已在 GitHub 上）：本轮按 ${githubRef} 对账、镜像目录不用，几分钟后重跑即到 ${ref}。`);
+        throw new Friendly(`GitHub main 的索引缓存滞后于镜像（${githubRef} < ${ref}）`, "几分钟后重跑。");
+      }
+    }
+    throw new MirrorMismatch(githubRef, ref);
+  }
   if (githubRef === null && ref) {
     const atTag = await fetchJson(GITEE.file("index.json", ref).url, `从 Gitee 镜像复核 ${ref} 的索引`, GITEE.file("index.json", ref));
     const tagRef = typeof atTag?.ref === "string" ? atTag.ref.trim() : null;
@@ -3510,6 +3529,35 @@ async function mirrorFallbackCheck() {
     if (!names.notes.some((n) => n.includes("改用 Gitee 镜像"))) fails.push(`镜像回退 · 目录回退没在提示里标「改用 Gitee 镜像」：${JSON.stringify(names.notes)}`);
     if (!calls.includes(GITEE_INDEX_MAIN)) fails.push("镜像回退 · 用镜像目录前没核镜像索引 ref");
     if (calls.includes(GITEE_INDEX_TAG)) fails.push("镜像回退 · GitHub 索引已在场时不该再去复核镜像 tag（多一次请求）");
+
+    // ②b 目录 403 + 镜像比 GitHub main 新、且那个 tag 在 GitHub 上已存在 ⇒ 只是 raw 缓存滞后：不 mismatch，按旧 ref 对账，归档压制
+    calls = [];
+    const NEWER = "release-20260825-0100";
+    const GH_AT_TAG = `https://raw.githubusercontent.com/${REPO}/${NEWER}/index.json`;
+    globalThis.fetch = serve({ ...ghOk, [CONTENTS_API]: { status: 403 }, [GITEE_INDEX_MAIN]: { body: b64(index(NEWER)) }, [GH_AT_TAG]: { body: index(NEWER) }, [GITEE_DIR]: giteeOk[GITEE_DIR] }, calls);
+    let lag;
+    try {
+      lag = await fetchUpstream();
+    } catch (err) {
+      fails.push(`🔴 镜像回退 · raw 缓存滞后被当成 mismatch 拦死了：${err.message}`);
+    }
+    if (lag) {
+      eq("缓存滞后 ⇒ 仍按 GitHub main 的旧 ref 对账", lag.ref, REF);
+      eq("缓存滞后 ⇒ 镜像目录不用，归档压制", lag.archiveSuppressed, true);
+      eq("缓存滞后 ⇒ sources.names 不是 gitee", lag.sources.names === "gitee", false);
+      if (!lag.notes.some((n) => n.includes("缓存滞后"))) fails.push(`镜像回退 · 滞后没在提示里说明：${JSON.stringify(lag.notes)}`);
+      if (!calls.includes(GH_AT_TAG)) fails.push("镜像回退 · 判滞后前没去 GitHub 按 tag 复核");
+    }
+    // ②c 镜像比 GitHub 新、但那个 tag 在 GitHub 上不存在 ⇒ 真 mismatch
+    calls = [];
+    globalThis.fetch = serve({ ...ghOk, [CONTENTS_API]: { status: 403 }, [GITEE_INDEX_MAIN]: { body: b64(index(NEWER)) }, [GITEE_DIR]: giteeOk[GITEE_DIR] }, calls);
+    let realMismatch = null;
+    try {
+      await fetchUpstream();
+    } catch (err) {
+      realMismatch = err;
+    }
+    if (!realMismatch?.mirrorMismatch) fails.push("🔴 镜像回退 · 镜像领先且 GitHub 无该 tag 时应判 mismatch");
 
     // ③ 索引在 GitHub 网络错 ⇒ 先 main 再按 ref 复核，仅镜像
     calls = [];

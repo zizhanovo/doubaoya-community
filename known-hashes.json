@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T02:06:41.234894+00:00",
+  "generatedAt": "2026-08-26T02:09:37.486625+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -200,6 +200,7 @@
       "ebb4a6128d51"
     ],
     "dby-update": [
+      "002803c47757",
       "04182fab354c",
       "069172b7e331",
       "0f57ebd82f3b",
@@ -3004,6 +3005,12 @@
         "version": "3.3.1",
         "date": "2026-08-25",
         "subject": "feat(dby-update): 对账器读索引 —— 刷新栏显示 旧版→新版 + changelog，归档只按显式状态，目录拉不到本轮不归档，origin/lock/pin"
+      },
+      {
+        "hash": "aec11ba4ae73",
+        "version": "3.4.0",
+        "date": "2026-08-25",
+        "subject": "feat(dby-update): GitHub 限流时回退 Gitee 镜像 —— 索引/目录列表/clone 三处各自独立回退，同 ref 才算数"
       },
       {
         "hash": "b4198f5ec4a3",

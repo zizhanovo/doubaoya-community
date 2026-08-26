@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T02:06:41.234894+00:00",
-  "ref": "release-20260826-0206",
+  "generatedAt": "2026-08-26T02:09:37.486625+00:00",
+  "ref": "release-20260826-0209",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -1638,6 +1638,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "002803c47757",
         "04182fab354c",
         "069172b7e331",
         "0f57ebd82f3b",
@@ -1666,6 +1667,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "3.4.1",
+          "hash": "002803c47757",
+          "ref": "release-20260826-0209",
+          "releasedAt": "2026-08-26T02:09:22.286537+00:00",
+          "changelog": "raw 缓存滞后不误判镜像不齐",
+          "changelogSource": "user"
+        },
         {
           "version": "3.4.0",
           "hash": "aec11ba4ae73",
@@ -1845,6 +1854,12 @@
           "version": "3.3.1",
           "date": "2026-08-25",
           "subject": "feat(dby-update): 对账器读索引 —— 刷新栏显示 旧版→新版 + changelog，归档只按显式状态，目录拉不到本轮不归档，origin/lock/pin"
+        },
+        {
+          "hash": "aec11ba4ae73",
+          "version": "3.4.0",
+          "date": "2026-08-25",
+          "subject": "feat(dby-update): GitHub 限流时回退 Gitee 镜像 —— 索引/目录列表/clone 三处各自独立回退，同 ref 才算数"
         },
         {
           "hash": "b4198f5ec4a3",

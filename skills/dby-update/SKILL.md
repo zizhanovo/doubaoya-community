@@ -5,8 +5,8 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和你自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 3.4.0
-changelog: GitHub 限流时回退 Gitee 镜像
+version: 3.4.1
+changelog: raw 缓存滞后不误判镜像不齐
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
