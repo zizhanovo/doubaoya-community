@@ -899,7 +899,7 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
   // 🔴 索引优先，旧三文件兜底。两条路统一成同一个内部结构，后面的代码不再关心元信息从哪来：
   //    currentHashes / knownHashes / renames 与旧文件语义逐字段一致，status / versions 只有索引那条路有。
   const meta = (await fetchIndex(up)) || (await fetchLegacy(up));
-  const { currentHashes, knownHashes, renames, status, versions, metaSource } = meta;
+  const { currentHashes, knownHashes, renames, status, versions, metaSource, displayName = {} } = meta;
   if (up.sources.meta === "gitee") notes.push(`仅镜像：GitHub 这一跑没取到上游元信息，本轮以 Gitee 镜像为准${meta.ref ? `（已复核镜像 main 与 tag ${meta.ref} 一致）` : ""}。`);
 
   // 安装源固定：缺字段按老版本表兼容处理（fail-open 到默认分支），但必须说出来。
@@ -960,7 +960,7 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
     if (unstamped.length) notes.push(`上游有 ${unstamped.length} 个包还没盖版本戳（${unstamped.join(", ")}），它们只会被装上、不参与新旧判定。`);
   }
   if (!names.length) throw new Friendly("上游清单是空的，这不正常，先不动你本机的任何东西。");
-  return { names, namesSource, archiveSuppressed, metaSource, ref, currentHashes, knownHashes, renames, status, versions, notes, sources: up.sources };
+  return { names, namesSource, archiveSuppressed, metaSource, ref, currentHashes, knownHashes, renames, status, versions, displayName, notes, sources: up.sources };
 }
 
 /**
@@ -992,8 +992,10 @@ async function fetchIndex(up) {
   const renames = {};
   const status = {};
   const versions = {};
+  const displayName = {};
   for (const [slug, entry] of Object.entries(index.skills)) {
     if (!entry || typeof entry !== "object") continue;
+    if (typeof entry.displayName === "string" && entry.displayName && entry.displayName !== slug) displayName[slug] = entry.displayName;
     status[slug] = typeof entry.status === "string" ? entry.status : "active";
     knownHashes[slug] = Array.isArray(entry.knownHashes) ? entry.knownHashes.map(String) : [];
     versions[slug] = Array.isArray(entry.versions) ? entry.versions.filter((v) => v && typeof v.hash === "string") : [];
@@ -1006,7 +1008,7 @@ async function fetchIndex(up) {
     }
   }
   const ref = typeof index.ref === "string" && index.ref.trim() ? index.ref.trim() : null;
-  return { currentHashes, knownHashes, renames, status, versions, ref, metaSource: "index" };
+  return { currentHashes, knownHashes, renames, status, versions, displayName, ref, metaSource: "index" };
 }
 
 /** 过渡期兜底：`versions.json` + `known-hashes.json` + `renames.json`，语义与索引出现之前完全一样。 */
@@ -1043,7 +1045,7 @@ export function convergedConclusion(namesSource, sources = null) {
 /** 刷新一行的打印：`↻ slug 旧 → 新  changelog`，隔了多版时把中间每一版缩进列在下面（最多 8 版，再多折叠）。 */
 function printRefreshLine(d, pad = "        ") {
   const autoTag = (src) => (src === "auto" ? "［auto：作者未写，占位文案］" : "");
-  console.log(`${pad}↻ ${d.slug}  ${d.from} → ${d.to}  ${d.changelog}${autoTag(d.changelogSource)}`);
+  console.log(`${pad}↻ ${d.slug}${d.displayName ? `（${d.displayName}）` : ""}  ${d.from} → ${d.to}  ${d.changelog}${autoTag(d.changelogSource)}`);
   const between = d.between || [];
   for (const v of between.slice(0, 8)) console.log(`${pad}     · ${v.version}  ${v.changelog}${autoTag(v.changelogSource)}`);
   if (between.length > 8) console.log(`${pad}     · …还有 ${between.length - 8} 版（--json 里全有）`);
@@ -1060,8 +1062,10 @@ export function describeRefresh(names, survey, upstream) {
     let at = entry?.hash ? list.findIndex((v) => v.hash === entry.hash) : -1;
     if (at < 0 && entry?.origin?.version) at = list.findIndex((v) => v.version === entry.origin.version);
     const between = at > 1 ? list.slice(1, at).map((v) => ({ version: v.version, changelog: v.changelog || "（无变更说明）", changelogSource: v.changelogSource || null })) : [];
+    const dn = upstream.displayName?.[slug];
     return {
       slug,
+      ...(dn ? { displayName: dn } : {}),
       from,
       to: cur?.version || "?",
       changelog: cur?.changelog || "（无变更说明）",
@@ -1960,7 +1964,7 @@ async function main() {
     // 🔴 做了什么要逐项点名（用户实证：跑完只看到「刷新 1」，不知道刷的是谁、从几到几）。
     //    刷新/新增按「slug 旧 → 新  changelog」列，与预检同一格式；收敛态列一行各包版本，回答「现在都是几」。
     for (const n of r.plan.archive) console.log(`        📦 ${n}  已归档`);
-    for (const d of describeRefresh(r.plan.add, [], upstream)) console.log(`        + ${d.slug}  ${d.to}  ${d.changelog}`);
+    for (const d of describeRefresh(r.plan.add, [], upstream)) console.log(`        + ${d.slug}${d.displayName ? `（${d.displayName}）` : ""}  ${d.to}  ${d.changelog}`);
     for (const d of describeRefresh(r.plan.refresh, r.survey || [], upstream)) printRefreshLine(d);
     const current = r.after.filter((s) => s.state === "current").map((s) => `${s.name} ${versionOfHash(upstream, s.name, s.hash) ?? "?"}`);
     if (current.length) console.log(`   版本：${current.join(" · ")}`);
