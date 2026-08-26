@@ -23,6 +23,7 @@ dby-rewrite/scripts/rewrite.py
   python rewrite.py <平台1,平台2,...> [文案]      # 解析多平台并逐一输出规则 prompt
   python rewrite.py 抖音 小红书 知乎 [文案]       # 多平台（空格分隔）
   python rewrite.py all [文案]                    # 全平台
+  python rewrite.py --selfcheck                   # 离线自检，纯本地不需要 key
 """
 
 import sys
@@ -206,6 +207,49 @@ def print_help() -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 自检
+# ─────────────────────────────────────────────────────────────────────────────
+
+def selfcheck() -> None:
+    """离线自检：平台表↔规则文件一一对应、all 不带文案可跑、未识别平台报支持列表。"""
+    import contextlib
+    import io
+
+    # ① 平台表与 references/ 一一对应（两个方向），别名表全部落在平台表内
+    on_disk = {f[:-3] for f in os.listdir(RULES_DIR) if f.endswith('.md')}
+    assert on_disk == set(PLATFORM_FILE.values()), \
+        f"平台表与 references/ 漂了：多 {on_disk - set(PLATFORM_FILE.values())}，缺 {set(PLATFORM_FILE.values()) - on_disk}"
+    assert set(PLATFORM_FILE) == set(SUPPORTED_PLATFORMS), "PLATFORM_FILE 键与平台表漂了"
+    assert set(PLATFORM_ALIAS.values()) == set(SUPPORTED_PLATFORMS), "别名表指到了平台表之外"
+    for p in SUPPORTED_PLATFORMS:
+        rules = extract_platform_rules(p)
+        assert rules and '# Role:' in rules, f"{p} 的规则取不到或缺 Role 段"
+
+    # ② `all` / `全部` / `所有` 不带文案也能跑（曾与帮助文本矛盾，修过）
+    for kw in sorted(ALL_KEYWORDS):
+        assert resolve_platforms([kw]) == SUPPORTED_PLATFORMS, f"全平台关键词 {kw} 解析漂了"
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        cmd_batch_prompt(['all'], '')
+    assert f'共 {len(SUPPORTED_PLATFORMS)} 个' in out.getvalue(), "all 不带文案没有跑全七个平台"
+
+    # ③ 未识别平台：exit 1 且 stderr 列出支持的平台
+    err = io.StringIO()
+    code = None
+    with contextlib.redirect_stderr(err):
+        try:
+            cmd_platform_prompt('微博')
+        except SystemExit as e:
+            code = e.code
+    assert code == 1, f"未识别平台应 exit 1，实际 {code}"
+    assert '支持的平台' in err.getvalue(), "未识别平台没有列出支持的平台"
+
+    # 破坏演练：证明断言不是恒真
+    assert resolve_platforms(['微博']) == [], "破坏演练失效：未识别平台不该解析出结果"
+    print('selfcheck ok: 平台表↔规则文件一一对应 / 别名表闭合 / all 不带文案可跑 / 未识别平台报支持列表')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # 入口
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -215,6 +259,10 @@ def main() -> None:
     if not args or args[0] in ('-h', '--help'):
         print_help()
         sys.exit(0)
+
+    if args[0] == '--selfcheck':
+        selfcheck()
+        return
 
     first = args[0].lower()
 
