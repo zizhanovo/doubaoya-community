@@ -1091,6 +1091,51 @@ def validate_no_key_prefix_instruction(root: Path = ROOT) -> None:
             offset += block.count("\n") + 2
 
 
+# ── 「教 agent 把密钥粘进对话」闸 ────────────────────────────────────────────
+# 🔴 **不许有任何一句话教用户把密钥整条打进跟 agent 的对话。** key 一旦进了用户消息，
+# 就进了会话记录、模型侧日志、之后的 shell history——回显与否与此无关。
+#
+# 这道闸补的是另一个渠道盲区：`validate_no_key_material` 扫「仓库里有没有密钥字面量」，
+# `validate_no_key_prefix_instruction` 扫「有没有教 agent 把前缀说出来」，
+# 两道都扫不到「教用户把占位符 key 喂进对话框」这句话本身——占位符不是密钥字面量，
+# 这句指令也没提「前缀」二字。真实事故：`dby-api/README.md` 曾写「直接喂它一句话：
+# 我的 DOUBAOYA_API_KEY 是 `dyh_你的密钥`」，还安抚一句「它不会把整条 key 回显出来」
+# ——回显与否根本不是重点，key 进消息那一刻就已经进日志了。
+#
+# 判据两条**同时**成立才算，且要求**近距**（同一行左右 20 字内），不是同段就算——
+# 「告诉我」这类动词在文档里另有大量无关用法（引导话术、marketing 文案示例），
+# 只有紧挨着密钥字样出现才是真事故：
+#   1. 「我的 KEY 是」这类直接粘贴指令（本身已自含密钥字样）；
+#   2. 「告诉我 / 喂它 / 喂给 agent / 发给你 / 直接说」这类动词，前后 20 字内出现密钥字样。
+# 唯一正确的姿势是先 `export DOUBAOYA_API_KEY=...` 进环境变量，再对 agent 说业务话术。
+#
+# ponytail: 天花板 = 换个说法绕开这批动词（「把那串字符发我」），或密钥字样与动词隔得比
+# 20 字更远。升级路径同上一道闸，是语义检查，不是继续堆同义词 / 加宽窗口。
+_KEY_WORD = r"(?:DOUBAOYA_API_KEY|API\s*[Kk]ey|密钥|钥匙)"
+_PASTE_VERB = r"(?:告诉我|喂它|喂给\s*agent|发给你|直接说)"
+KEY_PASTE_INSTRUCT = re.compile(
+    rf"我的\s*{_KEY_WORD}\s*(?:是|就是)"
+    rf"|{_PASTE_VERB}[^\n]{{0,20}}{_KEY_WORD}"
+    rf"|{_KEY_WORD}[^\n]{{0,20}}{_PASTE_VERB}",
+    re.IGNORECASE,
+)
+
+
+def validate_no_key_paste_instruction(root: Path = ROOT) -> None:
+    """🔴 不许有任何一句话教用户把密钥整条粘进对话。判据与盲区见上面那段注释。"""
+    for relative, text in scanned_text_files(root):
+        if relative.parts[:1] != ("skills",):
+            continue
+        match = KEY_PASTE_INSTRUCT.search(text)
+        require(
+            match is None,
+            f"教用户把密钥粘进对话：{relative.as_posix()} 里的 "
+            f"`{match.group(0) if match else ''}`——key 一旦进用户消息就进了会话记录、"
+            "模型侧日志、之后的 shell history，回显与否与此无关。唯一正确的姿势是先 "
+            "`export DOUBAOYA_API_KEY=...` 进环境变量，再对 agent 说业务话术。",
+        )
+
+
 # ── 价格字面量闸 ────────────────────────────────────────────────────────────
 # 🔴 **分发物里不许写死价格 / 点数。** 价格和入参一样是**会漂的服务端事实**，抄进 skill 包
 # 当天就开始腐烂。而且它比字段名更危险：字段名写错了有 `VALIDATION_ERROR` 兜底，用户当场看得见；
@@ -1951,6 +1996,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_retired_discoverability(root)
     validate_no_key_material(root)
     validate_no_key_prefix_instruction(root)
+    validate_no_key_paste_instruction(root)
     validate_untrusted_upstream_rule(root)
     validate_runtime_declaration(root)
     validate_entry_guards_resolve_symlinks(root)
