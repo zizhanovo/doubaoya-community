@@ -97,7 +97,7 @@
 | 场景 | 同步端点 | 要给什么 |
 |---|---|---|
 | 诊断前刷新这个号的发文数据 | `POST /api/apis/gongzhonghao/gzh-sync-notes/call` | 账号名 |
-| 这个号还没收录，想让它进库 | `POST /api/apis/gongzhonghao/gzh-sync-account/call` | 账号名 **加微信号**（`gh_` 开头那个），少一个不行 |
+| 这个号还没收录，想让它进库 | `POST /api/apis/gongzhonghao/gzh-sync-account/call` ⛔ 实拉时 `mode=unavailable`，别调；先 `GET /api/apis/gongzhonghao/gzh-sync-account` 确认恢复了再用 | 账号名 **加微信号**（`gh_` 开头那个），少一个不行 |
 
 （**字段名照例现拉**：上面两列说的是「要给哪些信息」，不是入参规格——具体叫什么、放在哪，
 以这一刻详情端点返回的那份为准。）

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T06:11:40.437738+00:00",
+  "generatedAt": "2026-08-26T06:11:49.786287+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1066,6 +1066,7 @@
         "18b04d9d8613",
         "1d294368f7d7",
         "64220c7bed79",
+        "7e9c0e95aa56",
         "7e9d8e2c7fa6",
         "9818d9fd10e5",
         "b798cca6be87",
@@ -1292,6 +1293,12 @@
           "version": "1.1.1",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "5f652a0700eb",
+          "version": "1.3.0",
+          "date": "2026-08-25",
+          "subject": "fix(dby-image): 落盘失败会把已付费的图静默丢掉 —— 兜底写进 tmpdir，让用户至少能去捡"
         },
         {
           "hash": "63c13c5ffbeb",
