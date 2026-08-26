@@ -5,8 +5,8 @@ description: >-
   用户提了公众号的活儿但没点名具体 skill、或说「该用哪个」「本鸭能干什么」「不知道从哪开始」时，先用本 skill 路由，别自己猜一个 dby-* 直接跑。
   触发方式：/dby、/dby 新手入门、本鸭、都爆鸭、「帮我看看下一步」「接下来做什么」「先干哪个」「公众号从哪开始」。
   Trigger: /dby, what's next, where do I start, which dby skill.
-version: 1.3.1
-changelog: 新增变更说明字段
+version: 1.3.2
+changelog: 补触发用例基线（evals/triggers.jsonl），正文未动
 ---
 
 # dby：都爆鸭公众号工具箱

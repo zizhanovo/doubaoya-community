@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T06:13:05.756970+00:00",
+  "generatedAt": "2026-08-26T06:13:19.582467+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -509,6 +509,7 @@
         "7ec123c4ccf5",
         "8a3dde169bfd",
         "9c4f8edfa780",
+        "9f20f18cca31",
         "a4d72b56310c",
         "b2ccb38b1d96",
         "c820f9aa0c6d",
@@ -1631,6 +1632,12 @@
           "version": "1.1.1",
           "date": "2026-08-25",
           "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+        },
+        {
+          "hash": "61ba5adaec10",
+          "version": "1.2.0",
+          "date": "2026-08-25",
+          "subject": "feat(dby-rewrite): 补交付前自检与 Recovery —— 把「标题 ≤20 字」标成硬上限却没有一步去数字数"
         }
       ]
     },
