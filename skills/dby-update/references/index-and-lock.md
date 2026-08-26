@@ -15,6 +15,8 @@
   预检刷新栏每行 `slug  旧semver → 新semver  changelog`；`changelogSource: auto` 的是盖戳工具替没写说明的作者生成的占位文案，
   打印时标 `［auto：作者未写，占位文案］`，转述时说清这不是作者写的。
   旧 semver 取本机 `<skill>/.dby/origin.json`；没 origin 就拿目录哈希在 `versions[]` 里找；找不到显示 `?`。
+  隔了不止一版时，刷新行下面缩进列出中间每一版（新→旧，最多打 8 版，超过折叠成「…还有 N 版（--json 里全有）」）；
+  `--json` 每条刷新记录另带一个 `between[]` 字段，不受打印折叠限制，全量列出中间每一版的 `{version, changelog, changelogSource}`。
 - 顶层 `ref`：安装源固定到的 release tag（`references/release-ref.md`）。
 
 **索引拉不到（404 / 断网）**：退回 `versions.json` + `known-hashes.json` + `renames.json` 三份旧文件，
@@ -44,6 +46,10 @@
   先核镜像 `main` 索引的 `ref` 与 GitHub 相同。clone 只在有 `ref` 时回退（无 ref 两边默认分支无法保证同一内容，宁可失败）。
 - 🔴 **主备 `ref` 不一致 = 镜像落后或超前**：fail-closed，在拉取阶段就退出非 0，不写盘、不打清单，`--json` 只含
   `{mirrorMismatch: {github, gitee}, executed: false}`；提示「联系维护者」——这是发布时 tag 没两边都推，不是用户的问题。
+- 🕐 **例外：镜像比 GitHub main 新、但那个新 tag 在 GitHub 上其实已经存在**——不是没推齐，是发布后头几分钟
+  GitHub raw 的 `main` 索引缓存还没刷新（按 tag 直取不受影响，用它复核就能分辨）。这种情况**不判 mismatch**：
+  正常跑完，本轮按 GitHub 说的旧 `ref` 对账、镜像目录不用（`archiveSuppressed: true`），`notes[]` 里有一条
+  「缓存滞后」的说明——转述给用户时说「刚发布，几分钟后重跑就到新版」，不是「联系维护者」。
 - `DBY_RAW_BASE` 覆盖态是验证用的单源，不回退，`sources` 三项都是 `override`。
 - Gitee 取文件只走 API v5（匿名 `/raw/` 路径 404）；镜像匿名 API 也有限流，所以只在主源失败时才碰，每轮最多 2 次请求。
 

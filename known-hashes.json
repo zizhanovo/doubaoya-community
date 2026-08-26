@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T06:12:07.787376+00:00",
+  "generatedAt": "2026-08-26T06:12:26.326389+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -209,6 +209,7 @@
       "002803c47757",
       "04182fab354c",
       "069172b7e331",
+      "080aed4c835c",
       "0f57ebd82f3b",
       "269a56ceb3b9",
       "2a8c66b15aa2",
@@ -2904,6 +2905,12 @@
         "version": "1.3.1",
         "date": "2026-08-25",
         "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+      },
+      {
+        "hash": "a7722b9c56db",
+        "version": "1.4.0",
+        "date": "2026-08-25",
+        "subject": "fix(dby-theme): 改主题会就地覆写用户线上默认排版且没有备份 —— 加红线 4「不备份不改」与回滚命令"
       }
     ],
     "dby-update": [
