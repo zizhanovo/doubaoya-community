@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:01:20.954606+00:00",
+  "generatedAt": "2026-08-26T08:01:22.457625+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1605,6 +1605,12 @@
           "version": "2.5.0",
           "date": "2026-08-25",
           "subject": "fix(dby-publish): 发布失败不再谎报「已存入草稿箱」，并补上失败后怎么办 —— 抓不到 mediaId 就报「结果待确认」+ 非零退出"
+        },
+        {
+          "hash": "082d8a4b68b1",
+          "version": "2.5.1",
+          "date": "2026-08-26",
+          "subject": "fix(dby-publish): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
         }
       ]
     },
@@ -1715,6 +1721,7 @@
         "af370a32f818",
         "b1b4f5ebb9e6",
         "c5cfbb362507",
+        "d9b79a294633",
         "ebb4a6128d51"
       ],
       "versions": [
