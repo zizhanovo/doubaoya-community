@@ -1,0 +1,6719 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-26T01:03:13.417676+00:00",
+  "ref": "release-20260826-0103",
+  "owner": "doubaoya",
+  "_legacyReadme": {
+    "renames": [
+      "这是 dby-update 对账器（skills/dby-update/scripts/reconcile.mjs）读的改名表：上游把某个 slug 改名（或合并进另一个 slug）之后，靠这张表告诉本机用户机器上的对账器该把老目录搬到哪。",
+      "谁读它：只有 reconcile.mjs 会拉这份文件；本仓其余脚本/文档不依赖它。",
+      "userFiles 的语义：老目录里属于用户本地数据的相对路径列表（文件或以 / 结尾的目录）。对账器只搬「老目录有、上游新包没有」的那些文件——上游新包自带的默认内容（比如内置主题）不会被老副本覆盖，用户自己留下的东西才会被搬走。",
+      "改名车已发（2026-08-20，openspec/changes/unify-dby-naming）：下表是这次改名/合并/下架的完整映射；`ai-intelligence-investigator` 是纯下架（能力随包退出），不出现在这张表里——按 docs/deleting-a-skill.md「例外」段处理，没有新包可搬。"
+    ],
+    "clawhub": [
+      "ClawHub 上架清单：每个 skills/<slug>/ 目录在这里有且只有一条元数据。",
+      "为什么需要它：clawhub CLI 不读 SKILL.md 的 frontmatter，displayName 由 slug 机械 title-case 而来",
+      "（wechat-cover -> 'Wechat Cover'），必须用 --name 显式覆盖，否则商店卡片上是一串没人搜得到的英文。",
+      "owner 是发布者 handle：ClawHub 的 slug 按 owner 分命名空间（canonical URL = /<owner>/skills/<slug>），",
+      "带 --owner 发布可以避开已被他人占用的裸 slug。",
+      "改这个文件后跑 tools/clawhub_publish.py 预览，跑 tools/validate_community.py 校验清单没漂移。",
+      "2026-08-20 unify-dby-naming 改名车：键改成新 slug；一个下架包与一个已被合并吸收的包的",
+      "两条条目已删除（详见 docs/deleting-a-skill.md），本地条目还没在 ClawHub 上手工下架的",
+      "老条目由维护者按发布计划另行处理。"
+    ]
+  },
+  "skills": {
+    "ai-intelligence-investigator": {
+      "displayName": "ai-intelligence-investigator",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "73620ccabced"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "73620ccabced",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "信息核实",
+        "信息溯源",
+        "多源验证",
+        "情报调查",
+        "深度调查",
+        "竞品调查",
+        "背景调查",
+        "舆情调查",
+        "调查报告"
+      ]
+    },
+    "astock-social-feed": {
+      "displayName": "astock-social-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "14ef0ed7e0e4"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "14ef0ed7e0e4",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/multi/cn30-multi-search"
+      ],
+      "retiredTriggerWords": [
+        "A股",
+        "A股复盘",
+        "A股舆情",
+        "大盘分析",
+        "涨停",
+        "盘后复盘",
+        "股市新闻",
+        "股市热点",
+        "股票讨论",
+        "选股"
+      ]
+    },
+    "bilibili-keyword-accounts": {
+      "displayName": "bilibili-keyword-accounts",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "46efd4c832c2"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "46efd4c832c2",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/bilibili/search-user"
+      ],
+      "retiredTriggerWords": [
+        "B站 UP主",
+        "B站同类账号",
+        "B站账号搜索",
+        "B站达人",
+        "bilibili 账号",
+        "找 B站账号"
+      ]
+    },
+    "bilibili-keyword-search": {
+      "displayName": "bilibili-keyword-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2e9f6065fbbf"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "2e9f6065fbbf",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/bilibili/search-work"
+      ],
+      "retiredTriggerWords": [
+        "B站搜作品",
+        "B站搜索",
+        "B站最新视频",
+        "B站热门",
+        "B站选题",
+        "bilibili 搜索"
+      ]
+    },
+    "bilibili-portfolio-search": {
+      "displayName": "bilibili-portfolio-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "60019ed605c7"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "60019ed605c7",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/bilibili/bilibili-user-works"
+      ],
+      "retiredTriggerWords": [
+        "B站 UP主作品",
+        "B站作品集",
+        "B站账号作品",
+        "UP主视频列表",
+        "bilibili 作品",
+        "对标 UP主"
+      ]
+    },
+    "celebrity-slice": {
+      "displayName": "celebrity-slice",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "688c81c38fd2",
+        "84831ef845b4",
+        "8d462e758f28",
+        "8d9c2c08c3a2",
+        "a7e916ec5338",
+        "bca4a6c3da99"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "688c81c38fd2",
+          "version": "",
+          "date": "2026-07-31",
+          "subject": "feat(celebrity-slice): validate_edl.py 12 项 EDL 机检"
+        },
+        {
+          "hash": "84831ef845b4",
+          "version": "",
+          "date": "2026-07-31",
+          "subject": "feat(celebrity-slice): skill 骨架（SKILL.md + methodology.md + rules.json）"
+        },
+        {
+          "hash": "8d462e758f28",
+          "version": "",
+          "date": "2026-07-31",
+          "subject": "docs(celebrity-slice): ASR 接口契约（兼后端实现 spec）"
+        },
+        {
+          "hash": "8d9c2c08c3a2",
+          "version": "",
+          "date": "2026-07-31",
+          "subject": "feat(celebrity-slice): snap_breath.py 气口吸附与能量互证"
+        },
+        {
+          "hash": "a7e916ec5338",
+          "version": "",
+          "date": "2026-07-31",
+          "subject": "feat(celebrity-slice): asr_transcribe.py doubaoya ASR 客户端"
+        },
+        {
+          "hash": "bca4a6c3da99",
+          "version": "",
+          "date": "2026-07-31",
+          "subject": "feat(celebrity-slice): make_captions.py 字幕生成与 source_map"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "9:16",
+        "EDL",
+        "karaoke 字幕",
+        "切片带货",
+        "口播剪辑",
+        "字幕烧制",
+        "明星切片",
+        "气口",
+        "直播切片",
+        "直播录像剪辑",
+        "直播高光",
+        "竖版短视频",
+        "高级种草"
+      ]
+    },
+    "cn-last30days": {
+      "displayName": "cn-last30days",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0042afabe441",
+        "0f728b2d9358",
+        "21ee642f258d",
+        "35bb42b4a1ca",
+        "8ab1d5dc820b",
+        "9839d4be5523"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "0f728b2d9358",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "9839d4be5523",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "21ee642f258d",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "8ab1d5dc820b",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "0042afabe441",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "chore(skills): 删掉 5 个空壳 dependency 声明"
+        },
+        {
+          "hash": "35bb42b4a1ca",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/multi/cn30-multi-search"
+      ],
+      "retiredTriggerWords": [
+        "小红书抖音公众号",
+        "社媒舆情",
+        "舆情监测",
+        "话题研究",
+        "跨平台分析",
+        "跨平台选题",
+        "近30天作品"
+      ]
+    },
+    "content-parse": {
+      "displayName": "content-parse",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "363c45af3c3a",
+        "4729912b52d1",
+        "52f068c4240e",
+        "ac955d2e1552",
+        "b695377ece3f"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "4729912b52d1",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "ac955d2e1552",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "52f068c4240e",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        },
+        {
+          "hash": "b695377ece3f",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "363c45af3c3a",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 五个存活壳补上显式触发词声明，让差集闸未来能机器保护它们的退役"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/tool/parse-content-detail"
+      ],
+      "retiredTriggerWords": [
+        "作品详情",
+        "扒文章",
+        "解析链接",
+        "链接解析"
+      ]
+    },
+    "cultural-tourism-bilibili-feed": {
+      "displayName": "cultural-tourism-bilibili-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0ffca08ba108",
+        "8f7130bf0be6"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "0ffca08ba108",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "8f7130bf0be6",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/bilibili/bilibili-playlet-feed"
+      ]
+    },
+    "cultural-tourism-douyin-feed": {
+      "displayName": "cultural-tourism-douyin-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "3ce07ddf82ba",
+        "d86877d1066b"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "3ce07ddf82ba",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "d86877d1066b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-playlet-feed"
+      ]
+    },
+    "cultural-tourism-wechat-feed": {
+      "displayName": "cultural-tourism-wechat-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2771c8f0d37c",
+        "384c55429c17",
+        "400fccb4f563",
+        "69136892c14b",
+        "86dc1f0f16cc"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "2771c8f0d37c",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "69136892c14b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "400fccb4f563",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "384c55429c17",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "86dc1f0f16cc",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-playlet-feed"
+      ]
+    },
+    "cultural-tourism-xiaohongshu-feed": {
+      "displayName": "cultural-tourism-xiaohongshu-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "1b1c55502ce4",
+        "a05407096d06"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "1b1c55502ce4",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "a05407096d06",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
+      ]
+    },
+    "dby": {
+      "displayName": "dby · 都爆鸭公众号工具箱",
+      "topics": [
+        "微信公众号",
+        "工具箱",
+        "路由"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "02380dfa3f98",
+        "02a03d78fb1c",
+        "04545b184f2e",
+        "054b6535ba16",
+        "1c068c859c03",
+        "259fd3762f29",
+        "2db0a55a86c2",
+        "3012327e9323",
+        "3614ff73a0b8",
+        "39e738fe2c0e",
+        "3f2f22ed69d1",
+        "54ce465091b2",
+        "578b1a067705",
+        "75694e183386",
+        "7ec123c4ccf5",
+        "8a3dde169bfd",
+        "9c4f8edfa780",
+        "a4d72b56310c",
+        "b2ccb38b1d96",
+        "c820f9aa0c6d",
+        "e0ef82da64ee",
+        "eeb802ec9c70",
+        "fccf378e28ef"
+      ],
+      "versions": [
+        {
+          "version": "1.3.1",
+          "hash": "054b6535ba16",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.3.0",
+          "hash": "02a03d78fb1c",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "2db0a55a86c2",
+          "version": "1.0.0",
+          "date": "2026-07-22",
+          "subject": "feat(community): 新增 wechat-theme-studio(Codex改主题+预览闭环) + Codex 插件清单(.codex-plugin/marketplace),整库可作Codex正式插件"
+        },
+        {
+          "hash": "75694e183386",
+          "version": "1.0.0",
+          "date": "2026-07-22",
+          "subject": "feat(community): 新增 dby 主入口路由 + dby-update 更新入口(对齐公众号飞轮/精确scoped更新)"
+        },
+        {
+          "hash": "578b1a067705",
+          "version": "1.0.0",
+          "date": "2026-08-10",
+          "subject": "feat(dby): 路由表接入 dby-charter + README 技能清单"
+        },
+        {
+          "hash": "e0ef82da64ee",
+          "version": "1.0.0",
+          "date": "2026-08-12",
+          "subject": "docs(wechat-theme-studio): 说清主题要落两处,发文流水线不读服务端主题"
+        },
+        {
+          "hash": "02380dfa3f98",
+          "version": "1.0.0",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        },
+        {
+          "hash": "3012327e9323",
+          "version": "1.0.0",
+          "date": "2026-08-18",
+          "subject": "docs: 收口本轮自造的三处漂移——mera 清单可见性、回执编造量、草稿发布计价"
+        },
+        {
+          "hash": "3614ff73a0b8",
+          "version": "1.0.0",
+          "date": "2026-08-18",
+          "subject": "docs(routing): 交付带最小回执，把「发现了但不该跑」和「没发现」分开写"
+        },
+        {
+          "hash": "39e738fe2c0e",
+          "version": "1.0.0",
+          "date": "2026-08-18",
+          "subject": "docs(routing): 给网关加指针，且把它限定在「怎么调」这个问题域"
+        },
+        {
+          "hash": "259fd3762f29",
+          "version": "1.0.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        },
+        {
+          "hash": "3f2f22ed69d1",
+          "version": "1.0.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役最后五个薄壳与 seedream 墓碑，写作链的三跳交给总入口"
+        },
+        {
+          "hash": "7ec123c4ccf5",
+          "version": "1.0.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 A 批四包，话术已在上一笔到位，指针与清单同笔改指总入口"
+        },
+        {
+          "hash": "9c4f8edfa780",
+          "version": "1.0.0",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        },
+        {
+          "hash": "a4d72b56310c",
+          "version": "1.0.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: charter + ip 二合一 —— 同一份档案的两个字段，本来就不该是两个包"
+        },
+        {
+          "hash": "fccf378e28ef",
+          "version": "1.0.0",
+          "date": "2026-08-19",
+          "subject": "fix(wechat-article-pipeline): 按修正后的 spec 收窄——只换调用知识的写法，业务一步不动"
+        },
+        {
+          "hash": "8a3dde169bfd",
+          "version": "1.0.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "eeb802ec9c70",
+          "version": "1.0.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills,tools): 主干只留一处真相，三处指针指向 dby-write，并加闸钉死"
+        },
+        {
+          "hash": "b2ccb38b1d96",
+          "version": "1.0.0",
+          "date": "2026-08-21",
+          "subject": "fix(dby): 主路由补上 dby-image —— 它是唯一一个主路由从头到尾没提过的包"
+        },
+        {
+          "hash": "54ce465091b2",
+          "version": "1.0.1",
+          "date": "2026-08-22",
+          "subject": "fix(dby): 「配」字在两行里撞车——把「配张封面图」显式判给 dby-image"
+        },
+        {
+          "hash": "02a03d78fb1c",
+          "version": "1.3.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "04545b184f2e",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "1c068c859c03",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "c820f9aa0c6d",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        }
+      ]
+    },
+    "dby-api": {
+      "displayName": "都爆鸭 · 新媒体数据总入口",
+      "topics": [
+        "新媒体",
+        "爆款选题",
+        "热榜",
+        "数据源"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "50cdd6a062be",
+        "596f05f4d505",
+        "5b22bb800679",
+        "6c0cb11d4b3b",
+        "94592136ac90",
+        "96330502a048",
+        "9b545f2f647a",
+        "9b9682a7a602",
+        "a59d7a4e7157",
+        "acae0014e410",
+        "bcf26b4eca1f",
+        "ce8326e3dbd2",
+        "ed6a2f86bffc"
+      ],
+      "versions": [
+        {
+          "version": "1.3.2",
+          "hash": "acae0014e410",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.3.1",
+          "hash": "ce8326e3dbd2",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "9b9682a7a602",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "bcf26b4eca1f",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills,tools): 主干只留一处真相，三处指针指向 dby-write，并加闸钉死"
+        },
+        {
+          "hash": "5b22bb800679",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(skills): 新增 dby-image —— 生图独立成包，并修掉一处靠运气活着的隐式超时"
+        },
+        {
+          "hash": "94592136ac90",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "refactor(dby-api): 正文瘦身 607→304 行，调用改以 scripts/doubaoya.mjs 为主路径"
+        },
+        {
+          "hash": "50cdd6a062be",
+          "version": "1.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "596f05f4d505",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "6c0cb11d4b3b",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "96330502a048",
+          "version": "1.3.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby-api): 通用网关脚本 fetch 补显式超时，客户端不再抢在服务端前掐线"
+        },
+        {
+          "hash": "9b545f2f647a",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+        },
+        {
+          "hash": "a59d7a4e7157",
+          "version": "1.2.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "ce8326e3dbd2",
+          "version": "1.3.1",
+          "date": "2026-08-24",
+          "subject": "docs(dby-api): 补 headers-timeout 判据的端到端实测，别只留一句\"默认是 300s\""
+        },
+        {
+          "hash": "ed6a2f86bffc",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        }
+      ]
+    },
+    "dby-banned-words": {
+      "displayName": "多平台违禁词检测",
+      "topics": [
+        "违禁词",
+        "合规审核",
+        "多平台",
+        "本地运行"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "3b6f51b83da1",
+        "5de93933d77a",
+        "8967a5bf1cbe",
+        "9875773c9a77",
+        "b3b6c7500194",
+        "edadb15db5ad",
+        "f124f3174c56",
+        "f2ae13c9d572"
+      ],
+      "versions": [
+        {
+          "version": "1.2.2",
+          "hash": "5de93933d77a",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.2.1",
+          "hash": "3b6f51b83da1",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "f124f3174c56",
+          "version": "1.0.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "f2ae13c9d572",
+          "version": "1.0.1",
+          "date": "2026-08-22",
+          "subject": "docs(dby-banned-words): 实调校准两处——span 类名带类别信息，零命中照样计费"
+        },
+        {
+          "hash": "3b6f51b83da1",
+          "version": "1.2.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "8967a5bf1cbe",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+        },
+        {
+          "hash": "9875773c9a77",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "b3b6c7500194",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "edadb15db5ad",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        }
+      ]
+    },
+    "dby-charter": {
+      "displayName": "公众号定位教练 · 号章程",
+      "topics": [
+        "微信公众号",
+        "账号定位",
+        "内容策略"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "069d68bd5b30",
+        "289a7e8efa11",
+        "5c113e2fefe3",
+        "7d8ce219936b",
+        "7e6fcee331f4",
+        "8f80d47eb37a",
+        "92827c092016",
+        "a2710665f546",
+        "a85067a32ed9",
+        "a9eaab1fad23",
+        "b478b3935700",
+        "c3738aab09a9",
+        "d4483ee94803",
+        "d9423fc38116"
+      ],
+      "versions": [
+        {
+          "version": "1.2.1",
+          "hash": "b478b3935700",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.2.0",
+          "hash": "069d68bd5b30",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "289a7e8efa11",
+          "version": "",
+          "date": "2026-08-10",
+          "subject": "feat(dby-charter): 定位教练 SKILL.md（七条红线 + 三入口 + charter API 契约）"
+        },
+        {
+          "hash": "a85067a32ed9",
+          "version": "",
+          "date": "2026-08-10",
+          "subject": "feat(dby-charter): references 四件套（frameworks/monetization/diagnosis/intake）"
+        },
+        {
+          "hash": "a9eaab1fad23",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        },
+        {
+          "hash": "a2710665f546",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 A 批四包，话术已在上一笔到位，指针与清单同笔改指总入口"
+        },
+        {
+          "hash": "c3738aab09a9",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: charter + ip 二合一 —— 同一份档案的两个字段，本来就不该是两个包"
+        },
+        {
+          "hash": "7d8ce219936b",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "7e6fcee331f4",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(dby-charter): 新增 scripts/charter.mjs，把两个「每次都会踩」的坑做进代码"
+        },
+        {
+          "hash": "92827c092016",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "fix(skills): 四个脚本补上 notice 转达，并加闸钉死这一类"
+        },
+        {
+          "hash": "5c113e2fefe3",
+          "version": "1.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "069d68bd5b30",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "8f80d47eb37a",
+          "version": "1.1.2",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "d4483ee94803",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "d9423fc38116",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        }
+      ]
+    },
+    "dby-gateway": {
+      "displayName": "都爆鸭 · 调用网关",
+      "topics": [
+        "调用协议",
+        "能力索引",
+        "基础设施"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "0a3b3433cbe5",
+        "18b04d9d8613",
+        "1d294368f7d7",
+        "64220c7bed79",
+        "7e9d8e2c7fa6",
+        "9818d9fd10e5",
+        "b798cca6be87",
+        "e19a51009f8d",
+        "e1dc9e3d282e"
+      ],
+      "versions": [
+        {
+          "version": "1.3.2",
+          "hash": "18b04d9d8613",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.3.1",
+          "hash": "9818d9fd10e5",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "b798cca6be87",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "64220c7bed79",
+          "version": "1.0.1",
+          "date": "2026-08-22",
+          "subject": "fix(dby-publish,dby-gateway): 撤回我上一轮的违规改动，并给能力索引加可执行的过期自查"
+        },
+        {
+          "hash": "e1dc9e3d282e",
+          "version": "1.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "0a3b3433cbe5",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "1d294368f7d7",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby-gateway): 调用协议收敛为 references/protocol.md 单一副本，§3 展开版删除、§5 样例下沉"
+        },
+        {
+          "hash": "7e9d8e2c7fa6",
+          "version": "1.3.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "9818d9fd10e5",
+          "version": "1.3.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-gateway): 402 说\"提示用户充值\"是空话——余额/差额/充值链接明明都在 extra 里"
+        },
+        {
+          "hash": "e19a51009f8d",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        }
+      ]
+    },
+    "dby-image": {
+      "displayName": "都爆鸭 · AI 生图与改图",
+      "topics": [
+        "生图",
+        "改图",
+        "AI绘图",
+        "内容创作"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "000e1d567391",
+        "06cc8d2245f3",
+        "098a5bb943f2",
+        "219886ee0a77",
+        "25fcd0d0d1ba",
+        "2a3ffb3fc5b2",
+        "47bee0597b99",
+        "63c13c5ffbeb",
+        "6a04472552de",
+        "73f91dda7bd6",
+        "c1227d1f5988",
+        "c6ca0ad17c66",
+        "d096f50d3a79",
+        "ee25802f9801",
+        "f80e00b562e4"
+      ],
+      "versions": [
+        {
+          "version": "1.2.2",
+          "hash": "63c13c5ffbeb",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.2.1",
+          "hash": "2a3ffb3fc5b2",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "06cc8d2245f3",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "fix(dby-image,dby-publish): size 参数完全无效——比例改由提示词控制（受控实测）"
+        },
+        {
+          "hash": "219886ee0a77",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "refactor(dby-image): 提示词参考按「单个出图」重构成阶梯，并修掉一条我写错的中文文字建议"
+        },
+        {
+          "hash": "25fcd0d0d1ba",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(dby-image): 补提示词工程与场景图库，并实测出 size 不是契约"
+        },
+        {
+          "hash": "47bee0597b99",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(dby-image): 参数真相表纠错 + 出图后加一道视觉验收"
+        },
+        {
+          "hash": "6a04472552de",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(dby-image): 加小红书与短视频两份平台场景子文件"
+        },
+        {
+          "hash": "c1227d1f5988",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "fix(skills): 四个脚本补上 notice 转达，并加闸钉死这一类"
+        },
+        {
+          "hash": "c6ca0ad17c66",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(skills): 新增 dby-image —— 生图独立成包，并修掉一处靠运气活着的隐式超时"
+        },
+        {
+          "hash": "d096f50d3a79",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "refactor(dby-image)!: 正文瘦身 388→175 行，出图改走 scripts/gen.mjs"
+        },
+        {
+          "hash": "ee25802f9801",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "refactor(dby-image): 基线不再限制画面内容——限定只留给场景的客观约束"
+        },
+        {
+          "hash": "f80e00b562e4",
+          "version": "1.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "000e1d567391",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "098a5bb943f2",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "2a3ffb3fc5b2",
+          "version": "1.2.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "73f91dda7bd6",
+          "version": "1.1.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        }
+      ]
+    },
+    "dby-publish": {
+      "displayName": "公众号图文流水线（选题→成稿→排版→草稿箱）",
+      "topics": [
+        "微信公众号",
+        "内容流水线",
+        "排版",
+        "发布",
+        "草稿箱"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "032593ba063c",
+        "11426702a7e8",
+        "117097d50326",
+        "134cdd2b4c29",
+        "1395aeae698c",
+        "14ab4254e81a",
+        "351676ef5646",
+        "487cb9172be9",
+        "4d2cafc48bca",
+        "5351f7c56f8f",
+        "53d58f1d50df",
+        "5784c51d996d",
+        "5e2022f6120b",
+        "693ee316248d",
+        "76caa2a60c4e",
+        "87b714968274",
+        "93bdab968731",
+        "afeb6e003c90",
+        "c24c940f04d9",
+        "ccf7d50a327d",
+        "d7c7ce4c8a76",
+        "da136cf9613a",
+        "e6cc1f2a871c",
+        "e7a976940e02",
+        "e88557062157",
+        "ec58027fccdc",
+        "fdf279bc684e"
+      ],
+      "versions": [
+        {
+          "version": "2.4.2",
+          "hash": "87b714968274",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "2.4.1",
+          "hash": "ccf7d50a327d",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "1395aeae698c",
+          "version": "1.4.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "487cb9172be9",
+          "version": "1.4.0",
+          "date": "2026-08-20",
+          "subject": "fix(dby-publish): 补回合并时丢失的计价去处原句——「具体扣多少以详情端点的实时点数字段为准」"
+        },
+        {
+          "hash": "afeb6e003c90",
+          "version": "1.4.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills,tools): 主干只留一处真相，三处指针指向 dby-write，并加闸钉死"
+        },
+        {
+          "hash": "032593ba063c",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "feat(skills): 新增 dby-image —— 生图独立成包，并修掉一处靠运气活着的隐式超时"
+        },
+        {
+          "hash": "117097d50326",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "feat(dby-publish)!: 流水线 md→HTML 改走平台渲染，:: 组件语法退场"
+        },
+        {
+          "hash": "14ab4254e81a",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "fix(dby-publish): 接住服务端的 notice —— 这条链断在流水线这一半"
+        },
+        {
+          "hash": "351676ef5646",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "fix(dby-image,dby-publish): size 参数完全无效——比例改由提示词控制（受控实测）"
+        },
+        {
+          "hash": "5351f7c56f8f",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "fix(skills): 四个脚本补上 notice 转达，并加闸钉死这一类"
+        },
+        {
+          "hash": "d7c7ce4c8a76",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "refactor(dby-publish): 正文 595→543 行，协议降级进 references，changelog 移出指令文件"
+        },
+        {
+          "hash": "da136cf9613a",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "fix(dby-publish,dby-theme): engine-2 报错不再教用户做一件不会发生的事"
+        },
+        {
+          "hash": "e6cc1f2a871c",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "feat(dby-image): 补提示词工程与场景图库，并实测出 size 不是契约"
+        },
+        {
+          "hash": "fdf279bc684e",
+          "version": "1.4.0",
+          "date": "2026-08-21",
+          "subject": "feat(dby-write): 写作规范接进写作流程，不再靠人转达"
+        },
+        {
+          "hash": "134cdd2b4c29",
+          "version": "2.0.2",
+          "date": "2026-08-22",
+          "subject": "fix(dby-publish): 主题清单写死成 4 个，而包里实际有 15 个"
+        },
+        {
+          "hash": "5784c51d996d",
+          "version": "2.0.3",
+          "date": "2026-08-22",
+          "subject": "fix(dby-publish): 清掉两处真过期——README 的步数、三个没人读的配置项"
+        },
+        {
+          "hash": "5e2022f6120b",
+          "version": "2.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "76caa2a60c4e",
+          "version": "2.0.1",
+          "date": "2026-08-22",
+          "subject": "fix(dby-publish,dby-gateway): 撤回我上一轮的违规改动，并给能力索引加可执行的过期自查"
+        },
+        {
+          "hash": "11426702a7e8",
+          "version": "2.3.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "4d2cafc48bca",
+          "version": "2.3.0",
+          "date": "2026-08-24",
+          "subject": "feat(dby-publish,dby-theme): 微信 draft/add 字段上限前置校验；主题校验器按官方编辑器规范加四条 warning"
+        },
+        {
+          "hash": "53d58f1d50df",
+          "version": "2.2.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "693ee316248d",
+          "version": "2.2.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "93bdab968731",
+          "version": "2.4.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-publish): 报错码被划进「绕开脚本才读」——走脚本的 agent 撞上 429 只会重试"
+        },
+        {
+          "hash": "c24c940f04d9",
+          "version": "2.1.0",
+          "date": "2026-08-24",
+          "subject": "feat(dby-publish,dby-write): 加 --render-only —— 只想看排版效果不必先绑公众号"
+        },
+        {
+          "hash": "ccf7d50a327d",
+          "version": "2.4.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-publish): 六张风格样图重出——旧的在教用户做英文封面，还带着乱码和商标"
+        },
+        {
+          "hash": "e7a976940e02",
+          "version": "2.2.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+        },
+        {
+          "hash": "e88557062157",
+          "version": "2.4.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-publish): --theme 裸 id 交服务端解析——显式路径那半的主题双源没被消掉"
+        },
+        {
+          "hash": "ec58027fccdc",
+          "version": "2.4.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        }
+      ]
+    },
+    "dby-rewrite": {
+      "displayName": "公众号爆款文案改写",
+      "topics": [
+        "微信公众号",
+        "文案改写",
+        "爆款",
+        "本地运行"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "27129afe12be",
+        "64eb94c6e436",
+        "db8a6e744f97",
+        "dbc228e09916",
+        "de838c0c1b1e",
+        "e6f18ded0432"
+      ],
+      "versions": [
+        {
+          "version": "1.1.1",
+          "hash": "27129afe12be",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.1.0",
+          "hash": "64eb94c6e436",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "db8a6e744f97",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "dbc228e09916",
+          "version": "1.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "64eb94c6e436",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "de838c0c1b1e",
+          "version": "1.0.2",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "e6f18ded0432",
+          "version": "1.0.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        }
+      ]
+    },
+    "dby-theme": {
+      "displayName": "公众号排版主题工作室",
+      "topics": [
+        "微信公众号",
+        "排版",
+        "主题",
+        "Markdown"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "0a8f19dad810",
+        "895210b408a4",
+        "9c3df5a11c54",
+        "a1b7ed58c9fe",
+        "af370a32f818",
+        "b1b4f5ebb9e6",
+        "c5cfbb362507",
+        "ebb4a6128d51"
+      ],
+      "versions": [
+        {
+          "version": "1.3.1",
+          "hash": "0a8f19dad810",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.3.0",
+          "hash": "895210b408a4",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-24",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "b1b4f5ebb9e6",
+          "version": "1.1.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "af370a32f818",
+          "version": "1.1.0",
+          "date": "2026-08-21",
+          "subject": "fix(dby-publish,dby-theme): engine-2 报错不再教用户做一件不会发生的事"
+        },
+        {
+          "hash": "895210b408a4",
+          "version": "1.3.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "9c3df5a11c54",
+          "version": "1.2.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "a1b7ed58c9fe",
+          "version": "1.2.2",
+          "date": "2026-08-24",
+          "subject": "feat(dby-publish,dby-theme): 微信 draft/add 字段上限前置校验；主题校验器按官方编辑器规范加四条 warning"
+        },
+        {
+          "hash": "c5cfbb362507",
+          "version": "1.2.2",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "ebb4a6128d51",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        }
+      ]
+    },
+    "dby-update": {
+      "displayName": "都爆鸭 Skill 自更新",
+      "topics": [
+        "更新",
+        "维护"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "04182fab354c",
+        "069172b7e331",
+        "0f57ebd82f3b",
+        "2a8c66b15aa2",
+        "35a0d058b1c6",
+        "3a1ce2acce36",
+        "4bbc2e85239b",
+        "53d92b2192de",
+        "60aec394ab7b",
+        "6d90a69f9f2b",
+        "6f72e665fa97",
+        "72d2d98f5f23",
+        "78d16ebe4793",
+        "89126d451b03",
+        "8b15b3b187e6",
+        "912ad0771767",
+        "9a2708863bc4",
+        "b34999536b26",
+        "bb1c48d2428f",
+        "c51a1f7c37be",
+        "c8fc00825fa8",
+        "ceb277b7b3a2",
+        "e88f976ec4bb"
+      ],
+      "versions": [
+        {
+          "version": "3.3.1",
+          "hash": "912ad0771767",
+          "ref": "release-20260826-0103",
+          "releasedAt": "2026-08-26T01:03:09.201922+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "3.3.1",
+          "hash": "96ddb6edcb35",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "3.3.0",
+          "hash": "72d2d98f5f23",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-25T17:09:38.110260+00:00",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "53d92b2192de",
+          "version": "1.0.0",
+          "date": "2026-07-22",
+          "subject": "feat(community): 新增 dby 主入口路由 + dby-update 更新入口(对齐公众号飞轮/精确scoped更新)"
+        },
+        {
+          "hash": "0f57ebd82f3b",
+          "version": "3.1.0",
+          "date": "2026-08-18",
+          "subject": "docs(dby-update): 把「受跟踪的包只挡归档、不挡刷新」这个天花板记成可 grep 的账"
+        },
+        {
+          "hash": "89126d451b03",
+          "version": "3.1.0",
+          "date": "2026-08-18",
+          "subject": "feat(dby-update): 归档链路四条加固——受 git 跟踪的绝不动、归档对 git 隐形、复原可粘贴、scope 落空要吼"
+        },
+        {
+          "hash": "9a2708863bc4",
+          "version": "3.1.0",
+          "date": "2026-08-18",
+          "subject": "fix(dby-update): --json 的 stdout 只许是纯 JSON，提示与进度全部改走 stderr"
+        },
+        {
+          "hash": "c8fc00825fa8",
+          "version": "3.0.0",
+          "date": "2026-08-18",
+          "subject": "feat(dby-update): 按内容哈希认包做三态对账，下架包归档而不删"
+        },
+        {
+          "hash": "e88f976ec4bb",
+          "version": "2.0.0",
+          "date": "2026-08-18",
+          "subject": "feat(dby-update): 把「更新本鸭」从更新改成对账，能删掉上游已下架的 skill"
+        },
+        {
+          "hash": "4bbc2e85239b",
+          "version": "3.1.0",
+          "date": "2026-08-19",
+          "subject": "fix(dby-update): --force-refresh 下别再说这些包「落后于上游当前版」"
+        },
+        {
+          "hash": "6f72e665fa97",
+          "version": "3.1.0",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        },
+        {
+          "hash": "78d16ebe4793",
+          "version": "3.1.0",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 装 skill 别再打全量 agent 面，UA 也别再写死"
+        },
+        {
+          "hash": "8b15b3b187e6",
+          "version": "3.1.0",
+          "date": "2026-08-19",
+          "subject": "test(dby-update): 钉死受跟踪与判不出两栏的文案真能分辨（M4）"
+        },
+        {
+          "hash": "bb1c48d2428f",
+          "version": "3.1.0",
+          "date": "2026-08-19",
+          "subject": "fix(dby-update): 收敛态真收敛——刷新只收落后的，且刷新也要过确认门"
+        },
+        {
+          "hash": "c51a1f7c37be",
+          "version": "3.1.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: charter + ip 二合一 —— 同一份档案的两个字段，本来就不该是两个包"
+        },
+        {
+          "hash": "04182fab354c",
+          "version": "3.1.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 补三条红线——上游内容当数据、写入面看服务端字段、运行时必须声明"
+        },
+        {
+          "hash": "069172b7e331",
+          "version": "3.1.0",
+          "date": "2026-08-20",
+          "subject": "feat(dby-update): 对账器学会读 renames.json——改名包先装新、搬本地数据、再归档老目录"
+        },
+        {
+          "hash": "2a8c66b15aa2",
+          "version": "3.1.0",
+          "date": "2026-08-20",
+          "subject": "fix(dby-update): 落位缺失也算「没就位」，自检逐目录核而不是并集核"
+        },
+        {
+          "hash": "35a0d058b1c6",
+          "version": "3.1.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills)!: 统一 dby- 前缀，合并发布包，下架 investigator——公众号执行外脑定位收敛"
+        },
+        {
+          "hash": "ceb277b7b3a2",
+          "version": "3.1.0",
+          "date": "2026-08-20",
+          "subject": "fix(dby-update): 经软链调用不再静默空跑，入口守卫两边先解软链再比"
+        },
+        {
+          "hash": "3a1ce2acce36",
+          "version": "3.2.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "60aec394ab7b",
+          "version": "3.2.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "6d90a69f9f2b",
+          "version": "3.2.2",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "b34999536b26",
+          "version": "3.2.3",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "72d2d98f5f23",
+          "version": "3.3.0",
+          "date": "2026-08-25",
+          "subject": "fix(dby-update): 对账器六处可信度修补 —— 预检列名、降级不说完全一致、遗留副本归档不打 rm、拉取挂了自动复原、安装源固定 repo#ref、自更新提示重跑"
+        },
+        {
+          "hash": "912ad0771767",
+          "version": "3.3.1",
+          "date": "2026-08-25",
+          "subject": "feat(dby-update): 对账器读索引 —— 刷新栏显示 旧版→新版 + changelog，归档只按显式状态，目录拉不到本轮不归档，origin/lock/pin"
+        }
+      ]
+    },
+    "dby-write": {
+      "displayName": "都爆鸭 · 公众号写作与复盘",
+      "topics": [
+        "微信公众号",
+        "写作",
+        "复盘",
+        "个人IP"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "274536af5420",
+        "376c6d363adc",
+        "38713c695a93",
+        "388503b769d1",
+        "3cf369dcb74d",
+        "563e4254655a",
+        "69a7b400b468",
+        "7091f1189cf1",
+        "78f1efdf04ad",
+        "acc07fe1a5e9",
+        "b40023ac688b",
+        "cadb7e558fce",
+        "cfa6a357b46d",
+        "dbaa900ce8ae",
+        "e039d2615adb",
+        "e75c09cb73fd",
+        "f61cb9659a4a",
+        "fc92fb4bf92f"
+      ],
+      "versions": [
+        {
+          "version": "1.9.1",
+          "hash": "3cf369dcb74d",
+          "ref": "release-20260825-1804",
+          "releasedAt": "2026-08-25T18:04:45.789358+00:00",
+          "changelog": "新增变更说明字段",
+          "changelogSource": "user"
+        },
+        {
+          "version": "1.9.0",
+          "hash": "7091f1189cf1",
+          "ref": "release-20260825-1709",
+          "releasedAt": "2026-08-25",
+          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
+          "changelogSource": "auto"
+        }
+      ],
+      "history": [
+        {
+          "hash": "e75c09cb73fd",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 新增 dby-write —— 给「写一篇公众号文章」这一跳建 owner"
+        },
+        {
+          "hash": "38713c695a93",
+          "version": "",
+          "date": "2026-08-21",
+          "subject": "feat(dby-write): 写作规范接进写作流程，不再靠人转达"
+        },
+        {
+          "hash": "e039d2615adb",
+          "version": "1.0.0",
+          "date": "2026-08-22",
+          "subject": "feat(skills): 11 个包补齐语义版本，并用哈希逼它说实话"
+        },
+        {
+          "hash": "fc92fb4bf92f",
+          "version": "",
+          "date": "2026-08-22",
+          "subject": "feat(dby-write): 新增 scripts/write.mjs，把取数与复盘算术做进代码"
+        },
+        {
+          "hash": "cadb7e558fce",
+          "version": "1.0.0",
+          "date": "2026-08-23",
+          "subject": "feat(dby-write): 口吻基准与禁用词接进写作路径——它们此前一次都没被读过"
+        },
+        {
+          "hash": "274536af5420",
+          "version": "1.4.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "376c6d363adc",
+          "version": "1.6.0",
+          "date": "2026-08-24",
+          "subject": "feat(dby-write): 顶级写作思维 A 级规则编进九步主干"
+        },
+        {
+          "hash": "388503b769d1",
+          "version": "1.3.1",
+          "date": "2026-08-24",
+          "subject": "fix(dby-scripts): 外部 agent 模拟测试暴露的四处脚本缺口"
+        },
+        {
+          "hash": "69a7b400b468",
+          "version": "1.5.0",
+          "date": "2026-08-24",
+          "subject": "feat(dby-write): 补「第 4 步 · 收素材」——六层素材阶梯与带出处的素材单"
+        },
+        {
+          "hash": "78f1efdf04ad",
+          "version": "1.4.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "b40023ac688b",
+          "version": "1.3.0",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "cfa6a357b46d",
+          "version": "1.1.0",
+          "date": "2026-08-24",
+          "subject": "fix(dby-write): 复盘基准改中位数 —— 一篇爆款不该把这个号其余文章全判成选题错误"
+        },
+        {
+          "hash": "dbaa900ce8ae",
+          "version": "1.2.0",
+          "date": "2026-08-24",
+          "subject": "feat(dby-publish,dby-write): 加 --render-only —— 只想看排版效果不必先绑公众号"
+        },
+        {
+          "hash": "f61cb9659a4a",
+          "version": "1.3.1",
+          "date": "2026-08-24",
+          "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "563e4254655a",
+          "version": "1.8.0",
+          "date": "2026-08-25",
+          "subject": "feat(dby-write): 六份体裁手艺文件，素材形态即路由 —— 声明什么形态，列提纲前读哪一份"
+        },
+        {
+          "hash": "7091f1189cf1",
+          "version": "1.9.0",
+          "date": "2026-08-25",
+          "subject": "feat(dby-write): 素材库接线 —— 用户讲过的真事沉淀成蒸馏卡，缺锚点先查库再问人"
+        },
+        {
+          "hash": "acc07fe1a5e9",
+          "version": "1.7.0",
+          "date": "2026-08-25",
+          "subject": "feat(dby-write)!: 写作规则跟着「本篇目标 + 手里的素材」走，不再是一套无条件的增长公式"
+        }
+      ]
+    },
+    "doubao-websearch": {
+      "displayName": "doubao-websearch",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2b05ffa5169a",
+        "36cb9bf3a044",
+        "46c629c99268",
+        "55d871bfec4a",
+        "636d6c4034b1"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "2b05ffa5169a",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "46c629c99268",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "55d871bfec4a",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "36cb9bf3a044",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "636d6c4034b1",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 五个存活壳补上显式触发词声明，让差集闸未来能机器保护它们的退役"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/doubao-web-search"
+      ],
+      "retiredTriggerWords": [
+        "事实核查",
+        "引用来源",
+        "查出处",
+        "联网搜索",
+        "联网查证",
+        "豆包搜索"
+      ]
+    },
+    "doubaoya": {
+      "displayName": "doubaoya",
+      "topics": [],
+      "status": "renamed",
+      "redirectTo": "dby-api",
+      "userFiles": [],
+      "knownHashes": [
+        "035c62d0cddb",
+        "1d9e98ab2e75",
+        "1ebfe7566006",
+        "22b7c35a85ae",
+        "2fdef21b13a1",
+        "3193cf932cb7",
+        "31e5a53fe52c",
+        "3a14e308dcf3",
+        "45222c3bbed9",
+        "4541fde58b19",
+        "476ef827075e",
+        "4ec537de8a0f",
+        "4fefd591daaa",
+        "5c9b0784c4c9",
+        "5e4285733c9a",
+        "6b67e50a9d2a",
+        "711a03d2a65d",
+        "7d4cbaac2727",
+        "7d952dd6a3ae",
+        "820ffedd8e9a",
+        "88b0d75ddcc1",
+        "934637117ed3",
+        "943416170780",
+        "9db2d38ae564",
+        "9f93465da94f",
+        "af1b56533141",
+        "d671ab439717",
+        "dc7f996b9e7d",
+        "e09552b3db86",
+        "e2ad60e60db9",
+        "e4c2e8b00436",
+        "e51b09417fb3",
+        "e59ca8d2e11c",
+        "e8b2bfb279bc",
+        "ee3213835010",
+        "ee5264c76066",
+        "f4a3b5eb3fd6",
+        "f770e22a5fb4",
+        "f918bc7c1258",
+        "fd5c7d045503"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "af1b56533141",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "e09552b3db86",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "820ffedd8e9a",
+          "version": "",
+          "date": "2026-07-08",
+          "subject": "fix: 选题 workflow — pull keyword-free 综合热点 + match to IP, stop searching the IP name"
+        },
+        {
+          "hash": "5e4285733c9a",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "fd5c7d045503",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "chore(focus): 社区库剪向公众号+小红书创作+通用工具——移除平台垂直/账号分析类 skill"
+        },
+        {
+          "hash": "d671ab439717",
+          "version": "",
+          "date": "2026-07-20",
+          "subject": "feat: add MP Ark WeChat archive skill"
+        },
+        {
+          "hash": "3a14e308dcf3",
+          "version": "",
+          "date": "2026-07-27",
+          "subject": "feat(mera): 新增 Mera 第二大脑 skill(写入走收条/带引用问答) + 总纲路由"
+        },
+        {
+          "hash": "943416170780",
+          "version": "",
+          "date": "2026-07-27",
+          "subject": "fix(mera): 按 Mera 地面真相纠正 5 处错误说法(证据判据/self形状/幂等/标题/去重)"
+        },
+        {
+          "hash": "22b7c35a85ae",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat(mera): 加 read 子命令,读取主路径改为「检索→读原文→自己综合」,ask 降级"
+        },
+        {
+          "hash": "e4c2e8b00436",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "035c62d0cddb",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(doubaoya): 总入口按两个能力集合各自的真实路由改写，并加闸钉死调用路径"
+        },
+        {
+          "hash": "3193cf932cb7",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(banned-words): 收掉「标好风险等级 / 给替换建议」的营销话术，与定稿判据对齐"
+        },
+        {
+          "hash": "45222c3bbed9",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        },
+        {
+          "hash": "4541fde58b19",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "4ec537de8a0f",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(doubaoya): 补回删包造出的话术面缺口——10 组触发词无人覆盖，而能力全部在架"
+        },
+        {
+          "hash": "6b67e50a9d2a",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs: 把「删包前必须走完的五步」写成 checklist，并让闸指向它"
+        },
+        {
+          "hash": "7d952dd6a3ae",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(routing): 交付带最小回执，把「发现了但不该跑」和「没发现」分开写"
+        },
+        {
+          "hash": "934637117ed3",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(banned-words): 按真实字段判违禁词，堵住「恒报合规」的漏报"
+        },
+        {
+          "hash": "9db2d38ae564",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(routing): 给网关加指针，且把它限定在「怎么调」这个问题域"
+        },
+        {
+          "hash": "9f93465da94f",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(mera): 第二大脑已下架，挂下架牌并清掉所有教 agent 去调的路由"
+        },
+        {
+          "hash": "e2ad60e60db9",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(security): 密钥内容一个字符都不许进日志，并给社区仓补上这条闸"
+        },
+        {
+          "hash": "e59ca8d2e11c",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        },
+        {
+          "hash": "e8b2bfb279bc",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs: 收口本轮自造的三处漂移——mera 清单可见性、回执编造量、草稿发布计价"
+        },
+        {
+          "hash": "ee3213835010",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(routing): 摘掉指向已删 mera 包的 primary_skill，并立闸钉死路由指针不许悬空"
+        },
+        {
+          "hash": "f918bc7c1258",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        },
+        {
+          "hash": "1d9e98ab2e75",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(doubaoya): description 改因式写法，同笔把四个待退役包的词迁进来"
+        },
+        {
+          "hash": "1ebfe7566006",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役最后五个薄壳与 seedream 墓碑，写作链的三跳交给总入口"
+        },
+        {
+          "hash": "2fdef21b13a1",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 A 批四包，话术已在上一笔到位，指针与清单同笔改指总入口"
+        },
+        {
+          "hash": "31e5a53fe52c",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        },
+        {
+          "hash": "476ef827075e",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(doubaoya): 批 3 的新家先建好——两条专属行、一个会丢的词、一条计费选路知识"
+        },
+        {
+          "hash": "4fefd591daaa",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "docs(doubaoya): 给公众号黑马账号推荐补一行专属行，它此前只有孪生 API 在表里"
+        },
+        {
+          "hash": "5c9b0784c4c9",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 10 个零装机纯壳，话术与指针同笔改指 doubaoya"
+        },
+        {
+          "hash": "7d4cbaac2727",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        },
+        {
+          "hash": "88b0d75ddcc1",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(wechat-article-pipeline): 试点改造成「业务 skill + 网关」形态"
+        },
+        {
+          "hash": "dc7f996b9e7d",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(doubaoya): 意图速查表铺满 24 条合并能力，并把「契约不许烤进分发物」闸扩到 doubaoya"
+        },
+        {
+          "hash": "e51b09417fb3",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 清掉「教 agent 露密钥前缀」与写死的价格，并各立一道闸"
+        },
+        {
+          "hash": "ee5264c76066",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: rewrite 三合一 —— 七个平台一个包，规则一平台一文件"
+        },
+        {
+          "hash": "f4a3b5eb3fd6",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "revert(description): 撤回砍字数与合计上限闸——共享预算的分母不是我们仓"
+        },
+        {
+          "hash": "f770e22a5fb4",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "docs(imagegen): 写清生图的两端超时，并说明为什么客户端不能先断"
+        },
+        {
+          "hash": "711a03d2a65d",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "fix(skills): 14 处入口守卫统一收口，经软链调用不再静默空跑"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/comments",
+        "/api/apis/douyin/realtime-search",
+        "/api/apis/douyin/search-work",
+        "/api/apis/gongzhonghao/category-time-hot",
+        "/api/apis/gongzhonghao/gongzhonghao-ai-feed",
+        "/api/apis/gongzhonghao/gongzhonghao-coze-cover",
+        "/api/apis/gongzhonghao/gongzhonghao-daily-publish",
+        "/api/apis/gongzhonghao/gongzhonghao-index-rank",
+        "/api/apis/gongzhonghao/gongzhonghao-playlet-feed",
+        "/api/apis/gongzhonghao/gongzhonghao-raise-rank",
+        "/api/apis/gongzhonghao/gongzhonghao-search-user",
+        "/api/apis/gongzhonghao/gongzhonghao-work-list",
+        "/api/apis/gongzhonghao/hot-article",
+        "/api/apis/gongzhonghao/search-article",
+        "/api/apis/multi/cn30-multi-search",
+        "/api/apis/multi/multi-content-export-top",
+        "/api/apis/sph/search-user",
+        "/api/apis/sph/search-work",
+        "/api/apis/sph/shipinhao-ai-feed",
+        "/api/apis/tool/parse-content-detail",
+        "/api/apis/trend/hot-keywords",
+        "/api/apis/trend/trending-hub-keyword",
+        "/api/apis/xiaohongshu/crawl-work",
+        "/api/apis/xiaohongshu/search-note",
+        "/api/apis/xiaohongshu/search-work",
+        "/api/apis/xiaohongshu/xiaohongshu-coze",
+        "/api/apis/xiaohongshu/xiaohongshu-daily-top",
+        "/api/apis/xiaohongshu/xiaohongshu-low-fans-top",
+        "/api/apis/xiaohongshu/xiaohongshu-weekly-top",
+        "/api/skills/cn-last30days",
+        "/api/skills/content-safety-check",
+        "/api/skills/doubao-web-search",
+        "/api/skills/gpt-image-gen",
+        "/api/skills/playlet-wechat-feed",
+        "/api/skills/recommend",
+        "/api/skills/search",
+        "/api/skills/trend-radar",
+        "/api/skills/wechat-account-analyzer",
+        "/api/skills/wechat-channels-ai-feed",
+        "/api/skills/wechat-cover",
+        "/api/skills/wechat-fastest-growing",
+        "/api/skills/wechat-prohibited-word",
+        "/api/skills/wechat-search",
+        "/api/skills/wechat-similar-account",
+        "/api/skills/xiaohongshu-viral-notes"
+      ],
+      "retiredTriggerWords": [
+        "AI出图",
+        "AI视频号",
+        "TOP",
+        "一周爆款",
+        "中线选题",
+        "主视觉",
+        "今日热点",
+        "今日爆款",
+        "仿写",
+        "优化",
+        "低粉爆款",
+        "低粉高赞",
+        "作品",
+        "作品详情",
+        "信号",
+        "借势选题",
+        "全平台爆款",
+        "全网热搜",
+        "全网热榜",
+        "公众号取数",
+        "公众号诊断",
+        "公众号违禁词",
+        "公众号：取数",
+        "内容：创作",
+        "写作",
+        "写小红书",
+        "冷启动对标",
+        "出海",
+        "出海：选题",
+        "分析",
+        "创作",
+        "参考",
+        "发了什么",
+        "发文复盘",
+        "取数",
+        "合规检测",
+        "后再写",
+        "周度趋势",
+        "周排行",
+        "周榜",
+        "图生图",
+        "增长榜",
+        "增长率排行",
+        "复盘",
+        "头部账号",
+        "套路",
+        "实时取数",
+        "实时搜索",
+        "对标",
+        "对标：分析",
+        "封面",
+        "封面：灵感",
+        "小号打法",
+        "小红书抖音公众号",
+        "小红书：搜索",
+        "引用来源",
+        "扒抖音作品",
+        "扒文章",
+        "扒评论区",
+        "批量爬公众号",
+        "批量诊断",
+        "找对标笔记",
+        "找选题",
+        "抖音：搜索",
+        "拆解",
+        "持续走高",
+        "排行",
+        "推荐",
+        "搜抖音爆款",
+        "改图",
+        "敏感词",
+        "文旅",
+        "文生图",
+        "日报",
+        "日榜",
+        "最多点赞",
+        "最新发布",
+        "极限词",
+        "某公众号发了什么",
+        "查出处",
+        "标杆账号",
+        "标题",
+        "标题：灵感",
+        "榜",
+        "榜单",
+        "每天在推什么",
+        "每日榜",
+        "流量风口",
+        "流量风向",
+        "灵感",
+        "热度指数",
+        "热搜",
+        "热搜关键词",
+        "热榜",
+        "热榜TOP10",
+        "热点：扫描",
+        "热门文章",
+        "热门笔记",
+        "热门账号",
+        "照着写小红书",
+        "爆文",
+        "爆款",
+        "爆款笔记",
+        "爆款：文章",
+        "爬取",
+        "爬虫",
+        "生成",
+        "生成图片",
+        "用户需求",
+        "盯公众号",
+        "相似账号",
+        "看评论",
+        "看赛道热门内容",
+        "矩阵",
+        "短剧",
+        "短视频选题",
+        "社媒舆情",
+        "竞品：账号",
+        "笔记发现",
+        "笔记查询",
+        "笔记：对标",
+        "素人爆款",
+        "素材",
+        "结构",
+        "综合搜索",
+        "综合热点",
+        "联网搜索",
+        "联网查证",
+        "聚合热榜",
+        "舆情监测",
+        "视频号：AI",
+        "角度",
+        "解析链接",
+        "订阅公众号",
+        "设计",
+        "评论",
+        "评论分析",
+        "评论风向",
+        "诊断",
+        "话题研究",
+        "豆包搜索",
+        "账号",
+        "账号体检",
+        "账号健康度",
+        "账号发文列表",
+        "账号画像",
+        "赛道日报",
+        "起号参考",
+        "起标题",
+        "跟踪",
+        "跨平台热搜",
+        "跨平台：选题",
+        "蹭热点",
+        "过审",
+        "近30天作品",
+        "近期爆款",
+        "违禁词",
+        "追更",
+        "追流量",
+        "追热点",
+        "选题",
+        "选题：拆解",
+        "配图",
+        "链接解析",
+        "阅读增长",
+        "首图灵感",
+        "高点击标题",
+        "黑马",
+        "黑马笔记",
+        "黑马账号"
+      ]
+    },
+    "doubaoya-gateway": {
+      "displayName": "doubaoya-gateway",
+      "topics": [],
+      "status": "renamed",
+      "redirectTo": "dby-gateway",
+      "userFiles": [],
+      "knownHashes": [
+        "08201331442c",
+        "153805c138d1",
+        "1b9f82882898",
+        "263cd71d3e9d",
+        "2d4cf93eb151",
+        "2d577dc98f2b",
+        "6d6420eaf6ff",
+        "7b241df32a12",
+        "80b4f6da2278",
+        "bfb8ea8b88d0",
+        "ced4b44acb42",
+        "d7be4ecd8086",
+        "f4b4d82e21d0"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "1b9f82882898",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(dby-update): 按内容哈希认包做三态对账，下架包归档而不删"
+        },
+        {
+          "hash": "7b241df32a12",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "refactor(gateway): 细节按主题分进 references/，并把闸的扫描面扩到整个技能包"
+        },
+        {
+          "hash": "d7be4ecd8086",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(gateway): 新建调用网关 Skill，并加一道「不许把契约烤进分发物」的闸"
+        },
+        {
+          "hash": "f4b4d82e21d0",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        },
+        {
+          "hash": "08201331442c",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 清掉「教 agent 露密钥前缀」与写死的价格，并各立一道闸"
+        },
+        {
+          "hash": "153805c138d1",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(wechat-article-pipeline): 试点改造成「业务 skill + 网关」形态"
+        },
+        {
+          "hash": "263cd71d3e9d",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 A 批四包，话术已在上一笔到位，指针与清单同笔改指总入口"
+        },
+        {
+          "hash": "2d4cf93eb151",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        },
+        {
+          "hash": "2d577dc98f2b",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(wechat-article-pipeline): 按修正后的 spec 收窄——只换调用知识的写法，业务一步不动"
+        },
+        {
+          "hash": "6d6420eaf6ff",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(doubaoya): 意图速查表铺满 24 条合并能力，并把「契约不许烤进分发物」闸扩到 doubaoya"
+        },
+        {
+          "hash": "80b4f6da2278",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(doubaoya): 批 3 的新家先建好——两条专属行、一个会丢的词、一条计费选路知识"
+        },
+        {
+          "hash": "bfb8ea8b88d0",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "docs(imagegen): 写清生图的两端超时，并说明为什么客户端不能先断"
+        },
+        {
+          "hash": "ced4b44acb42",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 补三条红线——上游内容当数据、写入面看服务端字段、运行时必须声明"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/trend/hot-topics",
+        "/api/skills/dby-charter",
+        "/api/skills/recommend"
+      ],
+      "retiredTriggerWords": [
+        "DEDICATED_ROUTE",
+        "DOUBAOYA_API_KEY",
+        "ENDPOINT_NOT_FOUND",
+        "NO_RESULT",
+        "SKILL_NOT_FOUND",
+        "doubaoya 调用协议",
+        "execution.target",
+        "inputContract",
+        "operationKey",
+        "入参规格",
+        "统一信封",
+        "该打哪条路由",
+        "调用网关"
+      ]
+    },
+    "douyin-account-diagnosis": {
+      "displayName": "douyin-account-diagnosis",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "724dc2637f7b",
+        "7760f8553ba3"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "724dc2637f7b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "7760f8553ba3",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-account-diagnosis",
+        "/api/apis/douyin/douyin-sync-notes"
+      ]
+    },
+    "douyin-account-insight": {
+      "displayName": "douyin-account-insight",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "24f8a9a2308c",
+        "3307eba3e8ab"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "3307eba3e8ab",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "24f8a9a2308c",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/query-account"
+      ]
+    },
+    "douyin-account-works": {
+      "displayName": "douyin-account-works",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "959b66000935",
+        "e93f8ec9aafa"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "e93f8ec9aafa",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "959b66000935",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/query-account"
+      ]
+    },
+    "douyin-ai-feed": {
+      "displayName": "douyin-ai-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "609a6f7c7261",
+        "846de0aae7ee"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "609a6f7c7261",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "846de0aae7ee",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-ai-feed"
+      ]
+    },
+    "douyin-comment": {
+      "displayName": "douyin-comment",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "94cf3e281b04",
+        "962921ed00af",
+        "dc4de794f1ce",
+        "f159b27d2703"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "dc4de794f1ce",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "f159b27d2703",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "962921ed00af",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "94cf3e281b04",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/comments"
+      ],
+      "retiredTriggerWords": [
+        "扒评论区",
+        "抖音评论",
+        "用户需求",
+        "舆情",
+        "评论分析",
+        "评论风向"
+      ]
+    },
+    "douyin-content-surge": {
+      "displayName": "douyin-content-surge",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "7a641b8a75d7",
+        "fc425c08e975"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "7a641b8a75d7",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "fc425c08e975",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-content-surge"
+      ],
+      "retiredTriggerWords": [
+        "上升榜",
+        "抖音飙升榜",
+        "日榜周榜",
+        "点赞飙升",
+        "起飞内容",
+        "黑马作品"
+      ]
+    },
+    "douyin-daily-hot": {
+      "displayName": "douyin-daily-hot",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0e8953a807ad",
+        "cc7c8113ceb4"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "0e8953a807ad",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "cc7c8113ceb4",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-likes-rank"
+      ],
+      "retiredTriggerWords": [
+        "吸赞作品",
+        "抖音日榜",
+        "抖音点赞榜",
+        "每日 TOP",
+        "点赞排行",
+        "爆款榜"
+      ]
+    },
+    "douyin-hot-trend": {
+      "displayName": "douyin-hot-trend",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "48b150ae5477",
+        "87047aa4c13f",
+        "e44863db7f53"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "48b150ae5477",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "e44863db7f53",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "87047aa4c13f",
+          "version": "",
+          "date": "2026-07-08",
+          "subject": "fix: 选题 workflow — pull keyword-free 综合热点 + match to IP, stop searching the IP name"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/trend/douyin-hot-trend"
+      ],
+      "retiredTriggerWords": [
+        "抖音实时榜",
+        "抖音热搜",
+        "抖音热榜",
+        "抖音热点",
+        "抖音趋势",
+        "抖音风向"
+      ]
+    },
+    "douyin-realtime-search": {
+      "displayName": "douyin-realtime-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "aa99390c4734",
+        "bdb6dadc9fe0",
+        "d861c99e79a8",
+        "da2722db8431"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "aa99390c4734",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "bdb6dadc9fe0",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "da2722db8431",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "d861c99e79a8",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/realtime-search"
+      ],
+      "retiredTriggerWords": [
+        "实时取数",
+        "抖音实时搜索",
+        "抖音综合搜索",
+        "最多点赞",
+        "最新发布",
+        "追流量"
+      ]
+    },
+    "douyin-rise-ranking": {
+      "displayName": "douyin-rise-ranking",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "849034333ff5",
+        "b1e84379d223"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "849034333ff5",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "b1e84379d223",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-rise-fans-rank"
+      ],
+      "retiredTriggerWords": [
+        "抖音涨粉榜",
+        "抖音粉丝增长",
+        "抖音起势",
+        "抖音黑马",
+        "涨粉排行",
+        "粉丝增量"
+      ]
+    },
+    "douyin-search": {
+      "displayName": "douyin-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "154c60c5923a",
+        "521d1ff1620b",
+        "5d6fe3fcf166",
+        "d0ecf7a7e23c"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "5d6fe3fcf166",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "521d1ff1620b",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "d0ecf7a7e23c",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "154c60c5923a",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/search-work"
+      ],
+      "retiredTriggerWords": [
+        "对标作品",
+        "扒抖音作品",
+        "抖音取数",
+        "抖音搜索",
+        "搜抖音爆款",
+        "短视频选题"
+      ]
+    },
+    "douyin-similar-account": {
+      "displayName": "douyin-similar-account",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "4e0458559153",
+        "c994c7aa5f08"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "4e0458559153",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "c994c7aa5f08",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-similar-account",
+        "/api/apis/douyin/douyin-sync-notes"
+      ]
+    },
+    "douyin-subscribe": {
+      "displayName": "douyin-subscribe",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "8ea32bd21257",
+        "f58e1f15413d"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "8ea32bd21257",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "f58e1f15413d",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-work-list"
+      ],
+      "retiredTriggerWords": [
+        "对标监控",
+        "抖音订阅",
+        "抖音追更",
+        "新作品",
+        "每日更新",
+        "盯账号"
+      ]
+    },
+    "douyin-top-account": {
+      "displayName": "douyin-top-account",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "b307d6a3b11d",
+        "cbfb32befb01"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "b307d6a3b11d",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "cbfb32befb01",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-top-account"
+      ],
+      "retiredTriggerWords": [
+        "影响力指数",
+        "抖音大号排行",
+        "抖音头部账号",
+        "抖音影响力榜",
+        "抖音榜单",
+        "抖音风向"
+      ]
+    },
+    "douyin-weekly-surge": {
+      "displayName": "douyin-weekly-surge",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2d87a4d21504",
+        "bfb8bd09453c"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "2d87a4d21504",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "bfb8bd09453c",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-content-surge"
+      ],
+      "retiredTriggerWords": [
+        "一周趋势",
+        "中线趋势",
+        "周度上升榜",
+        "抖音飙升周榜",
+        "持续走高"
+      ]
+    },
+    "douyin-works-crawler": {
+      "displayName": "douyin-works-crawler",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "4d9e35baf18d",
+        "a33bf8aa64c1"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "4d9e35baf18d",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "a33bf8aa64c1",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-user-works"
+      ],
+      "retiredTriggerWords": [
+        "作品列表",
+        "对标账号",
+        "抖音作品采集",
+        "抖音内容拆解",
+        "抖音账号画像",
+        "抖音达人资料"
+      ]
+    },
+    "gongzhonghao-search": {
+      "displayName": "gongzhonghao-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "28e528b8a3b7",
+        "5a9658cc65ba",
+        "ddd991ed7d43",
+        "e19a42437713"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "e19a42437713",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "5a9658cc65ba",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "ddd991ed7d43",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "28e528b8a3b7",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/search-article"
+      ]
+    },
+    "gzh-ai-feed": {
+      "displayName": "gzh-ai-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "17b81ba201c0",
+        "4e2d2e3763f3",
+        "83dda703ed94",
+        "b3d13aba1ebb",
+        "be7e953fc6dd",
+        "d2b1fa95fe37",
+        "f0c2d4aea208"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "83dda703ed94",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "f0c2d4aea208",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "17b81ba201c0",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "d2b1fa95fe37",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "b3d13aba1ebb",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "4e2d2e3763f3",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 五个存活壳补上显式触发词声明，让差集闸未来能机器保护它们的退役"
+        },
+        {
+          "hash": "be7e953fc6dd",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 把删壳真正丢掉的两块话术接回来——盲测量出来的，不是猜的"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-ai-feed"
+      ],
+      "retiredTriggerWords": [
+        "公众号爆文",
+        "内容灵感",
+        "每日榜",
+        "热点扫描"
+      ]
+    },
+    "gzh-astock-top": {
+      "displayName": "gzh-astock-top",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0a630607e3b2",
+        "26995b98b054",
+        "b0397ba4619e",
+        "b05513e55a44",
+        "cb0117854e10",
+        "ee79a58d585c"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "b0397ba4619e",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "ee79a58d585c",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "b05513e55a44",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "cb0117854e10",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "26995b98b054",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "0a630607e3b2",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-account-analyzer",
+        "/api/apis/gongzhonghao/gongzhonghao-daily-publish",
+        "/api/apis/gongzhonghao/gongzhonghao-search-user",
+        "/api/apis/gongzhonghao/hot-article"
+      ]
+    },
+    "gzh-search": {
+      "displayName": "gzh-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0ce1bf738a5c",
+        "685cb3f07cc3",
+        "70a5e0479c16",
+        "95c7ffa97dcb",
+        "9b6a69a3ddfa"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "685cb3f07cc3",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "95c7ffa97dcb",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "0ce1bf738a5c",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "70a5e0479c16",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "9b6a69a3ddfa",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-work-list",
+        "/api/apis/gongzhonghao/search-article"
+      ],
+      "retiredTriggerWords": [
+        "公众号取数",
+        "公众号爬虫",
+        "扒文章",
+        "批量爬公众号",
+        "热点扫描",
+        "选题素材"
+      ]
+    },
+    "gzh-subscribe": {
+      "displayName": "gzh-subscribe",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "63eba88a501b",
+        "6a3904b09bb5",
+        "7e5c89cdb151",
+        "86ca8b1384fb",
+        "9b3420dcf641"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "63eba88a501b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "7e5c89cdb151",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "6a3904b09bb5",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "86ca8b1384fb",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "9b3420dcf641",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-work-list"
+      ],
+      "retiredTriggerWords": [
+        "某公众号发了什么",
+        "盯公众号",
+        "竞品发文复盘",
+        "订阅公众号",
+        "账号发文列表",
+        "追更"
+      ]
+    },
+    "image-gen": {
+      "displayName": "image-gen",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "1db63fc51834",
+        "21c0a56043e3",
+        "2a98fbcc0dfb",
+        "3c18c3d227c3",
+        "4c8276708177",
+        "5f925cccefc8",
+        "7644508c5b4a",
+        "7b1584092802",
+        "cf818b734a81",
+        "d8aee0025edb",
+        "dbab965c3a57"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "21c0a56043e3",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "7644508c5b4a",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "1db63fc51834",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "chore(focus): 社区库剪向公众号+小红书创作+通用工具——移除平台垂直/账号分析类 skill"
+        },
+        {
+          "hash": "2a98fbcc0dfb",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "dbab965c3a57",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "7b1584092802",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "3c18c3d227c3",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "chore(skills): 删掉 5 个空壳 dependency 声明"
+        },
+        {
+          "hash": "4c8276708177",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        },
+        {
+          "hash": "d8aee0025edb",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "5f925cccefc8",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 10 个零装机纯壳，话术与指针同笔改指 doubaoya"
+        },
+        {
+          "hash": "cf818b734a81",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(imagegen): image-gen 的「约 3 分钟」全部改成真值，别让它和刚写下的规则打架"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/gpt-image-gen"
+      ],
+      "retiredTriggerWords": [
+        "AI 出图",
+        "主视觉",
+        "做封面",
+        "图生图",
+        "改图",
+        "文生图",
+        "生成图片",
+        "配图"
+      ]
+    },
+    "ip-profile": {
+      "displayName": "ip-profile",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "b36db0c86bf5",
+        "ba16b9cb509d",
+        "d05bb83c226b",
+        "dd6c27e2411f",
+        "e1bcf796fd49",
+        "fbbf493d9e83"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "ba16b9cb509d",
+          "version": "",
+          "date": "2026-07-13",
+          "subject": "docs(ip-profile): 致谢补 nuwa-skill"
+        },
+        {
+          "hash": "d05bb83c226b",
+          "version": "",
+          "date": "2026-07-13",
+          "subject": "feat(ip-profile): 公众号 IP 档案 skill（建/更新/重蒸/传图）"
+        },
+        {
+          "hash": "dd6c27e2411f",
+          "version": "",
+          "date": "2026-07-13",
+          "subject": "docs(ip-profile): 范文改以粘贴为主，去掉不通的公众号历史导入"
+        },
+        {
+          "hash": "e1bcf796fd49",
+          "version": "",
+          "date": "2026-07-13",
+          "subject": "docs(ip-profile): IP 图改用 /api/upload 正式上传端点"
+        },
+        {
+          "hash": "b36db0c86bf5",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "fbbf493d9e83",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "IP 头像",
+        "IP 档案",
+        "个人产品",
+        "公众号人设",
+        "带货话术",
+        "文风 DNA",
+        "文风蒸馏",
+        "更新人设",
+        "重新蒸馏"
+      ]
+    },
+    "ks-ai-feed": {
+      "displayName": "ks-ai-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "99d8a5314b6e"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "99d8a5314b6e",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/kuaishou/kuaishou-ai-feed"
+      ]
+    },
+    "mera": {
+      "displayName": "mera",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "24c263d1a67e",
+        "2b23f763aa42",
+        "2db4df543c4e",
+        "725991ab4f3e",
+        "80c955d249ac",
+        "cca381f912d6",
+        "ecbb1d97dd44",
+        "eeafb3631fc4"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "24c263d1a67e",
+          "version": "",
+          "date": "2026-07-27",
+          "subject": "feat(mera): 新增 Mera 第二大脑 skill(写入走收条/带引用问答) + 总纲路由"
+        },
+        {
+          "hash": "2db4df543c4e",
+          "version": "",
+          "date": "2026-07-27",
+          "subject": "fix(mera): 无证据时那句英文占位符彻底不进 stdout（删 answer_upstream 副本）"
+        },
+        {
+          "hash": "725991ab4f3e",
+          "version": "",
+          "date": "2026-07-27",
+          "subject": "fix(mera): 按 Mera 地面真相纠正 5 处错误说法(证据判据/self形状/幂等/标题/去重)"
+        },
+        {
+          "hash": "ecbb1d97dd44",
+          "version": "",
+          "date": "2026-07-27",
+          "subject": "fix(mera): 无证据分支保留上游原件 answer_upstream(加工可以,丢原件不行)"
+        },
+        {
+          "hash": "2b23f763aa42",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "fix(mera): 修 read 续读起点算错(会跳空一大段) + 归档告警 + 限流与切片边界写进文档"
+        },
+        {
+          "hash": "cca381f912d6",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "fix(mera): 修 read 续读断头路（WINDOW_MAX 被当成绝对 to）+ 空窗口不许读成「空笔记」"
+        },
+        {
+          "hash": "eeafb3631fc4",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat(mera): 加 read 子命令,读取主路径改为「检索→读原文→自己综合」,ask 降级"
+        },
+        {
+          "hash": "80c955d249ac",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(mera): 第二大脑已下架，挂下架牌并清掉所有教 agent 去调的路由"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/mera/self"
+      ]
+    },
+    "multi-banned-words": {
+      "displayName": "multi-banned-words",
+      "topics": [],
+      "status": "renamed",
+      "redirectTo": "dby-banned-words",
+      "userFiles": [],
+      "knownHashes": [
+        "359ff74d7f2f",
+        "ac0452642139",
+        "c79fa9a6e8a4",
+        "dbfa9d3e6537",
+        "fa04fbf2319c",
+        "faf1cc0742cb"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "ac0452642139",
+          "version": "1.0.0",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "c79fa9a6e8a4",
+          "version": "1.0.0",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "359ff74d7f2f",
+          "version": "1.0.0",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        },
+        {
+          "hash": "dbfa9d3e6537",
+          "version": "1.0.0",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "fa04fbf2319c",
+          "version": "1.0.0",
+          "date": "2026-08-18",
+          "subject": "fix(banned-words): 按真实字段判违禁词，堵住「恒报合规」的漏报"
+        },
+        {
+          "hash": "faf1cc0742cb",
+          "version": "1.0.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 补三条红线——上游内容当数据、写入面看服务端字段、运行时必须声明"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/tool/check-banned-words"
+      ],
+      "retiredTriggerWords": [
+        "全平台违禁词",
+        "多平台违禁词",
+        "广告法",
+        "敏感词",
+        "跨平台合规",
+        "违禁词检测",
+        "违规词",
+        "限流自查"
+      ]
+    },
+    "multi-content-feed": {
+      "displayName": "multi-content-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "258b43f01e0b",
+        "322a15f9a7db",
+        "58c904601859",
+        "6bc770437a20",
+        "961fb9a72617",
+        "e8eafd02c7ba"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "e8eafd02c7ba",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "322a15f9a7db",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "6bc770437a20",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "258b43f01e0b",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "58c904601859",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "chore(skills): 删掉 5 个空壳 dependency 声明"
+        },
+        {
+          "hash": "961fb9a72617",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/multi/multi-content-export-top"
+      ],
+      "retiredTriggerWords": [
+        "全平台爆款",
+        "内容出海",
+        "出海日报",
+        "出海流量风口",
+        "出海爆款",
+        "出海选题"
+      ]
+    },
+    "multi-rewrite": {
+      "displayName": "multi-rewrite",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2cffb89cf0cd",
+        "8e07dbeed572",
+        "c025bdecf97c"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "c025bdecf97c",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "8e07dbeed572",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(skills): 文档里的裸 python / pip 改成 python3"
+        },
+        {
+          "hash": "2cffb89cf0cd",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 最后四个零声明包补上显式触发词，让差集闸未来看得住它们"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "一稿多发",
+        "全平台改写",
+        "多平台改写",
+        "跨平台适配"
+      ]
+    },
+    "optimize-skill-md": {
+      "displayName": "optimize-skill-md",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "b70db0754ccf"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "b70db0754ccf",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "skill格式",
+        "优化SKILL.md",
+        "优化Skill",
+        "技能优化",
+        "技能编写",
+        "规范化技能"
+      ]
+    },
+    "pdf-image-text-extractor": {
+      "displayName": "pdf-image-text-extractor",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "7100990470e0",
+        "79fe3715dfe0",
+        "8ba5a1a01cc5",
+        "dfbc50fee134"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "7100990470e0",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "79fe3715dfe0",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "dfbc50fee134",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(skills): 文档里的裸 python / pip 改成 python3"
+        },
+        {
+          "hash": "8ba5a1a01cc5",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 最后四个零声明包补上显式触发词，让差集闸未来看得住它们"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "OCR识别",
+        "PDF提取",
+        "PDF文字",
+        "图片文字",
+        "扫描件",
+        "提取文本",
+        "文档提取"
+      ]
+    },
+    "playlet-bili-feed": {
+      "displayName": "playlet-bili-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "54dbfba65fe8",
+        "8170d6371065"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "54dbfba65fe8",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "8170d6371065",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/bilibili/bilibili-playlet-feed"
+      ]
+    },
+    "playlet-douyin-feed": {
+      "displayName": "playlet-douyin-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "6fd2146a8d5b",
+        "eba898eaa46b"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "6fd2146a8d5b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "eba898eaa46b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/douyin/douyin-playlet-feed"
+      ]
+    },
+    "playlet-wechat-feed": {
+      "displayName": "playlet-wechat-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "351ee4f679f2",
+        "3ebe92afaed3",
+        "7c190de3a23b",
+        "7cba97b1e6d5",
+        "e7eee90e5a0f",
+        "f029374f0b3a",
+        "f315fbf96fcb"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "351ee4f679f2",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "7c190de3a23b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "7cba97b1e6d5",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "3ebe92afaed3",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "f315fbf96fcb",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "e7eee90e5a0f",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 五个存活壳补上显式触发词声明，让差集闸未来能机器保护它们的退役"
+        },
+        {
+          "hash": "f029374f0b3a",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 把删壳真正丢掉的两块话术接回来——盲测量出来的，不是猜的"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-playlet-feed"
+      ],
+      "retiredTriggerWords": [
+        "公众号爆文",
+        "文旅",
+        "每天在推什么",
+        "每日榜",
+        "短剧",
+        "赛道日报"
+      ]
+    },
+    "playlet-xiaohongshu-feed": {
+      "displayName": "playlet-xiaohongshu-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2d14e5f59b28",
+        "4024193a834e"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "2d14e5f59b28",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "4024193a834e",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
+      ]
+    },
+    "seedance-video-gen": {
+      "displayName": "seedance-video-gen",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "80f628c3c505"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "80f628c3c505",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/seedance-video-gen"
+      ]
+    },
+    "seedream-5-lite": {
+      "displayName": "seedream-5-lite",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "01ab2a8b4d38",
+        "507d3cd35ece",
+        "6e6cb9e8eb63",
+        "7b4d5857c795",
+        "7ec746a1de61",
+        "cbc7525953d6",
+        "d4a0fb2d8312",
+        "d72d51a89e4b"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "cbc7525953d6",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "01ab2a8b4d38",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "6e6cb9e8eb63",
+          "version": "",
+          "date": "2026-07-18",
+          "subject": "fix(skills): seedream-5-lite 示例 size 合法化(上游最低像素约束)"
+        },
+        {
+          "hash": "7b4d5857c795",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "d72d51a89e4b",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "d4a0fb2d8312",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(doubaoya): 总入口按两个能力集合各自的真实路由改写，并加闸钉死调用路径"
+        },
+        {
+          "hash": "507d3cd35ece",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 五个存活壳补上显式触发词声明，让差集闸未来能机器保护它们的退役"
+        },
+        {
+          "hash": "7ec746a1de61",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/gpt-image-gen",
+        "/api/skills/seedream-lite"
+      ],
+      "retiredTriggerWords": [
+        "AI 出图",
+        "图生图",
+        "文生图",
+        "生成图片",
+        "配图"
+      ]
+    },
+    "tiktok-account-search": {
+      "displayName": "tiktok-account-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0452d7e2c259"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "0452d7e2c259",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/tiktok/search-user"
+      ],
+      "retiredTriggerWords": [
+        "TikTok 创作者",
+        "TikTok 博主",
+        "TikTok 账号搜索",
+        "TikTok 达人",
+        "搜 TikTok 账号",
+        "海外抖音账号"
+      ]
+    },
+    "trending-hub": {
+      "displayName": "trending-hub",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2fa9c18f9ffc",
+        "3a87f4f60e76",
+        "4c8e42c9cc32",
+        "704ffd48321d",
+        "aa5dfce8c2c1",
+        "aab9d14c6e58",
+        "ce7dcc76fcf8",
+        "ecd0d3e1198a",
+        "f5f1f7bde205"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "ecd0d3e1198a",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "3a87f4f60e76",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "aab9d14c6e58",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "2fa9c18f9ffc",
+          "version": "",
+          "date": "2026-07-08",
+          "subject": "fix: 选题 workflow — pull keyword-free 综合热点 + match to IP, stop searching the IP name"
+        },
+        {
+          "hash": "aa5dfce8c2c1",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "chore(focus): 社区库剪向公众号+小红书创作+通用工具——移除平台垂直/账号分析类 skill"
+        },
+        {
+          "hash": "ce7dcc76fcf8",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "4c8e42c9cc32",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        },
+        {
+          "hash": "704ffd48321d",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "f5f1f7bde205",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/trend/trending-hub-keyword"
+      ],
+      "retiredTriggerWords": [
+        "借势选题",
+        "全网热榜",
+        "找选题",
+        "热搜",
+        "爆款选题",
+        "综合热点",
+        "趋势",
+        "蹭热点",
+        "追热点",
+        "选题",
+        "选题信号"
+      ]
+    },
+    "trending-hub-top10": {
+      "displayName": "trending-hub-top10",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0b37ea168359",
+        "39b4df904774",
+        "3ee115e4176b",
+        "4db77fa2e299",
+        "759f77d28df3",
+        "c3f4290d1cdf",
+        "e293119366fd",
+        "f6476256f293"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "3ee115e4176b",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "c3f4290d1cdf",
+          "version": "",
+          "date": "2026-07-08",
+          "subject": "fix: 选题 workflow — pull keyword-free 综合热点 + match to IP, stop searching the IP name"
+        },
+        {
+          "hash": "f6476256f293",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "39b4df904774",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "0b37ea168359",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "759f77d28df3",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "4db77fa2e299",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "chore(skills): 删掉 5 个空壳 dependency 声明"
+        },
+        {
+          "hash": "e293119366fd",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/trend/hot-keywords"
+      ],
+      "retiredTriggerWords": [
+        "今日热点",
+        "全网热搜",
+        "热搜关键词",
+        "热榜TOP10",
+        "热点榜",
+        "聚合热榜",
+        "跨平台热搜"
+      ]
+    },
+    "video-downloader": {
+      "displayName": "video-downloader",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "22d81b5c253f",
+        "814cbe4a2dc1"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "22d81b5c253f",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "814cbe4a2dc1",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/video-downloader"
+      ]
+    },
+    "wechat-10w-hot": {
+      "displayName": "wechat-10w-hot",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "6220c344c078",
+        "96210aea2de6",
+        "af3f025e734b",
+        "b82f2ab8e880",
+        "b9e1d16e6ba0",
+        "f5c7a37be938"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "b9e1d16e6ba0",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "96210aea2de6",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "af3f025e734b",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "f5c7a37be938",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "6220c344c078",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "b82f2ab8e880",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/category-time-hot"
+      ]
+    },
+    "wechat-account-analyzer": {
+      "displayName": "wechat-account-analyzer",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "153389f9602d",
+        "4df783921870",
+        "4fe64f6efacf",
+        "7073587035e4",
+        "d63f093ef772"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "4df783921870",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "7073587035e4",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "d63f093ef772",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "4fe64f6efacf",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "153389f9602d",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-account-analyzer",
+        "/api/apis/gongzhonghao/gzh-sync-notes"
+      ],
+      "retiredTriggerWords": [
+        "公众号诊断",
+        "批量诊断",
+        "竞品诊断",
+        "账号体检",
+        "账号健康度",
+        "账号画像"
+      ]
+    },
+    "wechat-article-pipeline": {
+      "displayName": "wechat-article-pipeline",
+      "topics": [],
+      "status": "renamed",
+      "redirectTo": "dby-publish",
+      "userFiles": [
+        "config.json",
+        "design-config.json",
+        "profiles/",
+        "themes/",
+        "assets/ip/"
+      ],
+      "knownHashes": [
+        "05469f1c1d54",
+        "123ef577ab86",
+        "14320b25d931",
+        "1b1d0072d93f",
+        "2278788bbdfd",
+        "2ee559010b10",
+        "2f42b3dae492",
+        "36d0ec66723c",
+        "3ca5a1ac9b04",
+        "567d45855c8f",
+        "5b08b28d0797",
+        "5e454ba990b7",
+        "5f18df66a2d6",
+        "65d559300eef",
+        "6af7fdbdf97a",
+        "6ee823b7415b",
+        "6fe62bf1b7aa",
+        "7330e2346ed3",
+        "88e8c98c695d",
+        "8e51d419df6b",
+        "8fd6a7602be1",
+        "91db95749649",
+        "9fd965739ead",
+        "b4ae491095d9",
+        "bc543b555f3e",
+        "c2e53f8828fd",
+        "c394ba22e112",
+        "cac10a28d159",
+        "ea71215fb478",
+        "f2b4bed93925",
+        "f501d5f2fbde",
+        "fce1260c3188",
+        "ffd28948cca2"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "567d45855c8f",
+          "version": "",
+          "date": "2026-07-07",
+          "subject": "feat(wechat-article-pipeline): borrow ecosystem — 13 themes, importer, heuristic extractor"
+        },
+        {
+          "hash": "5e454ba990b7",
+          "version": "",
+          "date": "2026-07-07",
+          "subject": "feat(wechat-article-pipeline): universal draft pipeline skill"
+        },
+        {
+          "hash": "ea71215fb478",
+          "version": "",
+          "date": "2026-07-07",
+          "subject": "feat(wechat-article-pipeline): theme system for replicating article styles"
+        },
+        {
+          "hash": "f2b4bed93925",
+          "version": "",
+          "date": "2026-07-11",
+          "subject": "feat(wechat-article-pipeline): 发文 skill 新增引导式设计"
+        },
+        {
+          "hash": "5f18df66a2d6",
+          "version": "",
+          "date": "2026-07-12",
+          "subject": "fix(wechat-article-pipeline): 内联花式标题 :::标题 文字 自闭合,不再吞掉后续组件"
+        },
+        {
+          "hash": "9fd965739ead",
+          "version": "",
+          "date": "2026-07-12",
+          "subject": "feat(wechat-article-pipeline): 新增本地设计工作台 + IP 参考图配图 + pipeline --design 配置驱动"
+        },
+        {
+          "hash": "fce1260c3188",
+          "version": "",
+          "date": "2026-07-12",
+          "subject": "feat(wechat-article-pipeline): 渲染器加组件层 MVP(5 个关键组件 + 块语法)"
+        },
+        {
+          "hash": "6af7fdbdf97a",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "36d0ec66723c",
+          "version": "",
+          "date": "2026-07-22",
+          "subject": "feat(wechat-pipeline): 同步本鸭精品 benya-clean 主题并设为默认排版"
+        },
+        {
+          "hash": "6ee823b7415b",
+          "version": "1.1.0",
+          "date": "2026-07-22",
+          "subject": "docs(community): 补 skills update 更新路径 + wechat-pipeline 更新引导(benya-clean 默认)"
+        },
+        {
+          "hash": "8fd6a7602be1",
+          "version": "1.1.0",
+          "date": "2026-07-22",
+          "subject": "fix(wechat-pipeline): 同步 benya-clean 微信兼容修复(去外框+装饰下沉,对齐主仓)"
+        },
+        {
+          "hash": "bc543b555f3e",
+          "version": "1.1.0",
+          "date": "2026-07-28",
+          "subject": "feat(wechat-article-pipeline): 上架 benya-premium 主题 + THEME-SCHEMA 占位法铁律"
+        },
+        {
+          "hash": "c2e53f8828fd",
+          "version": "1.1.0",
+          "date": "2026-08-11",
+          "subject": "fix(wechat): 渲染器同步 doubaoyahub 本轮修复；发布错误码表按真实成因重写"
+        },
+        {
+          "hash": "f501d5f2fbde",
+          "version": "1.1.0",
+          "date": "2026-08-13",
+          "subject": "feat(validate-theme): 同步 doubaoyahub v2 安全边界——tokens 三层 + --x:/url(data: 两条硬规则"
+        },
+        {
+          "hash": "c394ba22e112",
+          "version": "1.1.0",
+          "date": "2026-08-14",
+          "subject": "docs(wechat): 写正文前先拉写作规范；正文不要再写一遍标题"
+        },
+        {
+          "hash": "5b08b28d0797",
+          "version": "1.1.0",
+          "date": "2026-08-17",
+          "subject": "docs(skills): writing-spec 接口已上线，改掉「待上线拿 404 就跳过」的过期指引"
+        },
+        {
+          "hash": "8e51d419df6b",
+          "version": "1.2.0",
+          "date": "2026-08-17",
+          "subject": "feat(wechat): 流水线优先拉服务端编译主题，validator 对 engine-2 主题升为硬错误"
+        },
+        {
+          "hash": "2278788bbdfd",
+          "version": "1.2.0",
+          "date": "2026-08-18",
+          "subject": "fix(security): 密钥内容一个字符都不许进日志，并给社区仓补上这条闸"
+        },
+        {
+          "hash": "2ee559010b10",
+          "version": "1.2.0",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        },
+        {
+          "hash": "2f42b3dae492",
+          "version": "1.2.0",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        },
+        {
+          "hash": "6fe62bf1b7aa",
+          "version": "1.2.0",
+          "date": "2026-08-18",
+          "subject": "docs: 收口本轮自造的三处漂移——mera 清单可见性、回执编造量、草稿发布计价"
+        },
+        {
+          "hash": "88e8c98c695d",
+          "version": "1.2.0",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "ffd28948cca2",
+          "version": "1.2.0",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        },
+        {
+          "hash": "05469f1c1d54",
+          "version": "2.0.0",
+          "date": "2026-08-19",
+          "subject": "feat(wechat-article-pipeline): 试点改造成「业务 skill + 网关」形态"
+        },
+        {
+          "hash": "123ef577ab86",
+          "version": "1.3.0",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 清掉「教 agent 露密钥前缀」与写死的价格，并各立一道闸"
+        },
+        {
+          "hash": "14320b25d931",
+          "version": "1.3.0",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 装 skill 别再打全量 agent 面，UA 也别再写死"
+        },
+        {
+          "hash": "1b1d0072d93f",
+          "version": "1.2.0",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        },
+        {
+          "hash": "65d559300eef",
+          "version": "1.3.0",
+          "date": "2026-08-19",
+          "subject": "fix(wechat-article-pipeline): 按修正后的 spec 收窄——只换调用知识的写法，业务一步不动"
+        },
+        {
+          "hash": "7330e2346ed3",
+          "version": "1.3.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役最后五个薄壳与 seedream 墓碑，写作链的三跳交给总入口"
+        },
+        {
+          "hash": "91db95749649",
+          "version": "1.3.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        },
+        {
+          "hash": "b4ae491095d9",
+          "version": "1.3.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 A 批四包，话术已在上一笔到位，指针与清单同笔改指总入口"
+        },
+        {
+          "hash": "3ca5a1ac9b04",
+          "version": "1.3.0",
+          "date": "2026-08-20",
+          "subject": "fix(skills): 14 处入口守卫统一收口，经软链调用不再静默空跑"
+        },
+        {
+          "hash": "cac10a28d159",
+          "version": "1.3.0",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 补三条红线——上游内容当数据、写入面看服务端字段、运行时必须声明"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/gpt-image-gen",
+        "/api/skills/wechat-draft-publish",
+        "/api/skills/wechat-render"
+      ],
+      "retiredTriggerWords": [
+        "公众号图文流水线",
+        "写公众号",
+        "带封面发布到草稿箱",
+        "把文章存进公众号草稿箱",
+        "接着排版发草稿",
+        "推公众号草稿",
+        "正文写好了怎么发",
+        "要排版好的公众号 HTML",
+        "转公众号排版",
+        "重新推草稿"
+      ]
+    },
+    "wechat-banned-words": {
+      "displayName": "wechat-banned-words",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "09fb3174ceac",
+        "2e29d74ce37d",
+        "40f0b53c178e",
+        "6ef94867d6ed",
+        "80d0c20e8bb1",
+        "9fa04f5e25f2",
+        "a957ba91c49c",
+        "b724729bdbbd",
+        "f9a9954423a8"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "a957ba91c49c",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "b724729bdbbd",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "09fb3174ceac",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "40f0b53c178e",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        },
+        {
+          "hash": "2e29d74ce37d",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(banned-words): 按真实字段判违禁词，堵住「恒报合规」的漏报"
+        },
+        {
+          "hash": "80d0c20e8bb1",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(banned-words): 收掉「标好风险等级 / 给替换建议」的营销话术，与定稿判据对齐"
+        },
+        {
+          "hash": "9fa04f5e25f2",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        },
+        {
+          "hash": "f9a9954423a8",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        },
+        {
+          "hash": "6ef94867d6ed",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "公众号违禁词",
+        "合规检测",
+        "广告法",
+        "敏感词",
+        "极限词",
+        "过审",
+        "违禁词检测"
+      ]
+    },
+    "wechat-channels-ai-feed": {
+      "displayName": "wechat-channels-ai-feed",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0a5bf0f34195",
+        "3958c899a0cc",
+        "644928674031",
+        "9fa062721a38",
+        "a11959e67fe5"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "644928674031",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "9fa062721a38",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "0a5bf0f34195",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "a11959e67fe5",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "3958c899a0cc",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/sph/shipinhao-ai-feed"
+      ],
+      "retiredTriggerWords": [
+        "AI 视频号",
+        "视频号 AI",
+        "视频号日报",
+        "视频号爆款",
+        "视频号选题"
+      ]
+    },
+    "wechat-cover": {
+      "displayName": "wechat-cover",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0a7601331adf",
+        "36ec34ea283d",
+        "489577c65d3c",
+        "54e5caaceb7c",
+        "56eec9d667c4",
+        "71089bbf7faf",
+        "760ac5584bd9",
+        "80f58ab682c1",
+        "a2c7a69c1d7c",
+        "c79a769e63fd",
+        "ff68f2fabfee"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "c79a769e63fd",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "a2c7a69c1d7c",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "36ec34ea283d",
+          "version": "",
+          "date": "2026-07-17",
+          "subject": "fix(skills): wechat-cover/wechat-title 取数指引对齐 cozeData 归一化信封(items[].item.coverUrl)"
+        },
+        {
+          "hash": "56eec9d667c4",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "489577c65d3c",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "ff68f2fabfee",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "0a7601331adf",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        },
+        {
+          "hash": "54e5caaceb7c",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        },
+        {
+          "hash": "80f58ab682c1",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        },
+        {
+          "hash": "71089bbf7faf",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 把删壳真正丢掉的两块话术接回来——盲测量出来的，不是猜的"
+        },
+        {
+          "hash": "760ac5584bd9",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-coze-cover"
+      ],
+      "retiredTriggerWords": [
+        "公众号封面",
+        "公众号标题",
+        "封面参考",
+        "封面套路",
+        "封面灵感",
+        "封面设计",
+        "标题优化",
+        "标题套路",
+        "爆款封面",
+        "爆款标题",
+        "起标题",
+        "高点击标题"
+      ]
+    },
+    "wechat-draft-publish": {
+      "displayName": "wechat-draft-publish",
+      "topics": [],
+      "status": "merged",
+      "redirectTo": "dby-publish",
+      "userFiles": [],
+      "knownHashes": [
+        "1cff688f3db3",
+        "24d35d8ef1cc",
+        "2bc61f8b2f21",
+        "3490716a0562",
+        "36d50bb4dd9b",
+        "65dcd550c6fc",
+        "75ef5514352b",
+        "85a1a1eee05b",
+        "8d6fed59d83c",
+        "a11caf10b3a8",
+        "b9f875220b84",
+        "d33943fee4fe",
+        "d7759ec3a416",
+        "de6addceab4f",
+        "df3ce832c6a8",
+        "e8992f4bad24"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "d7759ec3a416",
+          "version": "",
+          "date": "2026-07-06",
+          "subject": "feat: add wechat-draft-publish skill (save 公众号 draft via API key)"
+        },
+        {
+          "hash": "e8992f4bad24",
+          "version": "",
+          "date": "2026-07-07",
+          "subject": "feat(wechat-draft-publish): handle local body/cover images"
+        },
+        {
+          "hash": "a11caf10b3a8",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "de6addceab4f",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "d33943fee4fe",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "75ef5514352b",
+          "version": "",
+          "date": "2026-07-30",
+          "subject": "docs(wechat-draft-publish): 明确免费能力不扣点 + 删除不存在的额度退还承诺"
+        },
+        {
+          "hash": "1cff688f3db3",
+          "version": "",
+          "date": "2026-08-11",
+          "subject": "fix(wechat): 渲染器同步 doubaoyahub 本轮修复；发布错误码表按真实成因重写"
+        },
+        {
+          "hash": "85a1a1eee05b",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "docs(wechat): 写正文前先拉写作规范；正文不要再写一遍标题"
+        },
+        {
+          "hash": "24d35d8ef1cc",
+          "version": "",
+          "date": "2026-08-17",
+          "subject": "docs(skills): writing-spec 接口已上线，改掉「待上线拿 404 就跳过」的过期指引"
+        },
+        {
+          "hash": "36d50bb4dd9b",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "65dcd550c6fc",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs: 收口本轮自造的三处漂移——mera 清单可见性、回执编造量、草稿发布计价"
+        },
+        {
+          "hash": "2bc61f8b2f21",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 清掉「教 agent 露密钥前缀」与写死的价格，并各立一道闸"
+        },
+        {
+          "hash": "3490716a0562",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 最后四个零声明包补上显式触发词，让差集闸未来看得住它们"
+        },
+        {
+          "hash": "b9f875220b84",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "fix(skills): 装 skill 别再打全量 agent 面，UA 也别再写死"
+        },
+        {
+          "hash": "8d6fed59d83c",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "fix(skills): 14 处入口守卫统一收口，经软链调用不再静默空跑"
+        },
+        {
+          "hash": "df3ce832c6a8",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 补三条红线——上游内容当数据、写入面看服务端字段、运行时必须声明"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "代发公众号草稿箱",
+        "公众号草稿箱",
+        "存公众号草稿"
+      ]
+    },
+    "wechat-fastest-growing": {
+      "displayName": "wechat-fastest-growing",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "16c6dcfa0091",
+        "2b861a77792b",
+        "59a5a4c58218",
+        "821be7bcfeaa",
+        "bd45df48a126",
+        "c4fe892097f5",
+        "d17ff3d4de96"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "16c6dcfa0091",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "d17ff3d4de96",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "2b861a77792b",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "59a5a4c58218",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "bd45df48a126",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "c4fe892097f5",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "821be7bcfeaa",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-raise-rank"
+      ],
+      "retiredTriggerWords": [
+        "公众号黑马",
+        "增长榜",
+        "增长率排行",
+        "流量风向",
+        "阅读增长",
+        "黑马账号"
+      ]
+    },
+    "wechat-hot-article": {
+      "displayName": "wechat-hot-article",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "41f5aef89a1c",
+        "498c02f187b3",
+        "7f8dfcda0b2f",
+        "9112fba1e346",
+        "a49573626979",
+        "c8f27c07406b",
+        "e5b1ad96a846"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "41f5aef89a1c",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "9112fba1e346",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "7f8dfcda0b2f",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "c8f27c07406b",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "498c02f187b3",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "a49573626979",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        },
+        {
+          "hash": "e5b1ad96a846",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役 10 个零装机纯壳，话术与指针同笔改指 doubaoya"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/hot-article"
+      ],
+      "retiredTriggerWords": [
+        "公众号爆文",
+        "热门文章",
+        "爆款排行",
+        "爆款文章",
+        "近期爆款",
+        "高阅读"
+      ]
+    },
+    "wechat-hot-write": {
+      "displayName": "wechat-hot-write",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "13b11380f9f4",
+        "19701d4bc747",
+        "213f6637e83a",
+        "7f10354e16ed",
+        "93756d698e10",
+        "cc0f1c703ea2",
+        "f9cbfc56eef5"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "13b11380f9f4",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "19701d4bc747",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "f9cbfc56eef5",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "7f10354e16ed",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "cc0f1c703ea2",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "213f6637e83a",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        },
+        {
+          "hash": "93756d698e10",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/hot-article"
+      ],
+      "retiredTriggerWords": [
+        "公众号写作",
+        "公众号文案",
+        "内容创作",
+        "写公众号",
+        "爆款仿写",
+        "起标题",
+        "选题角度"
+      ]
+    },
+    "wechat-mp-exporter": {
+      "displayName": "wechat-mp-exporter",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "e432461f663c"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "e432461f663c",
+          "version": "",
+          "date": "2026-07-20",
+          "subject": "feat: add MP Ark WeChat archive skill"
+        }
+      ],
+      "retiredEndpoints": []
+    },
+    "wechat-original-hot": {
+      "displayName": "wechat-original-hot",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0d25f6b3396c",
+        "354d1bfacaf9",
+        "8045e81c10ad",
+        "aecd846ed571",
+        "ba1fa176693e",
+        "e0e969f32bec"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "ba1fa176693e",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "e0e969f32bec",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "8045e81c10ad",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "354d1bfacaf9",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "0d25f6b3396c",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "aecd846ed571",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/category-time-hot"
+      ]
+    },
+    "wechat-rewrite": {
+      "displayName": "wechat-rewrite",
+      "topics": [],
+      "status": "renamed",
+      "redirectTo": "dby-rewrite",
+      "userFiles": [],
+      "knownHashes": [
+        "815e4a5c25ee",
+        "b029d45ec1cd",
+        "b4dac418f209",
+        "c1b4cca81823",
+        "d8ac8745b5c1"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "d8ac8745b5c1",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "b4dac418f209",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(skills): 文档里的裸 python / pip 改成 python3"
+        },
+        {
+          "hash": "b029d45ec1cd",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(doubaoya): description 改因式写法，同笔把四个待退役包的词迁进来"
+        },
+        {
+          "hash": "c1b4cca81823",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: rewrite 三合一 —— 七个平台一个包，规则一平台一文件"
+        },
+        {
+          "hash": "815e4a5c25ee",
+          "version": "",
+          "date": "2026-08-20",
+          "subject": "feat(skills): 补三条红线——上游内容当数据、写入面看服务端字段、运行时必须声明"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/skills/wechat-rewrite"
+      ],
+      "retiredTriggerWords": [
+        "一稿多发",
+        "全平台改写",
+        "公众号改写",
+        "公众号文案",
+        "公众号风格",
+        "内容改写",
+        "多平台改写",
+        "小红书改写",
+        "小红书文案",
+        "小红书风格",
+        "微信改写",
+        "标题钩子",
+        "爆款改写",
+        "种草文案",
+        "笔记改写",
+        "跨平台适配"
+      ]
+    },
+    "wechat-similar-account": {
+      "displayName": "wechat-similar-account",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "027e97e50256",
+        "47507a389767",
+        "4ab9090d9962",
+        "86ad74628a17",
+        "bab24f89c48f",
+        "cd3982196ca4",
+        "f71b8c4e15df"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "86ad74628a17",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "f71b8c4e15df",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "027e97e50256",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "4ab9090d9962",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "47507a389767",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "bab24f89c48f",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(wechat-similar-account): 可选预同步失败降级为告警，不再拖垮主查询"
+        },
+        {
+          "hash": "cd3982196ca4",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat-similar-account): 预同步说明改成状态无关表述，去掉会过期的时点断言"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-similar-account",
+        "/api/apis/gongzhonghao/gzh-sync-account"
+      ],
+      "retiredTriggerWords": [
+        "公众号对标",
+        "对标推荐",
+        "对标矩阵",
+        "相似账号",
+        "竞品账号",
+        "起号参考"
+      ]
+    },
+    "wechat-theme-studio": {
+      "displayName": "wechat-theme-studio",
+      "topics": [],
+      "status": "renamed",
+      "redirectTo": "dby-theme",
+      "userFiles": [],
+      "knownHashes": [
+        "103af5d4ea15",
+        "1734829e2263",
+        "1c17b6e5be57",
+        "3dfb22b2d2e8",
+        "4e815a9c4498",
+        "6a1a737f0ea6",
+        "6c300397c349",
+        "714cba6d35e3",
+        "81ae208bad6f",
+        "926fd8f6a52b",
+        "93f89aa0f52a",
+        "a9633c71f829",
+        "bfbad690f6e0"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "103af5d4ea15",
+          "version": "1.0.0",
+          "date": "2026-07-22",
+          "subject": "feat(community): 新增 wechat-theme-studio(Codex改主题+预览闭环) + Codex 插件清单(.codex-plugin/marketplace),整库可作Codex正式插件"
+        },
+        {
+          "hash": "4e815a9c4498",
+          "version": "1.0.0",
+          "date": "2026-08-11",
+          "subject": "fix(wechat): 渲染器同步 doubaoyahub 本轮修复；发布错误码表按真实成因重写"
+        },
+        {
+          "hash": "3dfb22b2d2e8",
+          "version": "1.0.0",
+          "date": "2026-08-12",
+          "subject": "docs(wechat-theme-studio): 去掉「自动拉取服务端主题正在做」的路线图暗示"
+        },
+        {
+          "hash": "81ae208bad6f",
+          "version": "1.0.0",
+          "date": "2026-08-12",
+          "subject": "docs(wechat-theme-studio): 说清主题要落两处,发文流水线不读服务端主题"
+        },
+        {
+          "hash": "6c300397c349",
+          "version": "1.0.0",
+          "date": "2026-08-13",
+          "subject": "feat(validate-theme): 同步 doubaoyahub v2 安全边界——tokens 三层 + --x:/url(data: 两条硬规则"
+        },
+        {
+          "hash": "93f89aa0f52a",
+          "version": "1.1.0",
+          "date": "2026-08-17",
+          "subject": "feat(wechat): 流水线优先拉服务端编译主题，validator 对 engine-2 主题升为硬错误"
+        },
+        {
+          "hash": "1734829e2263",
+          "version": "1.1.0",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        },
+        {
+          "hash": "1c17b6e5be57",
+          "version": "1.1.0",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        },
+        {
+          "hash": "a9633c71f829",
+          "version": "1.1.0",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "714cba6d35e3",
+          "version": "1.1.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 四对孪生合并进 doubaoya——换 description 与删四个壳同一笔落地"
+        },
+        {
+          "hash": "926fd8f6a52b",
+          "version": "1.1.0",
+          "date": "2026-08-19",
+          "subject": "feat(validate): 立差集闸与 description 预算闸，并在闸的保护下砍掉 1482 字符"
+        },
+        {
+          "hash": "bfbad690f6e0",
+          "version": "1.1.0",
+          "date": "2026-08-19",
+          "subject": "refactor(skills)!: 退役最后五个薄壳与 seedream 墓碑，写作链的三跳交给总入口"
+        },
+        {
+          "hash": "6a1a737f0ea6",
+          "version": "1.1.0",
+          "date": "2026-08-20",
+          "subject": "fix(skills): 14 处入口守卫统一收口，经软链调用不再静默空跑"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "change layout",
+        "heading style",
+        "palette",
+        "wechat-theme-studio",
+        "定制主题样式",
+        "换公众号配色",
+        "改公众号排版",
+        "改默认排版",
+        "调排版主题"
+      ]
+    },
+    "wechat-title": {
+      "displayName": "wechat-title",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0376b445a8b7",
+        "084421ccadf1",
+        "1f27366b4853",
+        "2b099ca1f4a1",
+        "57026e816596",
+        "7cacd7ea4396",
+        "87c02142ec35",
+        "8a5f08d8eaf9",
+        "cdf09aba567a",
+        "da6364068436"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "0376b445a8b7",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "87c02142ec35",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "da6364068436",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "cdf09aba567a",
+          "version": "",
+          "date": "2026-07-17",
+          "subject": "fix(skills): wechat-cover/wechat-title 取数指引对齐 cozeData 归一化信封(items[].item.coverUrl)"
+        },
+        {
+          "hash": "1f27366b4853",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "084421ccadf1",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "8a5f08d8eaf9",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "7cacd7ea4396",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        },
+        {
+          "hash": "2b099ca1f4a1",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 下一步指针改成终态判据，不再无条件推着 agent 往草稿箱走"
+        },
+        {
+          "hash": "57026e816596",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "docs(wechat): 把公众号写作链的前向边补齐，并加闸防它再静默断掉"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-coze-cover"
+      ],
+      "retiredTriggerWords": [
+        "公众号标题",
+        "标题优化",
+        "标题套路",
+        "标题生成",
+        "爆款标题",
+        "起标题"
+      ]
+    },
+    "wechat-top-account": {
+      "displayName": "wechat-top-account",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0a77fafa5268",
+        "5279a0e40e3f",
+        "728023ecefac",
+        "74507cae2329",
+        "80316f00d045",
+        "addc73ba41b4"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "74507cae2329",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "5279a0e40e3f",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "addc73ba41b4",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "728023ecefac",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "80316f00d045",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "0a77fafa5268",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/gongzhonghao/gongzhonghao-index-rank"
+      ],
+      "retiredTriggerWords": [
+        "公众号排行",
+        "公众号榜单",
+        "头部账号",
+        "热度指数",
+        "热门账号",
+        "竞品跟踪"
+      ]
+    },
+    "xiaohongshu-account-analyzer": {
+      "displayName": "xiaohongshu-account-analyzer",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "2059a2e2d215",
+        "318fde7bc5ee"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "2059a2e2d215",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "318fde7bc5ee",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xhs-sync-notes",
+        "/api/apis/xiaohongshu/xiaohongshu-account-analyzer"
+      ],
+      "retiredTriggerWords": [
+        "博主诊断",
+        "小红书分析",
+        "小红书账号诊断",
+        "账号优化",
+        "账号体检",
+        "账号健康度"
+      ]
+    },
+    "xiaohongshu-comment": {
+      "displayName": "xiaohongshu-comment",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "3745e77e379a",
+        "a58044a613e7"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "3745e77e379a",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "a58044a613e7",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/comments"
+      ],
+      "retiredTriggerWords": [
+        "小红书评论",
+        "看评论",
+        "笔记评论",
+        "评论分析",
+        "评论查询",
+        "评论翻页",
+        "评论舆情"
+      ]
+    },
+    "xiaohongshu-cover": {
+      "displayName": "xiaohongshu-cover",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "063503aa95fe",
+        "12225edcba7e",
+        "1500f22530d8",
+        "7e88a01f3f82",
+        "b7873c8e198c",
+        "ce8871a8d7da",
+        "ecba653171fd"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "7e88a01f3f82",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "ecba653171fd",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "12225edcba7e",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "1500f22530d8",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "063503aa95fe",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "ce8871a8d7da",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "b7873c8e198c",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-coze"
+      ],
+      "retiredTriggerWords": [
+        "封面参考",
+        "封面套路",
+        "封面选题",
+        "小红书封面",
+        "爆款封面",
+        "首图灵感"
+      ]
+    },
+    "xiaohongshu-crawler": {
+      "displayName": "xiaohongshu-crawler",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "1636d25a1788",
+        "8684329a3d53",
+        "d70b1f681cd2",
+        "ea5374907934"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "ea5374907934",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "1636d25a1788",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "8684329a3d53",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "d70b1f681cd2",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/crawl-work"
+      ],
+      "retiredTriggerWords": [
+        "小红书作品",
+        "小红书搜索",
+        "小红书热门",
+        "小红书爆款",
+        "小红书爬取",
+        "小红书笔记查询"
+      ]
+    },
+    "xiaohongshu-dailytop": {
+      "displayName": "xiaohongshu-dailytop",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "1dbf7b3b2aef",
+        "2dadb13dd316",
+        "4f3ef7ed5138",
+        "56a110223ee4",
+        "d1318e6a9e4a",
+        "fd7e0953156c"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "fd7e0953156c",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "4f3ef7ed5138",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "56a110223ee4",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "1dbf7b3b2aef",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "d1318e6a9e4a",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "2dadb13dd316",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-daily-top"
+      ],
+      "retiredTriggerWords": [
+        "今日爆款",
+        "小红书 TOP",
+        "小红书排行",
+        "小红书日榜",
+        "每日榜",
+        "热门笔记"
+      ]
+    },
+    "xiaohongshu-hot-notes": {
+      "displayName": "xiaohongshu-hot-notes",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "065508851e48",
+        "a23fe0aac988",
+        "a4a17b9add33",
+        "f9cde7079387"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "f9cde7079387",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "a4a17b9add33",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "065508851e48",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        },
+        {
+          "hash": "a23fe0aac988",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/search-note"
+      ],
+      "retiredTriggerWords": [
+        "小红书榜单",
+        "小红书热榜",
+        "小红书热门笔记",
+        "小红书爆款",
+        "找对标笔记",
+        "爆款笔记发现",
+        "看赛道热门内容",
+        "选题灵感"
+      ]
+    },
+    "xiaohongshu-lowtop": {
+      "displayName": "xiaohongshu-lowtop",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "73aa4807a1bd",
+        "7cd382ea90a7",
+        "857cb4392079",
+        "899c06785145",
+        "b98c85a7380e",
+        "bdea44486a0a",
+        "d86c80acf6ad"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "857cb4392079",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "b98c85a7380e",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "899c06785145",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "bdea44486a0a",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "7cd382ea90a7",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "d86c80acf6ad",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "73aa4807a1bd",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-low-fans-top"
+      ],
+      "retiredTriggerWords": [
+        "低粉爆款",
+        "低粉高赞",
+        "冷启动对标",
+        "小号打法",
+        "素人爆款",
+        "黑马笔记"
+      ]
+    },
+    "xiaohongshu-note-analyzer": {
+      "displayName": "xiaohongshu-note-analyzer",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0b5400184e52",
+        "c6d9c01a83c1",
+        "d05efd6582c2",
+        "d387bc6dcde4",
+        "d8c8a8ab3ce0",
+        "d94b99c47d3b",
+        "f9ed2cbdfa75"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "0b5400184e52",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "d05efd6582c2",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "c6d9c01a83c1",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "f9ed2cbdfa75",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "d94b99c47d3b",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "d8c8a8ab3ce0",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "d387bc6dcde4",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-coze"
+      ],
+      "retiredTriggerWords": [
+        "对标分析",
+        "爆款复盘",
+        "爆款结构",
+        "笔记对标",
+        "笔记拆解",
+        "选题拆解"
+      ]
+    },
+    "xiaohongshu-rewrite": {
+      "displayName": "xiaohongshu-rewrite",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "03deba6d22ab",
+        "8210b53d8ac5",
+        "c8d85a5bd293"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "c8d85a5bd293",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "03deba6d22ab",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "fix(skills): 文档里的裸 python / pip 改成 python3"
+        },
+        {
+          "hash": "8210b53d8ac5",
+          "version": "",
+          "date": "2026-08-19",
+          "subject": "feat(skills): 最后四个零声明包补上显式触发词，让差集闸未来看得住它们"
+        }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "小红书改写",
+        "小红书文案",
+        "小红书风格",
+        "种草文案",
+        "笔记改写"
+      ]
+    },
+    "xiaohongshu-search": {
+      "displayName": "xiaohongshu-search",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "1eb05c48ce6c",
+        "1fd3a23ae5b2",
+        "597d187b07d4",
+        "649700e60b74",
+        "824cce3be7cf",
+        "8df96829278c",
+        "a5bbc8195712",
+        "a6c934422bbc",
+        "f098334d5130"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "8df96829278c",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        },
+        {
+          "hash": "f098334d5130",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "1fd3a23ae5b2",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "chore(focus): 社区库剪向公众号+小红书创作+通用工具——移除平台垂直/账号分析类 skill"
+        },
+        {
+          "hash": "597d187b07d4",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "1eb05c48ce6c",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        },
+        {
+          "hash": "a5bbc8195712",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "649700e60b74",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills): 把非显然的运行时要求写进 compatibility"
+        },
+        {
+          "hash": "824cce3be7cf",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "chore(skills): 删掉 5 个空壳 dependency 声明"
+        },
+        {
+          "hash": "a6c934422bbc",
+          "version": "",
+          "date": "2026-08-18",
+          "subject": "feat(skills)!: 删掉 15 个零/低用量薄壳 + MP Ark，59 → 43"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/search-note",
+        "/api/apis/xiaohongshu/xiaohongshu-coze"
+      ],
+      "retiredTriggerWords": [
+        "内容灵感",
+        "小红书搜索",
+        "小红书热门",
+        "小红书爆款笔记",
+        "小红书选题",
+        "爆款笔记",
+        "笔记选题"
+      ]
+    },
+    "xiaohongshu-similar-account": {
+      "displayName": "xiaohongshu-similar-account",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "835a7c719637",
+        "c3bfc6da0931"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "835a7c719637",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "c3bfc6da0931",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-similar-account"
+      ],
+      "retiredTriggerWords": [
+        "KOL对标",
+        "对标账号",
+        "小红书对标",
+        "找同赛道账号",
+        "标杆账号",
+        "相似账号",
+        "起号参考"
+      ]
+    },
+    "xiaohongshu-title": {
+      "displayName": "xiaohongshu-title",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "0f77a1078ba5",
+        "2050c5d8acea",
+        "a12ca537a9aa",
+        "a8e96f0895df",
+        "ac77da8bd6df",
+        "cecd01c0d842",
+        "d1a8a2641f32"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "a12ca537a9aa",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "d1a8a2641f32",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "cecd01c0d842",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "ac77da8bd6df",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "a8e96f0895df",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "2050c5d8acea",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "0f77a1078ba5",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-coze"
+      ],
+      "retiredTriggerWords": [
+        "小红书标题",
+        "标题套路",
+        "标题灵感",
+        "标题钩子",
+        "爆款标题",
+        "起标题"
+      ]
+    },
+    "xiaohongshu-top-account": {
+      "displayName": "xiaohongshu-top-account",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "840cdde287ae"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "840cdde287ae",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-top-account"
+      ],
+      "retiredTriggerWords": [
+        "KOL榜",
+        "小红书博主排行",
+        "小红书头部账号",
+        "小红书账号榜",
+        "账号对标",
+        "赛道榜单"
+      ]
+    },
+    "xiaohongshu-weeklytop": {
+      "displayName": "xiaohongshu-weeklytop",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "148f304d84ab",
+        "43c0d97d13fe",
+        "475f712a2ba2",
+        "5f566da69f97",
+        "6a2e8f8d5c8d",
+        "7729d63f3f2d",
+        "b11085757bd5"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "148f304d84ab",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "polish: correctness sweep across all skills (output-field/param fixes)"
+        },
+        {
+          "hash": "475f712a2ba2",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync final hot-list/榜单 + coze skills — full capability parity"
+        },
+        {
+          "hash": "5f566da69f97",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "43c0d97d13fe",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: 全量迁移剩余 skill 脚本读取 .version 声明 User-Agent 版本"
+        },
+        {
+          "hash": "b11085757bd5",
+          "version": "",
+          "date": "2026-07-29",
+          "subject": "docs: 补全 34 个已迁移 skill 的 notice 转达段落"
+        },
+        {
+          "hash": "7729d63f3f2d",
+          "version": "",
+          "date": "2026-08-13",
+          "subject": "fix(skills): 分类改用官方闭集全称，修掉一批\"照抄就返空\"的默认值与示例"
+        },
+        {
+          "hash": "6a2e8f8d5c8d",
+          "version": "",
+          "date": "2026-08-14",
+          "subject": "fix(skills): 422 错误码写的不是真实的那个，12 个 skill 一起改成 PROVIDER_NO_RESULT"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/xiaohongshu-weekly-top"
+      ],
+      "retiredTriggerWords": [
+        "一周爆款",
+        "中线选题",
+        "周度趋势",
+        "小红书周排行",
+        "小红书周榜",
+        "持续走高"
+      ]
+    },
+    "xiaohongshu-write": {
+      "displayName": "xiaohongshu-write",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "029a7aa48da1",
+        "591a92eb6ee8",
+        "667c7af62067",
+        "6c4ba8d88c91"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "6c4ba8d88c91",
+          "version": "",
+          "date": "2026-06-27",
+          "subject": "feat: sync ~52 more skills from the full capability set"
+        },
+        {
+          "hash": "591a92eb6ee8",
+          "version": "",
+          "date": "2026-07-14",
+          "subject": "refactor: 术语统一——裸密钥凭据统一叫「密钥」（原「口令」退役）"
+        },
+        {
+          "hash": "029a7aa48da1",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "feat: pilot 8 个 skill 脚本改用 .version 文件声明 User-Agent 版本"
+        },
+        {
+          "hash": "667c7af62067",
+          "version": "",
+          "date": "2026-07-28",
+          "subject": "docs: pilot skill 文档教 agent 转达响应里的更新 notice"
+        }
+      ],
+      "retiredEndpoints": [
+        "/api/apis/xiaohongshu/search-work"
+      ],
+      "retiredTriggerWords": [
+        "写小红书",
+        "小红书创作",
+        "小红书文案",
+        "小红书笔记",
+        "爆款文案",
+        "笔记生成"
+      ]
+    },
+    "zhihu-rewrite": {
+      "displayName": "zhihu-rewrite",
+      "topics": [],
+      "status": "retired",
+      "knownHashes": [
+        "a9d730b5c7fb"
+      ],
+      "versions": [],
+      "history": [
+        {
+          "hash": "a9d730b5c7fb",
+          "version": "",
+          "date": "2026-06-26",
+          "subject": "feat: doubaoya-community skill library (umbrella + Wave 1 data skills + Wave 2 local skills)"
+        }
+      ],
+      "retiredEndpoints": []
+    }
+  }
+}

@@ -7,32 +7,38 @@
     "改名车已发（2026-08-20，openspec/changes/unify-dby-naming）：下表是这次改名/合并/下架的完整映射；`ai-intelligence-investigator` 是纯下架（能力随包退出），不出现在这张表里——按 docs/deleting-a-skill.md「例外」段处理，没有新包可搬。"
   ],
   "renames": {
-    "wechat-article-pipeline": {
-      "to": "dby-publish",
-      "userFiles": ["config.json", "design-config.json", "profiles/", "themes/", "assets/ip/"]
-    },
-    "wechat-draft-publish": {
-      "to": "dby-publish",
-      "userFiles": []
-    },
-    "wechat-theme-studio": {
-      "to": "dby-theme",
-      "userFiles": []
-    },
-    "wechat-rewrite": {
-      "to": "dby-rewrite",
-      "userFiles": []
-    },
-    "multi-banned-words": {
-      "to": "dby-banned-words",
-      "userFiles": []
-    },
     "doubaoya": {
       "to": "dby-api",
       "userFiles": []
     },
     "doubaoya-gateway": {
       "to": "dby-gateway",
+      "userFiles": []
+    },
+    "multi-banned-words": {
+      "to": "dby-banned-words",
+      "userFiles": []
+    },
+    "wechat-article-pipeline": {
+      "to": "dby-publish",
+      "userFiles": [
+        "config.json",
+        "design-config.json",
+        "profiles/",
+        "themes/",
+        "assets/ip/"
+      ]
+    },
+    "wechat-draft-publish": {
+      "to": "dby-publish",
+      "userFiles": []
+    },
+    "wechat-rewrite": {
+      "to": "dby-rewrite",
+      "userFiles": []
+    },
+    "wechat-theme-studio": {
+      "to": "dby-theme",
       "userFiles": []
     }
   }

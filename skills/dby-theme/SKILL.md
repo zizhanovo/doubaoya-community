@@ -5,7 +5,8 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger: customize WeChat article theme, change layout / palette / heading style.
-version: 1.3.0
+version: 1.3.1
+changelog: 新增变更说明字段
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
