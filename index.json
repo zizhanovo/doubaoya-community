@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T01:06:31.366832+00:00",
-  "ref": "release-20260826-0103",
+  "generatedAt": "2026-08-26T01:26:34.559020+00:00",
+  "ref": "release-20260826-0125",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -1656,6 +1656,7 @@
         "912ad0771767",
         "9a2708863bc4",
         "b34999536b26",
+        "b4198f5ec4a3",
         "bb1c48d2428f",
         "c51a1f7c37be",
         "c8fc00825fa8",
@@ -1663,6 +1664,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "3.3.2",
+          "hash": "b4198f5ec4a3",
+          "ref": "release-20260826-0125",
+          "releasedAt": "2026-08-26T01:26:18.051445+00:00",
+          "changelog": "不是对账器装的包也补 .dby/origin.json（哈希能对上索引某一版才补），下一跑用 origin 判「改过」",
+          "changelogSource": "user"
+        },
         {
           "version": "3.3.1",
           "hash": "912ad0771767",

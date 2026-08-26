@@ -545,6 +545,24 @@ export function writeOrigin(pkgDir, slug, upstream) {
   return origin;
 }
 
+/**
+ * 给「不是本对账器装的、但内容能在索引里对上某一版」的包补 origin。返回补了几个。
+ * 只补 current / historical 且无 origin 的；每个落位目录各一份（宿主按目录读，origin 也随目录走）。
+ */
+export function backfillOrigins(scope, survey, upstream) {
+  let n = 0;
+  for (const s of survey) {
+    if (s.origin || (s.state !== "current" && s.state !== "historical")) continue;
+    if (!versionOfHash(upstream, s.name, s.hash)) continue;
+    for (const dir of uniqueRealDirs((s.dirs || []).map((d) => join(d.path, s.name)))) {
+      if (readOrigin(dir)) continue;
+      writeOrigin(dir, s.name, upstream);
+      n++;
+    }
+  }
+  return n;
+}
+
 /** 索引里这个 slug、这个哈希对应的 semver；索引没这一版（或退回了旧文件）返回 null。 */
 export function versionOfHash(upstream, slug, hash) {
   return (upstream?.versions?.[slug] || []).find((v) => v.hash === hash)?.version ?? null;
@@ -1676,7 +1694,11 @@ async function main() {
   // ---- 复核 + 自检
   const results = [];
   for (const { scope, plan, lock } of report) {
-    const after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    let after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    // 🔴 origin 补录：不是对账器装的（用户手跑 skills add、或本机是 origin 机制之前装的）就没有 origin，
+    //    但只要目录哈希能在索引里对上某一版，这一版是什么就是确定的——补一份，下一跑就能用 origin 判「改过」，
+    //    而不是永远退回闭集猜。哈希对不上任何一版（modified / 索引退回旧文件）的不补：宁可没有也不写错。
+    if (backfillOrigins(scope, after, upstream)) after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
     // lock 每跑重建非 pin 字段：以磁盘现状为准，pin 原样继承。
     writeLock(scope, rebuildLock(lock, after, upstream));
     // 受 git 跟踪的是**故意**留在原地的，不算「没归档掉」——否则它每次都把退出码顶成 3，
@@ -3103,6 +3125,41 @@ function restoreArchiveCheck() {
  *   4.3 用户把文件改回**恰好命中闭集**的历史版：origin 在场 ⇒ 仍判 modified（闭集会说 historical，那是错的）；
  *   4.4 --pin 后上游再出新版：预检单列「已固定」并带原因、执行后目录不动、npx 没收到它；--unpin 后恢复刷新。
  */
+/**
+ * origin 补录：不是对账器装的、但哈希能对上索引某一版 ⇒ 补 origin；对不上的不补。
+ */
+function backfillOriginCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-backfill-selfcheck-"));
+  try {
+    const mk = (name, body) => {
+      const d = join(root, name);
+      mkdirSync(d, { recursive: true });
+      writeFileSync(join(d, "SKILL.md"), body);
+      return d;
+    };
+    const known = mk("known-pkg", "---\nname: known-pkg\n---\n");
+    const stranger = mk("odd-pkg", "---\nname: odd-pkg\n---\n");
+    const kh = computeSkillHash(known);
+    const upstream = { ref: "release-x", versions: { "known-pkg": [{ version: "2.0.0", hash: kh }], "odd-pkg": [{ version: "1.0.0", hash: "000000000000" }] } };
+    const dirs = [{ label: ".claude/skills", path: root }];
+    const survey = [
+      { name: "known-pkg", hash: kh, state: "current", origin: null, dirs },
+      { name: "odd-pkg", hash: computeSkillHash(stranger), state: "modified", origin: null, dirs },
+    ];
+    const n = backfillOrigins({ kind: "project", dir: root }, survey, upstream);
+    if (n !== 1) fails.push(`origin 补录 · 应补 1 个，实际 ${n}`);
+    const o = readOrigin(known);
+    if (!o || o.hash !== kh || o.version !== "2.0.0") fails.push(`origin 补录 · known-pkg 的 origin 不对：${JSON.stringify(o)}`);
+    if (readOrigin(stranger)) fails.push("origin 补录 · 哈希对不上任何一版的包不该被补 origin");
+    if (computeSkillHash(known) !== kh) fails.push("origin 补录 · 写 origin 改变了目录哈希");
+    if (backfillOrigins({ kind: "project", dir: root }, survey.map((s) => ({ ...s, origin: s.name === "known-pkg" ? o : null })), upstream) !== 0) fails.push("origin 补录 · 二次运行应为 0（幂等）");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
 function originLockPinCheck() {
   const fails = [];
   const root = mkdtempSync(join(tmpdir(), "dby-origin-selfcheck-"));
@@ -3301,7 +3358,7 @@ async function runSelfCheck() {
   fails.push(...installRefAndSelfUpdateCheck());
   fails.push(...restoreArchiveCheck());
   fails.push(...(await indexFetchCheck()));
-  fails.push(...originLockPinCheck());
+  fails.push(...originLockPinCheck(), ...backfillOriginCheck());
 
   // 🔴 改名迁移（renames.json）：纯函数层先钉 extractRenames / splitRenameGitTracked，
   // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
