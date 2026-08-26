@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T09:31:18.334833+00:00",
-  "ref": "release-20260826-0930",
+  "generatedAt": "2026-08-26T10:04:44.460271+00:00",
+  "ref": "release-20260826-1004",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -1236,6 +1236,7 @@
         "25fcd0d0d1ba",
         "2a3ffb3fc5b2",
         "47bee0597b99",
+        "5a21a05f4764",
         "5f652a0700eb",
         "63c13c5ffbeb",
         "6a04472552de",
@@ -1249,6 +1250,14 @@
         "f80e00b562e4"
       ],
       "versions": [
+        {
+          "version": "1.6.0",
+          "hash": "5a21a05f4764",
+          "ref": "release-20260826-1004",
+          "releasedAt": "2026-08-26T10:04:42.733762+00:00",
+          "changelog": "接手 dby-publish 下线的配图位置规划——plan-figures.mjs 迁入本包，确定性规则挑 「哪些 h2 小节末尾配图」与画面建议（免费、不出图、不接 LLM），出好图交 dby-publish 上传排版",
+          "changelogSource": "user"
+        },
         {
           "version": "1.5.0",
           "hash": "c70826332715",
@@ -1417,6 +1426,7 @@
         "93bdab968731",
         "afeb6e003c90",
         "c24c940f04d9",
+        "c3582315f2c5",
         "ccf7d50a327d",
         "d7c7ce4c8a76",
         "da136cf9613a",
@@ -1428,6 +1438,14 @@
         "fdf279bc684e"
       ],
       "versions": [
+        {
+          "version": "4.0.0",
+          "hash": "c3582315f2c5",
+          "ref": "release-20260826-1004",
+          "releasedAt": "2026-08-26T10:04:42.733762+00:00",
+          "changelog": "出图与设计工作台整套下线——gen-image.mjs、design-studio.mjs、assets/ 风格库、引导式设计、 pipeline.mjs 的 --design 参数全部移除，这些老用法会坏；封面与配图统一由 dby-image 出图， 拿到本地文件路径后封面走 --cover、配图以 <img src> 落进正文再渲染； 配图位置规划脚本 plan-figures.mjs 迁往 dby-image。",
+          "changelogSource": "user"
+        },
         {
           "version": "3.0.0",
           "hash": "00fc7c578914",
@@ -1631,6 +1649,12 @@
           "subject": "fix(dby-publish): 发布失败不再谎报「已存入草稿箱」，并补上失败后怎么办 —— 抓不到 mediaId 就报「结果待确认」+ 非零退出"
         },
         {
+          "hash": "00fc7c578914",
+          "version": "3.0.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby-publish)!: 瘦身 69 → 51 个文件 —— 包内 14 个主题是服务端旧副本，留着只会让排版对不上"
+        },
+        {
           "hash": "082d8a4b68b1",
           "version": "2.5.1",
           "date": "2026-08-26",
@@ -1747,9 +1771,18 @@
         "b1b4f5ebb9e6",
         "c5cfbb362507",
         "d9b79a294633",
-        "ebb4a6128d51"
+        "ebb4a6128d51",
+        "ffbf27bdc3ec"
       ],
       "versions": [
+        {
+          "version": "1.4.3",
+          "hash": "ffbf27bdc3ec",
+          "ref": "release-20260826-1004",
+          "releasedAt": "2026-08-26T10:04:42.733762+00:00",
+          "changelog": "本地预览文档改用 dby-publish 的 render-wechat-html.mjs（那边的 design-studio 工作台已随其 4.0 下线）； 另主题契约指针指本包校验器 scripts/validate-theme.mjs",
+          "changelogSource": "user"
+        },
         {
           "version": "1.4.2",
           "hash": "2023466e2e9f",
@@ -1837,6 +1870,12 @@
           "version": "1.4.0",
           "date": "2026-08-25",
           "subject": "fix(dby-theme): 改主题会就地覆写用户线上默认排版且没有备份 —— 加红线 4「不备份不改」与回滚命令"
+        },
+        {
+          "hash": "2023466e2e9f",
+          "version": "1.4.2",
+          "date": "2026-08-26",
+          "subject": "feat(dby-publish)!: 瘦身 69 → 51 个文件 —— 包内 14 个主题是服务端旧副本，留着只会让排版对不上"
         },
         {
           "hash": "d9b79a294633",

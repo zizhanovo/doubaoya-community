@@ -5,8 +5,9 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger words: customize WeChat article theme, change layout / palette / heading style.
-version: 1.4.2
-changelog: 主题契约指针改指本包校验器 scripts/validate-theme.mjs，不再指向 dby-publish 已删除的 THEME-SCHEMA.md
+version: 1.4.3
+changelog: 本地预览文档改用 dby-publish 的 render-wechat-html.mjs（那边的 design-studio 工作台已随其 4.0 下线）；
+  另主题契约指针指本包校验器 scripts/validate-theme.mjs
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
@@ -116,7 +117,7 @@ open /tmp/preview.html    # macOS;别的平台用浏览器打开
 > `sample.md` 别带 `#` 一级标题：`title` 会被插成 h1，正文再有就显示两个大标题。
 > render 返回的 HTML 与最终存进草稿的正文**逐字一致**。`data.warnings` 若有(如未知 `{{token}}`)一并看一眼。
 
-→ 本机已装 `dby-publish` 且想要「改文件即换肤」的实时预览，读 `references/live-preview.md`，
+→ 本机已装 `dby-publish` 且想在本机「改文件重跑即换肤」地预览，读 `references/live-preview.md`，
 不需要就别读。改 themeJson 本身以上面 API 渲染那条路为准。
 
 ### 5. ⚠️ 落地生效范围（两条渲染路的主题源）

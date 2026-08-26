@@ -19,14 +19,10 @@ cp config.example.json config.json
 | `coverDir` | 本地封面目录。未通过 `--cover` 指定封面时，可在这里放约定好的封面图。`""` = 不用本地封面。 | `"./covers"` |
 | `coverFallback` | 无本地封面时的兜底策略标记，回报里会注明「走都爆鸭兜底」。 | `"doubaoya"` |
 | `ipProfile` | IP/身份 profile 的路径（相对本 skill 目录）。流水线会加载并回显它的 `displayName / aliases / isNot`，防止把账号名误读成通用名词。见 `profiles/README.md`。 | `"profiles/my-ip.json"` |
-| `ipImage` | 你的卡通 IP 形象图路径（相对本 skill 目录）。设计工作台/生图脚本会把它作为**参考图条件化**生成封面与配图，让全篇形象统一（走 `operation:"edit"` + `referenceImage`）。把图放进 `assets/ip/` 再指向它。`null` = 不注册 IP，封面/配图退回文生图。见 `assets/ip/README.md`。 | `"assets/ip/benya.png"` |
 | `mdTheme` | Markdown→HTML 默认主题。`null` = 不送任何主题字段，由**服务端**套你在 doubaoya.com 排版工作室保存的默认排版。写成路径（如 `"themes/magazine.json"`）= 钉本机主题 JSON（先本机校验再整套送出；相对路径按配置文件所在目录解析）；写成裸 id（如 `"benya-clean"`）或 `"neutral"` = 送 `themeId` 交服务端解析（`neutral` 是平台的中性排版）。CLI 的 `--theme` 永远优先。细节与唯一事实源见 `references/rendering.md`「主题从哪来」。 | `null` |
 | `draftsDir` | 本地草稿/产物目录（可选，供你归档渲染出的 HTML）。`""` = 用临时目录。 | `"./drafts"` |
-| `defaultStyleId` | 逃生舱默认风格 id（用户说「你全权定/我赶时间」时用它自动出图）。取值见 `assets/styles/index.json` 的 6 个 `id`。 | `"magazine-editorial"` |
 
-> **可视化设计工作台（可选）**：不想用命令行逐步选风格/生图，可起 `node scripts/design-studio.mjs --md <文章.md> --title "<标题>"`（本地 `127.0.0.1` 网页、零依赖），在页面里点完排版主题/封面/配图，「保存配置」产出一个 `design-config.json`（结构见 `schemas/design-config.schema.json`），再 `node scripts/pipeline.mjs --md … --title … --design <json>` 消费（套主题 + 设封面 + 按 h2 锚点注入配图）。`--design` 的主题/封面是默认值，显式 `--theme`/`--cover` 冲突时命令行优先并告警。生成的图落 design-config 同目录的 `.design/assets/`，与上面的字段无关，无需在 `config.json` 里配置。
-
-> **生封面/配图无需额外密钥**：`scripts/gen-image.mjs` 直接用你发布本就在用的密钥 `DOUBAOYA_API_KEY`（Bearer）调 doubaoya.com 的生图接口、扣点数，上游生图密钥只在 doubaoya 服务端、skill 端不接触。密钥只放环境变量（`export DOUBAOYA_API_KEY=…`），绝不落配置/文件。
+> **生封面/配图不在本包**：出图（含配图位置规划）归 `dby-image`，出好图落成本地文件后，封面走 `--cover <路径>`、配图以 `<img src=本地路径>` 落进正文，与 `config.json` 的字段无关。
 
 > 提醒：`config.json` 属于你个人，**不要**提交到公共仓库。仓库里只保留 `config.example.json`（全空/占位）。
 
@@ -36,11 +32,12 @@ cp config.example.json config.json
 
 2026-08-22 对账：`coverAutogen` / `figureAutogen` / `generatedDir` 曾在这张表里，
 **而脚本与 SKILL.md 都零读取** —— 用户写了它们只会得到沉默：不报错、不生效、没有任何现象。
-已摘掉。
+已摘掉。2026-08-26 出图栈下线后，`ipImage` / `defaultStyleId` 的读者（design-studio / gen-image /
+SKILL.md 的引导式设计）全部退场，同理摘掉。
 
 🔴 **加配置项之前先想清楚谁读它。** 本包有**两类读者**：
 - **脚本**（`scripts/*.mjs`、`publish_draft.py`）——grep 得到；
 - **agent**（SKILL.md 教它去读的，例如 `defaultStyleId` 那条逃生舱）——grep 脚本**搜不到**。
 
 ⇒ 判一个键死没死，**两边都要查**。只查脚本会把 agent 读的键误判成死键
-（这次就差点误删 `defaultStyleId`）。
+（当年就差点因此误删过 `defaultStyleId`——如今它是连 agent 侧读者也没了才摘的）。

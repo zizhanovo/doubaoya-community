@@ -363,8 +363,8 @@ async function main() {
       "",
       "正文继续。",
     ].join("\n");
-    // renderMarkdownForDraft 随流水线改走平台渲染一起退场；这里直接用本机渲染器，
-    // 与 design-studio.mjs 的用法一致（本机渲染器保留的两个场景之一）。
+    // renderMarkdownForDraft 随流水线改走平台渲染一起退场；这里直接用本机渲染器
+    // （它保留的唯一场景就是这种「无密钥、纯本机看排版」的用法）。
     const html = renderWechatHtml(normalizeDraftMarkdown(md), { theme: COMPILED_FIXTURE });
     assert.ok(html.includes("border-left:4px solid #ff8708"), "主题样式应套上");
     assert.ok(!html.includes("{{"), "编译形态主题渲染出的 HTML 必须零 {{");

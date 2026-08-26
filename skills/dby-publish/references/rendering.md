@@ -28,8 +28,8 @@
 
 ⚠️ 它是**专用路由**：调用地址跟能力详情端点毫无关系，只能读详情响应里 `execution` 的 `target`。
 
-**本机渲染器 `scripts/render-wechat-html.mjs` 还在，但已退出流水线主干**，只服务两个场景：
-设计工作台 `design-studio.mjs`；以及**用户没有密钥、只想先看这篇排出来什么样**——
+**本机渲染器 `scripts/render-wechat-html.mjs` 还在，但已退出流水线主干**，只服务一个场景：
+**用户没有密钥、只想先看这篇排出来什么样**——
 
 ```
 node scripts/render-wechat-html.mjs --md a.md --out a.html

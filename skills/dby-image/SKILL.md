@@ -8,8 +8,9 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 1.5.0
-changelog: 接手出图话术（配图等），补 negative scope：只要封面套路与参考数据走 dby-api
+version: 1.6.0
+changelog: 接手 dby-publish 下线的配图位置规划——plan-figures.mjs 迁入本包，确定性规则挑
+  「哪些 h2 小节末尾配图」与画面建议（免费、不出图、不接 LLM），出好图交 dby-publish 上传排版
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。零依赖，不用 npm install。
@@ -115,6 +116,20 @@ node "$GEN" --describe
 
 ---
 
+## 公众号整篇配图：先规划位置（免费、不出图）
+
+整篇文章要配几张图时，先用确定性规则挑「在哪些 h2 小节末尾放图」+ 每张画面建议，再逐张出图：
+
+```bash
+node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-figures/--min-chars/--json 可调
+```
+
+张数按正文字数分档（<1800→3、1800–3000→4、>3000→5），只挑有效字数 ≥160 的小节，偏向信息量大的。
+它只出方案不改文件：按方案逐张出图后，把 `<img src=本地路径>` 插进对应 h2 小节**末尾**，
+再交 `dby-publish` 渲染与预上传。
+
+---
+
 ## 这个包管什么、不管什么
 
 | 用户在说 | 归谁 |
@@ -124,9 +139,10 @@ node "$GEN" --describe
 | 给了参考图，**只要它的感觉**（风格、氛围） | ✅ 不改图：按 [`prompt-ladder.md`](references/prompt-ladder.md) 「特殊入口」反推七项重画 |
 | 爆款封面套路 / 同赛道封面参考数据 | ❌ `dby-api`（取数，不出图） |
 | 直接给我一版封面**方案** | ❌ `dby-api` 的 `skill.wechat.coverDesign` |
-| 排版时的配图规划、图片预上传、封面上传 | ❌ `dby-publish` |
+| 整篇文章的配图**放哪儿**（位置规划） | ✅ `scripts/plan-figures.mjs`，见上节 |
+| 图片预上传、封面上传、排版存草稿 | ❌ `dby-publish` |
 
-> `dby-publish` 流水线第 6 步需要新图时点名本包；图片的上传与排布仍归它。
+> `dby-publish` 流水线「封面 / 配图」一步需要新图时点名本包；图片的上传与排布仍归它。
 
 ---
 

@@ -8,10 +8,11 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 3.0.0
-changelog: 包内主题只留内置兜底 benya-clean，其余 14 个服务端旧副本删除——把 --theme 或 config.mdTheme 写成 themes/xxx.json 路径的用法会坏，改用裸 id（服务端解析，排版才与账号默认一致）
-  失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）；
-  拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。
+version: 4.0.0
+changelog: 出图与设计工作台整套下线——gen-image.mjs、design-studio.mjs、assets/ 风格库、引导式设计、
+  pipeline.mjs 的 --design 参数全部移除，这些老用法会坏；封面与配图统一由 dby-image 出图，
+  拿到本地文件路径后封面走 --cover、配图以 <img src> 落进正文再渲染；
+  配图位置规划脚本 plan-figures.mjs 迁往 dby-image。
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -41,33 +42,34 @@ compatibility: >-
 ## 流程声明：`pipeline.json`
 
 10 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`）——它是**人读的约定文档**，
-`pipeline.mjs` 不读取它，改流程要两边手工同步。**「引导式设计」这一步由 agent 执行**，其余步骤 `pipeline.mjs` 机械跑完。
+`pipeline.mjs` 不读取它，改流程要两边手工同步。**「封面 / 配图」这一步由 agent 执行**（图归 `dby-image`），其余步骤 `pipeline.mjs` 机械跑完。
 本文只用步骤名不用序号；`pipeline.mjs` 日志里的「步骤 N」是脚本自己的机械步序，与 SOP 编号不对应。
 
 → 想逐步核对这 10 步分别做什么时读 `references/sop.md`，不需要就别读。
 
 ---
 
-## 调用都爆鸭：本 Skill 用到的三条能力
+## 调用都爆鸭：本 Skill 用到的两条能力
 
 只点名能力与详情端点；入参每次调用前现拉。
 
 | operationKey | 详情端点 | 用在第几步 |
 |---|---|---|
 | `skill.wechat.render` ⚠️专用 | `GET /api/skills/wechat-render` | 「md→HTML」（服务端排版那条路） |
-| `skill.ai.imageGen` | `GET /api/skills/gpt-image-gen` | 「引导式设计」生封面 / 配图（`scripts/gen-image.mjs` 就是它的薄壳）。**用户单独要一张封面 / 插图、不走流水线 → `dby-image`**；流水线内的自动封面 / 配图用本包 `gen-image.mjs`，上传与排布也归本包 |
 | `skill.wechat.draftPublish` ⚠️专用 | `GET /api/skills/wechat-draft-publish` | 「保存草稿」 |
 
-请求由 `scripts/pipeline.mjs`（及它调用的 `gen-image.mjs`、`preprocess-and-publish.mjs`）代发；
+生封面 / 生配图**不在本包**：出图归 `dby-image`，本包只消费它落盘的本地文件。
+
+请求由 `scripts/pipeline.mjs`（及它调用的 `preprocess-and-publish.mjs`）代发；
 绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`（鉴权、密钥怎么拿、
 先拉规格再拼参数、`execution.target`、信封格式）。
 🔴 **报错码是例外，走脚本一样要读**：脚本原样抛错零解读，撞上就读该文件第 6 条
 （429 按 IP 分桶，换 key、开新会话都没用，退避≤3 次且别加并发）。
 🔴 两条**专用路由**的调用地址只在 `target` 里，从详情端点**推不出来**。
 
-> **存草稿与生图都花钱、服务端排版渲染不花钱**；现价从详情响应现拉现说，花钱的两步动手前先问用户。
+> **存草稿花钱、服务端排版渲染不花钱**；现价从详情响应现拉现说，花钱的那步动手前先问用户。
 
-→ 用户要的东西**超出上面这三条**时，读 `dby-gateway/references/capability-index.md` 选路、
+→ 用户要的东西**超出上面这两条**时，读 `dby-gateway/references/capability-index.md` 选路、
 读 `routing-pitfalls.md` 看已知的坑；正常流程里这两份都不必读。
 
 ---
@@ -84,16 +86,13 @@ compatibility: >-
 
 ---
 
-## 引导式设计（封面 / 配图 / 排版）
+## 封面与配图（可选，图归 `dby-image`）
 
-渲染前后完成视觉设计。**引导是默认**（4 处停下来问用户）；用户说
-「封面配图你全权定 / 我赶时间」就走逃生舱，用 `config.defaultStyleId` 自动出一版。
-用户已说「推」且**没提封面 / 配图**时不进四问：只提示一次「不传封面就走兜底封面」，然后直接跑。
-
-→ 真要动手做视觉时读 `references/guided-design.md`（选风格 → 封面 → 配图 → 确认排版；
-封面比例 / `--cover-guard` / 尺寸上限都在那儿与 `references/cli.md`），走逃生舱就不必读。
-→ 想改成**在网页里一次点完**（可视化工作台，产出 `design-config.json` 给 `pipeline.mjs --design`）
-读 `references/design-studio.md`，与命令行引导等价，二选一。
+本包**不出图**。需要封面 / 配图时先走 `dby-image` 出图，拿到**本地文件路径**再接回流水线：
+封面走 `--cover <路径>`；配图以 `<img src=本地路径>` 落进 Markdown 源对应 h2 小节末尾
+（位置可先用 `dby-image` 的 `plan-figures.mjs` 按确定性规则规划），入源后重跑渲染，
+配图才会获得主题图样式。上传与排布仍归本包（流水线原样保留每个 `<img src>` 并预上传本地图）。
+用户已说「推」且**没提封面 / 配图**时不出图：只提示一次「不传封面就走兜底封面」，然后直接跑。
 
 ---
 
@@ -116,7 +115,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run             # 发
 🔴 **跑完只认最终回报里的 `mediaId`**——它是「已存入草稿箱」的唯一凭据，没有它就不当已存入。
 存草稿失败 / 中途 Ctrl-C / 不确定草稿箱里有没有 → 读 `references/recovery.md`（重跑不幂等，会多存一份）。
 
-→ 要指定账号 / 公众号 / 本地封面 / 摘要，或用 `--html`、`--design`、`--theme` 的完整写法时读
+→ 要指定账号 / 公众号 / 本地封面 / 摘要，或用 `--html`、`--theme` 的完整写法时读
 `references/cli.md`，不需要就别读。
 
 ---

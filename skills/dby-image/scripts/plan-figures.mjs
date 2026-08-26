@@ -2,9 +2,9 @@
 // plan-figures.mjs — 都爆鸭 · 公众号配图「自动布局」规划器（确定性规则，零依赖、不接 LLM）
 // -----------------------------------------------------------------------------
 // 输入一篇 Markdown，**用确定性规则**决定「在哪些 h2 小节末尾配图」+「每张画面建议」。
-// 取代旧的「逐 h2 让用户手选锚点」——用户不再手动分段。工作台点「自动配图」调它出方案，
-// 再逐个用 IP 参考图生成、自动摆好。产出的锚点结构与 pipeline.mjs 的 afterHeading 注入
-// 完全对齐（design-config.images[].anchor），**无需改动发布链路**。
+// 用法：先跑它拿方案，再逐张用本包 gen.mjs 生图，最后把 `<img src=本地路径>` 手工插进
+// Markdown 源里对应 h2 小节的**末尾**（下一个同级/更高级标题之前）——它只出方案，不改文件。
+// 之后排版 / 图片预上传 / 存草稿归 dby-publish（其流水线原样保留每个 <img src>）。
 //
 // 规则（全部确定性、可复现）：
 //   1. 把正文按 h2（##）切成小节；小节前的引言不配图（没有 h2 锚点）。
@@ -35,7 +35,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const DEFAULT_MIN_CHARS = 160;
 const FIRST_SENTENCE_MAX = 40;
 
-// h2 判定与取文本（与 pipeline.injectImagesAfterHeadings 的 h2Text 对齐）
+// h2 判定与取文本（与 dby-publish 流水线的 h2 语义一致：ATX 二级标题，容忍行尾 #）
 function h2Text(line) {
   const m = line.match(/^ {0,3}##(?!#)\s+(.+?)\s*#*\s*$/);
   return m ? m[1].trim() : null;

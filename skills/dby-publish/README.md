@@ -66,8 +66,6 @@ dby-publish/
 ├── config.example.README.md      # 配置字段逐项说明
 ├── references/                   # 条件式细节文档（SKILL.md 按需指路，含 recovery.md）
 ├── themes/                       # 只留内置兜底主题 benya-clean.json；其余主题走服务端裸 id
-├── schemas/                      # design-config.schema.json（设计工作台产物校验）
-├── assets/                       # 生图风格库 styles/ 与卡通 IP 图 ip/
 ├── profiles/
 │   ├── example-ip.json           # 虚构示例身份卡（演示 schema）
 │   └── README.md
@@ -75,7 +73,7 @@ dby-publish/
     ├── pipeline.mjs              # 编排者 CLI（心脏）
     ├── account-verify.mjs       # 多来源 key → whoami → 挑对账号
     ├── render-wechat-html.mjs   # md → 公众号内联样式 HTML（本机；已退出流水线主干，
-    │                             #   只供设计工作台与「无密钥先看排版」，无在线预览链接）
+    │                             #   只供「无密钥先看排版」，无在线预览链接）
     └── preprocess-and-publish.mjs  # vendored：传图 + 存草稿
 ```
 
@@ -87,6 +85,15 @@ MIT — 见 [`LICENSE`](./LICENSE)。
 
 ## 最近变更
 
+- **4.0.0**：出图与设计工作台整套下线。删除 `scripts/gen-image.mjs`（生图薄壳）、
+  `scripts/design-studio.mjs` + 页面（本地可视化设计工作台）、`assets/`（6 张风格样图与 IP 图目录）、
+  `references/guided-design.md` / `references/design-studio.md`、`schemas/design-config.schema.json`，
+  以及 `pipeline.mjs` 的 `--design` 参数——这些老用法会坏（major）。封面与配图统一由 `dby-image` 出图：
+  拿到本地文件路径后封面走 `--cover <路径>`、配图以 `<img src=本地路径>` 落进正文再渲染。
+  配图位置规划脚本 `plan-figures.mjs` 迁往 `dby-image`。`config.json` 的 `ipImage` / `defaultStyleId`
+  已无读者，从模板与字段说明中移除。
+- **3.0.0**：包内主题只留内置兜底 `benya-clean`，其余 14 个服务端旧副本删除——把 `--theme` 或
+  `config.mdTheme` 写成 `themes/xxx.json` 路径的用法会坏，改用裸 id（服务端解析，排版才与账号默认一致）。
 - **2.5.0**：发布失败/中断有恢复文档了——新增 `references/recovery.md`（重跑不幂等、素材残留怎么处理、
   哪些错误码退点、从哪一步重来）；保存草稿抓不到 `mediaId` 时不再打「完成」横幅，改报「结果待确认」
   并以非零码退出（`mediaId` 是唯一凭据），失败信息也会说明已做过什么、现在什么状态；

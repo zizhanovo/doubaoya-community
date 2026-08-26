@@ -1,6 +1,6 @@
-# CLI 用法（六个场景 + 全部参数）
+# CLI 用法（五个场景 + 全部参数）
 
-> 要指定账号 / 公众号 / 本地封面 / 摘要，或要用 `--design`、`--dry-run` 的完整写法时读它。
+> 要指定账号 / 公众号 / 本地封面 / 摘要，或要用 `--dry-run`、`--render-only` 的完整写法时读它。
 
 ```bash
 export DOUBAOYA_API_KEY="dyh_你的密钥"   # 或放 ~/.doubaoya/key、Keychain（account-verify 会找）
@@ -21,15 +21,12 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run
 # D'. 只渲染拿在线预览链接：跳过草稿前置检查，要密钥、不要绑号
 node scripts/pipeline.mjs --md a.md --title "标题" --render-only
 
-# E. 起可视化设计工作台选主题/封面/配图 → 产出 design-config.json（见「用设计工作台」）
-node scripts/design-studio.mjs --md a.md --title "标题"           # 网页里点完「保存配置」
-
-# F. 用设计工作台产出的 design-config 跑流水线（套主题 + 设封面 + 按 h2 锚点注入配图）
-node scripts/pipeline.mjs --md a.md --title "标题" --design a.design.json --dry-run
+# E. 带本地封面与配图（图先用 dby-image 出好；配图以 <img src=本地路径> 落进 a.md 正文）
+node scripts/pipeline.mjs --md a.md --title "标题" --cover ./cover.jpg
 ```
 
 参数：`--md | --html`（二选一）、`--title`（必填）、`--account`、`--appid`、`--cover`（本地 jpeg/png，>1MB 自动压成 jpg）、`--digest`、
-`--config`、`--profile`、`--theme <id> | <path> | neutral | default`、`--design`、`--output-processed-html`、`--base-url`、`--render-only`、`--dry-run`、`--help`。
+`--config`、`--profile`、`--theme <id> | <path> | neutral | default`、`--output-processed-html`、`--base-url`、`--render-only`、`--dry-run`、`--help`。
 
 `--theme` 的两种写法**去处不同**：
 

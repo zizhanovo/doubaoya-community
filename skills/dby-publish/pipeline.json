@@ -1,8 +1,8 @@
 {
   "metadata": {
     "name": "dby-publish",
-    "version": "2.5.0",
-    "description": "都爆鸭 · 公众号图文流水线：把一篇写好的 Markdown/HTML 走确定性的机械步骤——加载身份上下文 → 校验目标账号 → 前置检查 → 渲染 → 引导式设计（选风格 · AI 生封面/配图 · 排版确认）→ 本地图片预上传 → 封面 → 存入公众号草稿箱。只存草稿，绝不群发。"
+    "version": "4.0.0",
+    "description": "都爆鸭 · 公众号图文流水线：把一篇写好的 Markdown/HTML 走确定性的机械步骤——加载身份上下文 → 校验目标账号 → 前置检查 → 渲染 → 封面 / 配图（可选，图由 dby-image 出）→ 本地图片预上传 → 封面 → 存入公众号草稿箱。只存草稿，绝不群发。"
   },
   "hardRules": [
     "只存草稿绝不群发",
@@ -51,10 +51,9 @@
     },
     {
       "id": 6,
-      "title": "引导式设计（封面 / 配图 / 排版）",
+      "title": "封面 / 配图（可选，图归 dby-image）",
       "type": "design",
-      "endpoint": "POST https://doubaoya.com/api/skills/gpt-image-gen/invoke（经 scripts/gen-image.mjs）",
-      "rule": "由 agent 引导完成视觉设计，产出喂给后续机械步骤（不改发布链路契约）：① 选风格——把 assets/styles/index.json 的 6 个风格 + 样图列给用户挑（或用户说'你定'）。② 封面——AI 读文章提炼封面概念，用选定风格 promptFragment + COVER_GUARD 调 gen-image.mjs 生宽幅横版封面（比例只靠 --cover-guard/prompt 控制，--size 无效），产出本地 jpeg 作为 --cover。③ 配图——扫文章结构标建议配图位，逐张生成（默认方图）并以 <img src=本地路径> 落进 Markdown 源；配图入源后需回到渲染步重跑，使其获得主题图样式（图注/圆角/间距）。④ 排版——确认所选主题（config.mdTheme，或用 --theme 换一套）并确认渲染器真被调用。引导是默认；用户若说'你全权定/我赶时间'则跳过所有停顿，用 config.defaultStyleId 自动出一版（逃生舱）。生图走密钥调 doubaoya 生图接口、扣点数、无需额外密钥（用 env DOUBAOYA_API_KEY），缺失时报清晰错误。此步由 agent 执行，非 pipeline.mjs 机械步骤。可视化替代：起 scripts/design-studio.mjs 本地网页工作台（127.0.0.1，零依赖）一次点完主题/封面/配图。注册卡通 IP（config.ipImage 或页面上传存 assets/ip/）后，封面与配图默认走参考图条件化（gen-image.mjs 的 referenceImage + operation:edit）保留统一形象；配图不再手选锚点，点「自动配图」由 scripts/plan-figures.mjs 确定性规则自动决定位置并逐张生成摆好。产出 design-config.json（含 ip 与自动 images[]，过 schemas/design-config.schema.json 校验），再 pipeline.mjs --design <json> 消费（套主题 + 设封面 + 按 h2 锚点注入配图；显式 --theme/--cover 冲突时命令行优先并告警）。",
+      "rule": "需要封面或配图时由 agent 走 dby-image 出图（本包不再自带生图脚本），拿到本地文件路径后接回机械步骤：封面走 --cover <本地路径>；配图以 <img src=本地路径> 落进 Markdown 源对应 h2 小节末尾（配图位置可先用 dby-image 的 plan-figures.mjs 按确定性规则规划），入源后回到渲染步重跑，使配图获得主题图样式（图注/圆角/间距）。用户没提封面/配图时不主动出图，只提示一次「不传封面就走兜底封面」。此步由 agent 执行，非 pipeline.mjs 机械步骤，不改发布链路契约。",
       "mustPass": false
     },
     {
@@ -62,7 +61,7 @@
       "title": "图片预处理",
       "type": "image-preprocess",
       "endpoint": "POST /api/wechat/media/upload",
-      "rule": "扫描正文 <img>，本地图片（含设计步生成的配图）由客户端预上传到公众号图床（>1MB 先压缩），拿回 mmbiz 地址改写 HTML；外链图片原样保留（服务端会自动搬运）。由 vendored preprocess-and-publish.mjs 完成。",
+      "rule": "扫描正文 <img>，本地图片（含 dby-image 生成的配图）由客户端预上传到公众号图床（>1MB 先压缩），拿回 mmbiz 地址改写 HTML；外链图片原样保留（服务端会自动搬运）。由 vendored preprocess-and-publish.mjs 完成。",
       "mustPass": true
     },
     {
@@ -70,7 +69,7 @@
       "title": "封面",
       "type": "cover",
       "endpoint": "POST /api/wechat/media/upload (purpose=thumb)",
-      "rule": "若 --cover/config.coverDir 指向本地文件（含设计步生成的封面），作为封面（thumb）预上传。若无封面，走都爆鸭兜底封面（config.coverFallback），并在回报中注明。",
+      "rule": "若 --cover/config.coverDir 指向本地文件（含 dby-image 生成的封面），作为封面（thumb）预上传。若无封面，走都爆鸭兜底封面（config.coverFallback），并在回报中注明。",
       "mustPass": false
     },
     {
@@ -85,7 +84,7 @@
       "id": 10,
       "title": "验证回报",
       "type": "report",
-      "rule": "输出结构化回报：标题 / 公众号(昵称) / 正文图上传数 / 封面(已上传本地封面 | 走都爆鸭兜底) / 使用风格 / mediaId 摘要 / 群发：否（本流水线只存草稿）。",
+      "rule": "输出结构化回报：标题 / 公众号(昵称) / 正文图上传数 / 封面(已上传本地封面 | 走都爆鸭兜底) / mediaId 摘要 / 群发：否（本流水线只存草稿）。",
       "mustPass": false
     }
   ]

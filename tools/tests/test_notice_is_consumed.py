@@ -32,7 +32,6 @@ ENVELOPE_READERS = [
     "skills/dby-publish/scripts/pipeline.mjs",
     "skills/dby-charter/scripts/charter.mjs",
     "skills/dby-image/scripts/gen.mjs",
-    "skills/dby-publish/scripts/gen-image.mjs",
     "skills/dby-publish/scripts/preprocess-and-publish.mjs",
     "skills/dby-write/scripts/write.mjs",
     "skills/dby-banned-words/scripts/check_multi.py",
