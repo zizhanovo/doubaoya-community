@@ -4,9 +4,10 @@ description: >-
   都爆鸭（doubaoya / 本鸭）公众号工具箱主入口：新手引导 / 任务前路由 / 任务后导航，把用户路由到正确的 dby-* skill。
   用户提了公众号的活儿但没点名具体 skill、或说「该用哪个」「本鸭能干什么」「不知道从哪开始」时，先用本 skill 路由，别自己猜一个 dby-* 直接跑。
   触发方式：/dby、/dby 新手入门、本鸭、都爆鸭、「帮我看看下一步」「接下来做什么」「先干哪个」「公众号从哪开始」。
-  Trigger: /dby, what's next, where do I start, which dby skill.
-version: 1.3.2
-changelog: 补触发用例基线（evals/triggers.jsonl），正文未动
+  本包管选路与衔接，**「刚做完一步、接下来呢」也归它**；本包自己不取数、不写作、不排版。已经点名了要用哪个包时直接用那个，不必绕本包。
+  Trigger words: /dby, what's next, where do I start, which dby skill.
+version: 1.4.0
+changelog: 路由判据 wechat-routing.json 迁入本包自持；新增出岔子处置（判据缺失 / 目标包没装 / 路由错了）；description 补 negative scope
 ---
 
 # dby：都爆鸭公众号工具箱
@@ -66,7 +67,7 @@ changelog: 补触发用例基线（evals/triggers.jsonl），正文未动
 ## 模式 B：任务后导航
 
 每次只选当前最该走的**一步**，依据是上一个 skill 的具体结论、用户新反馈和当前目标；用户已明确下一步时按他的目标走。
-路由优先级、终态门、禁止误路由以 `dby-api/references/wechat-routing.json` 为准。
+路由优先级、终态门、禁止误路由以 `references/wechat-routing.json` 为准。
 
 1. **认上下文**：识别上一个 skill 是什么，提取核心结论 / 关键信号。
 2. **查导航图**：读 `references/navigation.md`（来源 skill × 结论信号 → 下一步，含「我这个号今天该做什么选题」的正确三步），选当前最该走的一步。
@@ -82,3 +83,9 @@ changelog: 补触发用例基线（evals/triggers.jsonl），正文未动
 
 - 用户同时有多个需求 → 问：「先解决哪个？一个一个来。」
 - 需求不在路由表范围内 / 想闲聊 → 不接，用 `references/onboarding.md` 的「边界话术」原句回复。
+
+## 出岔子了怎么办
+
+- **判据文件读不到**（`references/wechat-routing.json` 缺失或读取失败）→ 退回本文上面那张路由表继续路由，**不猜终态**（终态未明就问一句），并如实告诉用户判据缺失、结论可能不全。
+- **路由到的包没装** → 告诉用户跑 `/dby-update` 装齐，**同一次对话只说一次**；他不想装或再次撞上同一个缺口时，直接给包名让他自己装，**不要再路由一遍**（那会转圈）。
+- **路由错了**（用户说选错包了）→ 说清当时依据哪个信号选的，然后重新路由；**已经做完的活不重跑**，把它当作新的上下文接着往下走。

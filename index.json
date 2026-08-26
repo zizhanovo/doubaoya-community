@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T07:15:11.663102+00:00",
+  "generatedAt": "2026-08-26T08:00:23.914251+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -505,6 +505,7 @@
         "3f2f22ed69d1",
         "54ce465091b2",
         "578b1a067705",
+        "71cd62a50402",
         "75694e183386",
         "7ec123c4ccf5",
         "8a3dde169bfd",
@@ -520,11 +521,11 @@
       ],
       "versions": [
         {
-          "version": "1.3.2",
-          "hash": "fb377523bd1c",
+          "version": "1.4.0",
+          "hash": "71cd62a50402",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
-          "changelog": "补触发用例基线（evals/triggers.jsonl），正文未动",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "路由判据 wechat-routing.json 迁入本包自持；新增出岔子处置（判据缺失 / 目标包没装 / 路由错了）；description 补 negative scope",
           "changelogSource": "user"
         },
         {
@@ -688,6 +689,12 @@
           "version": "1.3.2",
           "date": "2026-08-25",
           "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
+        },
+        {
+          "hash": "d5cfe53c21dd",
+          "version": "1.3.2",
+          "date": "2026-08-26",
+          "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
         }
       ]
     },
@@ -719,11 +726,11 @@
       ],
       "versions": [
         {
-          "version": "1.3.3",
-          "hash": "d57b38332f48",
+          "version": "2.0.0",
+          "hash": "53d2c3fb1e80",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
-          "changelog": "README 改为先 export DOUBAOYA_API_KEY 到环境变量再对 agent 说业务话术，不再教用户把整条密钥粘进对话消息",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "**话术改走别的包**：「配张封面图 / 改图 / 文生图」这类出图话术现在直接进 dby-image，「过审 / 合规检测 / 违禁词」进 dby-banned-words；本包专做取数，不再宣称总入口与路由",
           "changelogSource": "user"
         },
         {
@@ -827,6 +834,12 @@
           "version": "1.3.3",
           "date": "2026-08-25",
           "subject": "fix(dby-api): README 教用户把密钥打进对话框 —— 改成先 export，并补第三道闸堵住这个判据盲区"
+        },
+        {
+          "hash": "842bc271ca8d",
+          "version": "1.3.3",
+          "date": "2026-08-26",
+          "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
         }
       ]
     },
@@ -852,11 +865,11 @@
       ],
       "versions": [
         {
-          "version": "1.2.3",
-          "hash": "e05d7674b9aa",
+          "version": "1.3.0",
+          "hash": "d1634c678daa",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
-          "changelog": "check_multi.py 补上转达 notice 字段——原来整个信封被丢弃，SKILL.md 承诺的更新提示用户永远看不到",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "接手合规话术（过审 / 合规检测 / 公众号违禁词），补 negative scope：改文风走 dby-rewrite",
           "changelogSource": "user"
         },
         {
@@ -1201,11 +1214,11 @@
       ],
       "versions": [
         {
-          "version": "1.4.0",
-          "hash": "a807c7cef9be",
+          "version": "1.5.0",
+          "hash": "c70826332715",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
-          "changelog": "公众号封面验收补裁切模拟脚本 wechat-crops.mjs（2.35:1 / 正中 1:1 / 360px 缩略图落盘再读回核）；叠标题先读图定位、不默认全幅蒙层；有真实照片优先用",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "接手出图话术（配图等），补 negative scope：只要封面套路与参考数据走 dby-api",
           "changelogSource": "user"
         },
         {
@@ -1321,6 +1334,12 @@
           "version": "1.2.2",
           "date": "2026-08-25",
           "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+        },
+        {
+          "hash": "a807c7cef9be",
+          "version": "1.4.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
         }
       ]
     },
@@ -1366,11 +1385,11 @@
       ],
       "versions": [
         {
-          "version": "2.5.0",
-          "hash": "b36d9ae7ae91",
+          "version": "2.5.1",
+          "hash": "082d8a4b68b1",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
-          "changelog": "失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）； 拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "终态纪律改为本地陈述，不再引用他包的路由判据文件 失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）； 拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。",
           "changelogSource": "user"
         },
         {
@@ -1672,11 +1691,11 @@
       ],
       "versions": [
         {
-          "version": "1.4.0",
-          "hash": "b5bfb17c7c72",
+          "version": "1.4.1",
+          "hash": "d9b79a294633",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
-          "changelog": "改主题前强制落盘备份并给出回滚命令、DELETE 加护栏；deploy-scope 与顶层键清单改指真实来源（校验器 / dby-publish/references/rendering.md）",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "终态纪律改为本地陈述，不再引用他包的路由判据文件",
           "changelogSource": "user"
         },
         {
@@ -2096,11 +2115,11 @@
       ],
       "versions": [
         {
-          "version": "1.10.0",
-          "hash": "cdccaf61a7e7",
+          "version": "1.10.1",
+          "hash": "7b2ebef991b0",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
-          "changelog": "主文瘦身进 200 行：标题细则并入新增的 references/title.md，红线细节与交棒命令行下沉 references；脚本示例改用安装全路径",
+          "releasedAt": "2026-08-26T08:00:22.409663+00:00",
+          "changelog": "交棒说明的终态纪律改为本地陈述，不再引用他包的路由判据文件",
           "changelogSource": "user"
         },
         {

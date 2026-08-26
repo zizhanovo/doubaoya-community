@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T07:15:11.663102+00:00",
+  "generatedAt": "2026-08-26T08:00:23.914251+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -72,6 +72,7 @@
       "3f2f22ed69d1",
       "54ce465091b2",
       "578b1a067705",
+      "71cd62a50402",
       "75694e183386",
       "7ec123c4ccf5",
       "8a3dde169bfd",
@@ -2271,6 +2272,12 @@
         "version": "1.3.2",
         "date": "2026-08-25",
         "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
+      },
+      {
+        "hash": "d5cfe53c21dd",
+        "version": "1.3.2",
+        "date": "2026-08-26",
+        "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
       }
     ],
     "dby-api": [
@@ -2357,6 +2364,12 @@
         "version": "1.3.3",
         "date": "2026-08-25",
         "subject": "fix(dby-api): README 教用户把密钥打进对话框 —— 改成先 export，并补第三道闸堵住这个判据盲区"
+      },
+      {
+        "hash": "842bc271ca8d",
+        "version": "1.3.3",
+        "date": "2026-08-26",
+        "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
       }
     ],
     "dby-banned-words": [
@@ -2659,6 +2672,12 @@
         "version": "1.2.2",
         "date": "2026-08-25",
         "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+      },
+      {
+        "hash": "a807c7cef9be",
+        "version": "1.4.0",
+        "date": "2026-08-26",
+        "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
       }
     ],
     "dby-publish": [

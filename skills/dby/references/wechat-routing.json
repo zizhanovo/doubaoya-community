@@ -8,6 +8,8 @@
       "candidate_skills": [
         "dby-write",
         "dby-api",
+        "dby-banned-words",
+        "dby-image",
         "dby-theme",
         "dby-publish",
         "dby"
@@ -33,7 +35,7 @@
         "requires_doubaoya_api_key": true
       },
       "mainline_owner": "dby-write",
-      "mainline_note": "The seven-step writing mainline is defined once, inside dby-write. Do NOT restate the steps here — a mainline copied into a second place drifts, and a pointer to a place that does not exist is worse than no pointer (the agent looks, fails to find it, then invents its own)."
+      "mainline_note": "The writing mainline is defined once, inside dby-write. Do NOT restate the steps here, and do NOT record how many steps it has — a mainline copied into a second place drifts, and so does its step count (this note itself carried a stale count long after dby-write's mainline had grown). A pointer to a place that does not exist is worse than no pointer (the agent looks, fails to find it, then invents its own)."
     },
     {
       "id": "doubaoya-cloud-public-data",

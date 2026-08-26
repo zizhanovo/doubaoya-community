@@ -4,7 +4,7 @@
 
 ## 终态
 
-`dby` 不问终态；终态（成稿 / 排版 HTML / 进草稿箱）由 `dby-write` 成稿后问，终态门以 `dby-api/references/wechat-routing.json` 为准。
+`dby` 不问终态；终态（成稿 / 排版 HTML / 进草稿箱）由 `dby-write` 成稿后问，终态门以 `wechat-routing.json` 为准。
 **目标停在哪一档，就在哪一档收手**：用户只要成稿时不跑 `dby-publish`（它会写进用户自己的公众号后台）；
 用户要进草稿箱却停在成稿才是断头。用户已说的终态照走，别替他决定。
 
