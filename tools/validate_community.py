@@ -1442,6 +1442,52 @@ def validate_user_agent_from_version(root: Path = ROOT) -> None:
             )
 
 
+def validate_frontmatter_is_real_yaml(root: Path = ROOT) -> None:
+    """🔴 frontmatter 必须能被**真的 YAML 解析器**读下来，不是"正则能抠出字段"就算数。
+
+    2026-08-26 实证：`dby-api` 的 changelog 写成 `**话术改走别的包**：…`，
+    YAML 里 `*` 开头是**别名节点**（alias），解析器直接 ScannerError。
+    本仓的 validator 与 stamp 都用正则抠 frontmatter，从头到尾没人发现；
+    而用户侧的安装器做的是真解析——包直接装不上，报到用户那里才知道。
+    正则读得懂 ≠ YAML 读得懂，这道闸补的就是这个缝。
+
+    另外单独点名开头的 YAML 指示符：装了 pyyaml 才做全量解析，没装时至少把最常踩的
+    这一类拦住（`*` 别名、`&` 锚点、`!` 标签、`%` 指令、`` ` `` 保留字、`@` 保留字）。
+    """
+    INDICATORS = "*&!%@`"
+    broken: list[str] = []
+    risky: list[str] = []
+    for skill_md in sorted(root.glob("skills/*/SKILL.md")):
+        text = skill_md.read_text(encoding="utf-8")
+        match = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+        if not match:
+            continue  # 缺 frontmatter 由 frontmatter_name 那条报
+        block = match.group(1)
+        for line in block.split("\n"):
+            m = re.match(r"^([A-Za-z_][\w-]*):\s+(\S.*)$", line)
+            if m and m.group(2)[0] in INDICATORS and m.group(2)[0] not in "\"'":
+                risky.append(f"{display_path(skill_md)}: {m.group(1)} 的值以 {m.group(2)[0]!r} 开头")
+        try:
+            import yaml  # type: ignore
+        except ImportError:
+            continue
+        try:
+            yaml.safe_load(block)
+        except Exception as exc:  # noqa: BLE001 —— 任何解析异常都算装不上
+            broken.append(f"{display_path(skill_md)}: {type(exc).__name__}: {str(exc).splitlines()[0]}")
+    require(
+        not risky,
+        "下列 frontmatter 字段的值以 YAML 指示符开头，安装器会解析失败：\n  "
+        + "\n  ".join(risky)
+        + "\n\n改法：去掉开头那个符号，或整个值加引号。"
+        "写强调不要用 `**粗体**` 开头——`*` 在 YAML 里是别名节点。",
+    )
+    require(
+        not broken,
+        "下列 SKILL.md 的 frontmatter 不是合法 YAML，用户装不上：\n  " + "\n  ".join(broken),
+    )
+
+
 def validate_artifacts(root: Path = ROOT) -> None:
     banned_parts ={"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv", "venv", "node_modules", "state", "runtime", "secrets", "profile", "mp-ark-archives"}
     banned_names = {".DS_Store", ".env", ".env.local", "session.json", "cookies.json", "auth-key", "runtime.json", "lock.json"}
@@ -2022,6 +2068,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_no_price_literals(root)
     validate_no_agent_fanout(root)
     validate_user_agent_from_version(root)
+    validate_frontmatter_is_real_yaml(root)
     validate_artifacts(root)
     return validate_description_budget(root) + validate_trigger_word_coverage(root)
 
