@@ -5,8 +5,8 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和用户自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 3.6.0
-changelog: 补两道安全闸——上游 slug 过形状校验后才拿去拼路径（防路径穿越），复原命令的路径改走参数传递（安装目录带单引号时原来会跑不通，而那是归档后唯一的退路）
+version: 4.0.0
+changelog: 更新改成旁路安装 + 目录级切换——新版先装到一边、校验通过才整个换进去，换完不对就自动退回更新前那版。以前失败会留下一半新一半旧的包，现在不会了
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
@@ -112,8 +112,9 @@ scope 猜错时脚本会打 ⚠️ 警告，看到就先确认 scope；不确定
 node <路径> --yes --scope <上一步用的那个> [--project-dir <目录>]
 ```
 
-脚本会自己完成：归档 → 拉齐全集 → 复核 → 自检（skill 有没有落盘、`DOUBAOYA_API_KEY` 在不在、
-doubaoya.com 连不连得通），最后打印一份结果，并告诉用户归档放在哪。
+脚本会自己完成：归档 → 拉齐全集 → 复核 → 自检，最后打印一份结果，并告诉用户归档放在哪。
+
+> 🛡 项目 scope 刷新/新增走「旁路装→校验→原子切换」，失败自动回滚；全局 scope 无此保证 → `references/staged-install.md`。
 
 **退出码**：`0` 全通过；`3` 对账做完了但自检有项没过；`1` 用户取消；`2` 需要确认但当前不是交互终端；`4` 出错。
 

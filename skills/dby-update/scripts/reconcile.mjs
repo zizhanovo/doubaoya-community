@@ -51,9 +51,9 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync, renameSync, rmdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import * as readline from "node:readline/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -1189,23 +1189,46 @@ function restoreCommand(root) {
  */
 function archivePackages(scope, names, survey, opts = {}) {
   if (!names.length) return null;
-  const root = archiveRoot(scope);
+  // `opts.root`：staged 原子切换逐包各调一次、共用同一个归档根，manifest 逐次合并（不给就每次开新根）。
+  const root = opts.root || archiveRoot(scope);
   ensureSelfIgnored(doubaoyaHome(scope));
   const moved = [];
-  for (const name of names) {
+  let moveErr = null;
+  outer: for (const name of names) {
     const entry = survey.find((s) => s.name === name);
     for (const dir of entry?.dirs || []) {
       const from = join(dir.path, name);
       if (!existsSync(from)) continue;
+      if (opts.atomic) {
+        // 🔴 staged 原子切换（opts.atomic）只搬**真实目录**：软链原地不动——真身换掉后它指向的
+        //    还是同一条路径，自然就是新版；搬软链只会多出第三次移动，还得再建回来。
+        let st = null;
+        try {
+          st = lstatSync(from);
+        } catch {
+          continue;
+        }
+        if (st.isSymbolicLink()) continue;
+      }
       // 去掉开头的点：归档目录是给人看的，藏成隐藏目录等于 ls 一眼看不见。
       const to = join(root, dir.label.replace(/^\./, "").replace(/\//g, "_"), name);
       try {
-        moveDir(from, to);
+        // 🔴 atomic 模式移动只许 rename（design D1）：EXDEV 直接报错停手，绝不退化成拷贝。
+        if (opts.atomic) renameOrFail(from, to, "归档 skill");
+        else moveDir(from, to);
         moved.push({ skill: name, from, to, hash: entry?.hash, ...(opts.perPackage?.[name] || {}) });
       } catch (err) {
-        throw explainFsError(err, "归档 skill", from);
+        moveErr = err instanceof Friendly ? err : explainFsError(err, "归档 skill", from);
+        break outer;
       }
     }
+  }
+  // 🔴 manifest 不许因为中途出错而省掉：已经移走的目录必须有据可查——复原（自动的和手动的）都靠它。
+  let prevPackages = [];
+  try {
+    prevPackages = JSON.parse(readFileSync(join(root, "manifest.json"), "utf-8")).packages || [];
+  } catch {
+    /* 没有旧 manifest 就是第一份 */
   }
   const manifest = {
     archivedAt: new Date().toISOString(),
@@ -1215,9 +1238,10 @@ function archivePackages(scope, names, survey, opts = {}) {
     restoreNote:
       "移回原处后 skill 立刻能用（宿主是按目录读的）；但 skills CLI 的安装记录已经清掉了，" +
       `想让 npx skills list 也认回来，就再跑一次：npx -y skills add ${REPO} -s <包名>`,
-    packages: moved,
+    packages: [...prevPackages, ...moved],
   };
   writeFileSync(join(root, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  if (moveErr) throw moveErr;
   return { root, count: moved.length };
 }
 
@@ -1239,11 +1263,14 @@ function moveDir(from, to) {
  * 已经不在归档里的条目（用户手动搬回过）跳过；原处已被占（同名目录又出现了）时不覆盖、记进 skipped，
  * 这种情形宁可留在归档里让用户自己看，也不能拿归档物盖掉一个现在在场的目录。
  */
-export function restoreArchive(root) {
+export function restoreArchive(root, opts = {}) {
   const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf-8"));
+  // `opts.only`：只复原这些 slug 的条目（staged 逐包回滚用——共用归档根里躺着别的包的旧版，不许被连带搬回去）。
+  const wanted = opts.only ? new Set(opts.only) : null;
   const restored = [];
   const skipped = [];
   for (const it of manifest.packages || []) {
+    if (wanted && !wanted.has(it.skill)) continue;
     if (!existsSync(it.to)) continue;
     if (existsSync(it.from)) {
       skipped.push({ skill: it.skill, from: it.from, to: it.to, reason: "原处已有同名目录，不覆盖" });
@@ -1253,6 +1280,555 @@ export function restoreArchive(root) {
     restored.push(it.skill);
   }
   return { root, restored, skipped };
+}
+
+// ---------------------------------------------------------------- staging 原子切换（项目 scope）
+//
+// 🔴 项目 scope 的刷新/新增不再让 `skills add` 在现有目录里逐文件覆盖，改成三段式（design D1–D6）：
+//    旁路装到 <scope>/.doubaoya/staging/<事务>/install（skills add 是 cwd 相对的，cwd 指过去就行）
+//    → 逐包校验（frontmatter 真解析 / 内容哈希 == 索引目标版 / SKILL.md 引用的脚本在场）
+//    → 目录级切换（现真身 rename 进归档、staging 里的新版 rename 进来，每包 2 次 rename）
+//    → 切换后复核，不过就把归档那份 rename 回来。事务粒度是**单个包**：一个失败只回滚它自己。
+//    全局 scope（-g）不吃 cwd，维持原地覆盖安装，输出里明说它没有这层保证（design D5）。
+
+/**
+ * 🔴 staged 切换里的目录搬运只许 rename（design D1）：EXDEV（跨文件系统）直接报错停手，
+ * **绝不退化成拷贝再删**——那会把「每包 2 次 rename」偷偷变回「N 次文件操作」，宿主的批量
+ * 删除防护会再次被顶到，而用户毫不知情。moveDir 的拷贝回退只服务归档/复原那类允许跨卷的
+ * 搬运，staged 切换必须同卷。`renameImpl` 只给自检注入用（真造跨卷场景不现实，注入才能钉住
+ * 「撞见 EXDEV 时抛错而不是走拷贝」这个分支）。
+ */
+function renameOrFail(from, to, what, renameImpl = renameSync) {
+  mkdirSync(dirname(to), { recursive: true });
+  try {
+    renameImpl(from, to);
+  } catch (err) {
+    if (err?.code === "EXDEV") {
+      throw new Friendly(
+        `${what}失败：${from} 与 ${to} 不在同一个文件系统（EXDEV），目录级原子切换做不了。`,
+        "staging 与安装目录必须同卷；不会退化成逐文件拷贝——那会失去原子性。看看安装目录或 .doubaoya 是不是被软链去了别的卷（网络盘 / 外接盘），移回同一卷再跑。"
+      );
+    }
+    throw explainFsError(err, what, from);
+  }
+}
+
+/** staging 必须与安装目录同卷（rename 跨卷抛 EXDEV），不同卷在动手前就拦住。`devOf` 只给自检注入用。 */
+function ensureSameVolume(stagingDir, installBase, devOf = (p) => statSync(p).dev) {
+  if (devOf(stagingDir) !== devOf(installBase)) {
+    throw new Friendly(
+      `staging 目录（${stagingDir}）与安装目录（${installBase}）不在同一个文件系统，目录级原子切换做不了。`,
+      "本轮没动任何已安装的包。多半是 .doubaoya 被软链到了别的卷；把它移回项目所在卷再跑。"
+    );
+  }
+}
+
+/**
+ * 🔴 SKILL.md frontmatter 的**严格 YAML 子集**解析器（切换前校验用，design D3）。
+ *
+ * 为什么不引 yaml 库：本脚本零依赖是对外承诺（frontmatter 的 compatibility 写着「不装任何 npm 包」）。
+ * 为什么敢用子集：方向是 fail-closed——**认不出来的构造一律抛错**（别名 `*`、锚点 `&`、标签 `!`、
+ * flow `{}`/`[]`、多行 plain 折行、tab 缩进、值里的 `: `……）。于是「真 YAML 解析器会拒绝的」这里
+ * 也一定拒绝——2026-08 的线上事故正是 changelog 以 `**` 开头被当成别名节点，这里第一时间拦住；
+ * 而「真 YAML 接受、这里不认识」的罕见写法只会让那个包**不切换、保留旧版**，错在保守一侧。
+ * 发布侧 validate_community.py 对 frontmatter 另有形状闸，正常发布物全落在子集内（自检拿本包
+ * 真实 SKILL.md 实证）。
+ */
+export function parseFrontmatterStrict(text) {
+  const m = /^---\r?\n([\s\S]*?)(?:\r?\n)---(?:\r?\n|$)/.exec(text);
+  if (!m) throw new Error("文件不以 --- 包围的 frontmatter 块开头");
+  const lines = m[1].split(/\r?\n/);
+  let i = 0;
+  const fail = (why) => {
+    throw new Error(`frontmatter 第 ${i + 1} 行：${why}`);
+  };
+  const indentOf = (line) => {
+    const ws = /^[ \t]*/.exec(line)[0];
+    if (ws.includes("\t")) fail("缩进里有 tab（YAML 禁止）");
+    return ws.length;
+  };
+  const isBlank = (line) => !line.trim() || line.trim().startsWith("#");
+  const scalar = (s) => {
+    const v = s.trim();
+    if (v.startsWith('"') || v.startsWith("'")) {
+      const q = v[0];
+      let body = "";
+      let k = 1;
+      let closed = false;
+      while (k < v.length) {
+        const c = v[k];
+        if (q === "'" && c === "'") {
+          if (v[k + 1] === "'") {
+            body += "'";
+            k += 2;
+            continue;
+          }
+          closed = true;
+          k++;
+          break;
+        }
+        if (q === '"' && c === "\\") {
+          body += v[k + 1] ?? "";
+          k += 2;
+          continue;
+        }
+        if (q === '"' && c === '"') {
+          closed = true;
+          k++;
+          break;
+        }
+        body += c;
+        k++;
+      }
+      if (!closed) fail("引号没闭合（多行引号标量不支持）");
+      const rest = v.slice(k).trim();
+      if (rest && !rest.startsWith("#")) fail(`引号闭合之后还有内容：${rest.slice(0, 30)}`);
+      return body;
+    }
+    // plain 标量：起手就是 YAML 指示符的一律拒绝（* 别名 & 锚点 ! 标签 % 指令 @ ` 保留、[{ flow、|> 该走块标量分支）
+    if (/^[*&!%@`|>[{]/.test(v)) {
+      fail(`值以 YAML 特殊指示符「${v[0]}」开头，plain 标量不允许——changelog 以 ** 开头被当成别名节点正是这一类`);
+    }
+    if (v === "?" || v.startsWith("? ")) fail("复杂键（?）不支持");
+    // 行内注释按 YAML 规矩从「空格 + #」起
+    const cut = v.search(/ #/);
+    const val = (cut >= 0 ? v.slice(0, cut) : v).trim();
+    // plain 值里出现 `: ` 在块上下文里是真 YAML 错误（mapping values are not allowed here）
+    if (/: /.test(val)) fail(`plain 值里出现了「: 」（冒号加空格），真 YAML 在这儿也会报错：${val.slice(0, 30)}`);
+    return val;
+  };
+  const parseBlock = (indent) => {
+    let kind = null; // "map" | "list"
+    let out = null;
+    while (i < lines.length) {
+      const line = lines[i];
+      if (isBlank(line)) {
+        i++;
+        continue;
+      }
+      const ind = indentOf(line);
+      if (ind < indent) break;
+      if (ind > indent) fail("缩进比所在块深（plain 折行 / 悬空行不支持）");
+      const body = line.slice(ind);
+      if (body === "-" || body.startsWith("- ")) {
+        if (kind === "map") fail("同一块里混用了 map 和 list");
+        kind = "list";
+        out ||= [];
+        if (body === "-" || !body.slice(2).trim()) fail("空列表项（`-` 后必须直接跟内容）");
+        out.push(scalar(body.slice(2)));
+        i++;
+        continue;
+      }
+      const km = /^([A-Za-z0-9_.-]+):(.*)$/.exec(body);
+      if (!km) fail(`认不出这一行（既不是 key: value 也不是 - 列表项）：${body.slice(0, 40)}`);
+      if (kind === "list") fail("同一块里混用了 list 和 map");
+      kind = "map";
+      out ||= {};
+      const key = km[1];
+      if (Object.prototype.hasOwnProperty.call(out, key)) fail(`重复的键：${key}`);
+      let rest = km[2];
+      if (rest.startsWith(" ")) rest = rest.slice(1);
+      else if (rest) fail(`冒号后面要有空格：${body.slice(0, 40)}`);
+      const v = rest.trim();
+      i++;
+      if (!v || v.startsWith("#")) {
+        let j = i;
+        while (j < lines.length && isBlank(lines[j])) j++;
+        const nextInd = j < lines.length ? indentOf(lines[j]) : -1;
+        out[key] = nextInd > indent ? parseBlock(nextInd) : null;
+      } else if (/^[|>][+-]?$/.test(v)) {
+        // 块标量：吃掉所有更深缩进（或空）的行，按第一行内容行定基准缩进
+        const buf = [];
+        let blockIndent = null;
+        while (i < lines.length) {
+          const l = lines[i];
+          if (!l.trim()) {
+            buf.push("");
+            i++;
+            continue;
+          }
+          const li = indentOf(l);
+          if (li <= indent) break;
+          blockIndent ??= li;
+          buf.push(l.slice(Math.min(li, blockIndent)));
+          i++;
+        }
+        out[key] = buf.join("\n").replace(/\n+$/, "");
+      } else {
+        const quoted = v.startsWith('"') || v.startsWith("'");
+        let val = scalar(v);
+        // plain 标量的折行（真 YAML 允许，仓里的 changelog 真在用）：紧随其后、缩进更深的行并进
+        // 同一个值，连接符是空格。引号标量必须同行闭合，没有折行。折行里出现列表项或「: 」
+        // 在真 YAML 里同样是错，一并拒绝；空行/注释行按保守处理直接结束折行。
+        while (!quoted && i < lines.length) {
+          const l = lines[i];
+          if (isBlank(l)) break;
+          if (indentOf(l) <= indent) break;
+          const cont = l.trim();
+          if (/^- /.test(cont)) fail("plain 折行里出现了列表项");
+          if (/: /.test(cont)) fail("plain 折行里出现了「: 」，真 YAML 在这儿也会报错");
+          val += ` ${cont}`;
+          i++;
+        }
+        out[key] = val;
+      }
+    }
+    if (out === null) fail("空块");
+    return out;
+  };
+  const doc = parseBlock(0);
+  if (typeof doc !== "object" || Array.isArray(doc)) throw new Error("frontmatter 顶层必须是键值映射");
+  return doc;
+}
+
+/** 包自己 SKILL.md 里引用到的 `scripts/…` 文件（去重、剔除带 .. 的）。前面紧跟 `/` 的不算——那是别的包的路径。 */
+export function referencedScripts(skillMdText) {
+  const out = new Set();
+  for (const m of skillMdText.matchAll(/(?:^|[^\w/])(scripts\/[A-Za-z0-9_][\w./-]*\.(?:mjs|cjs|js|py|sh))/g)) {
+    if (!m[1].includes("..")) out.add(m[1]);
+  }
+  return [...out].sort();
+}
+
+/**
+ * 切换前逐包三项校验（design D3）：frontmatter 真解析、内容哈希 == 索引声明的目标版本、关键脚本在场。
+ * 任一不过就不切换那个包，现有版本一个字节不动。
+ *
+ * 「关键脚本」的声明源：索引今天没有逐文件清单，而内容哈希核对本就覆盖「每个文件逐字节等于发布版」
+ * ——比任何脚本清单都强。所以这项取**包自己 SKILL.md 引用的 scripts/ 文件**当声明，它对「还没盖
+ * 版本戳、比不了哈希」的包仍把得住「教程指着一个不存在的脚本」这条断头路。
+ */
+export function validateStagedPackage(stagedDir, slug, upstream) {
+  if (!existsSync(stagedDir)) return { ok: false, failures: ["安装器没把这个包写进 staging（看上面 skills add 的日志）"] };
+  const failures = [];
+  const mdPath = join(stagedDir, "SKILL.md");
+  let mdText = null;
+  if (!existsSync(mdPath)) failures.push("SKILL.md 不存在");
+  else {
+    mdText = readFileSync(mdPath, "utf-8");
+    try {
+      parseFrontmatterStrict(mdText);
+    } catch (err) {
+      failures.push(`SKILL.md 的 frontmatter 不是合法 YAML：${err.message}`);
+    }
+  }
+  const expected = upstream.currentHashes?.[slug] || null;
+  if (expected) {
+    const actual = computeSkillHash(stagedDir);
+    if (actual !== expected) failures.push(`内容哈希与索引声明的目标版本不一致：期望 ${expected}，实测 ${actual}`);
+  }
+  if (mdText) {
+    for (const rel of referencedScripts(mdText)) {
+      if (!existsSync(join(stagedDir, rel))) failures.push(`SKILL.md 引用的脚本缺失：${rel}`);
+    }
+  }
+  return { ok: !failures.length, failures };
+}
+
+/** 项目 scope 走 staged 原子切换；全局 scope（-g）不吃 cwd，旁路无效，维持现状（design D5）。 */
+export function usesStagedInstall(scope) {
+  return scope.kind !== "global";
+}
+
+/**
+ * 🔴 两个 scope 的保证级别不同，必须各自说出来（design D5）：沉默会让用户以为全局也有回滚。
+ */
+export function scopeGuaranteeNote(kind) {
+  return kind === "global"
+    ? "⚠️ 全局 scope（-g）本轮不是事务的：原地覆盖安装，不提供原子切换与自动回滚，失败可能留下半更新。"
+    : "🛡 项目 scope 走旁路安装 + 目录级原子切换：每个包要么整包是新版、要么保持更新前那版，复核不过自动回滚。";
+}
+
+/** 只给自检注入用：DBY_SELFCHECK_BREAK_VERIFY 里的 slug 会被强制判「复核失败」，用来演练回滚链路。 */
+function selfCheckBreakSet() {
+  return new Set((process.env.DBY_SELFCHECK_BREAK_VERIFY || "").split(",").filter(Boolean));
+}
+
+// 在场的 staged 事务：正常路径由 main 显式 cleanup；中途抛错（改名迁移 / 遗留副本归档挂了）时
+// 入口的 catch 兜底清理——spec 要求 staging 在事务结束时清理，成败都清。
+const ACTIVE_STAGED_TXS = new Set();
+
+/** 兜底清理所有还在场的 staged 事务（入口 catch 用）。清不掉也不能盖过原始错误，静默放过。 */
+function cleanupStagedTxs() {
+  for (const tx of [...ACTIVE_STAGED_TXS]) {
+    try {
+      tx.cleanup();
+    } catch {
+      /* 原始错误优先 */
+    }
+  }
+}
+
+/**
+ * 开一笔 staged 事务：staging 根落在 `<scope>/.doubaoya/staging/<时间戳>/`（与安装目录同卷，
+ * design D1），并把正在跑的这份 reconcile 连同 references/ 复制进事务目录（design D4——
+ * 目录级 rename 比逐文件覆盖硬：自身被移走后一切按需读取全部失效，所以先留副本）。
+ */
+function beginStagedTx(scope) {
+  const home = doubaoyaHome(scope);
+  ensureSelfIgnored(home);
+  const base = join(home, "staging", timestamp());
+  let root = base;
+  for (let i = 2; existsSync(root); i++) root = `${base}-${i}`;
+  const installRoot = join(root, "install");
+  try {
+    mkdirSync(installRoot, { recursive: true });
+  } catch (err) {
+    throw explainFsError(err, "创建 staging 目录", installRoot);
+  }
+  try {
+    ensureSameVolume(root, scopeRoot(scope));
+    const selfRoot = join(root, "self");
+    cpSync(dirname(SELF_PATH), join(selfRoot, "scripts"), { recursive: true });
+    const refs = join(resolve(dirname(SELF_PATH), ".."), "references");
+    if (existsSync(refs)) cpSync(refs, join(selfRoot, "references"), { recursive: true });
+  } catch (err) {
+    rmSync(root, { recursive: true, force: true });
+    throw err;
+  }
+  const tx = {
+    root,
+    installRoot,
+    archiveRoot: null, // 首次归档时才开，整笔事务共用一个根
+    stagedDirOf: (slug) => join(installRoot, ".agents", "skills", slug),
+    cleanup() {
+      // spec：staging 在事务结束时清理，成败都清；staging/ 里没别的事务根就连它一起收掉。
+      ACTIVE_STAGED_TXS.delete(tx);
+      rmSync(root, { recursive: true, force: true });
+      try {
+        rmdirSync(join(home, "staging"));
+      } catch {
+        /* 非空或不存在都不管 */
+      }
+    },
+  };
+  ACTIVE_STAGED_TXS.add(tx);
+  return tx;
+}
+
+/**
+ * 🔴 真实落地的包才写进项目安装账本（spec「真实落地的包才写进项目安装账本」）：
+ * 旁路安装对外部工具应当不可见——`npx skills list` / `experimental_install` 读的是项目根的
+ * `skills-lock.json`，账本停更 = 这两个命令从此对本仓的包说谎。所以某包**切换成功并复核通过后**，
+ * 把 skills CLI 在 staging 里生成的该 slug 条目（source/ref/sourceType/skillPath/computedHash，
+ * 格式是 CLI 自己的，原样照抄不发明）合并进真账本。三条边界：
+ *   - 失败 / 回滚的包绝不写入——账本只反映真实落地的东西；
+ *   - 真账本不存在（用户从没用 CLI 装过）不凭空创建，跳过；
+ *   - 保持文件原有形态（version 字段、键序、缩进、末尾换行）——它受 git 跟踪，替换既有键
+ *     留在原位、新键只追加，无谓的格式重排是纯 diff 噪声。
+ * 合并失败不推翻已复核通过的切换（包是真落地了，账本滞后是次一级问题），但要在输出里说出来。
+ */
+function mergeStagedLockEntry(scope, slug, tx) {
+  const realPath = join(scope.dir, "skills-lock.json");
+  if (!existsSync(realPath)) return "no-lock";
+  let stagedEntry = null;
+  try {
+    const staged = JSON.parse(readFileSync(join(tx.installRoot, "skills-lock.json"), "utf-8"));
+    stagedEntry = staged?.skills?.[slug] ?? null;
+  } catch {
+    /* staging 里没有可用账本，按缺条目处理 */
+  }
+  if (!stagedEntry || typeof stagedEntry !== "object") return "no-staged-entry";
+  try {
+    const raw = readFileSync(realPath, "utf-8");
+    const real = JSON.parse(raw);
+    if (!real || typeof real !== "object" || !real.skills || typeof real.skills !== "object") return "unreadable：形状不认识，没敢动";
+    // 缩进按文件现状探测（首个缩进串），末尾换行照旧；JSON.parse 保留键序，原键覆写留在原位。
+    const indent = /\n([ \t]+)"/.exec(raw)?.[1] ?? "  ";
+    real.skills[slug] = stagedEntry;
+    writeFileSync(realPath, JSON.stringify(real, null, indent) + (raw.endsWith("\n") ? "\n" : ""));
+    return "merged";
+  } catch (err) {
+    return `merge-failed：${err?.message || err}`;
+  }
+}
+
+/**
+ * 单包「切换 + 复核 + 失败回滚」（design D2/D3）。返回 outcome：
+ *   { slug, action: "switched" | "not-switched" | "rolled-back" | "rollback-failed",
+ *     from, to, failures?, archiveRoot?, error? }
+ *
+ * 切换 = 两次 rename：现真身 → 归档（复用 archivePackages 的 manifest / 复原命令），
+ * staging 新版 → 真身位置。其余受管目录的软链原地不动（路径没变，真身换掉后自然指向新版），
+ * 缺的补上、指错的重指。复核不过就把归档那份 rename 回来，该包回到更新前状态。
+ */
+function switchOnePackage({ scope, slug, upstream, survey, tx, breakVerify = false }) {
+  const entry = survey.find((s) => s.name === slug) || null;
+  const from = entry ? entry.origin?.version ?? versionOfHash(upstream, slug, entry.hash) ?? "?" : null;
+  const to = upstream.versions?.[slug]?.[0]?.version ?? null;
+  const base = (action, extra = {}) => ({ slug, action, from, to, ...extra });
+
+  const stagedDir = tx.stagedDirOf(slug);
+  const check = validateStagedPackage(stagedDir, slug, upstream);
+  if (!check.ok) return base("not-switched", { failures: check.failures });
+
+  const dirs = installDirs(scope);
+  const live = dirs.filter((d) => existsSync(d.path));
+  const managed = live.length ? live : dirs.filter((d) => d.agent === "universal");
+  const lstatOf = (p) => {
+    try {
+      return lstatSync(p);
+    } catch {
+      return null;
+    }
+  };
+  const realDirs = managed.filter((d) => {
+    const st = lstatOf(join(d.path, slug));
+    return st && st.isDirectory(); // lstat 不跟软链：软链在这儿是 false
+  });
+  // 真身落点：现有真实目录在哪就换哪（优先 universal 那份）；全新安装落 universal（没有就第一个受管目录）
+  const targetDir = realDirs.find((d) => d.agent === "universal") || realDirs[0] || managed.find((d) => d.agent === "universal") || managed[0];
+  const target = join(targetDir.path, slug);
+
+  // ① 现有真身移进归档（软链原地不动）。失败 ⇒ 按 manifest 撤回已移走的部分，包保持原样。
+  let archived = null;
+  if (entry && realDirs.length) {
+    tx.archiveRoot ||= archiveRoot(scope);
+    try {
+      archived = archivePackages(scope, [slug], [{ ...entry, dirs: realDirs }], {
+        atomic: true,
+        root: tx.archiveRoot,
+        reason: "staged 原子切换换下来的更新前版本；新版复核通过后可删，复核不过它就是回滚的来源",
+      });
+    } catch (err) {
+      try {
+        const r = restoreArchive(tx.archiveRoot, { only: [slug] });
+        if (r.skipped.length) throw new Error(r.skipped.map((s) => `${s.skill}：${s.reason}`).join("；"));
+        return base("not-switched", { failures: [`归档现有版本失败：${err.message}（已撤回，现有版本没变）`] });
+      } catch (rbErr) {
+        return base("rollback-failed", {
+          failures: [`归档现有版本失败：${err.message}`],
+          archiveRoot: tx.archiveRoot,
+          error: rbErr?.message || String(rbErr),
+        });
+      }
+    }
+  }
+
+  // ②③④⑤：新版进场 → 软链核对 → 写 origin → 复核；任何一步不对都走同一条回滚。
+  let placedNew = false;
+  const createdLinks = [];
+  const replacedLinks = [];
+  const rollback = (failures) => {
+    try {
+      // 没过复核的新版挪进事务目录（随事务一起清掉），把位置腾给旧版
+      if (placedNew && lstatOf(target)) renameOrFail(target, join(tx.root, "rejected", slug), "移出未通过复核的新版");
+      for (const p of createdLinks) rmSync(p, { force: true });
+      for (const l of replacedLinks) {
+        rmSync(l.path, { force: true });
+        symlinkSync(l.old, l.path);
+      }
+      if (archived?.root) {
+        const r = restoreArchive(archived.root, { only: [slug] });
+        if (r.skipped.length) throw new Error(r.skipped.map((s) => `${s.skill}：${s.reason}`).join("；"));
+      }
+      return base("rolled-back", { failures, archiveRoot: archived?.root ?? null });
+    } catch (rbErr) {
+      // 🔴 回滚本身失败：归档目录绝对路径 + 可粘贴的复原命令 + 原始错误，一样都不能少（spec 硬要求）
+      return base("rollback-failed", { failures, archiveRoot: archived?.root ?? null, error: rbErr?.message || String(rbErr) });
+    }
+  };
+  try {
+    renameOrFail(stagedDir, target, "切换新版进安装目录");
+    placedNew = true;
+    for (const d of managed) {
+      const p = join(d.path, slug);
+      if (resolve(p) === resolve(target)) continue;
+      const st = lstatOf(p);
+      if (st?.isSymbolicLink()) {
+        let pointsRight = false;
+        try {
+          pointsRight = realpathSync(p) === realpathSync(target);
+        } catch {
+          /* 断链就重建 */
+        }
+        if (pointsRight) continue;
+        replacedLinks.push({ path: p, old: readlinkSync(p) });
+        rmSync(p, { force: true });
+        symlinkSync(relative(dirname(p), target), p);
+      } else if (!st) {
+        mkdirSync(d.path, { recursive: true });
+        symlinkSync(relative(dirname(p), target), p);
+        createdLinks.push(p);
+      } else {
+        throw new Friendly(`${p} 位置上还占着一个真实目录，切换形态异常`);
+      }
+    }
+    writeOrigin(target, slug, upstream);
+    // ⑤ 复核（design：内容哈希 / 每个受管目录的落位都解析到新真身 / origin 在场）
+    const failures = [];
+    const expected = upstream.currentHashes?.[slug] || null;
+    if (expected) {
+      const actual = computeSkillHash(target);
+      if (actual !== expected) failures.push(`落地后内容哈希不对：期望 ${expected}，实测 ${actual}`);
+    }
+    for (const d of managed) {
+      const p = join(d.path, slug);
+      let real = null;
+      try {
+        real = realpathSync(p);
+      } catch {
+        /* 缺落位 */
+      }
+      if (real !== realpathSync(target)) failures.push(`${d.label} 下的落位没指到新目录`);
+    }
+    if (!readOrigin(target)) failures.push("origin.json 没写上");
+    if (breakVerify) failures.push("（自检注入的强制失败，演练回滚链路）");
+    if (failures.length) return rollback(failures);
+    // 复核通过之后才记账——失败/回滚的包永远走不到这一行，账本只见真实落地的东西。
+    const lock = mergeStagedLockEntry(scope, slug, tx);
+    return base("switched", { archiveRoot: archived?.root ?? null, lock });
+  } catch (err) {
+    return rollback([err?.message || String(err)]);
+  }
+}
+
+/** 逐包 outcome 的打印：成功/未切换/已回滚/回滚失败四种，都要点名 + 带版本（用户只看得见文案）。 */
+function printSwitchOutcome(o) {
+  const fromTo = `${o.from ?? "（新装）"} → ${o.to ?? "?"}`;
+  if (o.action === "switched") {
+    say(`   ✔ ${o.slug}  ${fromTo}  已切换`);
+    // merged / no-lock（用户从没用 CLI 装过）是常态不吭声；账本没跟上才要说——包已真落地，只是 skills CLI 的记录滞后。
+    if (o.lock && o.lock !== "merged" && o.lock !== "no-lock") {
+      say(`      ⚠️ skills-lock.json 没跟上（${o.lock}）：包已装好能用，但 npx skills list 对它的记录是旧的`);
+    }
+  } else if (o.action === "not-switched") {
+    say(`   ✋ ${o.slug}  切换前校验没过，未切换，现有版本${o.from ? `（${o.from}）` : ""}一个字节没动：`);
+    for (const f of o.failures || []) say(`      - ${f}`);
+  } else if (o.action === "rolled-back") {
+    say(`   ↩ ${o.slug}  切换后复核没过，已回滚到更新前版本${o.from ? `（${o.from}）` : ""}：`);
+    for (const f of o.failures || []) say(`      - ${f}`);
+  } else {
+    say(`   ❌ ${o.slug}  复核没过，回滚也失败了（${o.error}）。更新前那版原样躺在归档里：`);
+    if (o.archiveRoot) {
+      say(`      归档目录：${o.archiveRoot}`);
+      say(`      手动复原照抄这条：${restoreCommand(o.archiveRoot)}`);
+    }
+    for (const f of o.failures || []) say(`      - ${f}`);
+  }
+}
+
+/**
+ * staged 事务的切换阶段：逐包「校验 → 切换 → 复核（不过则回滚）」。
+ * 🔴 dby-update 自己不在这儿切（design D4）：返回 `pendingSelf`，由 main 在本 scope 全部
+ * 其余动作（改名迁移、遗留副本归档）之后单独切它，切完不再读安装路径。
+ */
+function stagedSwitchAll({ scope, upstream, want, survey, tx }) {
+  const breakSet = selfCheckBreakSet();
+  const order = [...want].sort();
+  const pendingSelf = order.includes("dby-update");
+  const now = order.filter((s) => s !== "dby-update");
+  if (now.length) {
+    say(`\n逐包校验并切换 ${now.length} 个（目录级 rename，每包要么新版、要么保持原版）…`);
+  }
+  if (pendingSelf) say(`   dby-update 自己压轴：等本 scope 其余动作都做完再切。`);
+  const outcomes = [];
+  for (const slug of now) {
+    const o = switchOnePackage({ scope, slug, upstream, survey, tx, breakVerify: breakSet.has(slug) });
+    outcomes.push(o);
+    printSwitchOutcome(o);
+  }
+  return { outcomes, pendingSelf };
 }
 
 // ---------------------------------------------------------------- 改名迁移
@@ -1743,6 +2319,30 @@ function say(...args) {
   else console.log(...args);
 }
 
+/**
+ * 🔴 归档必须**同时**告诉用户「怎么捞回来」，而且是能直接粘贴的命令。只写「见 manifest」
+ *    等于把复原门槛推给用户自己在终端里翻 JSON——那道门槛高到等于没有复原路径。
+ * staged 切换换下来的旧版（`stagedOld`）单独一种说法：原处已经是复核通过的新版，整份复原命令
+ * 会因「原处已占」而全部跳过，打出来只会误导——改说「怎么退回某一个包」。
+ */
+function printArchivedRoots(archived) {
+  for (const a of archived) {
+    if (!a?.count) continue;
+    if (a.stagedOld) {
+      console.log(`\n切换下来的旧版共 ${a.count} 份留在 ${a.root}（回滚保险，不删）`);
+      console.log(`   新版确认没问题 → 整个目录删掉即可。想退回某个包：先把它现在的目录移走，`);
+      console.log(`   再按 manifest.json 里那条的 to 移回 from（mv <to> <from>）。`);
+      continue;
+    }
+    console.log(`\n${a.stray ? "旧版遗留副本" : "归档的"} ${a.count} 份原样躺在 ${a.root}`);
+    console.log(`   确认没问题 → 整个目录删掉即可。`);
+    console.log(`   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：\n`);
+    console.log(`   ${restoreCommand(a.root)}\n`);
+    console.log(`   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，`);
+    console.log(`   想让 \`npx skills list\` 也认回来，再跑一次：npx -y skills add ${REPO} -s <包名>`);
+  }
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (opts.help) {
@@ -1846,6 +2446,9 @@ async function main() {
   // ---- 执行
   const archived = [];
   const renameOutcomesByScope = new Map();
+  // staged 原子切换（项目 scope）：逐 scope 的 outcome 与「自己被切换了」的标记
+  const stagedByScope = new Map();
+  let selfStagedSwitched = false;
   for (const { scope, survey, plan, stray } of report) {
     const cwd = scope.kind === "global" ? undefined : scope.dir;
     const scopeFlag = scope.kind === "global" ? ["-g"] : [];
@@ -1869,16 +2472,37 @@ async function main() {
     const upToDateSet = new Set(plan.upToDate);
     const renameTargets = plan.renamed.filter((r) => !upToDateSet.has(r.to)).map((r) => r.to);
     const want = [...new Set([...plan.add, ...plan.refresh, ...renameTargets])].sort();
+    let stagedTx = null;
     if (want.length) {
       say(`\n拉取上游 ${want.length} 个 skill…`);
       const agentsToo = targetAgents(scope);
       say(`   装给：${agentsToo.join(", ")}`);
       if (upstream.ref) say(`   安装源固定到版本表声明的 ref：${upstream.ref}`);
+      // 🔴 两个 scope 的保证级别不同，必须各自说出来（design D5）
+      say(`   ${scopeGuaranteeNote(scope.kind)}`);
       try {
-        await installWithFallback(upstream, want, scopeFlag, agentsToo, cwd);
-        // 装完立刻写 origin：下一跑「用户改过没有」就以它为准，不再只靠闭集猜。
-        for (const slug of want) {
-          for (const dir of uniqueRealDirs(installDirs(scope).map((d) => join(d.path, slug)))) writeOrigin(dir, slug, upstream);
+        if (!usesStagedInstall(scope)) {
+          // 全局 scope 维持现状：原地覆盖安装（design D5）
+          await installWithFallback(upstream, want, scopeFlag, agentsToo, cwd);
+          // 装完立刻写 origin：下一跑「用户改过没有」就以它为准，不再只靠闭集猜。
+          for (const slug of want) {
+            for (const dir of uniqueRealDirs(installDirs(scope).map((d) => join(d.path, slug)))) writeOrigin(dir, slug, upstream);
+          }
+        } else {
+          // 🔴 项目 scope 旁路安装（proposal 核心）：`skills add` 是 cwd 相对的，cwd 指向 staging，
+          //    新版就落进 <staging>/.agents/skills/<slug>，现有安装目录零读写。staging 里那份
+          //    skills-lock.json 是 CLI 现生成的账本：**逐包切换复核通过后**把该 slug 条目合并进
+          //    真 lock（见 mergeStagedLockEntry），整份文件绝不整体覆盖，事务结束后残余随 staging 清掉。
+          //    origin 不在这儿写——切换环节逐包写（写早了会落在 staging 里被清掉）。
+          stagedTx = beginStagedTx(scope);
+          try {
+            await installWithFallback(upstream, want, scopeFlag, ["universal"], stagedTx.installRoot);
+          } catch (err) {
+            stagedTx.cleanup();
+            stagedTx = null;
+            say(`   旁路安装失败：已安装的包本次一个字节没动（新版只下到了旁路目录，已清理）。`);
+            throw err;
+          }
         }
       } catch (err) {
         // 🔴 归档已经落盘、拉取挂了 ⇒ 先把本 scope 这一轮归档的目录按 manifest 搬回原处，再报错。
@@ -1903,6 +2527,13 @@ async function main() {
         }
         throw err;
       }
+    }
+
+    // ---- staged 切换：staging 里的新版逐包「校验 → 两次 rename → 复核（不过则回滚）」。
+    //      dby-update 自己此处不切（design D4），压到本 scope 全部动作之后。
+    let stagedInfo = null;
+    if (stagedTx) {
+      stagedInfo = stagedSwitchAll({ scope, upstream, want, survey, tx: stagedTx });
     }
 
     // ---- 改名迁移：新包已经落地，现在搬本地数据、再把搬完的老目录归档。
@@ -1955,6 +2586,61 @@ async function main() {
       archived.push({ scope: scope.label, packages: stray.ours.length, stray: true, ...res });
       say(`   已移到 ${res.root}` + (stray.others.length ? `；不是我们的 ${stray.others.length} 个原地没动` : ""));
     }
+
+    // ---- 🔴 dby-update 自己最后切（design D4）：本 scope 其余动作（改名迁移、遗留副本归档）都
+    //      完成后才动它；staging 成败都在这儿清（中途抛错的兜底清理在入口 catch 里）。
+    if (stagedTx) {
+      if (stagedInfo?.pendingSelf) {
+        const o = switchOnePackage({ scope, slug: "dby-update", upstream, survey, tx: stagedTx, breakVerify: selfCheckBreakSet().has("dby-update") });
+        stagedInfo.outcomes.push(o);
+        printSwitchOutcome(o);
+        if (o.action === "switched") selfStagedSwitched = true;
+      }
+      // 切换换下来的旧版都在事务共用的归档根里：进 archived，让结尾把位置与处置方式说出来
+      if (stagedTx.archiveRoot) {
+        const swapped = stagedInfo.outcomes.filter((o) => o.archiveRoot).length;
+        archived.push({ scope: scope.label, stagedOld: true, packages: swapped, root: stagedTx.archiveRoot, count: swapped });
+      }
+      stagedTx.cleanup();
+      stagedByScope.set(scope, stagedInfo.outcomes);
+    }
+  }
+
+  // ---- 🔴 design D4 的收尾分支：本进程把 dby-update 自己目录级切换掉了 ⇒ 从这一刻起不再读
+  //      安装路径下任何文件。收尾重扫（重建 lock、origin 补录、联网自检）全部留给下一跑，
+  //      这里只用执行阶段已经在手的结果收尾。
+  if (selfStagedSwitched) {
+    const stagedBad = [...stagedByScope.values()].some((os) => os.some((o) => o.action !== "switched"));
+    const renameBad = [...renameOutcomesByScope.values()].some((os) => os.some((x) => !x.skipped && !x.ok));
+    const exit = stagedBad || renameBad ? 3 : 0;
+    if (opts.json) {
+      console.log(
+        JSON.stringify(
+          {
+            ...meta,
+            selfUpdated: true,
+            rescanSkipped: true,
+            notes: upstream.notes,
+            staged: [...stagedByScope.entries()].map(([s, outcomes]) => ({ scope: s.label, outcomes })),
+            archived,
+            executed: true,
+          },
+          null,
+          2
+        )
+      );
+      return exit;
+    }
+    for (const { scope } of report) {
+      const os = stagedByScope.get(scope);
+      if (!os?.length) continue;
+      console.log(`\n── ${scope.label} 对账完成（逐包结果见上：✔ 已是新版 / ✋ 未切换 / ↩ 已回滚 / ❌ 回滚失败）`);
+    }
+    printArchivedRoots(archived);
+    console.log(`\n🔁 本轮把 dby-update 自己也切换到了新版：切换自身之后本进程不再读安装目录，`);
+    console.log(`   所以这次没做收尾核对（lock 重建、联网自检）。再跑一次 /dby-update，新版会把它们补上。`);
+    if (exit) console.log(`   ⚠️ 上面有没切换成功的包（✋ / ↩ / ❌），重跑时会再试。`);
+    return exit;
   }
 
   // ---- 复核 + 自检
@@ -2005,7 +2691,7 @@ async function main() {
     const expect = [...plan.add, ...plan.refresh, ...(plan.upToDate || [])];
     const checks = await selfTest(scope, expect);
     const renameResults = renameOutcomesByScope.get(scope) || [];
-    results.push({ scope, plan, survey, after, stillStale, stillBehind, keptModified, keptForeign, checks, renameResults });
+    results.push({ scope, plan, survey, after, stillStale, stillBehind, keptModified, keptForeign, checks, renameResults, staged: stagedByScope.get(scope) || null });
   }
 
   // 改名迁移里「搬运失败、老目录没归档」的，必须让整体退出码反映出来——它不是自检项，
@@ -2050,6 +2736,21 @@ async function main() {
       console.log(`      安装器可能报了失败却以退出码 0 收场。重跑一次 /dby-update；`);
       console.log(`      仍然装不上就把上面安装器的日志贴出来——这不是「更新完成」。`);
     }
+    // 🔴 staged 切换里没换成的，收尾再逐项点一次名（执行阶段打印过原因；这里保证结果区也有名字与版本）。
+    //    不能只靠 stillBehind：misplaced（内容已是当前版、只缺落位）的包没换成时 state 仍是 current，
+    //    stillBehind 抓不到它，退出码必须由这儿压下去。
+    for (const o of r.staged || []) {
+      if (o.action === "switched") continue;
+      allOk = false;
+      const why = (o.failures || []).join("；") || "复核没过";
+      if (o.action === "rollback-failed") {
+        console.log(`   ❌ ${o.slug}：${why}——回滚也失败了（${o.error}），更新前那版在归档里：${o.archiveRoot ?? "?"}`);
+      } else if (o.action === "rolled-back") {
+        console.log(`   ↩ ${o.slug}：${why}——已回滚到更新前版本${o.from ? `（${o.from}）` : ""}`);
+      } else {
+        console.log(`   ✋ ${o.slug}：${why}——未切换，保持${o.from ? ` ${o.from}` : "现有版本"}`);
+      }
+    }
     if (r.stillStale.length) {
       allOk = false;
       console.log(`   ⚠️ 还有 ${r.stillStale.length} 个没归档掉：${r.stillStale.join(", ")}`);
@@ -2086,27 +2787,18 @@ async function main() {
       }
     }
   }
-  // 🔴 归档必须**同时**告诉用户「怎么捞回来」，而且是能直接粘贴的命令。只写「见 manifest」
-  //    等于把复原门槛推给用户自己在终端里翻 JSON——那道门槛高到等于没有复原路径。
-  for (const a of archived) {
-    if (!a?.count) continue;
-    console.log(`\n${a.stray ? "旧版遗留副本" : "归档的"} ${a.count} 份原样躺在 ${a.root}`);
-    console.log(`   确认没问题 → 整个目录删掉即可。`);
-    console.log(`   想全部捞回来 → 照抄这一条（按 manifest 逐条移回原处）：\n`);
-    console.log(`   ${restoreCommand(a.root)}\n`);
-    console.log(`   移回去就立刻能用（宿主是按目录读 skill 的）；但 skills CLI 的安装记录已经清掉，`);
-    console.log(`   想让 \`npx skills list\` 也认回来，再跑一次：npx -y skills add ${REPO} -s <包名>`);
-  }
-  // skills CLI 会把「这次装了哪些包、哪个版本」记进项目里的 skills-lock.json，那是**受 git 跟踪**的
-  // 文件（不像 .doubaoya 自带忽略），所以对账跑完 git status 会多出一行。不说清，用户会以为
-  // 工具偷偷弄脏了他的工作区。
+  printArchivedRoots(archived);
+  // skills-lock.json 是**受 git 跟踪**的文件（不像 .doubaoya 自带忽略），对账跑完 git status
+  // 可能多出一行。不说清，用户会以为工具偷偷弄脏了他的工作区。staged 之后它有两个来路：
+  // 归档/下架那步 skills remove 清记录；刷新/新增在**切换复核通过后**把 CLI 生成的条目合并进来
+  // （失败/回滚的包不写入，所以那几个 slug 的记录会是旧值——账本只反映真实落地的东西）。
   if (totalChanges > 0) {
     for (const { scope } of report) {
       if (scope.kind !== "project" || !scope.dir) continue;
       const lock = join(scope.dir, "skills-lock.json");
       if (!existsSync(lock)) continue;
-      console.log(`\n📝 ${lock} 会被 skills CLI 一起更新（记的是这次装了哪些包、哪个版本）。`);
-      console.log(`   这是**预期内**的改动，不是污染；它受 git 跟踪，会出现在 git status 里，照常提交即可。`);
+      console.log(`\n📝 ${lock} 会被一起更新（下架清记录；刷新/新增在切换复核通过后合并进新条目，失败回滚的包保持旧记录）。`);
+      console.log(`   这是**预期内**的，不是污染；它受 git 跟踪，照常提交即可。`);
     }
   }
   console.log(
@@ -3481,10 +4173,11 @@ function originLockPinCheck() {
     writeFileSync(join(pkg, "SKILL.md"), NEW);
     const newHash = computeSkillHash(pkg);
     writeFileSync(join(pkg, "SKILL.md"), OLD);
-    // 假 npx：add 时真把"新版内容"写进目录（模拟 skills CLI 落盘），其余只记参数。
+    // 假 npx：add 时把"新版内容"写进 **cwd 相对**的 .agents/skills/<slug>（skills CLI 的真实落点；
+    //    staged 旁路安装正是靠 cwd 指向 staging），其余只记参数。
     writeFileSync(
       join(bin, "npx"),
-      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add "*) printf -- '${NEW.replace(/\n/g, "\\n")}' > '${join(pkg, "SKILL.md")}';; esac\nexit 0\n`,
+      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add "*) mkdir -p ".agents/skills/some-skill"; printf -- '${NEW.replace(/\n/g, "\\n")}' > ".agents/skills/some-skill/SKILL.md";; esac\nexit 0\n`,
       { mode: 0o755 }
     );
     const writeIndex = (versions) =>
@@ -3793,10 +4486,11 @@ globalThis.fetch = async (url) => {
     const newHash = computeSkillHash(pkg);
     writeFileSync(join(pkg, "SKILL.md"), OLD);
     const idx = (ref) => ({ schemaVersion: 1, ...(ref ? { ref } : {}), skills: { "some-skill": { status: "active", knownHashes: [oldHash, newHash], versions: [{ version: "1.1.0", hash: newHash }, { version: "1.0.0", hash: oldHash }] } } });
-    // 假 npx：add 的包参数是 GitHub 就模拟 clone 挂掉；是 Gitee URL 就把新版内容写进目录
+    // 假 npx：add 的包参数是 GitHub 就模拟 clone 挂掉；是 Gitee URL 就把新版内容写进 **cwd 相对**的
+    //    .agents/skills/<slug>（staged 旁路安装的落点——cwd 就是 staging）
     writeFileSync(
       join(bin, "npx"),
-      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add ${REPO}"*) echo "fatal: unable to access github.com" >&2; exit 1;; *" add https://gitee.com/"*) printf -- '${NEW.replace(/\n/g, "\\n")}' > '${join(pkg, "SKILL.md")}';; esac\nexit 0\n`,
+      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add ${REPO}"*) echo "fatal: unable to access github.com" >&2; exit 1;; *" add https://gitee.com/"*) mkdir -p ".agents/skills/some-skill"; printf -- '${NEW.replace(/\n/g, "\\n")}' > ".agents/skills/some-skill/SKILL.md";; esac\nexit 0\n`,
       { mode: 0o755 }
     );
     const routes = { [INDEX_URL]: { body: idx(REF) }, [CONTENTS_API]: { body: [{ type: "dir", name: "some-skill" }] } };
@@ -3827,6 +4521,602 @@ globalThis.fetch = async (url) => {
   } finally {
     rmSync(cloneRoot, { recursive: true, force: true });
     rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+// ---------------------------------------------------------------- staged 原子切换自检
+
+/** realpath 解不开（目录被搬走/断链）返回 null——自检里比对用：坏实现造成的缺失该变成红字，不是把自检炸掉。 */
+function realOrNull(p) {
+  try {
+    return realpathSync(p);
+  } catch {
+    return null;
+  }
+}
+
+/** 预载一个只应答 DBY_FAKE_ROUTES 的假 fetch（staged 自检的子进程要跑 selfTest，健康检查不许出网）。 */
+function stagedPreload(bin) {
+  const preload = join(bin, "fake-fetch.mjs");
+  writeFileSync(
+    preload,
+    `const routes = JSON.parse(process.env.DBY_FAKE_ROUTES || "{}");
+globalThis.fetch = async (url) => {
+  const r = routes[url];
+  if (!r) return new Response("nope", { status: 404 });
+  return new Response(JSON.stringify(r.body ?? ""), { status: r.status ?? 200 });
+};
+`
+  );
+  return preload;
+}
+
+/**
+ * staged 自检的通用 fixture：项目根 + 「.agents/skills 真身 + .claude/skills 相对软链」的本机常态形态，
+ * 上游元信息走 DBY_RAW_BASE 指向的 index.json（非 http 走文件读取，零联网）。哈希全是真算的。
+ * pkg: { slug, old?, new, misplacedOnly?, declareHash? }
+ *   old 给了 ⇒ 预装旧版（refresh 场景）；misplacedOnly ⇒ 不建 .claude 软链（缺落位场景）；
+ *   declareHash 给了 ⇒ 索引声明这个哈希而不是新内容的真哈希（造「哈希不一致」用）。
+ */
+function buildStagedFixture(pkgs) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "dby-staged-selfcheck-")));
+  const agentsDir = join(root, ".agents", "skills");
+  const claudeDir = join(root, ".claude", "skills");
+  mkdirSync(agentsDir, { recursive: true });
+  mkdirSync(claudeDir, { recursive: true });
+  const index = { schemaVersion: 1, ref: "release-staged-check", skills: {} };
+  const info = {};
+  for (const p of pkgs) {
+    const probe = join(root, ".hash-probe");
+    mkdirSync(probe, { recursive: true });
+    writeFileSync(join(probe, "SKILL.md"), p.new);
+    const newHash = computeSkillHash(probe);
+    rmSync(probe, { recursive: true, force: true });
+    let oldHash = null;
+    if (p.old) {
+      const dir = join(agentsDir, p.slug);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "SKILL.md"), p.old);
+      oldHash = computeSkillHash(dir);
+      if (!p.misplacedOnly) symlinkSync(join("..", "..", ".agents", "skills", p.slug), join(claudeDir, p.slug));
+    }
+    const declared = p.declareHash || newHash;
+    index.skills[p.slug] = {
+      status: "active",
+      knownHashes: [...new Set([oldHash, declared].filter(Boolean))],
+      versions: [
+        { version: "1.1.0", hash: declared, changelog: "新版", changelogSource: "user" },
+        ...(oldHash && oldHash !== declared ? [{ version: "1.0.0", hash: oldHash, changelog: "旧版", changelogSource: "user" }] : []),
+      ],
+    };
+    info[p.slug] = { oldHash, newHash, dir: join(agentsDir, p.slug), link: join(claudeDir, p.slug) };
+  }
+  writeFileSync(join(root, "index.json"), JSON.stringify(index));
+  return { root, agentsDir, claudeDir, info };
+}
+
+/**
+ * staged 自检的假 npx：add 时把各包新版写进 **cwd 相对**的 .agents/skills/<slug>——cwd 是 staging
+ * 才写得进 staging，这正是「旁路安装真的走了旁路」的观测点；顺带记录 pwd、事务副本在不在、
+ * 以及 staging 里目录的 inode（rename 保 inode，切换是不是真 rename 全靠它作证）。
+ */
+/** 自检 fixture 里 skills CLI 那种形状的账本条目（字段名照抄真 CLI，不发明）。 */
+function stubLockEntry(slug, ref) {
+  return { source: "zizhanovo/doubaoya-community", ref, sourceType: "github", skillPath: `skills/${slug}/SKILL.md`, computedHash: "c0ffee".repeat(10) + "beef" };
+}
+
+function stubStagedNpx(bin, marker, payloads, { inodeOf = null } = {}) {
+  const writes = Object.entries(payloads)
+    .map(([slug, content]) => `mkdir -p ".agents/skills/${slug}"; printf -- '${content.replace(/\n/g, "\\n")}' > ".agents/skills/${slug}/SKILL.md"`)
+    .join("; ");
+  // 真 CLI 会把装好的包记进 cwd 的 skills-lock.json（旁路 ⇒ 落在 staging 里）：照它的字段形状造一份
+  const stagedLock = JSON.stringify({
+    version: 1,
+    skills: Object.fromEntries(Object.keys(payloads).map((slug) => [slug, stubLockEntry(slug, "release-staged-check-new")])),
+  });
+  const inode = inodeOf ? `; ls -di ".agents/skills/${inodeOf}" >> '${marker}'` : "";
+  writeFileSync(
+    join(bin, "npx"),
+    `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add "*) pwd >> '${marker}'; [ -f ../self/scripts/reconcile.mjs ] && echo selfcopy-ok >> '${marker}'; ${writes}; printf -- '${stagedLock}' > "skills-lock.json"${inode};; esac\nexit 0\n`,
+    { mode: 0o755 }
+  );
+}
+
+/** staged 自检子进程的统一起跑线：假 fetch 预载 + DBY_RAW_BASE + 假 npx + 假 API 钥匙（只查在不在）。 */
+function runStagedFixture(root, bin, args, extraEnv = {}) {
+  return spawnSync(process.execPath, ["--import", pathToFileURL(join(bin, "fake-fetch.mjs")).href, SELF_PATH, "--project-dir", root, ...args], {
+    encoding: "utf-8",
+    env: {
+      ...process.env,
+      DBY_RAW_BASE: root,
+      PATH: `${bin}:${process.env.PATH}`,
+      DOUBAOYA_API_KEY: "dyh_selfcheck_placeholder",
+      DBY_FAKE_ROUTES: JSON.stringify({ [HEALTH_URL]: { body: { success: true, data: { status: "ok" } } } }),
+      DBY_SELFCHECK_BREAK_VERIFY: "",
+      ...extraEnv,
+    },
+  });
+}
+
+/**
+ * 🔴 staged 切换主线全链路实证（任务 2.1–2.5）：旁路安装真落 staging（假 npx 的 pwd 作证）、
+ * 事务副本在场、切换是真 rename（staging 目录与归档目录的 inode 前后一致——拷贝会换 inode）、
+ * 软链指向新真身、缺落位的包切换后补上软链、归档 manifest 齐全、成功路径 staging 清干净、
+ * 输出逐项列「slug 旧 → 新」、二次运行收敛。
+ */
+function stagedSwitchCheck() {
+  const fails = [];
+  const OLD = "---\nname: pkg-good\n---\nv1\n";
+  const NEW = "---\nname: pkg-good\n---\nv2\n";
+  const HALF = "---\nname: half-pkg\n---\nsame\n";
+  const fx = buildStagedFixture([
+    { slug: "pkg-good", old: OLD, new: NEW },
+    { slug: "half-pkg", old: HALF, new: HALF, misplacedOnly: true }, // 内容已是当前版、只缺 .claude 落位
+  ]);
+  const bin = mkdtempSync(join(tmpdir(), "dby-staged-npx-"));
+  const marker = join(bin, "called.log");
+  stagedPreload(bin);
+  stubStagedNpx(bin, marker, { "pkg-good": NEW, "half-pkg": HALF }, { inodeOf: "pkg-good" });
+  try {
+    // 真项目账本（4 空格缩进故意与默认不同——合并必须保持文件原有形态，不许重排成 2 空格）
+    const realLockPath = join(fx.root, "skills-lock.json");
+    writeFileSync(
+      realLockPath,
+      JSON.stringify({ version: 1, skills: { "pkg-good": stubLockEntry("pkg-good", "release-old"), "unrelated-pkg": stubLockEntry("unrelated-pkg", "release-old") } }, null, 4) + "\n"
+    );
+    const oldIno = statSync(fx.info["pkg-good"].dir).ino;
+    const res = runStagedFixture(fx.root, bin, ["--scope", "project", "--yes"]);
+    const out = `${res.stdout}\n${res.stderr}`;
+    const tail = () => JSON.stringify(out.slice(-800));
+    if (res.status !== 0) fails.push(`staged 切换 · 全成功应退出 0，实际 ${res.status}：${tail()}`);
+    const mk = existsSync(marker) ? readFileSync(marker, "utf-8") : "";
+    if (!mk.includes(".doubaoya/staging/")) fails.push(`🔴 staged 切换 · skills add 的 cwd 不在 staging 下（旁路没生效）：${JSON.stringify(mk)}`);
+    if (!mk.includes("selfcopy-ok")) fails.push("🔴 staged 切换 · 事务目录里没有 reconcile 副本（design D4 的事务副本没复制进去）");
+    const dir = fx.info["pkg-good"].dir;
+    if (!existsSync(join(dir, "SKILL.md")) || readFileSync(join(dir, "SKILL.md"), "utf-8") !== NEW) fails.push(`🔴 staged 切换 · 真身内容不是新版：${tail()}`);
+    else if (computeSkillHash(dir) !== fx.info["pkg-good"].newHash) fails.push("staged 切换 · 落地哈希不等于索引声明的目标版");
+    if (!readOrigin(dir)) fails.push("staged 切换 · 切换后没写 origin.json");
+    const link = fx.info["pkg-good"].link;
+    if (!lstatSync(link).isSymbolicLink()) fails.push("staged 切换 · .claude 那侧不再是软链");
+    else if (!realOrNull(dir) || realOrNull(link) !== realOrNull(dir)) fails.push("🔴 staged 切换 · 软链没解析到新真身");
+    // 🔴 两次目录移动的实证：rename 保 inode，拷贝会换 inode
+    const stagedIno = Number((/^\s*(\d+) .*pkg-good/m.exec(mk) || [])[1]);
+    if (!stagedIno) fails.push(`staged 切换 · 假 npx 没记下 staging 目录的 inode：${JSON.stringify(mk)}`);
+    else if (statSync(dir).ino !== stagedIno) fails.push("🔴 staged 切换 · 新真身 inode ≠ staging 里那份——切换退化成了拷贝，不是 rename");
+    const archiveDir = join(fx.root, ".doubaoya", "archive");
+    const roots = existsSync(archiveDir) ? readdirSync(archiveDir) : [];
+    const manifest = roots.length ? JSON.parse(readFileSync(join(archiveDir, roots[0], "manifest.json"), "utf-8")) : null;
+    const entry = manifest?.packages?.find((p) => p.skill === "pkg-good");
+    if (!entry) fails.push(`🔴 staged 切换 · 归档 manifest 里没有换下来的旧版：${JSON.stringify(manifest)}`);
+    else {
+      if (statSync(entry.to).ino !== oldIno) fails.push("🔴 staged 切换 · 归档不是 rename（旧真身 inode 变了）");
+      if (computeSkillHash(entry.to) !== fx.info["pkg-good"].oldHash) fails.push("staged 切换 · 归档里躺的不是更新前内容");
+    }
+    // 缺落位的包：切换后 .claude 侧软链补上了（切换后重建软链那步的正面实证）
+    const halfLink = fx.info["half-pkg"].link;
+    const halfReal = realOrNull(fx.info["half-pkg"].dir);
+    if (!halfReal || realOrNull(halfLink) !== halfReal) fails.push("🔴 staged 切换 · 缺落位的包切换后没在 .claude/skills 重建软链");
+    if (existsSync(join(fx.root, ".doubaoya", "staging"))) fails.push("🔴 staged 切换 · 成功路径跑完 staging 还在（spec：事务结束时清理）");
+    // 🔴 真账本合并（spec「真实落地的包才写进项目安装账本」）：切换成功的条目更新成 CLI 生成的那条，
+    //    无关条目一个字不动，键序与缩进保持原样（4 空格），末尾换行还在。
+    const lockRaw = readFileSync(realLockPath, "utf-8");
+    let lockNow = null;
+    try {
+      lockNow = JSON.parse(lockRaw);
+    } catch (err) {
+      fails.push(`🔴 staged 切换 · 合并后真 skills-lock.json 不是合法 JSON（${err.message}）`);
+    }
+    if (lockNow) {
+      if (lockNow.skills?.["pkg-good"]?.ref !== "release-staged-check-new") fails.push(`🔴 staged 切换 · 真 lock 里 pkg-good 没更新成 staging 里 CLI 生成的那条：${JSON.stringify(lockNow.skills?.["pkg-good"])}`);
+      if (JSON.stringify(lockNow.skills?.["unrelated-pkg"]) !== JSON.stringify(stubLockEntry("unrelated-pkg", "release-old"))) fails.push("🔴 staged 切换 · 真 lock 里无关条目被动了");
+      if (lockNow.skills?.["half-pkg"]?.ref !== "release-staged-check-new") fails.push("staged 切换 · 切换成功的 half-pkg 没记进真 lock");
+      if (Object.keys(lockNow)[0] !== "version" || Object.keys(lockNow.skills)[0] !== "pkg-good") fails.push(`staged 切换 · 真 lock 的键序被重排了：${Object.keys(lockNow)} / ${Object.keys(lockNow.skills)}`);
+      if (!lockRaw.includes('\n    "version"') || lockRaw.includes('\n  "version"')) fails.push("staged 切换 · 真 lock 的缩进被改了（原文件是 4 空格）");
+      if (!lockRaw.endsWith("\n")) fails.push("staged 切换 · 真 lock 末尾换行被吃了");
+    }
+    if (!/pkg-good\s+1\.0\.0 → 1\.1\.0\s+已切换/.test(out)) fails.push(`🔴 staged 切换 · 输出没逐项列「slug 旧 → 新 已切换」：${tail()}`);
+    if (!out.includes("旁路安装 + 目录级原子切换")) fails.push(`staged 切换 · 没打印项目 scope 的保证级别说明：${tail()}`);
+    const again = runStagedFixture(fx.root, bin, ["--scope", "project", "--dry-run", "--json"]);
+    try {
+      const plan = JSON.parse(again.stdout).report[0].plan;
+      if (plan.refresh.length || plan.add.length) fails.push(`staged 切换 · 二次运行不收敛：refresh=${JSON.stringify(plan.refresh)} add=${JSON.stringify(plan.add)}`);
+    } catch (err) {
+      fails.push(`staged 切换 · 二次运行的 --json 读不出计划（${err.message}）`);
+    }
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 切换前校验门（任务 3.1）：三项各造一个坏样本，坏的拦下且现有版本哈希不变、好的照常切换
+ * ——逐包原子的「一个坏包不拖累别人」在这儿一并实证。哈希不一致要报出期望值与实测值。
+ */
+function stagedGateCheck() {
+  const fails = [];
+  const GOOD_OLD = "---\nname: good-pkg\n---\nv1\n";
+  const GOOD_NEW = "---\nname: good-pkg\n---\nv2\n";
+  const YAML_OLD = "---\nname: bad-yaml\n---\nv1\n";
+  // frontmatter 值以 ** 开头 = 别名节点错误（2026-08-26 事故原型）；declareHash 取真哈希 ⇒ 哈希关会过，单独钉 YAML 关
+  const YAML_NEW = "---\nname: bad-yaml\nchangelog: **坏掉**\n---\nv2\n";
+  const HASH_OLD = "---\nname: bad-hash\n---\nv1\n";
+  const HASH_NEW = "---\nname: bad-hash\n---\nv2\n";
+  const fx = buildStagedFixture([
+    { slug: "good-pkg", old: GOOD_OLD, new: GOOD_NEW },
+    { slug: "bad-yaml", old: YAML_OLD, new: YAML_NEW },
+    { slug: "bad-hash", old: HASH_OLD, new: HASH_NEW, declareHash: "e".repeat(12) },
+  ]);
+  const bin = mkdtempSync(join(tmpdir(), "dby-staged-npx-"));
+  const marker = join(bin, "called.log");
+  stagedPreload(bin);
+  stubStagedNpx(bin, marker, { "good-pkg": GOOD_NEW, "bad-yaml": YAML_NEW, "bad-hash": HASH_NEW });
+  try {
+    const res = runStagedFixture(fx.root, bin, ["--scope", "project", "--yes"]);
+    const out = `${res.stdout}\n${res.stderr}`;
+    const tail = () => JSON.stringify(out.slice(-900));
+    if (res.status === 0) fails.push("🔴 校验门 · 有包被拦下时退出码不该是 0");
+    if (readFileSync(join(fx.info["good-pkg"].dir, "SKILL.md"), "utf-8") !== GOOD_NEW) fails.push("🔴 校验门 · 一个坏包把好包拖下水了（逐包原子被破坏）");
+    const hashOrNull = (d) => (existsSync(d) ? computeSkillHash(d) : null);
+    if (hashOrNull(fx.info["bad-yaml"].dir) !== fx.info["bad-yaml"].oldHash) fails.push("🔴 校验门 · YAML 坏包被切换或弄丢了——现有版本必须一个字节不动");
+    if (hashOrNull(fx.info["bad-hash"].dir) !== fx.info["bad-hash"].oldHash) fails.push("🔴 校验门 · 哈希不一致的包被切换或弄丢了");
+    if (!/bad-yaml[\s\S]{0,200}YAML/.test(out)) fails.push(`🔴 校验门 · 没逐项说明 bad-yaml 是哪一项没过：${tail()}`);
+    if (!out.includes("期望 eeeeeeeeeeee") || !out.includes(`实测 ${fx.info["bad-hash"].newHash}`)) fails.push(`🔴 校验门 · 哈希不一致没报出期望值与实测值：${tail()}`);
+    // 🔴 校验必须发生在**切换之前**（design D3 的否决项）：坏包的 outcome 必须是「✋ 未切换」，
+    //    不许是「↩ 切换后复核不过再回滚」——切换后复核能兜住磁盘状态，但白折腾一轮 rename，
+    //    还多一次「回滚本身失败」的风险敞口；只看磁盘的断言分不出这两条路，这里必须看 outcome。
+    if (!/✋ bad-hash/.test(out) || /↩ bad-hash/.test(out)) fails.push(`🔴 校验门 · 哈希核对被推迟到了切换之后（该在动手前拦住）：${tail()}`);
+    if (!/✋ bad-yaml/.test(out) || /↩ bad-yaml/.test(out)) fails.push(`🔴 校验门 · YAML 核对被推迟到了切换之后：${tail()}`);
+    if (existsSync(join(fx.root, ".doubaoya", "staging"))) fails.push("🔴 校验门 · 失败路径跑完 staging 还在");
+    // 项目根从没用 CLI 装过（fixture 没有真 skills-lock.json）⇒ 合并跳过，不许凭空造一本账
+    if (existsSync(join(fx.root, "skills-lock.json"))) fails.push("🔴 校验门 · 真 skills-lock.json 本不存在，却被凭空创建了");
+
+    // 单元：SKILL.md 引用的脚本缺失要拦；补上就放行（哈希没得比的包也有这道闸）
+    const sdir = mkdtempSync(join(tmpdir(), "dby-staged-script-"));
+    try {
+      writeFileSync(join(sdir, "SKILL.md"), "---\nname: x\n---\n跑 `scripts/do-it.mjs` 完成任务\n");
+      const missing = validateStagedPackage(sdir, "x", { currentHashes: {} });
+      if (missing.ok || !missing.failures.some((f) => f.includes("scripts/do-it.mjs"))) {
+        fails.push(`🔴 校验门 · SKILL.md 引用的脚本缺失没被拦：${JSON.stringify(missing)}`);
+      }
+      mkdirSync(join(sdir, "scripts"), { recursive: true });
+      writeFileSync(join(sdir, "scripts", "do-it.mjs"), "// ok\n");
+      const present = validateStagedPackage(sdir, "x", { currentHashes: {} });
+      if (!present.ok) fails.push(`校验门 · 脚本在场却没放行：${JSON.stringify(present)}`);
+    } finally {
+      rmSync(sdir, { recursive: true, force: true });
+    }
+    // 单元：严格 YAML 子集对**本包真实 SKILL.md** 必须能过（fail-closed 不许闭到把自己人拦在门外）
+    try {
+      const own = parseFrontmatterStrict(readFileSync(join(resolve(dirname(SELF_PATH), ".."), "SKILL.md"), "utf-8"));
+      if (own.name !== "dby-update") fails.push(`校验门 · 解析本包 SKILL.md 的 name 不对：${JSON.stringify(own.name)}`);
+    } catch (err) {
+      fails.push(`🔴 校验门 · 严格 YAML 子集解析不了本包真实 SKILL.md（会把正常发布物拦在门外）：${err.message}`);
+    }
+    // 单元：必须拒绝的形状（别名 / 未闭合引号 / tab 缩进）
+    for (const [label, text] of [
+      ["别名节点", "---\nname: x\nchangelog: **坏**\n---\n"],
+      ["未闭合引号", '---\nname: x\ndesc: "没闭合\n---\n'],
+      ["tab 缩进", "---\nname: x\n\tdesc: y\n---\n"],
+    ]) {
+      let rejected = false;
+      try {
+        parseFrontmatterStrict(text);
+      } catch {
+        rejected = true;
+      }
+      if (!rejected) fails.push(`🔴 校验门 · 严格 YAML 子集没有拒绝「${label}」`);
+    }
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 复核失败 ⇒ 只回滚那一个包（任务 3.2/3.3/4.1），其余保留新版；回滚后内容哈希 == 更新前哈希。
+ * 回滚本身失败（任务 3.4）在进程内直调实证：归档绝对路径 + 可粘贴复原命令 + 原始错误，一样不少。
+ */
+function stagedRollbackCheck() {
+  const fails = [];
+  const mk = (slug, v) => `---\nname: ${slug}\n---\n${v}\n`;
+  const fx = buildStagedFixture([
+    { slug: "good-a", old: mk("good-a", "v1"), new: mk("good-a", "v2") },
+    { slug: "good-b", old: mk("good-b", "v1"), new: mk("good-b", "v2") },
+  ]);
+  const bin = mkdtempSync(join(tmpdir(), "dby-staged-npx-"));
+  stagedPreload(bin);
+  stubStagedNpx(bin, join(bin, "called.log"), { "good-a": mk("good-a", "v2"), "good-b": mk("good-b", "v2") });
+  try {
+    // 真账本里只有 good-a（good-b 从没记过）：切换成功的更新、回滚的必须保持缺席
+    const realLockPath = join(fx.root, "skills-lock.json");
+    writeFileSync(realLockPath, JSON.stringify({ version: 1, skills: { "good-a": stubLockEntry("good-a", "release-old") } }, null, 2) + "\n");
+    const res = runStagedFixture(fx.root, bin, ["--scope", "project", "--yes", "--json"], { DBY_SELFCHECK_BREAK_VERIFY: "good-b" });
+    if (res.status === 0) fails.push("🔴 回滚 · 有包回滚时退出码不该是 0");
+    let staged = null;
+    try {
+      staged = JSON.parse(res.stdout).results?.[0]?.staged;
+    } catch (err) {
+      fails.push(`回滚 · --json 读不出（${err.message}）：${(res.stderr || "").trim().split("\n").pop()}`);
+    }
+    const a = staged?.find((o) => o.slug === "good-a");
+    const b = staged?.find((o) => o.slug === "good-b");
+    if (a?.action !== "switched") fails.push(`🔴 回滚 · 一个包复核失败把另一个也拖回去了（不是逐包原子）：${JSON.stringify(a)}`);
+    if (b?.action !== "rolled-back" || b?.from !== "1.0.0") fails.push(`🔴 回滚 · good-b 该记成 rolled-back 回 1.0.0：${JSON.stringify(b)}`);
+    if (readFileSync(join(fx.info["good-a"].dir, "SKILL.md"), "utf-8") !== mk("good-a", "v2")) fails.push("🔴 回滚 · good-a 该保留新版");
+    // 目录整个不见 = 「挪出了新版、没移回旧版」——最坏的那种退化，必须单独点名而不是让 computeSkillHash 抛错炸掉自检
+    if (!existsSync(join(fx.info["good-b"].dir, "SKILL.md"))) fails.push("🔴 回滚 · good-b 目录整个不见了——复核失败后没把归档那份移回来");
+    else if (computeSkillHash(fx.info["good-b"].dir) !== fx.info["good-b"].oldHash) fails.push("🔴 回滚 · good-b 回滚后内容哈希 ≠ 更新前哈希");
+    const bDirReal = realOrNull(fx.info["good-b"].dir);
+    if (!bDirReal || realOrNull(fx.info["good-b"].link) !== bDirReal) fails.push("🔴 回滚 · 回滚后 .claude 软链没解析到旧真身");
+    if (!/回滚/.test(res.stderr || "")) fails.push(`回滚 · 输出没说明发生了回滚：${JSON.stringify((res.stderr || "").slice(-300))}`);
+    if (existsSync(join(fx.root, ".doubaoya", "staging"))) fails.push("🔴 回滚 · 失败路径跑完 staging 还在");
+    // 🔴 账本只见真实落地的东西：good-a 记新账，回滚的 good-b 保持缺席
+    const lockNow = JSON.parse(readFileSync(realLockPath, "utf-8"));
+    if (lockNow.skills?.["good-a"]?.ref !== "release-staged-check-new") fails.push(`🔴 回滚 · 切换成功的 good-a 没记进真 lock：${JSON.stringify(lockNow.skills?.["good-a"])}`);
+    if ("good-b" in (lockNow.skills || {})) fails.push("🔴 回滚 · 回滚的包被写进了真 skills-lock.json——账本只许反映真实落地的东西");
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+
+  // ── 回滚本身失败：占死 rejected 落点（写成文件），「挪出新版」那步真失败 ⇒ rollback-failed，
+  //    outcome 与打印必须带：归档绝对路径、可粘贴复原命令、原始错误。
+  const root2 = realpathSync(mkdtempSync(join(tmpdir(), "dby-staged-rbfail-")));
+  try {
+    const agentsDir = join(root2, ".agents", "skills");
+    const pkg = join(agentsDir, "rb-pkg");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "SKILL.md"), mk("rb-pkg", "v1"));
+    const oldHash = computeSkillHash(pkg);
+    const scope = { kind: "project", dir: root2, label: "rbfail fixture" };
+    const tx = beginStagedTx(scope);
+    try {
+      const stagedDir = tx.stagedDirOf("rb-pkg");
+      mkdirSync(stagedDir, { recursive: true });
+      writeFileSync(join(stagedDir, "SKILL.md"), mk("rb-pkg", "v2"));
+      const newHash = computeSkillHash(stagedDir);
+      writeFileSync(join(tx.root, "rejected"), "占位文件：让回滚挪不动新版"); // 🔴 制造回滚失败
+      const upstream = { currentHashes: { "rb-pkg": newHash }, versions: { "rb-pkg": [{ version: "9.9.9", hash: newHash }, { version: "1.0.0", hash: oldHash }] } };
+      const survey = [{ name: "rb-pkg", hash: oldHash, state: "historical", origin: null, dirs: [{ label: ".agents/skills", path: agentsDir, agent: "universal" }] }];
+      const o = switchOnePackage({ scope, slug: "rb-pkg", upstream, survey, tx, breakVerify: true });
+      if (o.action !== "rollback-failed") fails.push(`🔴 回滚失败 · 该记成 rollback-failed，实际 ${JSON.stringify(o.action)}`);
+      if (!o.archiveRoot) fails.push("🔴 回滚失败 · outcome 没带归档目录路径");
+      if (!o.error) fails.push("🔴 回滚失败 · 原始回滚错误被吞了");
+      const lines = [];
+      const original = console.log;
+      console.log = (...args) => lines.push(args.join(" "));
+      try {
+        printSwitchOutcome(o);
+      } finally {
+        console.log = original;
+      }
+      const printed = lines.join("\n");
+      if (o.archiveRoot && !printed.includes(o.archiveRoot)) fails.push(`🔴 回滚失败 · 打印里没有归档目录绝对路径：${printed}`);
+      if (!printed.includes("node -e")) fails.push(`🔴 回滚失败 · 打印里没有可粘贴的复原命令：${printed}`);
+      if (o.error && !printed.includes(o.error.slice(0, 20))) fails.push(`回滚失败 · 打印里没带原始错误：${printed}`);
+    } finally {
+      tx.cleanup();
+    }
+  } finally {
+    rmSync(root2, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 dby-update 自己最后切 + 切换自身后不再读安装路径（任务 4.3/4.4/4.5）。
+ * 「不再读」的可观测面：跳过收尾重扫 ⇒ scope 根的 .dby/lock.json **没**被写（正常路径必写）。
+ * 反向对照：自更新复核失败回滚时（自己没换成），收尾重扫照常 ⇒ lock 有。
+ */
+function stagedSelfLastCheck() {
+  const fails = [];
+  const mk = (slug, v) => `---\nname: ${slug}\n---\n${v}\n`;
+  const build = () =>
+    buildStagedFixture([
+      { slug: "dby-update", old: mk("dby-update", "v1"), new: mk("dby-update", "v2") },
+      { slug: "zzz-pkg", old: mk("zzz-pkg", "v1"), new: mk("zzz-pkg", "v2") },
+    ]);
+  const payloads = { "dby-update": mk("dby-update", "v2"), "zzz-pkg": mk("zzz-pkg", "v2") };
+  const bin = mkdtempSync(join(tmpdir(), "dby-staged-npx-"));
+  const marker = join(bin, "called.log");
+  stagedPreload(bin);
+  stubStagedNpx(bin, marker, payloads);
+
+  // ① 正常自更新：JSON 断言切换顺序（字典序本该 dby-update 在前，压轴逻辑必须把它排到末位）与早收尾
+  const fx1 = build();
+  try {
+    writeFileSync(join(fx1.root, "skills-lock.json"), JSON.stringify({ version: 1, skills: { "dby-update": stubLockEntry("dby-update", "release-old") } }, null, 2) + "\n");
+    const res = runStagedFixture(fx1.root, bin, ["--scope", "project", "--yes", "--json"]);
+    let parsed = null;
+    try {
+      parsed = JSON.parse(res.stdout);
+    } catch (err) {
+      fails.push(`自更新 · --json 的 stdout 不是纯 JSON（${err.message}）：${(res.stderr || "").trim().split("\n").pop()}`);
+    }
+    if (parsed) {
+      if (parsed.rescanSkipped !== true) fails.push(`🔴 自更新 · 切换自身后该跳过收尾重扫（rescanSkipped），实际 ${JSON.stringify(parsed.rescanSkipped)}`);
+      if (parsed.selfUpdated !== true) fails.push(`自更新 · selfUpdated 应为 true：${JSON.stringify(parsed.selfUpdated)}`);
+      const order = parsed.staged?.[0]?.outcomes?.map((o) => o.slug);
+      if (JSON.stringify(order) !== JSON.stringify(["zzz-pkg", "dby-update"])) fails.push(`🔴 自更新 · 切换顺序里 dby-update 不在末位：${JSON.stringify(order)}`);
+      if (!parsed.staged?.[0]?.outcomes?.every((o) => o.action === "switched")) fails.push(`自更新 · 两个包都该切换成功：${JSON.stringify(parsed.staged)}`);
+    }
+    if (res.status !== 0) fails.push(`自更新 · 全成功应退出 0，实际 ${res.status}`);
+    if (existsSync(join(fx1.root, ".dby", "lock.json"))) fails.push("🔴 自更新 · 切换自身之后还做了收尾重扫（lock.json 被写了）——安装路径被读了");
+    if (readFileSync(join(fx1.info["dby-update"].dir, "SKILL.md"), "utf-8") !== mk("dby-update", "v2")) fails.push("自更新 · dby-update 真身不是新版");
+    // 自己也是「真实落地的包」：压轴切换成功后同样要记进真账本（zzz 追加、自己更新）
+    const lock1 = JSON.parse(readFileSync(join(fx1.root, "skills-lock.json"), "utf-8"));
+    if (lock1.skills?.["dby-update"]?.ref !== "release-staged-check-new" || lock1.skills?.["zzz-pkg"]?.ref !== "release-staged-check-new") {
+      fails.push(`🔴 自更新 · 切换成功的包没记全进真 lock：${JSON.stringify(lock1.skills)}`);
+    }
+  } finally {
+    rmSync(fx1.root, { recursive: true, force: true });
+  }
+
+  // ② 文本运行：提示「再跑一次」，且没有自检段（重扫被跳过）
+  const fx2 = build();
+  try {
+    const res = runStagedFixture(fx2.root, bin, ["--scope", "project", "--yes"]);
+    if (!/再跑一次/.test(res.stdout)) fails.push(`🔴 自更新 · 切换自身后没提示重跑：${JSON.stringify(res.stdout.slice(-400))}`);
+    if (/自检：/.test(res.stdout)) fails.push("🔴 自更新 · 切换自身后仍打印了自检段（收尾重扫没跳过）");
+  } finally {
+    rmSync(fx2.root, { recursive: true, force: true });
+  }
+
+  // ③ 自更新复核失败：它自己回滚，别的包不受影响；此时没切换自身 ⇒ 收尾重扫照常（lock 在）
+  const fx3 = build();
+  try {
+    writeFileSync(join(fx3.root, "skills-lock.json"), JSON.stringify({ version: 1, skills: { "dby-update": stubLockEntry("dby-update", "release-old") } }, null, 2) + "\n");
+    const res = runStagedFixture(fx3.root, bin, ["--scope", "project", "--yes"], { DBY_SELFCHECK_BREAK_VERIFY: "dby-update" });
+    if (res.status === 0) fails.push("🔴 自更新回滚 · 退出码不该是 0");
+    if (!existsSync(join(fx3.info["dby-update"].dir, "SKILL.md"))) fails.push("🔴 自更新回滚 · dby-update 目录整个不见了——复核失败后没把归档那份移回来");
+    else if (computeSkillHash(fx3.info["dby-update"].dir) !== fx3.info["dby-update"].oldHash) fails.push("🔴 自更新回滚 · dby-update 没回到更新前版本");
+    if (readFileSync(join(fx3.info["zzz-pkg"].dir, "SKILL.md"), "utf-8") !== mk("zzz-pkg", "v2")) fails.push("🔴 自更新回滚 · 其余包的结果不该受影响");
+    if (!existsSync(join(fx3.root, ".dby", "lock.json"))) fails.push("自更新回滚 · 自己没换成时收尾重扫该照常做（lock 该在）");
+    if (!/回滚/.test(res.stdout)) fails.push(`自更新回滚 · 输出没说明回滚：${JSON.stringify(res.stdout.slice(-400))}`);
+    // 回滚的自己保持旧账、切换成功的 zzz 记新账——「保持旧值」那半边界在这儿钉
+    const lock3 = JSON.parse(readFileSync(join(fx3.root, "skills-lock.json"), "utf-8"));
+    if (lock3.skills?.["dby-update"]?.ref !== "release-old") fails.push(`🔴 自更新回滚 · 回滚的 dby-update 在真 lock 里被写成了新账：${JSON.stringify(lock3.skills?.["dby-update"])}`);
+    if (lock3.skills?.["zzz-pkg"]?.ref !== "release-staged-check-new") fails.push("自更新回滚 · 切换成功的 zzz-pkg 没记进真 lock");
+  } finally {
+    rmSync(fx3.root, { recursive: true, force: true });
+  }
+  rmSync(bin, { recursive: true, force: true });
+  return fails;
+}
+
+/**
+ * 🔴 跨卷 fail-closed（任务 2.1/2.2）：EXDEV 必须抛错停手，绝不退化成拷贝——真造跨卷场景不现实，
+ * 注入 rename/devOf 钉住那两个分支（design 明说这条用代码级断言）。
+ */
+function stagedExdevCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-staged-exdev-"));
+  try {
+    const from = join(root, "from-dir");
+    mkdirSync(from, { recursive: true });
+    writeFileSync(join(from, "SKILL.md"), "x");
+    const to = join(root, "to-dir");
+    let thrown = null;
+    try {
+      renameOrFail(from, to, "自检演练", () => {
+        throw Object.assign(new Error("cross-device link not permitted"), { code: "EXDEV" });
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    if (!(thrown instanceof Friendly) || !/EXDEV/.test(thrown.message)) fails.push(`🔴 跨卷 · EXDEV 没有按 fail-closed 抛 Friendly：${thrown?.message}`);
+    if (thrown && !/不会退化成逐文件拷贝/.test(thrown.hint || "")) fails.push(`跨卷 · 提示没说明「不退化成拷贝」：${thrown?.hint}`);
+    // 🔴 最要命的退化：catch 住 EXDEV 走拷贝。判据是磁盘——from 原地在、to 没被造出来。
+    if (!existsSync(join(from, "SKILL.md"))) fails.push("🔴 跨卷 · EXDEV 之后源目录被动了");
+    if (existsSync(to)) fails.push("🔴 跨卷 · EXDEV 之后目标出现了——EXDEV 被退化成拷贝");
+    // 同卷预检
+    let vol = null;
+    try {
+      ensureSameVolume(root, root, (p) => (p === root ? 1 : 2));
+    } catch (err) {
+      vol = err;
+    }
+    if (vol) fails.push(`跨卷 · 同卷被误拦：${vol.message}`);
+    try {
+      ensureSameVolume(join(root, "a"), join(root, "b"), (p) => (p.endsWith("a") ? 1 : 2));
+    } catch (err) {
+      vol = err;
+    }
+    if (!(vol instanceof Friendly) || !/不在同一个文件系统/.test(vol?.message || "")) fails.push(`🔴 跨卷 · 不同卷没有在动手前拦住：${vol?.message}`);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/**
+ * 🔴 全局 scope 维持现状且两句保证分别说（任务 5.1/5.2）：$HOME 指到假家目录，一跑同时覆盖两个 scope。
+ * 判据：-g 那次 add 的 cwd 不在 staging 下（没进 staged 分支）、项目那次在；两句说明同场且不同。
+ */
+function stagedGlobalScopeCheck() {
+  const fails = [];
+  // 纯函数层先钉两句不同
+  const g = scopeGuaranteeNote("global");
+  const p = scopeGuaranteeNote("project");
+  if (g === p) fails.push("🔴 scope 保证 · 两个 scope 的说明是同一句");
+  if (!g.includes("不提供原子切换") || !g.includes("半更新")) fails.push(`🔴 scope 保证 · 全局那句没说清「不提供原子切换/失败可能留下半更新」：${g}`);
+  if (usesStagedInstall({ kind: "global" }) !== false) fails.push("🔴 scope 保证 · 全局 scope 进了 staged 分支");
+  if (usesStagedInstall({ kind: "project", dir: "x" }) !== true) fails.push("scope 保证 · 项目 scope 没走 staged");
+
+  const mk = (slug, v) => `---\nname: ${slug}\n---\n${v}\n`;
+  const fx = buildStagedFixture([{ slug: "p-pkg", old: mk("p-pkg", "v1"), new: mk("p-pkg", "v2") }]);
+  const fakeHome = realpathSync(mkdtempSync(join(tmpdir(), "dby-staged-home-")));
+  const bin = mkdtempSync(join(tmpdir(), "dby-staged-npx-"));
+  const marker = join(bin, "called.log");
+  stagedPreload(bin);
+  try {
+    const gdir = join(fakeHome, ".claude", "skills", "g-pkg");
+    mkdirSync(gdir, { recursive: true });
+    writeFileSync(join(gdir, "SKILL.md"), mk("g-pkg", "v1"));
+    const gOld = computeSkillHash(gdir);
+    const probe = join(fakeHome, ".hash-probe");
+    mkdirSync(probe, { recursive: true });
+    writeFileSync(join(probe, "SKILL.md"), mk("g-pkg", "v2"));
+    const gNew = computeSkillHash(probe);
+    rmSync(probe, { recursive: true, force: true });
+    const index = JSON.parse(readFileSync(join(fx.root, "index.json"), "utf-8"));
+    index.skills["g-pkg"] = {
+      status: "active",
+      knownHashes: [gOld, gNew],
+      versions: [
+        { version: "2.0.0", hash: gNew, changelog: "新版", changelogSource: "user" },
+        { version: "1.0.0", hash: gOld, changelog: "旧版", changelogSource: "user" },
+      ],
+    };
+    writeFileSync(join(fx.root, "index.json"), JSON.stringify(index));
+    // 假 npx：-g 那次写家目录（老路径原地覆盖），项目那次写 cwd 相对（staging 旁路）。
+    // 对账让每个 scope 都等于上游全集，所以两个分支都得把两个包全写出来。
+    const gWrites = ["g-pkg", "p-pkg"]
+      .map((s) => `mkdir -p "$HOME/.claude/skills/${s}"; printf -- '${mk(s, "v2").replace(/\n/g, "\\n")}' > "$HOME/.claude/skills/${s}/SKILL.md"`)
+      .join("; ");
+    const pWrites = ["g-pkg", "p-pkg"]
+      .map((s) => `mkdir -p ".agents/skills/${s}"; printf -- '${mk(s, "v2").replace(/\n/g, "\\n")}' > ".agents/skills/${s}/SKILL.md"`)
+      .join("; ");
+    writeFileSync(
+      join(bin, "npx"),
+      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add "*) case " $* " in *" -g "*) echo "GPWD:$(pwd)" >> '${marker}'; ${gWrites};; *) echo "PPWD:$(pwd)" >> '${marker}'; ${pWrites};; esac;; esac\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    const res = runStagedFixture(fx.root, bin, ["--scope", "auto", "--yes"], { HOME: fakeHome });
+    const out = `${res.stdout}\n${res.stderr}`;
+    const tail = () => JSON.stringify(out.slice(-900));
+    if (!out.includes(g)) fails.push(`🔴 scope 保证 · 全局那句没出现在输出里：${tail()}`);
+    if (!out.includes(p)) fails.push(`🔴 scope 保证 · 项目那句没出现在输出里：${tail()}`);
+    const mkLog = existsSync(marker) ? readFileSync(marker, "utf-8") : "";
+    const gpwd = /^GPWD:(.*)$/m.exec(mkLog)?.[1] || "";
+    const ppwd = /^PPWD:(.*)$/m.exec(mkLog)?.[1] || "";
+    if (!gpwd) fails.push(`scope 保证 · -g 那次 add 没被记录：${JSON.stringify(mkLog)}`);
+    else if (gpwd.includes(".doubaoya/staging")) fails.push(`🔴 scope 保证 · -g 路径进了 staging 分支：${gpwd}`);
+    if (!ppwd.includes(".doubaoya/staging")) fails.push(`🔴 scope 保证 · 项目路径没走 staging：${ppwd}`);
+    if (existsSync(join(fakeHome, ".doubaoya", "staging"))) fails.push("🔴 scope 保证 · 全局 scope 家目录里冒出了 staging");
+    if (readFileSync(join(gdir, "SKILL.md"), "utf-8") !== mk("g-pkg", "v2")) fails.push(`scope 保证 · 全局包没按现状方式装上：${tail()}`);
+    if (readFileSync(join(fx.info["p-pkg"].dir, "SKILL.md"), "utf-8") !== mk("p-pkg", "v2")) fails.push(`scope 保证 · 项目包没切换成新版：${tail()}`);
+    if (res.status !== 0) fails.push(`scope 保证 · 两 scope 全成功应退出 0，实际 ${res.status}：${tail()}`);
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+    rmSync(fakeHome, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
+/** 任务 5.3：D6 的已知窗口（两次 rename 之间进程被杀）与恢复方式必须写在 references 里，不假装不存在。 */
+function stagedReferencesCheck() {
+  const p = join(resolve(dirname(SELF_PATH), ".."), "references", "staged-install.md");
+  if (!existsSync(p)) return [`staged 参考文档不存在：${p}（D6 的已知窗口与恢复方式必须写明）`];
+  const text = readFileSync(p, "utf-8");
+  const fails = [];
+  for (const phrase of ["两次 rename 之间", "归档不删除", "manifest"]) {
+    if (!text.includes(phrase)) fails.push(`references/staged-install.md 里找不到「${phrase}」——D6 的已知窗口与恢复方式没写全`);
   }
   return fails;
 }
@@ -3920,6 +5210,19 @@ async function runSelfCheck() {
   fails.push(...(await indexFetchCheck()));
   fails.push(...originLockPinCheck(), ...backfillOriginCheck());
   fails.push(...(await mirrorFallbackCheck()));
+  // staged 原子切换（项目 scope）：主线切换 / 校验门 / 回滚 / 自更新压轴 / 跨卷 fail-closed / scope 保证级别 / D6 文档。
+  // 🔴 逐个包一层 guard：这些检查故意制造坏磁盘状态，检查自身抛错必须变成一条红字，
+  //    不许把整套自检炸掉（炸掉 = 零 FAILED 行，长得像别的问题，演练时真踩过）。
+  const guardStaged = (fn) => {
+    try {
+      return fn();
+    } catch (err) {
+      return [`${fn.name} 自检自身抛错：${err?.message || err}`];
+    }
+  };
+  for (const fn of [stagedSwitchCheck, stagedGateCheck, stagedRollbackCheck, stagedSelfLastCheck, stagedExdevCheck, stagedGlobalScopeCheck, stagedReferencesCheck]) {
+    fails.push(...guardStaged(fn));
+  }
 
   // 🔴 改名迁移（renames.json）：纯函数层先钉 extractRenames / splitRenameGitTracked，
   // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
@@ -4088,7 +5391,14 @@ async function runSelfCheck() {
       "装完写 <skill>/.dby/origin.json 且目录哈希不变、scope 根 .dby/lock.json 与 origin 一致、" +
       "origin 在场时改回闭集历史版仍判 modified、--pin 后预检单列且执行不动、--unpin 后恢复刷新、" +
       "Gitee 镜像回退：GitHub 正常不碰镜像、403/网络错才换源而 404 不换、索引先 main 再按 ref 复核、" +
-      "主备 ref 不同 fail-closed（退出非 0、不写盘、--json 带 mirrorMismatch）、clone 回退用同一 ref 且无 ref 不回退、sources 三项进 --json）"
+      "主备 ref 不同 fail-closed（退出非 0、不写盘、--json 带 mirrorMismatch）、clone 回退用同一 ref 且无 ref 不回退、sources 三项进 --json、" +
+      "staged 原子切换：旁路安装真落 staging（假 npx 的 cwd 作证）且事务副本在场、切换与归档都是真 rename（inode 前后一致）、" +
+      "软链解析到新真身且缺落位的包补建软链、切换前三项校验（frontmatter 真解析 / 哈希 == 索引目标版并报期望实测 / SKILL.md 引用脚本在场）任一不过就不切且现有版本哈希不变、" +
+      "严格 YAML 子集过得了全部真实发布物并拒绝别名/未闭合引号/tab、逐包原子（一个失败只回滚它自己、其余保留新版）、" +
+      "回滚后哈希 == 更新前且回滚失败时报归档绝对路径 + 可粘贴复原命令 + 原始错误、dby-update 压轴最后切且切换自身后跳过收尾重扫（lock 不写）并提示重跑、" +
+      "自更新复核失败自己回滚其余不受影响、EXDEV fail-closed 不退化成拷贝且不同卷动手前就拦、" +
+      "全局 scope 不进 staging 分支、两个 scope 同场时保证级别两句分别说、成功与失败路径 staging 都清干净、D6 已知窗口写进 references、" +
+      "切换成功的包把 CLI 生成的账本条目合并进真 skills-lock.json（键序缩进原样、无关条目不动）而失败/回滚的包保持旧账或缺席、真账本不存在不凭空创建）"
   );
   return 0;
 }
@@ -4135,6 +5445,8 @@ if (isMainModule()) {
     main()
       .then((code) => process.exit(code))
       .catch((err) => {
+        // staging 兜底清理（spec：成败都清）；正常路径 main 里已显式清过，这里只兜中途抛错的。
+        cleanupStagedTxs();
         // 🔴 镜像 ref 不一致：`--json` 下 stdout 仍只许是一份纯 JSON，mirrorMismatch 原样带出；磁盘此时一个字没动。
         if (err?.mirrorMismatch && jsonMode) console.log(JSON.stringify({ mirrorMismatch: err.mirrorMismatch, executed: false }, null, 2));
         if (err instanceof Friendly) {

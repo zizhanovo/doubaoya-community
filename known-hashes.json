@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T13:29:44.400864+00:00",
+  "generatedAt": "2026-08-26T18:51:57.649097+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -256,6 +256,7 @@
       "c51a1f7c37be",
       "c8fc00825fa8",
       "ceb277b7b3a2",
+      "cf6033c0ce35",
       "d89ef52b1bf2",
       "e88f976ec4bb"
     ],
@@ -2918,6 +2919,12 @@
         "version": "2.5.1",
         "date": "2026-08-26",
         "subject": "fix(dby-publish): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
+      },
+      {
+        "hash": "915ea7bae745",
+        "version": "4.0.1",
+        "date": "2026-08-26",
+        "subject": "chore(license): MIT 换成 PolyForm Noncommercial 1.0.0，附 doubaoya 终端用户额外许可"
       },
       {
         "hash": "c3582315f2c5",
