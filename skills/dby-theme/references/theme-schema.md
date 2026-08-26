@@ -22,7 +22,7 @@ top-level 键以 [`scripts/validate-theme.mjs`](../scripts/validate-theme.mjs) �
 - **标题装饰的正确姿势**（守红线 1）:色条 / 竖条 / 下划线用 `border-left` / `border-bottom` / `padding` **写进标题自己的 `style`**,别用空 `wrapBefore` 块。参照 `benya-clean` 与本 skill 的 `themes/theme.example.json`。
 - **`decorations.articleWrap` 留空**（守红线 2）。
 
-> 主题契约的权威文档在 `dby-publish/themes/THEME-SCHEMA.md`（若已装）。本 skill 的 §themeJson 结构 + `theme.example.json` 足够独立完成一次改主题。
+> 主题契约以 `scripts/validate-theme.mjs` 为准（跑它）。本 skill 的 §themeJson 结构 + `theme.example.json` 足够独立完成一次改主题。
 
 ---
 

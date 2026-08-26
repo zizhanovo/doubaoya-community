@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.5.1
-changelog: 终态纪律改为本地陈述，不再引用他包的路由判据文件
+version: 3.0.0
+changelog: 包内主题只留内置兜底 benya-clean，其余 14 个服务端旧副本删除——把 --theme 或 config.mdTheme 写成 themes/xxx.json 路径的用法会坏，改用裸 id（服务端解析，排版才与账号默认一致）
   失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）；
   拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。
 compatibility: >-

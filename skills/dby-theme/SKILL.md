@@ -5,8 +5,8 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger words: customize WeChat article theme, change layout / palette / heading style.
-version: 1.4.1
-changelog: 终态纪律改为本地陈述，不再引用他包的路由判据文件
+version: 1.4.2
+changelog: 主题契约指针改指本包校验器 scripts/validate-theme.mjs，不再指向 dby-publish 已删除的 THEME-SCHEMA.md
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
@@ -136,7 +136,7 @@ open /tmp/preview.html    # macOS;别的平台用浏览器打开
 `elements` 支持的标签、`{{token}}` 插值、`li.marker` / `img.figureStyle` / `hr.html` 这些位置），
 不需要就别读。**只换配色的话改 `palette` 八个键就够**，其余用 `{{token}}` 自动跟随。
 
-> 主题契约的权威文档在 `dby-publish/themes/THEME-SCHEMA.md`（若已装）；
+> 主题契约以本包 `scripts/validate-theme.mjs` 为准（跑它，别照文档记）；
 > 本 skill 的 `references/theme-schema.md` + `themes/theme.example.json` 足够独立完成一次改主题。
 
 ---

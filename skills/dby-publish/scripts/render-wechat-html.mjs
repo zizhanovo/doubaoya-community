@@ -26,7 +26,7 @@
 //   (comfortable line-height, ~16px body, generous 段间距), ready to paste
 //   into a 公众号 draft body.
 //
-// Theming (see ../themes/THEME-SCHEMA.md — the authoritative contract):
+// Theming (see ./validate-theme.mjs — the authoritative contract):
 //   A "theme" is a declarative JSON map of per-element inline-style templates +
 //   a small palette + optional decorative HTML snippets. Any `{{token}}` inside
 //   any style/html string resolves from `palette` (then `page`). A user theme is
@@ -60,7 +60,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 // -----------------------------------------------------------------------------
 // BUILT-IN DEFAULT THEME — neutral / theme-agnostic. No brand colors baked in.
-// This is a full theme object that follows ../themes/THEME-SCHEMA.md. When no
+// This is a full theme object that follows ./validate-theme.mjs. When no
 // user theme is supplied the renderer merges an empty theme over this, so the
 // output is byte-identical to the historical hardcoded renderer. Element styles
 // dogfood palette `{{tokens}}`; values without a palette key stay literal.
@@ -964,7 +964,7 @@ Options:
   --md <file>       Markdown input file (required unless --check)
   --out <file>      Output HTML file (default: <input-basename>.wechat.html)
   --title <str>     Optional H1 title prepended to the article
-  --theme <file>    theme.json to apply (see ../themes/THEME-SCHEMA.md). Omit for neutral defaults.
+  --theme <file>    theme.json to apply (see ./validate-theme.mjs). Omit for neutral defaults.
   --check           Print "ok" + node version and exit
   -h, --help        Show this help
 `;

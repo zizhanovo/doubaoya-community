@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // Zero-dependency THEME-FORMAT IMPORTER for the 都爆鸭 (doubaoya) community
 // `dby-publish` skill. It converts open-source community theme
-// formats into our `theme.json` contract (see ../themes/THEME-SCHEMA.md), so
+// formats into our `theme.json` contract (see ./validate-theme.mjs), so
 // users can bring their own themes from the two most common ecosystems:
 //
 //   * wewrite-yaml  — oaker-io/wewrite `toolkit/themes/*.yaml`  (MIT)
@@ -13,7 +13,7 @@
 //                     (`var(--md-primary-color)` = accent). doocs grace/simple
 //                     are DIFFS over default.css — pass `--base default.css`.
 //
-// The output ALWAYS obeys THEME-SCHEMA.md and passes `validate-theme.mjs`:
+// The output ALWAYS passes `validate-theme.mjs` (the contract lives there, not in a doc):
 //   inline-style only; no class=/id=/<script>/<style>/event-handlers; never
 //   emits an image `src=` (themes carry no images); palette values are colors.
 //
@@ -687,7 +687,7 @@ Formats:
                  diffs over default.css, so pass --base <default.css> and an --accent to synthesize.
   auto (default) .yaml/.yml => wewrite-yaml, .css => doocs-css.
 
-The output always obeys ../themes/THEME-SCHEMA.md and passes validate-theme.mjs.
+The output always obeys ./validate-theme.mjs and passes validate-theme.mjs.
 `;
 
 function detectFormat(file, explicit) {

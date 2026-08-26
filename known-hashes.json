@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T09:15:43.741032+00:00",
+  "generatedAt": "2026-08-26T09:31:18.334833+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -166,6 +166,7 @@
       "f80e00b562e4"
     ],
     "dby-publish": [
+      "00fc7c578914",
       "032593ba063c",
       "082d8a4b68b1",
       "11426702a7e8",
@@ -207,6 +208,7 @@
     ],
     "dby-theme": [
       "0a8f19dad810",
+      "2023466e2e9f",
       "895210b408a4",
       "9c3df5a11c54",
       "a1b7ed58c9fe",
@@ -2383,6 +2385,12 @@
         "version": "2.0.0",
         "date": "2026-08-26",
         "subject": "feat(dby-api)!: 收窄为取数能力包 —— 摘掉 14 个正文明写外派的触发词，删掉自带的路由链"
+      },
+      {
+        "hash": "5f6a8c8b5a66",
+        "version": "2.0.1",
+        "date": "2026-08-26",
+        "subject": "fix(dby-api): 2.0.0 的 changelog 用 ** 开头，YAML 当成别名节点解析失败 —— 整个包装不上"
       },
       {
         "hash": "842bc271ca8d",

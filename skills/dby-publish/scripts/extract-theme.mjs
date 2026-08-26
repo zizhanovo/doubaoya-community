@@ -15,7 +15,7 @@
 //   oaker-io/wewrite  →  https://github.com/oaker-io/wewrite   (MIT, © 2026 OpenClaw)
 // (its scripts/learn_theme.py). Credit + license retained; see themes/CREDITS.
 //
-// Output is a theme.json in OUR schema (see ../themes/THEME-SCHEMA.md): a filled
+// Output is a theme.json in OUR schema (see ./validate-theme.mjs): a filled
 // `palette` + `page` + reasonable `elements` styles that inject the derived
 // palette via {{tokens}}, exactly as wewrite stamps its base_css template. The
 // output is guaranteed to pass `validate-theme.mjs`.

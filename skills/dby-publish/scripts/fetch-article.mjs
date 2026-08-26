@@ -9,7 +9,7 @@
  *   styles ARE the data we analyze), and print a quick style fingerprint
  *   (tag counts + the distinct colors and font-sizes seen). The cleaned HTML
  *   is then read by an agent to author a reusable theme.json
- *   (see ../themes/THEME-SCHEMA.md).
+ *   (see ./validate-theme.mjs).
  *
  * This is a ONE-TIME style-study step. It fetches a single PUBLIC article for
  * your own study — it does NOT log in and does NOT scrape at scale.
@@ -246,7 +246,7 @@ const HELP = `fetch-article.mjs — zero-dep 公众号 reference-article fetcher
 Fetch ONE public mp.weixin.qq.com article, extract its body (#js_content),
 clean it while KEEPING inline style="…" attributes, and print a style
 fingerprint (tag counts + distinct colors/font-sizes) to help you author a
-theme.json (see ../themes/THEME-SCHEMA.md). One-time study step; no login,
+theme.json (see ./validate-theme.mjs). One-time study step; no login,
 no scraping at scale.
 
 Usage:
@@ -332,7 +332,7 @@ async function main() {
   L.push("   " + (fp.fontSizes.length ? fp.fontSizes.join("  ") : "(none found)"));
   L.push("");
   L.push("Next: read the cleaned HTML, extract the RECURRING inline-style pattern,");
-  L.push("and fill a theme.json per ../themes/THEME-SCHEMA.md → validate-theme.mjs → render --theme.");
+  L.push("and fill a theme.json per ./validate-theme.mjs → validate-theme.mjs → render --theme.");
   process.stdout.write(L.join("\n") + "\n");
 }
 

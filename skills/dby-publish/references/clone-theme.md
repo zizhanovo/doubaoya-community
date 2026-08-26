@@ -4,7 +4,7 @@
 
 想让排版长得像某个你欣赏的公众号，或某种描述得出的风格？把它一次性**萃取成一个 `theme.json`**，
 之后**永久复用**（每次渲染只需 `--theme my-theme.json`，见下方 CLI）。主题契约的**权威**是
-[`themes/THEME-SCHEMA.md`](../themes/THEME-SCHEMA.md)（字段语义），顶层键清单以校验器
+校验器 `scripts/validate-theme.mjs`（字段语义与顶层键清单都以它为准），
 `scripts/validate-theme.mjs` 的 `TOP_LEVEL_KEYS` 为准——生成后先跑它。本机预览用 `scripts/render-wechat-html.mjs --theme`；走流水线时 `pipeline.mjs --theme <path>` 会**先在本机校验再整套送去平台渲染**。
 
 > **写主题是一次性的活**；产出的 `theme.json` 之后一直用。默认主题是 `themes/benya-clean.json`
@@ -83,4 +83,4 @@
 克制近 small-caps 的标题（大字距、非高饱和色）。同样先 `validate-theme.mjs` 再 `render --theme`。
 起步同样建议**复制** `themes/benya-clean.json`（默认/推荐）/ `magazine.json`（杂志风）/ `minimal.json`（极简）/ `knowledge.json`（知识卡片）之一再改。
 
-一切以 [`themes/THEME-SCHEMA.md`](../themes/THEME-SCHEMA.md) 为准；主题索引见 [`themes/README.md`](../themes/README.md)。
+一切以 `scripts/validate-theme.mjs` 为准（跑它，别照文档记）；可用主题 id 见 `GET /api/wechat/themes`。

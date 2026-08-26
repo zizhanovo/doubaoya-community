@@ -65,7 +65,7 @@ dby-publish/
 ├── config.example.json           # 配置模板（复制成 config.json 再填）
 ├── config.example.README.md      # 配置字段逐项说明
 ├── references/                   # 条件式细节文档（SKILL.md 按需指路，含 recovery.md）
-├── themes/                       # 主题契约 THEME-SCHEMA.md + 起手主题 JSON（服务端主题的旧副本）
+├── themes/                       # 只留内置兜底主题 benya-clean.json；其余主题走服务端裸 id
 ├── schemas/                      # design-config.schema.json（设计工作台产物校验）
 ├── assets/                       # 生图风格库 styles/ 与卡通 IP 图 ip/
 ├── profiles/

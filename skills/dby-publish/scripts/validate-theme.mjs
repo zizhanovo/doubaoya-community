@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // validate-theme.mjs
 // -----------------------------------------------------------------------------
-// Zero-dependency validator for a 公众号 theme.json (see ../themes/THEME-SCHEMA.md).
+// Zero-dependency validator for a 公众号 theme.json (see ./validate-theme.mjs).
 //
 // It enforces the schema shape AND the 公众号 safety rules a theme must obey:
 //   * 公众号 strips <style>/<head>/class-based CSS — a theme that injects
@@ -357,7 +357,7 @@ Usage:
   node validate-theme.mjs <theme.json>
 
 Exit code 0 if valid; non-zero if there are hard errors.
-See ../themes/THEME-SCHEMA.md for the contract.
+See ./validate-theme.mjs for the contract.
 `;
 
 async function main() {
