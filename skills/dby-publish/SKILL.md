@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.5.0
-changelog: >-
+version: 2.5.1
+changelog: 终态纪律改为本地陈述，不再引用他包的路由判据文件
   失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）；
   拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。
 compatibility: >-
@@ -26,7 +26,8 @@ compatibility: >-
 把一篇**已经写好的**图文走一串确定性步骤，存进用户自己公众号的**草稿箱**，返回 `mediaId`。
 
 正文归 `dby-write`（或用户自带）；取数、爆款样本、封面套路归 `dby-api`；合规检测归 `dby-banned-words`。
-终态门以 `dby-api/references/wechat-routing.json` 为准：用户只要成稿就不跑本包，终态未明先问一句。
+🔴 **终态纪律**：用户只要成稿就**不跑本包**——本包会写进他自己的公众号后台，是真实副作用。
+终态未明先问一句，别默认往下推。
 
 ---
 

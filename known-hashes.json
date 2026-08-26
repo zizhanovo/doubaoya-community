@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T08:01:19.462377+00:00",
+  "generatedAt": "2026-08-26T08:01:20.954606+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -166,6 +166,7 @@
     ],
     "dby-publish": [
       "032593ba063c",
+      "082d8a4b68b1",
       "11426702a7e8",
       "117097d50326",
       "134cdd2b4c29",
@@ -2441,6 +2442,12 @@
         "version": "1.2.3",
         "date": "2026-08-25",
         "subject": "fix(dby-banned-words): SKILL.md 承诺转达的 notice 是条死指令 —— 脚本把整个信封丢了，闸只扫 .mjs 所以一直没红"
+      },
+      {
+        "hash": "d1634c678daa",
+        "version": "1.3.0",
+        "date": "2026-08-26",
+        "subject": "feat(dby-banned-words): 接手合规话术 —— 过审 / 合规检测 / 公众号违禁词从 dby-api 迁入"
       }
     ],
     "dby-charter": [
