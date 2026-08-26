@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T06:10:48.198073+00:00",
+  "generatedAt": "2026-08-26T06:11:11.917780+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -104,6 +104,7 @@
       "8967a5bf1cbe",
       "9875773c9a77",
       "b3b6c7500194",
+      "e05d7674b9aa",
       "edadb15db5ad",
       "f124f3174c56",
       "f2ae13c9d572"
@@ -2781,6 +2782,12 @@
         "version": "2.4.2",
         "date": "2026-08-25",
         "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+      },
+      {
+        "hash": "eff5ef724697",
+        "version": "2.5.0",
+        "date": "2026-08-25",
+        "subject": "fix(dby-publish): 发布失败不再谎报「已存入草稿箱」，并补上失败后怎么办 —— 抓不到 mediaId 就报「结果待确认」+ 非零退出"
       }
     ],
     "dby-rewrite": [

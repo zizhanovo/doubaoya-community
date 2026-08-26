@@ -1,8 +1,8 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、跨平台合规、违禁词检测、敏感词、违规词、极限词、绝对化用语、限流自查、审核不过、广告法。
-version: 1.2.2
-changelog: 新增变更说明字段
+version: 1.2.3
+changelog: check_multi.py 补上转达 notice 字段——原来整个信封被丢弃，SKILL.md 承诺的更新提示用户永远看不到
 compatibility: >-
   需要 Python 3（`scripts/check_multi.py` 只用标准库，不装任何 pip 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。

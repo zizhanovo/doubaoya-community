@@ -38,6 +38,10 @@ def _skill_user_agent() -> str:
 USER_AGENT = _skill_user_agent()
 DEFAULT_PLATFORMS = ["xiaohongshu", "douyin", "gongzhonghao"]
 
+# 「你安装的 skill 有更新」挂在成功信封的 notice 字段上，SKILL.md 承诺原样转达给用户。
+# 多平台扇出时同一条 notice 会在每个平台的响应里重复出现，去重后只提示一次。
+_NOTICES_SEEN = set()
+
 
 def check_one(platform, content, api_key):
     """对单个平台发起一次检测，返回 data 字典或 {"error": ...} 字典。"""
@@ -78,6 +82,12 @@ def check_one(platform, content, api_key):
         return {"error": {"code": "NETWORK_ERROR", "message": str(exc.reason)}}
     except Exception as exc:  # noqa: BLE001 — 兜底，保证别的平台继续
         return {"error": {"code": "UNKNOWN_ERROR", "message": str(exc)}}
+
+    notice = body.get("notice")
+    if notice and notice not in _NOTICES_SEEN:
+        _NOTICES_SEEN.add(notice)
+        # 走 stderr，stdout 留给 json.dumps 的结果，别把它污染成非法 JSON。
+        sys.stderr.write(f"[notice] {notice}\n")
 
     if not body.get("success"):
         err = body.get("error") or {}
