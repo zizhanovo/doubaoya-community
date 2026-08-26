@@ -35,17 +35,24 @@ class CommunityValidatorTests(unittest.TestCase):
                 validator.frontmatter_name(skill)
 
     def routing_fixture(self, root: Path) -> Path:
-        destination = root / "skills" / "dby-api"
+        # 判据文件归路由包（dby）所有；dby-api 只是 validate_routing 还要读它的能力划分声明。
+        # 这两份必须用真实内容，别被下面那个建桩循环覆盖掉——覆盖了 dby 就不再"加载路由源"，
+        # 断言会以一个与被测点无关的理由变红。
+        destination = root / "skills" / "dby"
         (destination / "references").mkdir(parents=True)
         shutil.copy2(validator.ROUTING, destination / "references" / "wechat-routing.json")
-        shutil.copy2(validator.SKILLS / "dby-api" / "SKILL.md", destination / "SKILL.md")
+        shutil.copy2(validator.SKILLS / "dby" / "SKILL.md", destination / "SKILL.md")
+        api = root / "skills" / "dby-api"
+        api.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(validator.SKILLS / "dby-api" / "SKILL.md", api / "SKILL.md")
+        real = {"dby", "dby-api"}
         routing = json.loads(validator.ROUTING.read_text(encoding="utf-8"))
         names = set()
         for route in routing["routes"]:
             if route.get("primary_skill"):
                 names.add(route["primary_skill"])
             names.update(route.get("candidate_skills", []))
-        for name in names:
+        for name in names - real:
             skill = root / "skills" / name
             skill.mkdir(parents=True, exist_ok=True)
             (skill / "SKILL.md").write_text(f"---\nname: {name}\ndescription: fixture\n---\n", encoding="utf-8")

@@ -18,7 +18,7 @@ import skill_index  # noqa: E402  —— 索引结构与兼容视图的单一定
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
-ROUTING = SKILLS / "dby-api" / "references" / "wechat-routing.json"
+ROUTING = SKILLS / "dby" / "references" / "wechat-routing.json"
 
 # 公众号写作链：从"写正文"到"存进草稿箱"的每一跳。链上每个 Skill 都必须在自己的 SKILL.md 里
 # 声明前向指针（一节 `## 下一步`，点名下游的真实 Skill）。没有它，agent 写完正文就宣布交付完成，
@@ -312,7 +312,7 @@ def validate_skill_slug_prefix(root: Path = ROOT) -> None:
 
 
 def validate_routing(root: Path = ROOT) -> None:
-    routing_path = root / "skills" / "dby-api" / "references" / "wechat-routing.json"
+    routing_path = root / "skills" / "dby" / "references" / "wechat-routing.json"
     routing = load_json(routing_path)
     require(isinstance(routing, dict), "wechat-routing.json must be an object")
     require_exact_keys(routing, {"schema_version", "routes", "precedence", "forbidden_misroutes"}, "routing")
@@ -412,8 +412,27 @@ def validate_routing(root: Path = ROOT) -> None:
     for signal in ("local qr login", "local session", "resumable archive", "article body export"):
         require(signal in cloud_signals, f"cloud forbidden-misroute signals are missing: {signal}")
 
+    # 🔴 路由判据归路由包所有：dby 读它，业务包一概不读（含 dby-api 自己）。
+    #    这条断言此前是反的——它要求 dby-api 加载路由源，把「下层向上引用」写成了硬性要求。
+    #    方向见 openspec/specs/dby-skill-routing（Requirement: 路由判据归路由包所有）。
+    router_text = (root / "skills" / "dby" / "SKILL.md").read_text(encoding="utf-8")
+    require("references/wechat-routing.json" in router_text, "dby SKILL.md does not load the routing source")
+
+    leakers = []
+    for skill_dir in discover_skill_dirs(root):
+        if skill_dir.name == "dby":
+            continue
+        for path in skill_dir.rglob("*.md"):
+            if "wechat-routing.json" in path.read_text(encoding="utf-8"):
+                leakers.append(str(path.relative_to(root)))
+    require(
+        not leakers,
+        f"这些业务包引用了路由判据文件：{sorted(leakers)}。"
+        "路由判据只由 dby 读取；业务包要遵守的终态纪律在本包正文里本地写一句，别指向他包文件——"
+        "指过去就是下层向上引用，判据一搬家这些指针就全断。",
+    )
+
     doubaoya_text = (root / "skills" / "dby-api" / "SKILL.md").read_text(encoding="utf-8")
-    require("references/wechat-routing.json" in doubaoya_text, "dby-api SKILL.md does not load the routing source")
     require("互动指标" in doubaoya_text, "dby-api SKILL.md does not state the WeChat capability split")
 
 
@@ -1949,7 +1968,7 @@ def validate_mainline_pointer(root: Path = ROOT) -> None:
     ponytail: 天花板 = 有人把主干步骤抄进第二处而不动指针，本闸看不见；
     升级路径 = 给主干步骤加显式标记再做唯一性断言，但那要先有标记。
     """
-    routing = load_json(root / "skills" / "dby-api" / "references" / "wechat-routing.json")
+    routing = load_json(root / "skills" / "dby" / "references" / "wechat-routing.json")
     routes = routing.get("routes", [])
     owners = {r.get("mainline_owner") for r in routes if isinstance(r, dict) and r.get("mainline_owner")}
     require(
