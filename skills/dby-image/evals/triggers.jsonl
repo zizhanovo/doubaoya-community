@@ -16,3 +16,5 @@
 {"q":"帮我写篇公众号文章","expect":false}
 {"q":"把这段改成公众号风格","expect":false}
 {"q":"我该用哪个skill开始弄公众号的事","expect":false}
+{"q":"看看这张封面在公众号列表和转发卡片里会被裁成什么样","expect":true}
+{"q":"封面已经有了，直接推到公众号草稿箱","expect":false}

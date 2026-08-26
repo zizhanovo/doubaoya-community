@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T06:13:19.582467+00:00",
+  "generatedAt": "2026-08-26T07:15:11.663102+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -513,6 +513,7 @@
         "a4d72b56310c",
         "b2ccb38b1d96",
         "c820f9aa0c6d",
+        "d5cfe53c21dd",
         "e0ef82da64ee",
         "eeb802ec9c70",
         "fccf378e28ef"
@@ -520,9 +521,9 @@
       "versions": [
         {
           "version": "1.3.2",
-          "hash": "9f20f18cca31",
+          "hash": "fb377523bd1c",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
+          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
           "changelog": "补触发用例基线（evals/triggers.jsonl），正文未动",
           "changelogSource": "user"
         },
@@ -681,6 +682,12 @@
           "version": "1.3.1",
           "date": "2026-08-25",
           "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+        },
+        {
+          "hash": "9f20f18cca31",
+          "version": "1.3.2",
+          "date": "2026-08-25",
+          "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
         }
       ]
     },
@@ -698,6 +705,7 @@
         "596f05f4d505",
         "5b22bb800679",
         "6c0cb11d4b3b",
+        "842bc271ca8d",
         "94592136ac90",
         "96330502a048",
         "9b545f2f647a",
@@ -712,9 +720,9 @@
       "versions": [
         {
           "version": "1.3.3",
-          "hash": "d7e863f5577a",
+          "hash": "d57b38332f48",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
+          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
           "changelog": "README 改为先 export DOUBAOYA_API_KEY 到环境变量再对 agent 说业务话术，不再教用户把整条密钥粘进对话消息",
           "changelogSource": "user"
         },
@@ -1184,6 +1192,7 @@
         "63c13c5ffbeb",
         "6a04472552de",
         "73f91dda7bd6",
+        "a807c7cef9be",
         "c1227d1f5988",
         "c6ca0ad17c66",
         "d096f50d3a79",
@@ -1192,11 +1201,11 @@
       ],
       "versions": [
         {
-          "version": "1.3.0",
-          "hash": "5f652a0700eb",
+          "version": "1.4.0",
+          "hash": "a807c7cef9be",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
-          "changelog": "生图写盘失败时不再让已扣费的图像数据随进程蒸发，改为兜底写到系统临时目录并在报错里给出该路径",
+          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
+          "changelog": "公众号封面验收补裁切模拟脚本 wechat-crops.mjs（2.35:1 / 正中 1:1 / 360px 缩略图落盘再读回核）；叠标题先读图定位、不默认全幅蒙层；有真实照片优先用",
           "changelogSource": "user"
         },
         {
@@ -1358,9 +1367,9 @@
       "versions": [
         {
           "version": "2.5.0",
-          "hash": "eff5ef724697",
+          "hash": "b36d9ae7ae91",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
+          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
           "changelog": "失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）； 拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。",
           "changelogSource": "user"
         },
@@ -1664,9 +1673,9 @@
       "versions": [
         {
           "version": "1.4.0",
-          "hash": "a7722b9c56db",
+          "hash": "b5bfb17c7c72",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
+          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
           "changelog": "改主题前强制落盘备份并给出回滚命令、DELETE 加护栏；deploy-scope 与顶层键清单改指真实来源（校验器 / dby-publish/references/rendering.md）",
           "changelogSource": "user"
         },
@@ -2088,9 +2097,9 @@
       "versions": [
         {
           "version": "1.10.0",
-          "hash": "37ae6db8310f",
+          "hash": "cdccaf61a7e7",
           "ref": "release-20260826-0610",
-          "releasedAt": "2026-08-26T06:10:46.567306+00:00",
+          "releasedAt": "2026-08-26T07:15:06.047040+00:00",
           "changelog": "主文瘦身进 200 行：标题细则并入新增的 references/title.md，红线细节与交棒命令行下沉 references；脚本示例改用安装全路径",
           "changelogSource": "user"
         },

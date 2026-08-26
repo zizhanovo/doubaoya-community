@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T06:13:19.582467+00:00",
+  "generatedAt": "2026-08-26T07:15:11.663102+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -80,6 +80,7 @@
       "a4d72b56310c",
       "b2ccb38b1d96",
       "c820f9aa0c6d",
+      "d5cfe53c21dd",
       "e0ef82da64ee",
       "eeb802ec9c70",
       "fccf378e28ef"
@@ -89,6 +90,7 @@
       "596f05f4d505",
       "5b22bb800679",
       "6c0cb11d4b3b",
+      "842bc271ca8d",
       "94592136ac90",
       "96330502a048",
       "9b545f2f647a",
@@ -151,6 +153,7 @@
       "63c13c5ffbeb",
       "6a04472552de",
       "73f91dda7bd6",
+      "a807c7cef9be",
       "c1227d1f5988",
       "c6ca0ad17c66",
       "d096f50d3a79",
@@ -2262,6 +2265,12 @@
         "version": "1.3.1",
         "date": "2026-08-25",
         "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+      },
+      {
+        "hash": "9f20f18cca31",
+        "version": "1.3.2",
+        "date": "2026-08-25",
+        "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
       }
     ],
     "dby-api": [
