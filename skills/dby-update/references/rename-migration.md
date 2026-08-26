@@ -7,8 +7,9 @@
 不够——用户留在老目录里的本地数据（比如 `dby-publish` 的 `config.json`）会跟着老目录
 一起进归档，用户得自己手动把它挖出来搬过去。改名迁移就是为了把这一步自动化。
 
-- **表在哪**：仓库根 `renames.json`（跟 `versions.json` / `known-hashes.json` 同一层），对账器
-  每次对账都会去拉一份。里面每条是 `旧 slug → { to: 新 slug, userFiles: [...] }`。
+- **表在哪**：仓库根 `index.json` 里 `status: renamed / merged` 的条目（`redirectTo` = 新 slug，`userFiles` 同下），
+  对账器每次对账都会拉索引。索引拉不到时退回旧文件 `renames.json`（每条 `旧 slug → { to, userFiles }`），语义一样。
+  上游目录列表拉不到那一跑（`archiveSuppressed`）改名迁移整条压掉——它最后一步也是归档。
 - **`userFiles` 的语义**：老目录里**属于用户本地数据**的相对路径（文件或以 `/` 结尾的目录）。
   对账器只搬「老目录有、**上游新包没有**的文件」——比如新包自带了 16 套内置主题，老目录里那份
   同名主题**不会**覆盖它；但用户自己加的主题、自己填的 `config.json`，因为新包里没有同名文件，

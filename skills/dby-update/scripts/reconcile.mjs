@@ -9,6 +9,8 @@
 //   node reconcile.mjs --scope global     只对账全局那份（默认 auto：哪儿装了对哪儿）
 //   node reconcile.mjs --json             机器可读输出
 //   node reconcile.mjs --self-check       离线自检（不联网）
+//   node reconcile.mjs --pin <slug> [--reason <为什么>]   把某个包固定在当前版：对账不刷新、不归档、不迁移它
+//   node reconcile.mjs --unpin <slug>     解除固定
 //
 // 它干什么：让本机这套「都爆鸭」skill **等于**上游当前全集——
 //   上游已下架的归档掉、新增的装上、落后当前版的刷新；已经是当前版的一个都不动。
@@ -65,6 +67,8 @@ const REPO = "zizhanovo/doubaoya-community";
 // 合成安装态跑一遍。设了它就以版本表为名单（不再问 GitHub 目录列表）。
 const RAW = process.env.DBY_RAW_BASE || `https://raw.githubusercontent.com/${REPO}/main`;
 const RAW_OVERRIDDEN = Boolean(process.env.DBY_RAW_BASE);
+// 上游元信息的唯一事实源；拉不到时退回下面三份旧文件（过渡期一趟兼容，见 fetchUpstream）。
+const INDEX_URL = `${RAW}/index.json`;
 const VERSIONS_URL = `${RAW}/versions.json`;
 const KNOWN_URL = `${RAW}/known-hashes.json`;
 const RENAMES_URL = `${RAW}/renames.json`;
@@ -114,13 +118,25 @@ export function computeSkillHash(dir) {
  *   historical 命中我们发布过的某个历史版 —— 我们的旧包，可归档可替换
  *   modified   slug 是我们的，但哈希谁都不命中 —— **用户动过手，绝不碰**
  *   foreign    slug 根本不在我们的闭集里 —— 别人的包，绝不碰
+ *
+ * 🔴 有安装记录（`<skill>/.dby/origin.json`，见 readOrigin）时，「用户改过没有」先看它：
+ *    目录哈希 ≠ origin.hash ⇒ modified，**哪怕改完的哈希恰好撞上闭集里某个历史版**——
+ *    闭集只能证明"这内容我们发过"，证不了"这台机器上装的就是那一版"。origin 是装的时候
+ *    写下的，它才知道。没 origin（老版本装的、或用户删了）退回闭集判定，与今天等价。
  */
-export function classify(name, hash, currentHashes, knownHashes) {
+export function classify(name, hash, currentHashes, knownHashes, origin = null) {
   if (!Object.prototype.hasOwnProperty.call(knownHashes, name)) return "foreign";
+  if (origin?.hash && origin.hash !== hash) return "modified";
   if (currentHashes[name] && currentHashes[name] === hash) return "current";
   if (knownHashes[name].includes(hash)) return "historical";
+  // origin 说没动过、闭集却不认识这个哈希：装的那一版没进闭集（发布时漏盖戳）。信 origin——
+  // 它记的就是装下来的哈希；判成"我们的旧版"让它照常刷新，判成 modified 会把它永远卡住。
+  if (origin?.hash === hash) return "historical";
   return "modified";
 }
+
+/** 上游索引里这些状态等于「这个 slug 已经不该以这个名字装在本机」：归档 / 迁移单只认它们。 */
+const GONE_STATUSES = new Set(["retired", "renamed", "merged"]);
 
 /**
  * 三张单子。只有 historical 且上游已下架的才进归档单；
@@ -141,18 +157,32 @@ export function classify(name, hash, currentHashes, knownHashes) {
  *    所以判据是「内容 **且** 落位」：任一受管 agent 目录缺落位 ⇒ 照样进刷新单重装一遍。
  *    opts.expectedAgents 给的是本机受管的 agent 名单（与 targetAgents 同源，装和查必须同一批）；
  *    不给就退回只看内容（纯函数自检里那些没有 dirs 的合成 survey 走的就是这条）。
+ *
+ * 🔴 归档只依据显式状态。`opts.status`（slug → 索引里的 status）给了，就只有
+ *    `retired / renamed / merged` 的进归档单；索引标 active 却不在上游目录名单里的，**不归档**，
+ *    单列进 `inconsistent`（索引与目录不一致，是维护者的事，不是用户机器该承担的动作）。
+ *    不给 `opts.status`（索引拉不到、退回旧文件）才走老的「名单缺席 ⇒ 下架」推断。
+ * 🔴 `opts.archiveSuppressed`：上游目录列表没核到时 fail-closed——归档候选全部改进 `archiveHeld`，
+ *    archive 一定是空的；刷新 / 新增不受影响，它们的依据是索引本身。
  */
 export function planReconcile(installed, upstreamNames, opts = {}) {
   const upstream = new Set(upstreamNames);
+  const status = opts.status || null;
   const archive = [];
+  const inconsistent = [];
   const keep = [];
   const untouched = [];
   for (const item of installed) {
     const { name, state } = item;
     if (state === "foreign" || state === "modified") untouched.push({ name, state });
-    else if (!upstream.has(name)) archive.push(name);
+    else if (status) {
+      if (GONE_STATUSES.has(status[name])) archive.push(name);
+      else if (!upstream.has(name)) inconsistent.push(name);
+      else keep.push(item);
+    } else if (!upstream.has(name)) archive.push(name);
     else keep.push(item);
   }
+  const archiveHeld = opts.archiveSuppressed ? archive.splice(0).sort() : [];
   const present = new Set(installed.map((i) => i.name));
   const add = [...upstream].filter((n) => !present.has(n)).sort();
   // 用户动过手的，连装都不许再装一遍盖掉它
@@ -179,6 +209,27 @@ export function planReconcile(installed, upstreamNames, opts = {}) {
     blocked: [...blocked].sort(),
     gitTracked: [],
     gitUnknown: [],
+    ...(status ? { inconsistent: inconsistent.sort() } : {}),
+    ...(opts.archiveSuppressed ? { archiveHeld } : {}),
+  };
+}
+
+/**
+ * 把用户固定（pin）的包在 planReconcile **之前**从 survey 里摘出来：它们不参与任何单子——
+ * 不刷新、不归档、不迁移，也不能因为"不在 survey 里"而被当成缺失重新装一遍，所以上游名单里
+ * 同样要摘掉。纯函数，返回摘完的 survey / names 和单独一栏 `pinned`（带 pinReason 给预检打印）。
+ */
+export function splitPinned(survey, upstreamNames, lock) {
+  const pins = Object.entries(lock?.skills || {}).filter(([, e]) => e?.pinned);
+  if (!pins.length) return { survey, names: upstreamNames, pinned: [] };
+  const pinnedSet = new Map(pins);
+  const pinned = survey
+    .filter((s) => pinnedSet.has(s.name))
+    .map((s) => ({ name: s.name, state: s.state, hash: s.hash, reason: pinnedSet.get(s.name).pinReason || null }));
+  return {
+    survey: survey.filter((s) => !pinnedSet.has(s.name)),
+    names: upstreamNames.filter((n) => !pinnedSet.has(n)),
+    pinned,
   };
 }
 
@@ -440,28 +491,171 @@ function listSkillDirs(path) {
   }
 }
 
-/** 扫两个安装目录，给每个已装的包定三态。以磁盘为准，不依赖安装记录。 */
+/** 扫两个安装目录，给每个已装的包定三态。以磁盘为准，不依赖 skills CLI 的安装记录；有我们自己写的 origin 就带上。 */
 function surveyScope(scope, currentHashes, knownHashes) {
   const seen = new Map();
   for (const dir of installDirs(scope)) {
     for (const name of listSkillDirs(dir.path)) {
+      const pkgDir = join(dir.path, name);
       let hash;
       try {
-        hash = computeSkillHash(join(dir.path, name));
+        hash = computeSkillHash(pkgDir);
       } catch (err) {
-        throw explainFsError(err, "读取已装 skill", join(dir.path, name));
+        throw explainFsError(err, "读取已装 skill", pkgDir);
       }
-      const state = classify(name, hash, currentHashes, knownHashes);
+      const origin = readOrigin(pkgDir);
+      const state = classify(name, hash, currentHashes, knownHashes, origin);
       const prev = seen.get(name);
       // 同名出现在两个目录：任一处被动过手，就整体按「动过手」保守处理。
-      if (!prev) seen.set(name, { name, hash, state, dirs: [dir] });
+      if (!prev) seen.set(name, { name, hash, state, origin, dirs: [dir] });
       else {
         prev.dirs.push(dir);
         if (state === "modified") prev.state = "modified";
+        if (!prev.origin && origin) prev.origin = origin;
       }
     }
   }
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// ---------------------------------------------------------------- origin / lock / pin
+
+/**
+ * 安装记录放在 skill 目录自己的点目录里：`<skill>/.dby/origin.json {slug, version, hash, ref, installedAt}`。
+ * 点目录不参与内容哈希（hashedFiles 排除所有点开头的路径段，与上游 stamp 同一规则），所以写它不会
+ * 把包变成"用户改过"。随目录走而不是集中放在 lock 里：lock 丢了整批变"来历不明"，origin 只会一个个丢。
+ */
+export function readOrigin(pkgDir) {
+  try {
+    const o = JSON.parse(readFileSync(join(pkgDir, ".dby", "origin.json"), "utf-8"));
+    return o && typeof o.hash === "string" && o.hash ? o : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 装完 / 刷新完写 origin：哈希按**落地的真实内容**算（不抄索引——ref 与索引万一不一致，抄来的哈希会让下一跑把它误判成"用户改过"）。 */
+export function writeOrigin(pkgDir, slug, upstream) {
+  const hash = computeSkillHash(pkgDir);
+  const version = versionOfHash(upstream, slug, hash);
+  const dby = join(pkgDir, ".dby");
+  ensureSelfIgnored(dby); // 用户把 skill 版本化进仓库时，这份记录不该冒出来当未跟踪文件
+  const origin = { slug, version, hash, ref: upstream.ref ?? null, installedAt: new Date().toISOString() };
+  writeFileSync(join(dby, "origin.json"), JSON.stringify(origin, null, 2) + "\n");
+  return origin;
+}
+
+/** 索引里这个 slug、这个哈希对应的 semver；索引没这一版（或退回了旧文件）返回 null。 */
+export function versionOfHash(upstream, slug, hash) {
+  return (upstream?.versions?.[slug] || []).find((v) => v.hash === hash)?.version ?? null;
+}
+
+function scopeRoot(scope) {
+  return scope.kind === "global" ? homedir() : scope.dir;
+}
+
+function lockPath(scope) {
+  return join(scopeRoot(scope), ".dby", "lock.json");
+}
+
+/** scope 根的汇总 `.dby/lock.json {version:1, skills:{slug:{version,hash,installedAt,pinned?,pinReason?}}}`；读不到 / 格式不对当空表。 */
+export function readLock(scope) {
+  try {
+    const lock = JSON.parse(readFileSync(lockPath(scope), "utf-8"));
+    if (lock?.version === 1 && lock.skills && typeof lock.skills === "object") return lock;
+  } catch {
+    /* 没有就是没有 */
+  }
+  return { version: 1, skills: {} };
+}
+
+function writeLock(scope, lock) {
+  const dir = dirname(lockPath(scope));
+  ensureSelfIgnored(dir); // 项目 scope 下它落在用户仓库根，自忽略，不进 git status
+  writeFileSync(lockPath(scope), JSON.stringify(lock, null, 2) + "\n");
+}
+
+const pinFields = (e) => (e?.pinned ? { pinned: true, ...(e.pinReason ? { pinReason: e.pinReason } : {}) } : {});
+
+/**
+ * 每跑重建 lock 的非 pin 字段：以磁盘（survey）为准，origin 有就抄 origin，没有就按目录哈希去索引里找版本号。
+ * pin 字段只从上一份 lock 里**原样继承**——它是用户的意图，不是磁盘现状，对账器无权重算。
+ * 已 pin 但此刻没装的包同样保留：pin 是"别动它"，不是"它必须在"。
+ */
+export function rebuildLock(prev, survey, upstream) {
+  const skills = {};
+  for (const s of survey) {
+    if (s.state === "foreign") continue;
+    skills[s.name] = {
+      version: s.origin?.version ?? versionOfHash(upstream, s.name, s.hash),
+      hash: s.hash,
+      installedAt: s.origin?.installedAt ?? null,
+      ...pinFields(prev?.skills?.[s.name]),
+    };
+  }
+  for (const [slug, e] of Object.entries(prev?.skills || {})) {
+    if (e?.pinned && !skills[slug]) skills[slug] = { version: e.version ?? null, hash: e.hash ?? null, installedAt: e.installedAt ?? null, ...pinFields(e) };
+  }
+  return { version: 1, skills: Object.fromEntries(Object.entries(skills).sort(([a], [b]) => a.localeCompare(b))) };
+}
+
+/**
+ * `--pin` / `--unpin` 子命令：不联网，只改 lock。`--scope auto` 时按"这个包装在哪"选 scope——
+ * 全局、项目都装了就两边都 pin（用户说的是"别动这个包"，不是"别动某一处的这个包"）。
+ */
+function runPinCommand(opts) {
+  const slug = opts.pin || opts.unpin;
+  // pin 只认真装了的包（显式 --scope 也一样）：固定一个不存在的包等于写一条永远不会生效的记录。
+  const scopes = resolvePinScopes(opts, slug).filter(
+    (s) => !opts.pin || installDirs(s).some((d) => existsSync(join(d.path, slug)))
+  );
+  if (!scopes.length) {
+    throw new Friendly(`没在任何受管安装目录里找到 ${slug}，没法固定一个不存在的包。`, "先 --dry-run 看看它装在哪个 scope，或用 --scope / --project-dir 指定。");
+  }
+  const done = [];
+  for (const scope of scopes) {
+    const lock = readLock(scope);
+    if (opts.pin) {
+      const dir = installDirs(scope).map((d) => join(d.path, slug)).find((p) => existsSync(p));
+      const hash = dir ? computeSkillHash(dir) : lock.skills[slug]?.hash ?? null;
+      const origin = dir ? readOrigin(dir) : null;
+      // ponytail: pin 不联网，没 origin 时 version 先记 null；下一次真跑重建 lock 会按哈希去索引里补上。
+      //   升级路径：pin 时也拉一次索引——多一次网络请求换一个此刻用不上的字段，先不做。
+      lock.skills[slug] = {
+        version: origin?.version ?? lock.skills[slug]?.version ?? null,
+        hash,
+        installedAt: origin?.installedAt ?? lock.skills[slug]?.installedAt ?? null,
+        pinned: true,
+        ...(opts.reason ? { pinReason: opts.reason } : {}),
+      };
+    } else if (lock.skills[slug]) {
+      const { pinned, pinReason, ...rest } = lock.skills[slug];
+      lock.skills[slug] = rest;
+    }
+    writeLock(scope, lock);
+    done.push({ scope: scope.label, lock: lockPath(scope) });
+  }
+  if (opts.json) console.log(JSON.stringify({ [opts.pin ? "pinned" : "unpinned"]: slug, reason: opts.reason || null, scopes: done }, null, 2));
+  else {
+    for (const d of done) {
+      console.log(opts.pin ? `📌 已固定 ${slug}（${d.scope}）${opts.reason ? `：${opts.reason}` : ""}` : `已解除固定 ${slug}（${d.scope}）`);
+      console.log(`   记在 ${d.lock}`);
+    }
+    if (opts.pin) console.log(`   之后每次对账都会跳过它（不刷新、不归档、不迁移），预检里单列一栏。想恢复：--unpin ${slug}`);
+    else console.log(`   下次对账它会恢复正常刷新。`);
+  }
+  return 0;
+}
+
+function resolvePinScopes(opts, slug) {
+  const global = { kind: "global", label: "全局（所有项目共用）" };
+  const project = { kind: "project", dir: opts.dir, label: `项目（${opts.dir}）` };
+  if (opts.scope === "global") return [global];
+  if (opts.scope === "project") return [project];
+  // auto：装在哪就 pin 哪；unpin 时 lock 里有它也算
+  return [global, project].filter(
+    (s) => installDirs(s).some((d) => existsSync(join(d.path, slug))) || (opts.unpin && readLock(s).skills[slug])
+  );
 }
 
 // ---------------------------------------------------------------- 上游
@@ -544,25 +738,23 @@ export function installSource(ref) {
  */
 async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
   const notes = [];
-  const versions = await fetchJson(VERSIONS_URL, "拉取上游版本表");
-  const known = await fetchJson(KNOWN_URL, "拉取历史版本闭集");
-  if (!versions?.skills || !known?.skills) throw new Friendly("上游版本表格式不对，先不动你本机的任何东西。");
-  const renames = await fetchRenames(notes);
-
-  const currentHashes = Object.fromEntries(
-    Object.entries(versions.skills).map(([k, v]) => [k, String(v).split("@").pop()])
-  );
-  const knownHashes = known.skills;
+  // 🔴 索引优先，旧三文件兜底。两条路统一成同一个内部结构，后面的代码不再关心元信息从哪来：
+  //    currentHashes / knownHashes / renames 与旧文件语义逐字段一致，status / versions 只有索引那条路有。
+  const meta = (await fetchIndex(notes)) || (await fetchLegacy(notes));
+  const { currentHashes, knownHashes, renames, status, versions, metaSource } = meta;
 
   // 安装源固定：缺字段按老版本表兼容处理（fail-open 到默认分支），但必须说出来。
-  const ref = typeof versions.ref === "string" && versions.ref.trim() ? versions.ref.trim() : null;
-  if (!ref) notes.push("安装源未固定：版本表没有 ref 字段，这次按默认分支 main 安装（装到的是 main 此刻的内容，不一定等于版本表那份快照）。");
+  const ref = meta.ref;
+  if (!ref) notes.push(`安装源未固定：${metaSource === "index" ? "索引" : "版本表"}没有 ref 字段，这次按默认分支 main 安装（装到的是 main 此刻的内容，不一定等于版本表那份快照）。`);
 
+  // 索引模式下"仍在架"= status active；旧文件模式下版本表的键就是全部在架的。
+  const activeNames = status ? Object.keys(status).filter((n) => !GONE_STATUSES.has(status[n])).sort() : Object.keys(currentHashes).sort();
   let names = null;
-  let namesSource = "versions";
+  let namesSource = status ? "index" : "versions";
+  let archiveSuppressed = false;
   if (rawOverridden) {
     namesSource = "override";
-    notes.push(`用的是 DBY_RAW_BASE 指定的上游（${RAW}），名单以版本表为准。`);
+    notes.push(`用的是 DBY_RAW_BASE 指定的上游（${RAW}），名单以${status ? "索引" : "版本表"}为准。`);
   } else {
     try {
       const items = await fetchJson(CONTENTS_API, "拉取上游 skill 目录");
@@ -571,26 +763,110 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
         namesSource = "contents-api";
       }
     } catch (err) {
-      notes.push(`目录列表拉不到（${err.message}），改用版本表的名单——上游目录这一跑没核到，结论会照实标注。`);
+      if (status) {
+        // 🔴 fail-closed 只压归档不压刷新：刷新 / 新增的依据是索引本身，目录列表只是"缺席推断"的证据。
+        archiveSuppressed = true;
+        notes.push(`目录列表拉不到（${err.message}），名单改用索引——上游目录这一跑没核到，本轮不做任何归档，刷新与新增照常。`);
+      } else {
+        notes.push(`目录列表拉不到（${err.message}），改用版本表的名单——上游目录这一跑没核到，结论会照实标注。`);
+      }
     }
   }
-  if (!names) names = Object.keys(currentHashes).sort();
+  if (!names) names = activeNames;
   else {
+    if (status) {
+      // 索引说已下架 / 改名，目录却还在（删目录晚于发索引）：归档以索引为准，不能又把它当"新增"装回来。
+      names = names.filter((n) => !GONE_STATUSES.has(status[n]));
+      const missing = activeNames.filter((n) => !names.includes(n));
+      if (missing.length) notes.push(`索引与目录不一致：${missing.join(", ")} 在索引里是 active，上游目录里却没有——不归档、不刷新，联系维护者。`);
+    }
     const unstamped = names.filter((n) => !currentHashes[n]);
     if (unstamped.length) notes.push(`上游有 ${unstamped.length} 个包还没盖版本戳（${unstamped.join(", ")}），它们只会被装上、不参与新旧判定。`);
   }
   if (!names.length) throw new Friendly("上游清单是空的，这不正常，先不动你本机的任何东西。");
-  return { names, namesSource, ref, currentHashes, knownHashes, renames, notes };
+  return { names, namesSource, archiveSuppressed, metaSource, ref, currentHashes, knownHashes, renames, status, versions, notes };
 }
 
 /**
- * 「无需任何操作」那句结论，按名单来源分三种说法：结论不许高于证据——
+ * 读 `index.json`：slug 为键，每条 `status / knownHashes / versions[]（versions[0] 是当前版）/ redirectTo / userFiles`。
+ * 拉不到或格式不认识返回 null（由调用方退回旧文件），**不中止**——过渡期上游可能还没发索引。
+ */
+async function fetchIndex(notes) {
+  let index;
+  try {
+    index = await fetchJson(INDEX_URL, "拉取上游索引");
+  } catch (err) {
+    notes.push(`上游索引拉不到（${err.message}），退回旧版三文件对账（metaSource: legacy）——这次看不到版本号与变更说明。`);
+    return null;
+  }
+  if (!index || typeof index !== "object" || index.schemaVersion !== 1 || !index.skills || typeof index.skills !== "object") {
+    notes.push("上游索引格式不对或 schemaVersion 不认识，退回旧版三文件对账（metaSource: legacy）。");
+    return null;
+  }
+  const currentHashes = {};
+  const knownHashes = {};
+  const renames = {};
+  const status = {};
+  const versions = {};
+  for (const [slug, entry] of Object.entries(index.skills)) {
+    if (!entry || typeof entry !== "object") continue;
+    status[slug] = typeof entry.status === "string" ? entry.status : "active";
+    knownHashes[slug] = Array.isArray(entry.knownHashes) ? entry.knownHashes.map(String) : [];
+    versions[slug] = Array.isArray(entry.versions) ? entry.versions.filter((v) => v && typeof v.hash === "string") : [];
+    const cur = versions[slug][0];
+    // 闭集必须含当前版：索引生成侧本就保证，这里再兜一手，别让"当前版"落在闭集外变成 modified。
+    if (cur && !knownHashes[slug].includes(cur.hash)) knownHashes[slug].push(cur.hash);
+    if (!GONE_STATUSES.has(status[slug]) && cur) currentHashes[slug] = cur.hash;
+    if ((status[slug] === "renamed" || status[slug] === "merged") && typeof entry.redirectTo === "string") {
+      renames[slug] = { to: entry.redirectTo, userFiles: Array.isArray(entry.userFiles) ? entry.userFiles : [] };
+    }
+  }
+  const ref = typeof index.ref === "string" && index.ref.trim() ? index.ref.trim() : null;
+  return { currentHashes, knownHashes, renames, status, versions, ref, metaSource: "index" };
+}
+
+/** 过渡期兜底：`versions.json` + `known-hashes.json` + `renames.json`，语义与索引出现之前完全一样。 */
+async function fetchLegacy(notes) {
+  const versionsFile = await fetchJson(VERSIONS_URL, "拉取上游版本表");
+  const known = await fetchJson(KNOWN_URL, "拉取历史版本闭集");
+  if (!versionsFile?.skills || !known?.skills) throw new Friendly("上游版本表格式不对，先不动你本机的任何东西。");
+  const renames = await fetchRenames(notes);
+  const currentHashes = Object.fromEntries(
+    Object.entries(versionsFile.skills).map(([k, v]) => [k, String(v).split("@").pop()])
+  );
+  const ref = typeof versionsFile.ref === "string" && versionsFile.ref.trim() ? versionsFile.ref.trim() : null;
+  return { currentHashes, knownHashes: known.skills, renames, status: null, versions: null, ref, metaSource: "legacy" };
+}
+
+/**
+ * 「无需任何操作」那句结论，按名单来源分四种说法：结论不许高于证据——
  * 目录列表没核到就不能说「与上游当前全集完全一致」。
  */
 export function convergedConclusion(namesSource) {
   if (namesSource === "contents-api") return "结论：无需任何操作——本机已经和上游当前全集完全一致。";
-  if (namesSource === "override") return "结论：无需任何操作——按 DBY_RAW_BASE 指定上游的版本表名单对账一致。";
+  if (namesSource === "override") return "结论：无需任何操作——按 DBY_RAW_BASE 指定上游的名单对账一致。";
+  if (namesSource === "index") return "结论：无需任何操作——按索引对账，上游目录未能核对，本轮不归档。";
   return "结论：无需任何操作——按版本表名单对账一致，上游目录未能核对（目录列表没拉到，上游若有还没盖版本戳的新包会漏掉）。";
+}
+
+/**
+ * 预检刷新栏每一行要说的：`slug  旧 semver → 新 semver` + 目标版的 changelog。
+ * 旧版本：本机 origin 记的；没 origin 就拿目录哈希去索引 `versions[]` 里找；找不到 `?`。
+ * 退回旧文件时索引不在场：新版本 `?`、changelog「（无变更说明）」。纯函数，好自检。
+ */
+export function describeRefresh(names, survey, upstream) {
+  return names.map((slug) => {
+    const entry = survey.find((s) => s.name === slug);
+    const cur = upstream.versions?.[slug]?.[0] || null;
+    const from = entry?.origin?.version || versionOfHash(upstream, slug, entry?.hash) || "?";
+    return {
+      slug,
+      from,
+      to: cur?.version || "?",
+      changelog: cur?.changelog || "（无变更说明）",
+      changelogSource: cur ? cur.changelogSource || null : null,
+    };
+  });
 }
 
 // ---------------------------------------------------------------- 归档
@@ -995,12 +1271,20 @@ function parseArgs(argv) {
     else if (a === "--verbose") o.verbose = true;
     else if (a === "--scope") o.scope = argv[++i];
     else if (a === "--project-dir") o.dir = argv[++i];
+    else if (a === "--pin") o.pin = argv[++i];
+    else if (a === "--unpin") o.unpin = argv[++i];
+    else if (a === "--reason") o.reason = argv[++i];
     else if (a === "--help" || a === "-h") o.help = true;
     else throw new Friendly(`不认识的参数：${a}`, "跑 --help 看用法。");
   }
   if (!["auto", "global", "project"].includes(o.scope)) {
     throw new Friendly(`--scope 只能是 auto / global / project，你给的是 ${o.scope}`);
   }
+  if (o.pin && o.unpin) throw new Friendly("--pin 和 --unpin 一次只能用一个。");
+  for (const k of ["pin", "unpin"]) {
+    if (k in o && (!o[k] || o[k].startsWith("--"))) throw new Friendly(`--${k} 后面要跟包名（slug）。`);
+  }
+  if (o.reason !== undefined && !o.pin) throw new Friendly("--reason 只跟 --pin 一起用。");
   return o;
 }
 
@@ -1074,6 +1358,18 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     console.log(`   📦 要归档 ${plan.archive.length} 个（上游已下架；移进归档目录，不删）：`);
     for (const n of plan.archive) console.log(`        - ${n}`);
   }
+  // 🔴 fail-closed 那一栏：索引说该归档，可上游目录没核到——本轮一个都不归档，但要让用户知道它们在等。
+  if (plan.archiveHeld?.length) {
+    console.log(`   ⏸  有 ${plan.archiveHeld.length} 个索引已标下架 / 改名，但这一跑上游目录没核到，本轮不归档（目录能拉到时再归档）：`);
+    for (const n of plan.archiveHeld) console.log(`        · ${n}`);
+  }
+  if (plan.inconsistent?.length) {
+    console.log(`   ⚠️ 有 ${plan.inconsistent.length} 个索引标 active、上游目录里却没有（索引与目录不一致，联系维护者），不归档也不刷新：${plan.inconsistent.join(", ")}`);
+  }
+  if (plan.pinned?.length) {
+    console.log(`   📌 已固定、不动 ${plan.pinned.length} 个（你用 --pin 固定的；不刷新、不归档、不迁移，--unpin 解除）：`);
+    for (const p of plan.pinned) console.log(`        = ${p.name}${p.reason ? `（${p.reason}）` : ""}`);
+  }
   // 🔴 两栏分开说。结论都是「没动」，可原因不同、用户该做的事也完全不同：
   //    上面那栏是「这是你自己版本化的包」，下面那栏是「我判不出来，你的 git 得先修」。
   if (plan.gitTracked?.length) {
@@ -1124,8 +1420,14 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
         ? `   ♻️  要刷新 ${plan.refresh.length} 个（--force-refresh：不分新旧，全部重下一遍）`
         : `   ♻️  要刷新 ${plan.refresh.length} 个（本机这份落后于上游当前版，或者少了一处落位）：`
     );
-    // 🔴 逐项列名：刷新是覆盖安装，用户确认的必须是具体清单，不是一个数字。
-    for (const n of plan.refresh) console.log(`        ↻ ${n}`);
+    // 🔴 逐项列名 + 版本号 + 变更说明：刷新是覆盖安装，用户确认的必须是「哪个包、从哪版到哪版、改了什么」。
+    //    `auto` 是盖戳工具替没写说明的作者生成的占位文案，要标出来，别让用户以为那是作者说的。
+    const info = new Map((plan.refreshInfo || []).map((r) => [r.slug, r]));
+    for (const n of plan.refresh) {
+      const r = info.get(n);
+      if (!r) console.log(`        ↻ ${n}`);
+      else console.log(`        ↻ ${n}  ${r.from} → ${r.to}  ${r.changelog}${r.changelogSource === "auto" ? "［auto：作者未写，占位文案］" : ""}`);
+    }
   }
   // 🔴 单说一句「缺落位」，否则用户看到「内容明明是最新的还要重下」只会以为工具在空转。
   if (plan.misplaced?.length) {
@@ -1175,6 +1477,9 @@ async function main() {
   //    stderr，提示本身并进 JSON 里——不是丢掉，是换个出口。
   jsonMode = opts.json;
 
+  // pin / unpin 不联网、不对账，只改 lock。
+  if (opts.pin || opts.unpin) return runPinCommand(opts);
+
   const upstream = await fetchUpstream();
   for (const n of upstream.notes) say(`提示：${n}`);
   const scopes = resolveScopes(opts, upstream.knownHashes);
@@ -1182,16 +1487,22 @@ async function main() {
   // ---- 先把清单摊开给人看，一个字都还没改
   const report = [];
   for (const scope of scopes) {
-    const survey = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    const fullSurvey = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    // 🔴 pin 过的先摘出去：它们不进任何单子，也不能因为"不在 survey 里"被当成缺失重装。
+    const lock = readLock(scope);
+    const { survey, names: upstreamNames, pinned } = splitPinned(fullSurvey, upstream.names, lock);
     // expectedAgents 与执行时的 targetAgents 同一批：判「缺不缺落位」的尺子，必须就是装的那把尺子。
-    const draft = planReconcile(survey, upstream.names, {
+    const draft = planReconcile(survey, upstreamNames, {
       forceRefresh: opts.forceRefresh,
       expectedAgents: targetAgents(scope),
+      status: upstream.status,
+      archiveSuppressed: upstream.archiveSuppressed,
     });
     // 🔴 改名候选要先从 archive / untouched 里摘出来，再对"剩下的"跑普通归档的 git 检查——
     //    不然一个正在改名迁移的老目录会漏过普通归档的 git 检查（它已经不在 archive 里了），
     //    必须单独再对改名候选跑一遍同样的检查（详见 splitRenameGitTracked）。
-    const withRenames = extractRenames(draft, upstream.renames, upstream.names);
+    //    目录没核到（archiveSuppressed）时改名迁移也压掉：它的最后一步同样是归档老目录。
+    const withRenames = extractRenames(draft, upstream.archiveSuppressed ? {} : upstream.renames, upstreamNames);
     // 🔴 归档之前先问 git：受跟踪的包一律摘出来不动（详见 splitGitTracked）。
     //    只对归档候选跑 git，不是对全部已装包——一次对账最多几十次探测，可忽略。
     const gitSplit = splitGitTracked(withRenames, findGitTracked(withRenames.archive, survey));
@@ -1200,8 +1511,11 @@ async function main() {
     // dry-run 与真跑共用同一套判定（execute:false 只读不写）：这里先把「会搬哪些文件」算出来
     // 挂在计划上，供打印 / --json 用——保证「计划说的」和「真跑做的」永远是同一份代码算出来的。
     plan.renamed = plan.renamed.map((r) => ({ ...r, preview: planRenameMigration(scope, survey, r, { execute: false }) }));
-    const stray = surveyStrayEveDir(scope, upstream.currentHashes, upstream.knownHashes);
-    report.push({ scope, survey, plan, stray });
+    plan.pinned = pinned;
+    plan.refreshInfo = describeRefresh(plan.refresh, survey, upstream);
+    // 遗留副本归档也是归档：目录没核到时一并压掉。
+    const stray = upstream.archiveSuppressed ? null : surveyStrayEveDir(scope, upstream.currentHashes, upstream.knownHashes);
+    report.push({ scope, survey, plan, stray, lock });
   }
 
   // 🔴 刷新一样是「往用户磁盘上写文件」的动作（`skills add` 会原地覆写），不该比归档少一道门。
@@ -1214,7 +1528,7 @@ async function main() {
   );
   // 🔴 自更新提示靠名单判定：本进程没法知道刚落地的新脚本长什么样，「dby-update 在本轮安装名单里」是唯一可靠信号。
   const selfUpdated = report.some((r) => r.plan.add.includes("dby-update") || r.plan.refresh.includes("dby-update"));
-  const meta = { namesSource: upstream.namesSource, installRef: upstream.ref };
+  const meta = { namesSource: upstream.namesSource, metaSource: upstream.metaSource, archiveSuppressed: upstream.archiveSuppressed, installRef: upstream.ref };
   if (!opts.json) {
     console.log(`\n上游现有 ${upstream.names.length} 个 skill；我们发布过的历史版本闭集覆盖 ${Object.keys(upstream.knownHashes).length} 个 slug`);
     for (const { scope, survey, plan, stray } of report) {
@@ -1278,6 +1592,10 @@ async function main() {
       if (upstream.ref) say(`   安装源固定到版本表声明的 ref：${upstream.ref}`);
       try {
         runSkills(["add", installSource(upstream.ref), ...scopeFlag, "-s", ...want, "-a", ...agentsToo, "-y"], cwd);
+        // 装完立刻写 origin：下一跑「用户改过没有」就以它为准，不再只靠闭集猜。
+        for (const slug of want) {
+          for (const dir of uniqueRealDirs(installDirs(scope).map((d) => join(d.path, slug)))) writeOrigin(dir, slug, upstream);
+        }
       } catch (err) {
         // 🔴 归档已经落盘、拉取挂了 ⇒ 先把本 scope 这一轮归档的目录按 manifest 搬回原处，再报错。
         //    复原自己也可能挂：那份归档根照实列出来、附复原命令，原始错误不吞。
@@ -1357,13 +1675,23 @@ async function main() {
 
   // ---- 复核 + 自检
   const results = [];
-  for (const { scope, survey, plan } of report) {
+  for (const { scope, plan, lock } of report) {
     const after = surveyScope(scope, upstream.currentHashes, upstream.knownHashes);
+    // lock 每跑重建非 pin 字段：以磁盘现状为准，pin 原样继承。
+    writeLock(scope, rebuildLock(lock, after, upstream));
     // 受 git 跟踪的是**故意**留在原地的，不算「没归档掉」——否则它每次都把退出码顶成 3，
-    // 谁把 skill 版本化进仓库谁就永远看到一次假红。
-    const kept = new Set([...plan.gitTracked, ...plan.gitUnknown]);
+    // 谁把 skill 版本化进仓库谁就永远看到一次假红。pin 的、目录没核到而压住的、索引不一致的同理。
+    const kept = new Set([
+      ...plan.gitTracked,
+      ...plan.gitUnknown,
+      ...(plan.pinned || []).map((p) => p.name),
+      ...(plan.archiveHeld || []),
+      ...(plan.inconsistent || []),
+    ]);
+    // 归档是否该发生只看索引状态（有索引时）；没索引才按名单缺席推断。
+    const shouldBeGone = (name) => (upstream.status ? GONE_STATUSES.has(upstream.status[name]) : !upstream.names.includes(name));
     const stillStale = after
-      .filter((s) => s.state === "historical" && !upstream.names.includes(s.name) && !kept.has(s.name))
+      .filter((s) => s.state === "historical" && shouldBeGone(s.name) && !kept.has(s.name))
       .map((s) => s.name);
     const keptModified = plan.untouched
       .filter((u) => u.state === "modified")
@@ -1474,6 +1802,11 @@ async function main() {
   );
   if (upstream.namesSource === "versions") {
     console.log(`   （这一跑上游目录列表没拉到，名单以版本表为准；上游若有还没盖版本戳的新包，这次没核到。）`);
+  } else if (upstream.namesSource === "index") {
+    console.log(`   （这一跑上游目录列表没拉到，按索引对账，上游目录未能核对，本轮没做任何归档；目录能拉到时再跑一次。）`);
+  }
+  if (upstream.metaSource === "legacy") {
+    console.log(`   （上游索引没拉到，这次是按旧版三文件对账的：看不到版本号与变更说明，其余判定不受影响。）`);
   }
   // 🔴 自己被刷新了：本进程跑的仍是旧版逻辑（不 re-exec，见文件头），新逻辑要下一跑才生效。
   if (selfUpdated) {
@@ -1482,8 +1815,16 @@ async function main() {
   return allOk ? 0 : 3;
 }
 
+/**
+ * `--json` 的形状：scope 只留 label；`plan.refresh` 对外是对象数组 `{slug, from, to, changelog, changelogSource}`
+ * （内部各处仍按名字数组传，只在出口这一处换形状，避免几十个 caller 跟着改）。lock 是磁盘上的东西，不进 JSON。
+ */
 function stripScope(r) {
-  const { scope, ...rest } = r;
+  const { scope, lock, ...rest } = r;
+  if (rest.plan) {
+    const { refreshInfo, ...plan } = rest.plan;
+    rest.plan = { ...plan, refresh: refreshInfo || plan.refresh.map((slug) => ({ slug })) };
+  }
   return { scope: scope.label, ...rest };
 }
 
@@ -1898,7 +2239,9 @@ function refreshScopeCheck() {
       return null;
     }
     try {
-      return JSON.parse(res.stdout).report[0].plan;
+      const plan = JSON.parse(res.stdout).report[0].plan;
+      // --json 里 refresh 是对象数组（slug/from/to/changelog）；这条自检只关心名字。
+      return { ...plan, refresh: plan.refresh.map((r) => r.slug) };
     } catch (err) {
       fails.push(`${label}: 读不出计划（${err.message}）`);
       return null;
@@ -2406,6 +2749,29 @@ function renameMigrationCheck() {
  */
 function refreshListCheck() {
   const fails = [];
+  // describeRefresh 纯函数：origin 优先 → 哈希在 versions[] 里找 → `?`；legacy（无 versions）时 to=? 且 changelog 是占位句。
+  const upstream = {
+    versions: {
+      "pkg-one": [{ version: "1.1.0", hash: "new1", changelog: "修了封面", changelogSource: "user" }, { version: "1.0.0", hash: "old1" }],
+      "pkg-two": [{ version: "2.0.0", hash: "new2", changelog: "契约变更（自动生成）", changelogSource: "auto" }],
+    },
+  };
+  const survey = [
+    { name: "pkg-one", hash: "old1" }, // 没 origin，靠哈希在 versions[] 里找到 1.0.0
+    { name: "pkg-two", hash: "zzz", origin: { version: "1.9.9", hash: "zzz" } }, // 有 origin，哈希不在 versions[] 里也认
+    { name: "pkg-three", hash: "nope" }, // 谁都找不到 ⇒ ?
+  ];
+  const info = describeRefresh(["pkg-one", "pkg-two", "pkg-three"], survey, upstream);
+  const eq = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`刷新栏 · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  };
+  eq("无 origin 按哈希找旧版", info[0], { slug: "pkg-one", from: "1.0.0", to: "1.1.0", changelog: "修了封面", changelogSource: "user" });
+  eq("有 origin 用 origin 的版本", [info[1].from, info[1].to, info[1].changelogSource], ["1.9.9", "2.0.0", "auto"]);
+  eq("找不到旧版显示 ?，索引没这个包时 to 也是 ?", [info[2].from, info[2].to, info[2].changelog], ["?", "?", "（无变更说明）"]);
+  eq("legacy（无 versions）时 changelog 是「（无变更说明）」", describeRefresh(["pkg-one"], survey, { versions: null })[0], {
+    slug: "pkg-one", from: "?", to: "?", changelog: "（无变更说明）", changelogSource: null,
+  });
+
   const lines = [];
   const original = console.log;
   console.log = (...args) => lines.push(args.join(" "));
@@ -2413,18 +2779,128 @@ function refreshListCheck() {
     printPlan(
       { label: "自检 scope" },
       [],
-      { archive: [], add: [], refresh: ["pkg-one", "pkg-two"], upToDate: [], untouched: [], blocked: [], gitTracked: [], gitUnknown: [] },
+      { archive: [], add: [], refresh: ["pkg-one", "pkg-two", "pkg-three"], refreshInfo: info, upToDate: [], untouched: [], blocked: [], gitTracked: [], gitUnknown: [] },
       {},
       0
     );
   } finally {
     console.log = original;
   }
-  const head = lines.findIndex((l) => l.includes("要刷新 2 个"));
+  const head = lines.findIndex((l) => l.includes("要刷新 3 个"));
   if (head < 0) return [`预检列名 · 没有「要刷新 N 个」抬头：${JSON.stringify(lines)}`];
-  for (const n of ["pkg-one", "pkg-two"]) {
-    if (!lines.slice(head + 1).some((l) => l.trim().endsWith(n))) fails.push(`🔴 预检列名 · 刷新栏只报了数、没列出 ${n}：${JSON.stringify(lines.slice(head))}`);
+  const body = lines.slice(head + 1);
+  const line = (n) => body.find((l) => l.includes(`↻ ${n}`));
+  for (const n of ["pkg-one", "pkg-two", "pkg-three"]) {
+    if (!line(n)) fails.push(`🔴 预检列名 · 刷新栏只报了数、没列出 ${n}：${JSON.stringify(body)}`);
   }
+  // 🔴 每行都得有「旧 → 新」和 changelog；auto 来源要标出来，user 来源不许误标
+  if (!line("pkg-one")?.includes("1.0.0 → 1.1.0") || !line("pkg-one")?.includes("修了封面")) fails.push(`🔴 刷新栏 · 没打「旧semver → 新semver + changelog」：${line("pkg-one")}`);
+  if (line("pkg-one")?.includes("auto")) fails.push(`刷新栏 · user 来源的 changelog 被标成了 auto：${line("pkg-one")}`);
+  if (!line("pkg-two")?.includes("auto")) fails.push(`🔴 刷新栏 · auto 占位文案没标注来源：${line("pkg-two")}`);
+  if (!line("pkg-three")?.includes("? → ?")) fails.push(`刷新栏 · 找不到版本时该显示 ?：${line("pkg-three")}`);
+  return fails;
+}
+
+/**
+ * 🔴 索引双读：只换 `globalThis.fetch`，让 fetchUpstream 真跑。
+ *   ① index.json 200 ⇒ metaSource=index；currentHashes 只含 active 的 versions[0].hash；renamed/merged 变成 renames 表；
+ *      knownHashes 含 retired 的闭集；不再请求三份旧文件。
+ *   ② index.json 404 ⇒ metaSource=legacy，退回三旧文件，notes 标注。
+ *   ③ 索引模式下 Contents API 403 ⇒ namesSource=index、archiveSuppressed=true、结论按 spec 文案；
+ *      Contents API 正常 ⇒ namesSource=contents-api、archiveSuppressed=false，且索引说 retired 的目录哪怕还在也不进名单。
+ * 前提同 namesSourceAndTokenCheck：进程里没设 DBY_RAW_BASE。
+ */
+async function indexFetchCheck() {
+  const fails = [];
+  if (RAW_OVERRIDDEN) return ["索引双读 · 这条自检要在没设 DBY_RAW_BASE 的环境下跑"];
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  const index = {
+    schemaVersion: 1,
+    ref: "release-20260825-0000",
+    skills: {
+      dby: { status: "active", knownHashes: ["aaaaaaaaaaaa", "bbbbbbbbbbbb"], versions: [{ version: "1.1.0", hash: "bbbbbbbbbbbb", changelog: "x", changelogSource: "user" }] },
+      "old-name": { status: "renamed", redirectTo: "dby", userFiles: ["config.json"], knownHashes: ["cccccccccccc"], versions: [] },
+      gone: { status: "retired", knownHashes: ["dddddddddddd"], versions: [] },
+    },
+  };
+  const serve = ({ indexStatus, contentsStatus, dirs }) => async (url) => {
+    calls.push(url);
+    if (url === INDEX_URL) return indexStatus === 200 ? new Response(JSON.stringify(index), { status: 200 }) : new Response("nope", { status: indexStatus });
+    if (url === CONTENTS_API) {
+      return contentsStatus === 200 ? new Response(JSON.stringify(dirs.map((name) => ({ type: "dir", name }))), { status: 200 }) : new Response("rate limited", { status: contentsStatus });
+    }
+    if (url === VERSIONS_URL) return new Response(JSON.stringify({ ref: "release-legacy", skills: { dby: "doubaoya-skill/dby@aaaaaaaaaaaa" } }), { status: 200 });
+    if (url === KNOWN_URL) return new Response(JSON.stringify({ skills: { dby: ["aaaaaaaaaaaa"] } }), { status: 200 });
+    return new Response("nope", { status: 404 });
+  };
+  const eq = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`索引双读 · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  };
+  try {
+    // ① 索引在
+    globalThis.fetch = serve({ indexStatus: 200, contentsStatus: 200, dirs: ["dby", "gone", "fresh"] });
+    const idx = await fetchUpstream();
+    eq("metaSource", idx.metaSource, "index");
+    eq("currentHashes 只含 active 的当前版", idx.currentHashes, { dby: "bbbbbbbbbbbb" });
+    eq("knownHashes 含 retired / renamed 的闭集", Object.keys(idx.knownHashes).sort(), ["dby", "gone", "old-name"]);
+    eq("renamed 条目变成 renames 表", idx.renames, { "old-name": { to: "dby", userFiles: ["config.json"] } });
+    eq("status 表", idx.status, { dby: "active", "old-name": "renamed", gone: "retired" });
+    eq("ref 取索引顶层", idx.ref, "release-20260825-0000");
+    eq("namesSource", idx.namesSource, "contents-api");
+    eq("archiveSuppressed", idx.archiveSuppressed, false);
+    eq("🔴 索引标 retired 的目录哪怕还在上游也不进名单（否则归档完又装回来）", idx.names, ["dby", "fresh"]);
+    if (calls.some((u) => u === VERSIONS_URL || u === KNOWN_URL || u === RENAMES_URL)) fails.push(`索引双读 · 索引在的时候还去拉了旧文件：${JSON.stringify(calls)}`);
+
+    // ③ 索引在、目录 403 ⇒ fail-closed 只压归档
+    calls.length = 0;
+    globalThis.fetch = serve({ indexStatus: 200, contentsStatus: 403 });
+    const held = await fetchUpstream();
+    eq("目录 403 时 namesSource", held.namesSource, "index");
+    eq("🔴 目录 403 时 archiveSuppressed", held.archiveSuppressed, true);
+    eq("目录 403 时名单 = 索引 active", held.names, ["dby"]);
+    if (!held.notes.some((n) => n.includes("不做任何归档"))) fails.push(`索引双读 · 目录 403 的提示没说「不归档」：${JSON.stringify(held.notes)}`);
+    eq("目录 403 的结论文案", convergedConclusion("index"), "结论：无需任何操作——按索引对账，上游目录未能核对，本轮不归档。");
+
+    // 索引 active 但目录里没有 ⇒ 只出 note
+    globalThis.fetch = serve({ indexStatus: 200, contentsStatus: 200, dirs: ["fresh"] });
+    const drift = await fetchUpstream();
+    if (!drift.notes.some((n) => n.includes("索引与目录不一致") && n.includes("dby"))) fails.push(`索引双读 · active 却缺目录没出「索引与目录不一致」提示：${JSON.stringify(drift.notes)}`);
+
+    // ② 索引 404 ⇒ legacy
+    calls.length = 0;
+    globalThis.fetch = serve({ indexStatus: 404, contentsStatus: 200, dirs: ["dby"] });
+    const legacy = await fetchUpstream();
+    eq("🔴 索引 404 时 metaSource", legacy.metaSource, "legacy");
+    eq("legacy 的 currentHashes 来自 versions.json", legacy.currentHashes, { dby: "aaaaaaaaaaaa" });
+    eq("legacy 的 ref 来自 versions.json", legacy.ref, "release-legacy");
+    eq("legacy 没有 status / versions", [legacy.status, legacy.versions], [null, null]);
+    if (!legacy.notes.some((n) => n.includes("legacy"))) fails.push(`索引双读 · 退回旧文件没在 notes 标注 legacy：${JSON.stringify(legacy.notes)}`);
+    if (!calls.includes(VERSIONS_URL) || !calls.includes(KNOWN_URL)) fails.push(`索引双读 · 索引 404 后没去拉旧文件：${JSON.stringify(calls)}`);
+  } catch (err) {
+    fails.push(`索引双读 · 自检自身抛错：${err?.message || err}`);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+
+  // 归档只依据显式状态（纯函数三例）
+  const installed = [
+    { name: "gone", state: "historical" },
+    { name: "active-missing", state: "historical" },
+    { name: "dby", state: "current" },
+  ];
+  const status = { gone: "retired", "active-missing": "active", dby: "active" };
+  const byStatus = planReconcile(installed, ["dby"], { status });
+  eq("索引标 retired 且命中闭集 ⇒ 归档", byStatus.archive, ["gone"]);
+  eq("🔴 索引 active 但目录缺失 ⇒ 不归档，单列 inconsistent", [byStatus.inconsistent, byStatus.refresh], [["active-missing"], []]);
+  const suppressed = planReconcile(installed, ["dby"], { status, archiveSuppressed: true });
+  eq("🔴 目录没核到 ⇒ archive 为空", suppressed.archive, []);
+  eq("目录没核到 ⇒ 归档候选进 archiveHeld", suppressed.archiveHeld, ["gone"]);
+  const stillRefresh = planReconcile([{ name: "dby", state: "historical" }], ["dby"], { status, archiveSuppressed: true });
+  eq("目录没核到 ⇒ 刷新照常", stillRefresh.refresh, ["dby"]);
+  eq("目录没核到 ⇒ 新增照常", planReconcile([], ["dby"], { status, archiveSuppressed: true }).add, ["dby"]);
+  // 没 status（legacy）⇒ 老的缺席推断原样保留
+  eq("legacy 仍按名单缺席归档", planReconcile(installed, ["dby"], {}).archive, ["active-missing", "gone"]);
   return fails;
 }
 
@@ -2620,6 +3096,124 @@ function restoreArchiveCheck() {
   return fails;
 }
 
+/**
+ * 🔴 origin / lock / pin 全链路实证，真读真写：
+ *   4.1 装完（假 npx 真把新内容写进目录）`<skill>/.dby/origin.json` 在场，hash = 索引 versions[0].hash，且目录哈希不因这个文件改变；
+ *   4.2 scope 根 `.dby/lock.json` 条数与 origin 一致、字段一致；
+ *   4.3 用户把文件改回**恰好命中闭集**的历史版：origin 在场 ⇒ 仍判 modified（闭集会说 historical，那是错的）；
+ *   4.4 --pin 后上游再出新版：预检单列「已固定」并带原因、执行后目录不动、npx 没收到它；--unpin 后恢复刷新。
+ */
+function originLockPinCheck() {
+  const fails = [];
+  const root = mkdtempSync(join(tmpdir(), "dby-origin-selfcheck-"));
+  const bin = mkdtempSync(join(tmpdir(), "dby-origin-npx-"));
+  const marker = join(bin, "called.log");
+  const pkg = join(root, ".claude", "skills", "some-skill");
+  const eq = (label, got, want) => {
+    if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`origin/lock/pin · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+  };
+  try {
+    const OLD = "---\nname: some-skill\n---\nv1\n";
+    const NEW = "---\nname: some-skill\n---\nv2\n";
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(join(pkg, "SKILL.md"), OLD);
+    const oldHash = computeSkillHash(pkg);
+    writeFileSync(join(pkg, "SKILL.md"), NEW);
+    const newHash = computeSkillHash(pkg);
+    writeFileSync(join(pkg, "SKILL.md"), OLD);
+    // 假 npx：add 时真把"新版内容"写进目录（模拟 skills CLI 落盘），其余只记参数。
+    writeFileSync(
+      join(bin, "npx"),
+      `#!/bin/sh\necho "$@" >> '${marker}'\ncase " $* " in *" add "*) printf -- '${NEW.replace(/\n/g, "\\n")}' > '${join(pkg, "SKILL.md")}';; esac\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    const writeIndex = (versions) =>
+      writeFileSync(
+        join(root, "index.json"),
+        JSON.stringify({ schemaVersion: 1, ref: "release-x", skills: { "some-skill": { status: "active", knownHashes: [oldHash, newHash, "ffffffffffff"], versions } } })
+      );
+    writeIndex([{ version: "1.1.0", hash: newHash, changelog: "第二版", changelogSource: "user" }, { version: "1.0.0", hash: oldHash, changelog: "首版", changelogSource: "auto" }]);
+    const run = (args) =>
+      spawnSync(process.execPath, [SELF_PATH, "--scope", "project", "--project-dir", root, ...args], {
+        encoding: "utf-8",
+        env: { ...process.env, DBY_RAW_BASE: root, PATH: `${bin}:${process.env.PATH}` },
+      });
+    const parse = (res, label) => {
+      try {
+        return JSON.parse(res.stdout);
+      } catch (err) {
+        fails.push(`origin/lock/pin · ${label} 的 stdout 不是 JSON（${err.message}）：${(res.stderr || "").trim().split("\n").pop()}`);
+        return null;
+      }
+    };
+
+    // 预检：刷新栏带版本号与 changelog（无 origin ⇒ 旧版靠哈希在 versions[] 里找到 1.0.0）
+    const pre = parse(run(["--dry-run", "--json"]), "预检");
+    eq("--json refresh 是对象数组", pre?.report?.[0]?.plan?.refresh, [{ slug: "some-skill", from: "1.0.0", to: "1.1.0", changelog: "第二版", changelogSource: "user" }]);
+    eq("metaSource=index", pre?.metaSource, "index");
+    const preText = run(["--dry-run"]).stdout;
+    if (!preText.includes("some-skill  1.0.0 → 1.1.0  第二版")) fails.push(`🔴 预检刷新栏没打「slug 旧 → 新 changelog」：${JSON.stringify(preText.slice(-500))}`);
+
+    // 4.1 装完写 origin，且不影响目录哈希
+    parse(run(["--yes", "--json"]), "首次刷新");
+    const originPath = join(pkg, ".dby", "origin.json");
+    if (!existsSync(originPath)) fails.push("🔴 origin · 刷新后 <skill>/.dby/origin.json 没写");
+    const origin = readOrigin(pkg);
+    eq("origin.hash = 索引 versions[0].hash", origin?.hash, newHash);
+    eq("origin.version", origin?.version, "1.1.0");
+    eq("origin.slug / ref", [origin?.slug, origin?.ref], ["some-skill", "release-x"]);
+    if (!origin?.installedAt) fails.push("origin · 没写 installedAt");
+    eq("🔴 目录哈希不因 .dby/origin.json 改变", computeSkillHash(pkg), newHash);
+    // 4.2 lock 与 origin 一致
+    const lock = readLock({ kind: "project", dir: root });
+    eq("lock 条数 = origin 条数", Object.keys(lock.skills), ["some-skill"]);
+    eq("lock 条目与 origin 一致", [lock.skills["some-skill"]?.version, lock.skills["some-skill"]?.hash, lock.skills["some-skill"]?.installedAt], [origin?.version, origin?.hash, origin?.installedAt]);
+    if (!existsSync(join(root, ".dby", ".gitignore"))) fails.push("lock · 项目根 .dby/ 没自忽略，会冒进用户 git status");
+    // 收敛：再跑是零动作
+    const again = parse(run(["--dry-run", "--json"]), "收敛态");
+    eq("装完再跑零动作", [again?.report?.[0]?.plan?.refresh, again?.report?.[0]?.plan?.upToDate], [[], ["some-skill"]]);
+
+    // 4.3 改回恰好命中闭集的历史版：origin 说不是它装的那份 ⇒ modified
+    writeFileSync(join(pkg, "SKILL.md"), OLD);
+    eq("🔴 纯函数：origin 在场时哈希撞闭集仍是 modified", classify("some-skill", oldHash, { "some-skill": newHash }, { "some-skill": [oldHash, newHash] }, origin), "modified");
+    eq("纯函数：没 origin 时退回闭集 ⇒ historical", classify("some-skill", oldHash, { "some-skill": newHash }, { "some-skill": [oldHash, newHash] }, null), "historical");
+    const touched = parse(run(["--dry-run", "--json"]), "改过后");
+    eq("🔴 全链路：改回历史版仍判「你改过」，不进刷新单", [touched?.report?.[0]?.survey?.[0]?.state, touched?.report?.[0]?.plan?.refresh], ["modified", []]);
+    writeFileSync(join(pkg, "SKILL.md"), NEW);
+
+    // 4.4 pin：上游再出新版，被 pin 的不动
+    writeIndex([{ version: "1.2.0", hash: "ffffffffffff", changelog: "第三版", changelogSource: "user" }, { version: "1.1.0", hash: newHash }, { version: "1.0.0", hash: oldHash }]);
+    const pinRes = run(["--pin", "some-skill", "--reason", "自己要留着这版"]);
+    if (pinRes.status !== 0) fails.push(`pin · 子命令跑挂了（退出码 ${pinRes.status}）：${(pinRes.stderr || "").trim()}`);
+    eq("pin 记进 lock", [readLock({ kind: "project", dir: root }).skills["some-skill"]?.pinned, readLock({ kind: "project", dir: root }).skills["some-skill"]?.pinReason], [true, "自己要留着这版"]);
+    const pinnedPlan = parse(run(["--dry-run", "--json"]), "pin 后预检")?.report?.[0]?.plan;
+    eq("🔴 pin 后不进刷新单", pinnedPlan?.refresh, []);
+    eq("pin 后单列一栏并带原因", pinnedPlan?.pinned, [{ name: "some-skill", state: "historical", hash: newHash, reason: "自己要留着这版" }]);
+    eq("pin 的不能被当成缺失重新装", pinnedPlan?.add, []);
+    const pinnedText = run(["--dry-run"]).stdout;
+    if (!pinnedText.includes("已固定") || !pinnedText.includes("自己要留着这版")) fails.push(`🔴 pin · 预检没打「已固定、不动」栏或没带原因：${JSON.stringify(pinnedText.slice(-400))}`);
+    rmSync(marker, { force: true });
+    parse(run(["--yes", "--json"]), "pin 后真跑");
+    eq("🔴 pin 后执行目录哈希不变", computeSkillHash(pkg), newHash);
+    if (existsSync(marker) && readFileSync(marker, "utf-8").includes("some-skill")) fails.push(`🔴 pin · 执行时 npx 还是收到了被固定的包：${readFileSync(marker, "utf-8").trim()}`);
+    eq("真跑重建 lock 后 pin 原样继承", readLock({ kind: "project", dir: root }).skills["some-skill"]?.pinned, true);
+    // unpin
+    const unpinRes = run(["--unpin", "some-skill"]);
+    if (unpinRes.status !== 0) fails.push(`unpin · 子命令跑挂了（退出码 ${unpinRes.status}）：${(unpinRes.stderr || "").trim()}`);
+    const afterUnpin = readLock({ kind: "project", dir: root }).skills["some-skill"];
+    if (!afterUnpin || "pinned" in afterUnpin || "pinReason" in afterUnpin) fails.push(`unpin · lock 里还留着 pinned/pinReason：${JSON.stringify(afterUnpin)}`);
+    const unpinnedPlan = parse(run(["--dry-run", "--json"]), "unpin 后预检")?.report?.[0]?.plan;
+    eq("🔴 unpin 后恢复刷新", unpinnedPlan?.refresh?.map((r) => r.slug), ["some-skill"]);
+    eq("unpin 后刷新栏的旧版来自 origin", [unpinnedPlan?.refresh?.[0]?.from, unpinnedPlan?.refresh?.[0]?.to], ["1.1.0", "1.2.0"]);
+    // pin 一个没装的包要报错，不能默默写一条
+    if (run(["--pin", "not-installed"]).status === 0) fails.push("pin · 固定一个没装的包居然成功了");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(bin, { recursive: true, force: true });
+  }
+  return fails;
+}
+
 async function runSelfCheck() {
   const fails = [];
   const eq = (label, got, want) => {
@@ -2706,6 +3300,8 @@ async function runSelfCheck() {
   fails.push(...(await namesSourceAndTokenCheck()));
   fails.push(...installRefAndSelfUpdateCheck());
   fails.push(...restoreArchiveCheck());
+  fails.push(...(await indexFetchCheck()));
+  fails.push(...originLockPinCheck());
 
   // 🔴 改名迁移（renames.json）：纯函数层先钉 extractRenames / splitRenameGitTracked，
   // 再用真读真写的 fixture 钉全链路——两层缺一不可，纯函数层快但证不了"真跑起来对不对"，
@@ -2776,7 +3372,12 @@ async function runSelfCheck() {
       "改名迁移 renames.json：空表/缺表/非法表退化一致、historical 与 modified 老包都能摘进改名候选、" +
       "to 未上线时不贸然搬家、受跟踪与判不出的改名候选单列不动、" +
       "真实文件系统上 config.json / profiles 逐字节搬对、上游新包自带的同名文件不被覆盖、" +
-      "新目录已有同名文件时冲突不覆盖也不挡住老目录归档、二次运行幂等）"
+      "新目录已有同名文件时冲突不覆盖也不挡住老目录归档、二次运行幂等、" +
+      "索引双读：index.json 优先且不再拉旧文件、404 退回三旧文件并标 metaSource=legacy、归档只认 retired/renamed/merged、" +
+      "索引 active 而目录缺失只出提示、目录列表拉不到时 archiveSuppressed 且 archive 为空而刷新新增照常、" +
+      "刷新栏每行「slug 旧 → 新 + changelog」且 auto 标注、--json refresh 为对象数组、" +
+      "装完写 <skill>/.dby/origin.json 且目录哈希不变、scope 根 .dby/lock.json 与 origin 一致、" +
+      "origin 在场时改回闭集历史版仍判 modified、--pin 后预检单列且执行不动、--unpin 后恢复刷新）"
   );
   return 0;
 }
