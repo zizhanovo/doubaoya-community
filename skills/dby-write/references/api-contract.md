@@ -19,7 +19,7 @@
 
 ## 交棒给 dby-publish 的两条命令行（SKILL.md 交棒节）
 
-终态门以 `dby-api/references/wechat-routing.json` 为准。
+用户只要成稿就到此为止，不交棒；终态未明先问一句。
 ② ③ 都先把成稿落盘 `.md`（正文，不含标题）再交棒。
 
 **② 只要排版好的 HTML**（`--render-only`：渲染免费，**不需要绑公众号**）：

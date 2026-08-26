@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:01:22.457625+00:00",
+  "generatedAt": "2026-08-26T08:01:24.072986+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1804,6 +1804,12 @@
           "version": "1.4.0",
           "date": "2026-08-25",
           "subject": "fix(dby-theme): 改主题会就地覆写用户线上默认排版且没有备份 —— 加红线 4「不备份不改」与回滚命令"
+        },
+        {
+          "hash": "d9b79a294633",
+          "version": "1.4.1",
+          "date": "2026-08-26",
+          "subject": "fix(dby-theme): 终态纪律改成本地一句话，不再引用他包的路由判据文件"
         }
       ]
     },
@@ -2138,6 +2144,7 @@
         "69a7b400b468",
         "7091f1189cf1",
         "78f1efdf04ad",
+        "7b2ebef991b0",
         "acc07fe1a5e9",
         "b40023ac688b",
         "cadb7e558fce",
