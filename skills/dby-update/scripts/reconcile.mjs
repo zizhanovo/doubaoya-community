@@ -1040,17 +1040,33 @@ export function convergedConclusion(namesSource, sources = null) {
  * 旧版本：本机 origin 记的；没 origin 就拿目录哈希去索引 `versions[]` 里找；找不到 `?`。
  * 退回旧文件时索引不在场：新版本 `?`、changelog「（无变更说明）」。纯函数，好自检。
  */
+/** 刷新一行的打印：`↻ slug 旧 → 新  changelog`，隔了多版时把中间每一版缩进列在下面（最多 8 版，再多折叠）。 */
+function printRefreshLine(d, pad = "        ") {
+  const autoTag = (src) => (src === "auto" ? "［auto：作者未写，占位文案］" : "");
+  console.log(`${pad}↻ ${d.slug}  ${d.from} → ${d.to}  ${d.changelog}${autoTag(d.changelogSource)}`);
+  const between = d.between || [];
+  for (const v of between.slice(0, 8)) console.log(`${pad}     · ${v.version}  ${v.changelog}${autoTag(v.changelogSource)}`);
+  if (between.length > 8) console.log(`${pad}     · …还有 ${between.length - 8} 版（--json 里全有）`);
+}
+
 export function describeRefresh(names, survey, upstream) {
   return names.map((slug) => {
     const entry = survey.find((s) => s.name === slug);
-    const cur = upstream.versions?.[slug]?.[0] || null;
+    const list = upstream.versions?.[slug] || [];
+    const cur = list[0] || null;
     const from = entry?.origin?.version || versionOfHash(upstream, slug, entry?.hash) || "?";
+    // 🔴 隔了好几版才更新的用户，只看最新一版的 changelog 会漏掉中间每一版改了什么：
+    //    把「本机这版之后、当前版之前」的每一版都带出来（新→旧），本机这版在索引里找不到就只给当前版。
+    let at = entry?.hash ? list.findIndex((v) => v.hash === entry.hash) : -1;
+    if (at < 0 && entry?.origin?.version) at = list.findIndex((v) => v.version === entry.origin.version);
+    const between = at > 1 ? list.slice(1, at).map((v) => ({ version: v.version, changelog: v.changelog || "（无变更说明）", changelogSource: v.changelogSource || null })) : [];
     return {
       slug,
       from,
       to: cur?.version || "?",
       changelog: cur?.changelog || "（无变更说明）",
       changelogSource: cur ? cur.changelogSource || null : null,
+      between,
     };
   });
 }
@@ -1637,7 +1653,7 @@ function printPlan(scope, survey, plan, opts, upstreamCount) {
     for (const n of plan.refresh) {
       const r = info.get(n);
       if (!r) console.log(`        ↻ ${n}`);
-      else console.log(`        ↻ ${n}  ${r.from} → ${r.to}  ${r.changelog}${r.changelogSource === "auto" ? "［auto：作者未写，占位文案］" : ""}`);
+      else printRefreshLine(r);
     }
   }
   // 🔴 单说一句「缺落位」，否则用户看到「内容明明是最新的还要重下」只会以为工具在空转。
@@ -1945,9 +1961,7 @@ async function main() {
     //    刷新/新增按「slug 旧 → 新  changelog」列，与预检同一格式；收敛态列一行各包版本，回答「现在都是几」。
     for (const n of r.plan.archive) console.log(`        📦 ${n}  已归档`);
     for (const d of describeRefresh(r.plan.add, [], upstream)) console.log(`        + ${d.slug}  ${d.to}  ${d.changelog}`);
-    for (const d of describeRefresh(r.plan.refresh, r.survey || [], upstream)) {
-      console.log(`        ↻ ${d.slug}  ${d.from} → ${d.to}  ${d.changelog}${d.changelogSource === "auto" ? "［auto］" : ""}`);
-    }
+    for (const d of describeRefresh(r.plan.refresh, r.survey || [], upstream)) printRefreshLine(d);
     const current = r.after.filter((s) => s.state === "current").map((s) => `${s.name} ${versionOfHash(upstream, s.name, s.hash) ?? "?"}`);
     if (current.length) console.log(`   版本：${current.join(" · ")}`);
     if (r.plan.gitTracked.length) {
@@ -2990,11 +3004,22 @@ function refreshListCheck() {
   const eq = (label, got, want) => {
     if (JSON.stringify(got) !== JSON.stringify(want)) fails.push(`刷新栏 · ${label}: got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
   };
-  eq("无 origin 按哈希找旧版", info[0], { slug: "pkg-one", from: "1.0.0", to: "1.1.0", changelog: "修了封面", changelogSource: "user" });
+  eq("无 origin 按哈希找旧版", info[0], { slug: "pkg-one", from: "1.0.0", to: "1.1.0", changelog: "修了封面", changelogSource: "user", between: [] });
+  // 隔了多版：本机 1.0.0，索引 1.3.0 ← 1.2.0 ← 1.1.0 ← 1.0.0 ⇒ between 列 1.2.0、1.1.0（新→旧），不含当前版与本机版
+  const multi = { versions: { far: [
+    { version: "1.3.0", hash: "h3", changelog: "三", changelogSource: "user" },
+    { version: "1.2.0", hash: "h2", changelog: "二", changelogSource: "auto" },
+    { version: "1.1.0", hash: "h1", changelog: "一", changelogSource: "user" },
+    { version: "1.0.0", hash: "h0", changelog: "零", changelogSource: "user" },
+  ] } };
+  const far = describeRefresh(["far"], [{ name: "far", hash: "h0" }], multi)[0];
+  eq("🔴 跨多版时列出中间每一版（新→旧）", [far.from, far.to, far.between.map((v) => `${v.version}:${v.changelog}:${v.changelogSource}`)], ["1.0.0", "1.3.0", ["1.2.0:二:auto", "1.1.0:一:user"]]);
+  eq("本机版在索引里找不到 ⇒ between 为空", describeRefresh(["far"], [{ name: "far", hash: "hx" }], multi)[0].between, []);
+  eq("origin 有版本号但哈希对不上 ⇒ 按版本号定位", describeRefresh(["far"], [{ name: "far", hash: "hx", origin: { version: "1.1.0", hash: "hx" } }], multi)[0].between.map((v) => v.version), ["1.2.0"]);
   eq("有 origin 用 origin 的版本", [info[1].from, info[1].to, info[1].changelogSource], ["1.9.9", "2.0.0", "auto"]);
   eq("找不到旧版显示 ?，索引没这个包时 to 也是 ?", [info[2].from, info[2].to, info[2].changelog], ["?", "?", "（无变更说明）"]);
   eq("legacy（无 versions）时 changelog 是「（无变更说明）」", describeRefresh(["pkg-one"], survey, { versions: null })[0], {
-    slug: "pkg-one", from: "?", to: "?", changelog: "（无变更说明）", changelogSource: null,
+    slug: "pkg-one", from: "?", to: "?", changelog: "（无变更说明）", changelogSource: null, between: [],
   });
 
   const lines = [];
@@ -3409,7 +3434,7 @@ function originLockPinCheck() {
 
     // 预检：刷新栏带版本号与 changelog（无 origin ⇒ 旧版靠哈希在 versions[] 里找到 1.0.0）
     const pre = parse(run(["--dry-run", "--json"]), "预检");
-    eq("--json refresh 是对象数组", pre?.report?.[0]?.plan?.refresh, [{ slug: "some-skill", from: "1.0.0", to: "1.1.0", changelog: "第二版", changelogSource: "user" }]);
+    eq("--json refresh 是对象数组", pre?.report?.[0]?.plan?.refresh, [{ slug: "some-skill", from: "1.0.0", to: "1.1.0", changelog: "第二版", changelogSource: "user", between: [] }]);
     eq("metaSource=index", pre?.metaSource, "index");
     const preText = run(["--dry-run"]).stdout;
     if (!preText.includes("some-skill  1.0.0 → 1.1.0  第二版")) fails.push(`🔴 预检刷新栏没打「slug 旧 → 新 changelog」：${JSON.stringify(preText.slice(-500))}`);

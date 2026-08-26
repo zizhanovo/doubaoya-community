@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T02:36:11.294655+00:00",
-  "ref": "release-20260826-0235",
+  "generatedAt": "2026-08-26T02:41:45.365683+00:00",
+  "ref": "release-20260826-0241",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -1652,6 +1652,7 @@
         "6f72e665fa97",
         "72d2d98f5f23",
         "78d16ebe4793",
+        "82a83c0cbd94",
         "89126d451b03",
         "8b15b3b187e6",
         "912ad0771767",
@@ -1668,6 +1669,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "3.4.3",
+          "hash": "82a83c0cbd94",
+          "ref": "release-20260826-0241",
+          "releasedAt": "2026-08-26T02:41:29.616980+00:00",
+          "changelog": "隔多版更新时列出中间每一版的说明",
+          "changelogSource": "user"
+        },
         {
           "version": "3.4.2",
           "hash": "bb0453139bd3",
@@ -1881,6 +1890,12 @@
           "version": "3.3.2",
           "date": "2026-08-25",
           "subject": "fix(dby-update): 不是对账器装的包也补 origin —— 用户手跑 skills add 之后，收敛态那一跑给能对上索引某一版的目录补 .dby/origin.json"
+        },
+        {
+          "hash": "bb0453139bd3",
+          "version": "3.4.2",
+          "date": "2026-08-25",
+          "subject": "feat(dby-update): 跑完逐项列出归档/新增/刷新了谁（旧 → 新 changelog）与各包当前版本 —— 用户实证只看到「刷新 1」不知道刷的是谁"
         },
         {
           "hash": "d89ef52b1bf2",
