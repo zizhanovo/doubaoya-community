@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T08:01:24.072986+00:00",
+  "generatedAt": "2026-08-26T08:55:20.063880+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -3294,6 +3294,12 @@
         "version": "1.7.0",
         "date": "2026-08-25",
         "subject": "feat(dby-write)!: 写作规则跟着「本篇目标 + 手里的素材」走，不再是一套无条件的增长公式"
+      },
+      {
+        "hash": "7b2ebef991b0",
+        "version": "1.10.1",
+        "date": "2026-08-26",
+        "subject": "fix(dby-write): 交棒说明的终态纪律改成本地一句话，不再引用他包的路由判据文件"
       }
     ],
     "doubao-websearch": [

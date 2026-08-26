@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:01:24.072986+00:00",
+  "generatedAt": "2026-08-26T08:55:20.063880+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -541,8 +541,8 @@
           "hash": "02a03d78fb1c",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "路由表与触发词按逐包领域调研更正；11 个 SKILL.md 去废话（删解释/元叙述/历史叙事/跨包重复红线）",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -753,8 +753,8 @@
           "hash": "ce8326e3dbd2",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "通用网关脚本 fetch 补显式超时，客户端不再抢在服务端前掐线；补 headers-timeout 判据的端到端实测",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -899,8 +899,8 @@
           "hash": "3b6f51b83da1",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "外部 agent 模拟测试暴露的脚本缺口修补；触发词按逐包调研补齐",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1004,8 +1004,8 @@
           "hash": "069d68bd5b30",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "定位问诊与文风蒸馏的规则按逐包调研更正；SKILL.md 去废话",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1137,8 +1137,8 @@
           "hash": "9818d9fd10e5",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "402 不再只说「提示用户充值」——余额、差额、充值链接本来就在 extra 里，照实取出来给用户",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1255,8 +1255,8 @@
           "hash": "2a3ffb3fc5b2",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "出图规则按逐包领域调研更正，触发词补齐；SKILL.md 去废话",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1433,8 +1433,8 @@
           "hash": "ccf7d50a327d",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "六张风格样图重出（旧的在教用户做英文封面，还带着乱码和商标）；--theme 裸 id 交服务端解析，消掉主题双源",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1654,8 +1654,8 @@
           "hash": "64eb94c6e436",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "七平台改写规则按逐包领域调研更正，触发词补齐；SKILL.md 去废话",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1746,8 +1746,8 @@
           "hash": "895210b408a4",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-24",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "主题校验器按官方编辑器规范加四条 warning；微信 draft/add 字段上限前置校验",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -1931,8 +1931,8 @@
           "hash": "72d2d98f5f23",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-25T17:09:38.110260+00:00",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "对账器六处可信度修补——预检逐项列名、降级不说「完全一致」、遗留副本归档不打 rm、拉取挂了自动复原、安装源固定到 repo#ref、自更新后提示重跑",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -2177,8 +2177,8 @@
           "hash": "7091f1189cf1",
           "ref": "release-20260825-1709",
           "releasedAt": "2026-08-25",
-          "changelog": "首次盖戳发布（作者未写变更说明，自动生成）",
-          "changelogSource": "auto"
+          "changelog": "写作规则跟着「本篇目标 + 手里的素材」走，不再是一套无条件的增长公式；六份体裁手艺文件按素材形态路由；素材库接线，缺锚点先查库再问人",
+          "changelogSource": "user"
         }
       ],
       "history": [
@@ -2295,6 +2295,12 @@
           "version": "1.7.0",
           "date": "2026-08-25",
           "subject": "feat(dby-write)!: 写作规则跟着「本篇目标 + 手里的素材」走，不再是一套无条件的增长公式"
+        },
+        {
+          "hash": "7b2ebef991b0",
+          "version": "1.10.1",
+          "date": "2026-08-26",
+          "subject": "fix(dby-write): 交棒说明的终态纪律改成本地一句话，不再引用他包的路由判据文件"
         }
       ]
     },
