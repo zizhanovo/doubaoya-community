@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:55:20.063880+00:00",
+  "generatedAt": "2026-08-26T09:04:43.211999+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1239,7 +1239,7 @@
           "hash": "c70826332715",
           "ref": "release-20260826-0610",
           "releasedAt": "2026-08-26T08:00:22.409663+00:00",
-          "changelog": "接手出图话术（配图等），补 negative scope：只要封面套路与参考数据走 dby-api",
+          "changelog": "接手出图话术（配图 / 首图灵感等 8 个词从 dby-api 迁入）并补 negative scope；落盘失败不再把已付费的图丢掉，兜底写进临时目录并给出路径；公众号封面验收新增裁切模拟（微信只收一张封面，1:1 是裁出来的）",
           "changelogSource": "user"
         },
         {
