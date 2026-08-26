@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T08:00:56.832627+00:00",
+  "generatedAt": "2026-08-26T08:01:19.462377+00:00",
   "ref": "release-20260826-0610",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -871,6 +871,7 @@
         "8967a5bf1cbe",
         "9875773c9a77",
         "b3b6c7500194",
+        "d1634c678daa",
         "e05d7674b9aa",
         "edadb15db5ad",
         "f124f3174c56",
@@ -1354,6 +1355,12 @@
           "version": "1.4.0",
           "date": "2026-08-26",
           "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
+        },
+        {
+          "hash": "c70826332715",
+          "version": "1.5.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby-image): 接手出图话术 —— 配图 / 首图灵感等 8 个词从 dby-api 迁入，补 negative scope"
         }
       ]
     },
