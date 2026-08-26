@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T10:25:45.420390+00:00",
-  "ref": "release-20260826-1025",
+  "generatedAt": "2026-08-26T12:28:54.606417+00:00",
+  "ref": "release-20260826-1225",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -496,6 +496,7 @@
         "02a03d78fb1c",
         "04545b184f2e",
         "054b6535ba16",
+        "09352feb3301",
         "1c068c859c03",
         "259fd3762f29",
         "2db0a55a86c2",
@@ -520,6 +521,14 @@
         "fccf378e28ef"
       ],
       "versions": [
+        {
+          "version": "1.4.1",
+          "hash": "09352feb3301",
+          "ref": "release-20260826-1225",
+          "releasedAt": "2026-08-26T12:25:27.119234+00:00",
+          "changelog": "补 compatibility 字段——此前 11 个包里只有它没声明前置条件；本包纯路由，不跑脚本不发请求不要密钥",
+          "changelogSource": "user"
+        },
         {
           "version": "1.4.0",
           "hash": "71cd62a50402",
@@ -1917,6 +1926,7 @@
         "080aed4c835c",
         "0f57ebd82f3b",
         "269a56ceb3b9",
+        "29458b8b722e",
         "2a8c66b15aa2",
         "35a0d058b1c6",
         "3a1ce2acce36",
@@ -1945,6 +1955,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "3.6.0",
+          "hash": "29458b8b722e",
+          "ref": "release-20260826-1225",
+          "releasedAt": "2026-08-26T12:28:03.365494+00:00",
+          "changelog": "补两道安全闸——上游 slug 过形状校验后才拿去拼路径（防路径穿越），复原命令的路径改走参数传递（安装目录带单引号时原来会跑不通，而那是归档后唯一的退路）",
+          "changelogSource": "user"
+        },
         {
           "version": "3.5.0",
           "hash": "7fc8162f40ea",
@@ -2220,6 +2238,12 @@
           "version": "3.3.3",
           "date": "2026-08-25",
           "subject": "fix(dby-update): 3.3.3 —— changelog 一句缩到 6000 字上限内，重新盖戳"
+        },
+        {
+          "hash": "7fc8162f40ea",
+          "version": "3.5.0",
+          "date": "2026-08-26",
+          "subject": "fix(dby-update): 装完重扫核对，该刷的没刷到就非零退出 —— 此前安装器报失败却退出码 0 时，对账跟着说「全部通过」"
         }
       ]
     },

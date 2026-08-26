@@ -202,6 +202,38 @@ const GONE_STATUSES = new Set(["retired", "renamed", "merged"]);
  * 🔴 `opts.archiveSuppressed`：上游目录列表没核到时 fail-closed——归档候选全部改进 `archiveHeld`，
  *    archive 一定是空的；刷新 / 新增不受影响，它们的依据是索引本身。
  */
+/**
+ * 🔴 信任边界：slug 来自上游（index.json 的键、GitHub/Gitee 的目录列表），会被拿去拼安装/归档路径
+ * （全文 15 处 `join(dir, slug)`）。上游被篡改、或有人 fork 一份改了 index.json，
+ * `"../../../.ssh"` 这样的名字就能把文件写到安装目录外面去。
+ *
+ * 发布侧确实有 `tools/validate_community.py` 的命名闸，但那是**我们自己发包时**跑的；
+ * 用户装包时那道闸不在场——消费侧必须自己校验，这是信任边界的输入校验，不是防御性编程。
+ *
+ * 判据取"允许清单"而不是"拒绝 ..": 只放行小写字母、数字、连字符，且不以连字符开头/结尾。
+ * 拒绝清单永远漏（`..`、`.`、绝对路径、`~`、NUL、Windows 盘符、Unicode 同形字…），允许清单不会。
+ */
+const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export function isSafeSlug(name) {
+  return typeof name === "string" && name.length > 0 && name.length <= 64 && SAFE_SLUG.test(name);
+}
+
+/** 从上游名单里滤掉形状不合法的，滤掉了就必须说出来——静默丢弃等于把攻击面藏起来。 */
+export function sanitizeSlugs(names, notes) {
+  const safe = [];
+  const rejected = [];
+  for (const n of names || []) (isSafeSlug(n) ? safe : rejected).push(n);
+  if (rejected.length && Array.isArray(notes)) {
+    notes.push(
+      `上游名单里有 ${rejected.length} 个名字形状不合法，已丢弃（不装、不归档、不迁移）：` +
+        rejected.map((r) => JSON.stringify(String(r)).slice(0, 40)).join(", ") +
+        "。合法的 slug 只含小写字母、数字与连字符。这通常意味着上游被改过，别忽略它。"
+    );
+  }
+  return { safe, rejected };
+}
+
 export function planReconcile(installed, upstreamNames, opts = {}) {
   const upstream = new Set(upstreamNames);
   const status = opts.status || null;
@@ -907,7 +939,10 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
   if (!ref) notes.push(`安装源未固定：${metaSource === "index" ? "索引" : "版本表"}没有 ref 字段，这次按默认分支 main 安装（装到的是 main 此刻的内容，不一定等于版本表那份快照）。`);
 
   // 索引模式下"仍在架"= status active；旧文件模式下版本表的键就是全部在架的。
-  const activeNames = status ? Object.keys(status).filter((n) => !GONE_STATUSES.has(status[n])).sort() : Object.keys(currentHashes).sort();
+  const activeNames = sanitizeSlugs(
+    status ? Object.keys(status).filter((n) => !GONE_STATUSES.has(status[n])).sort() : Object.keys(currentHashes).sort(),
+    notes
+  ).safe;
   let names = null;
   let namesSource = status ? "index" : "versions";
   let archiveSuppressed = false;
@@ -950,6 +985,8 @@ async function fetchUpstream({ rawOverridden = RAW_OVERRIDDEN } = {}) {
   }
   if (!names) names = activeNames;
   else {
+    // 目录列表来自网络，先过形状闸再参与后续任何路径拼接
+    names = sanitizeSlugs(names, notes).safe;
     if (status) {
       // 索引说已下架 / 改名，目录却还在（删目录晚于发索引）：归档以索引为准，不能又把它当"新增"装回来。
       names = names.filter((n) => !GONE_STATUSES.has(status[n]));
@@ -1118,12 +1155,27 @@ export function ensureSelfIgnored(home) {
  * ponytail: 用单引号包路径，天花板是归档路径里含单引号时得自己改写；路径 = 用户目录 +
  * 时间戳，实际不会有。升级路径是改成 `node <脚本> --restore <目录>` 子命令。
  */
+/**
+ * 打给用户复制粘贴的复原命令。归档之后这是**唯一**的退路，所以两件事都不能省：
+ *
+ * 🔴 路径走 `process.argv` 传参，绝不拼进命令字符串。安装目录路径是用户的
+ *    （目录名里带个单引号完全合法），拼进带引号的 `node -e "..."` 里当场破——
+ *    而破掉的复原命令比没有复原命令更糟：用户以为有退路，真要捞的时候才发现没有。
+ *    自检里 `sh -c` 会真跑一遍它，见 selfTest 的「复原命令必须真的能复原」。
+ * 🔴 脚本体里不出现任何来自外部的字符串，只有固定代码 + argv[1]。
+ */
+const RESTORE_SNIPPET =
+  "const p=require('path'),f=require('fs');" +
+  "for(const it of require(process.argv[1]).packages){" +
+  "f.mkdirSync(p.dirname(it.from),{recursive:true});f.renameSync(it.to,it.from)}";
+
+/** shell 可粘贴形态：单引号包裹路径，路径里的单引号按 POSIX 规矩转义（'\''）。 */
+function shellQuote(v) {
+  return `'${String(v).replace(/'/g, `'\\''`)}'`;
+}
+
 function restoreCommand(root) {
-  return (
-    `node -e "const p=require('path'),f=require('fs');` +
-    `for(const it of require('${join(root, "manifest.json")}').packages){` +
-    `f.mkdirSync(p.dirname(it.from),{recursive:true});f.renameSync(it.to,it.from)}"`
-  );
+  return `node -e ${shellQuote(RESTORE_SNIPPET)} ${shellQuote(join(root, "manifest.json"))}`;
 }
 
 /**
@@ -3913,6 +3965,46 @@ async function runSelfCheck() {
   const splitNone = splitRenameGitTracked(filled, { tracked: [], unknown: [] });
   eq("git 都干净时两条都进 renamed", splitNone.renamed.map((r) => r.from).sort(), ["old-pkg-a", "old-pkg-b"]);
   eq("git 都干净时 renamedSkipped 为空", splitNone.renamedSkipped, []);
+
+  // ── 信任边界：上游 slug 的形状闸 ──
+  // slug 来自上游 index.json 的键与 GitHub/Gitee 的目录列表，会被拿去拼 15 处安装/归档路径。
+  // 发布侧的命名闸只在我们自己发包时跑，用户装包时不在场 ⇒ 消费侧必须自己校验。
+  eq("正常 slug 放行", ["dby", "dby-api", "dby-banned-words"].filter(isSafeSlug), ["dby", "dby-api", "dby-banned-words"]);
+  eq(
+    "路径穿越/绝对路径/家目录/空字节/反斜杠 一个都不放行",
+    ["../../../.ssh", "..", ".", "/etc/passwd", "~/x", "a\u0000b", "a\\b", "a/b"].filter(isSafeSlug),
+    []
+  );
+  eq("大写、下划线、点、空格、前后连字符 都不放行", ["DBY", "a_b", "a.b", "a b", "-a", "a-"].filter(isSafeSlug), []);
+  eq("空串与超长不放行", ["", "a".repeat(65)].filter(isSafeSlug), []);
+  {
+    const notes = [];
+    const { safe, rejected } = sanitizeSlugs(["dby-api", "../evil", "dby-image"], notes);
+    eq("滤完只剩合法的", safe, ["dby-api", "dby-image"]);
+    eq("被滤掉的原样带出", rejected, ["../evil"]);
+    // 🔴 静默丢弃等于把攻击面藏起来——必须在 notes 里说出来，而 notes 会被转述给用户。
+    if (!notes.length || !notes[0].includes("形状不合法")) fails.push("上游名单被滤掉却没进 notes——静默丢弃把攻击面藏起来了");
+  }
+
+  // ── 复原命令：路径含单引号时仍然跑得通 ──
+  // 原实现把路径拼进 `node -e "...require('<路径>')..."`，安装目录带单引号（完全合法的路径）就当场破，
+  // 而这是归档后**唯一**的退路。改成路径走 argv 传参 + POSIX 单引号转义。
+  {
+    const dir = mkdtempSync(join(tmpdir(), "dby-restore-quote-"));
+    try {
+      const weird = join(dir, "my'project");
+      const from = join(weird, "pkg");
+      const to = join(weird, "archived-pkg");
+      mkdirSync(to, { recursive: true });
+      writeFileSync(join(to, "SKILL.md"), "x");
+      writeFileSync(join(weird, "manifest.json"), JSON.stringify({ packages: [{ from, to }] }));
+      const r = spawnSync("sh", ["-c", restoreCommand(weird)], { encoding: "utf-8" });
+      if (r.status !== 0) fails.push(`复原命令在带单引号的路径下跑不通（退出码 ${r.status}）：${(r.stderr || "").trim().split("\n")[0]}`);
+      if (!existsSync(join(from, "SKILL.md"))) fails.push("🔴 带单引号的路径下复原命令没把包移回原处——归档的退路在这种路径上是断的");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
 
   // ── stillBehind：装完重扫，该刷的没刷到就必须让退出码说实话 ──
   // 背景（2026-08-26 用户现场）：`skills add` 打了 `Failed to install 3` 却以退出码 0 收场，

@@ -6,8 +6,11 @@ description: >-
   触发方式：/dby、/dby 新手入门、本鸭、都爆鸭、「帮我看看下一步」「接下来做什么」「先干哪个」「公众号从哪开始」。
   本包管选路与衔接，**「刚做完一步、接下来呢」也归它**；本包自己不取数、不写作、不排版。已经点名了要用哪个包时直接用那个，不必绕本包。
   Trigger words: /dby, what's next, where do I start, which dby skill.
-version: 1.4.0
-changelog: 路由判据 wechat-routing.json 迁入本包自持；新增出岔子处置（判据缺失 / 目标包没装 / 路由错了）；description 补 negative scope
+version: 1.4.1
+changelog: 补 compatibility 字段——此前 11 个包里只有它没声明前置条件；本包纯路由，不跑脚本不发请求不要密钥
+compatibility: >-
+  纯路由与导航，不跑脚本、不发网络请求、不需要任何密钥。被它路由到的包各自有自己的前置条件
+  （多数需要环境变量 DOUBAOYA_API_KEY；dby-rewrite 纯本地不需要）。
 ---
 
 # dby：都爆鸭公众号工具箱

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T10:25:45.420390+00:00",
+  "generatedAt": "2026-08-26T12:28:54.606417+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -63,6 +63,7 @@
       "02a03d78fb1c",
       "04545b184f2e",
       "054b6535ba16",
+      "09352feb3301",
       "1c068c859c03",
       "259fd3762f29",
       "2db0a55a86c2",
@@ -229,6 +230,7 @@
       "080aed4c835c",
       "0f57ebd82f3b",
       "269a56ceb3b9",
+      "29458b8b722e",
       "2a8c66b15aa2",
       "35a0d058b1c6",
       "3a1ce2acce36",
@@ -3221,6 +3223,12 @@
         "version": "3.3.3",
         "date": "2026-08-25",
         "subject": "fix(dby-update): 3.3.3 —— changelog 一句缩到 6000 字上限内，重新盖戳"
+      },
+      {
+        "hash": "7fc8162f40ea",
+        "version": "3.5.0",
+        "date": "2026-08-26",
+        "subject": "fix(dby-update): 装完重扫核对，该刷的没刷到就非零退出 —— 此前安装器报失败却退出码 0 时，对账跟着说「全部通过」"
       }
     ],
     "dby-write": [
