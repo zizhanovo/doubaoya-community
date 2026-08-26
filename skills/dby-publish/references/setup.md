@@ -25,4 +25,4 @@ cp profiles/example-ip.json profiles/my-ip.json
 **专有名词误读成字面意思的通用名词**，导致选题、配图、封面全跑偏。profile 里的 **`isNot`** 就是把这条
 消歧规则**外化成数据**：流水线第 2 步先读它、回显它，明确「这是账号名，不是那个通用名词」。
 示例 profile（`profiles/example-ip.json`，虚构的 `示例·日常号`）演示了 schema——请照它写**你自己**账号的身份卡。
-详见 [`profiles/README.md`](./profiles/README.md)。
+详见 [`profiles/README.md`](../profiles/README.md)。

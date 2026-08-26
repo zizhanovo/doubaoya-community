@@ -8,8 +8,10 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 2.4.2
-changelog: 新增变更说明字段
+version: 2.5.0
+changelog: >-
+  失败/中断有恢复文档了（references/recovery.md：重跑不幂等、素材残留、退点口径）；
+  拿不到 mediaId 不再宣称完成，改报「结果待确认」并非零退出。
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -35,19 +37,13 @@ compatibility: >-
 
 ---
 
-## 单一事实源：`pipeline.json`
+## 流程声明：`pipeline.json`
 
-10 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`），
-本 SKILL.md 与 `scripts/pipeline.mjs` 都以它为准。**「引导式设计」这一步由 agent 执行**，其余步骤 `pipeline.mjs` 机械跑完。
-本文只用步骤名不用序号；`pipeline.mjs` 日志里的「步骤 N/9」是脚本自己的机械步序，与 SOP 编号不对应。
+10 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`）——它是**人读的约定文档**，
+`pipeline.mjs` 不读取它，改流程要两边手工同步。**「引导式设计」这一步由 agent 执行**，其余步骤 `pipeline.mjs` 机械跑完。
+本文只用步骤名不用序号；`pipeline.mjs` 日志里的「步骤 N」是脚本自己的机械步序，与 SOP 编号不对应。
 
 → 想逐步核对这 10 步分别做什么时读 `references/sop.md`，不需要就别读。
-
-### 硬规则（`hardRules`，代码里强制）
-- **发布前必须 whoami 校验目标账号** — 「whoami 校验账号」不过，「保存草稿」不跑。
-- **先加载身份上下文再做内容判断**。
-- **发现走 `/api/skills`，执行走 `/api/wechat/status` + `/api/wechat/publish`，不走 `/invoke`**。
-- **本地图片必须客户端预上传**（服务端读不到你本机的文件）。
 
 ---
 
@@ -77,27 +73,13 @@ compatibility: >-
 
 ## 写正文之前
 
-### 🔴 正文不要写标题
-
-公众号**总是**拿草稿的 `title` 字段渲文章页大标题，正文里再有同一个标题就**显示两次**。
-
-- **写 Markdown**：正文**从第一段直接开始**，层级最高只用到 `##`。标题只走 `--title` 参数。
-- **写好 HTML 直发**（`--html`）：别在 HTML 开头放 `<h1>`（或拿来当大标题使的 `<h2>` / 加粗大字）——
-  这条路把文件**原样**发出去，没有去重。
-
-→ 单独跑本机渲染器 / 想知道 `pipeline.mjs --md` 替你兜了什么底，见 `references/rendering.md`。
-
-### 先拉一份写作规范：`GET /api/wechat/writing-spec`
-
-→ 正文**不是走 `dby-write` 写的**时读 `references/writing-spec.md`，不需要就别读
-（`dby-write` 第 1 步已经拉过这一份，别再拉一次）。
-
-#### 排版 / 渲染的细节
-
-**不写 `--theme` 就是用你在排版工作室保存的默认排版**；md→HTML 只走平台
-`POST /api/wechat/render`（免费），**失败一律中止、绝不回退本机渲染器**。
-→ 要弄清套哪套排版、老稿子重跑为什么长得不一样，或要用 `> [!NOTE]` 提示块，
-读 `references/rendering.md`，不需要就别读。
+- 🔴 **正文不写标题，标题只走 `--title`**——公众号总是拿草稿 `title` 渲大标题，正文里再写就显示两次；
+  `--html` 直发路径**原样**发出、没有去重，开头别放 `<h1>`。`--md` 路径兜了什么底见 `references/rendering.md`。
+- 正文**不是走 `dby-write` 写的** → 先拉写作规范，读 `references/writing-spec.md`
+  （`dby-write` 第 1 步已经拉过这一份，别再拉一次）。
+- **不写 `--theme` 就是用你在排版工作室保存的默认排版**；md→HTML 只走平台
+  `POST /api/wechat/render`（免费），**失败一律中止、绝不回退本机渲染器**。
+  套哪套排版 / 老稿子重跑为什么长得不一样 / `> [!NOTE]` 提示块 → 读 `references/rendering.md`。
 
 ---
 
@@ -107,11 +89,8 @@ compatibility: >-
 「封面配图你全权定 / 我赶时间」就走逃生舱，用 `config.defaultStyleId` 自动出一版。
 用户已说「推」且**没提封面 / 配图**时不进四问：只提示一次「不传封面就走兜底封面」，然后直接跑。
 
-→ 真要动手做视觉时读 `references/guided-design.md`（选风格 → 封面加 `--cover-guard`
-→ 配图落进 Markdown 源后回「md→HTML」重渲染 → 确认排版），走逃生舱就不必读。
-比例只靠 `--cover-guard` / prompt 控制，`--size` 无效；封面主体要进**居中正方形安全区**（微信按 2.35:1 与 1:1 各裁一次）。
-`--cover` 收本地 jpeg / png 都行（>1MB 自动压成 jpg）。标题 / 摘要 / 正文长度上限脚本先拦再花钱，数字见 `references/cli.md`。
-
+→ 真要动手做视觉时读 `references/guided-design.md`（选风格 → 封面 → 配图 → 确认排版；
+封面比例 / `--cover-guard` / 尺寸上限都在那儿与 `references/cli.md`），走逃生舱就不必读。
 → 想改成**在网页里一次点完**（可视化工作台，产出 `design-config.json` 给 `pipeline.mjs --design`）
 读 `references/design-studio.md`，与命令行引导等价，二选一。
 
@@ -133,6 +112,9 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run             # 发
 
 本机有多条 key 对应不同账号时，账号校验会停下要 `--account <账号>`，按报错列出的账号补上重跑。
 
+🔴 **跑完只认最终回报里的 `mediaId`**——它是「已存入草稿箱」的唯一凭据，没有它就不当已存入。
+存草稿失败 / 中途 Ctrl-C / 不确定草稿箱里有没有 → 读 `references/recovery.md`（重跑不幂等，会多存一份）。
+
 → 要指定账号 / 公众号 / 本地封面 / 摘要，或用 `--html`、`--design`、`--theme` 的完整写法时读
 `references/cli.md`，不需要就别读。
 
@@ -142,10 +124,10 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run             # 发
 
 | 用户在说 / 你要干的事 | 读哪份 |
 |---|---|
-| **只看排版**（本机出稿看效果，不发） | 只读 `references/rendering.md`；`pipeline.json`、`setup.md`、`prerequisites.md` 都不读 |
+| **只看排版**（本机出稿看效果，不发） | 只读 `references/rendering.md`，其余都不读 |
 | 哪个脚本干哪件事、想不走 `pipeline.mjs` 自己组合 | `references/modules.md` |
-| **第一次用本包**（还没有 `config.json` / 身份卡） | `references/setup.md` —— `config.json` 属于你个人、别提交；「读取身份上下文」先读身份卡（`isNot` 字段声明账号名不是哪个通用名词） |
-| **把某个公众号的排版复刻成 `theme.json`**（给 URL 或给一段风格描述） | `references/clone-theme.md` —— 契约权威是 [`themes/THEME-SCHEMA.md`](./themes/THEME-SCHEMA.md)，校验器 `scripts/validate-theme.mjs`。包内起手主题用 `ls themes/*.json` **现看，别照文档里的名字猜**；服务端内置目录更全，要挑那几个走 `dby-theme` |
+| **第一次用本包**（还没有 `config.json` / 身份卡） | `references/setup.md`（`config.json` 属于你个人、别提交） |
+| **把某个公众号的排版复刻成 `theme.json`** | `references/clone-theme.md`（契约、校验器、现成主题怎么挑都在里面） |
 
 ---
 

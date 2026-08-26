@@ -20,8 +20,8 @@
 //      设计工作台 design-studio.mjs，以及「没有密钥、只想先看排版长什么样」。
 //      🔴 那条路**不产生在线预览链接** —— 走平台才有 detailUrl，那正是它存在的理由。
 //
-// 单一事实源：9 步 SOP 与硬规则同时声明在同目录 ../pipeline.json，SKILL.md 与本文件
-// 都以它为准。
+// 10 步 SOP 与硬规则声明在同目录 ../pipeline.json——那是人读的约定文档，本文件**不读取它**；
+// 改流程要两边手工同步（下面日志里的「步骤 N」是本脚本自己的机械步序，与 SOP 编号不对应）。
 //
 // 用法见 --help。零依赖（Node ≥18 内置 + 全局 fetch）。
 // -----------------------------------------------------------------------------
@@ -233,7 +233,7 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
 // 小工具
 // ---------------------------------------------------------------------------
 function step(n, title) {
-  process.stdout.write(`\n── 步骤 ${n}/9 · ${title} ${"─".repeat(Math.max(2, 40 - title.length))}\n`);
+  process.stdout.write(`\n── 步骤 ${n} · ${title} ${"─".repeat(Math.max(2, 40 - title.length))}\n`);
 }
 function info(msg) {
   process.stdout.write(`   ${msg}\n`);
@@ -842,7 +842,7 @@ async function main() {
   //    只渲染的人不需要。而 dry-run 分支**一个字都不动** —— 它的语义是「发布前彩排」，
   //    故意包含账号校验与前置检查，那正是它的价值。两个诉求不同，给两个入口。
   if (args.renderOnly) {
-    step(9, "RENDER-ONLY 回报");
+    step(5, "RENDER-ONLY 回报");
     if (!renderDetailUrl && mdPath) {
       warn("这次渲染没拿到在线预览链接（平台未回 detailUrl）——HTML 仍已产出。");
     }
@@ -871,7 +871,7 @@ async function main() {
     });
     const localCount = (out.match(/本地\s*(\d+)\s*张需要预上传/) || [])[1] || "?";
 
-    step(9, "DRY-RUN 回报");
+    step(6, "DRY-RUN 回报");
     process.stdout.write(
       "\n══════════ DRY-RUN 回报（未发布任何内容）══════════\n" +
         `  标题:        ${title}\n` +
@@ -903,15 +903,37 @@ async function main() {
     DOUBAOYA_API_KEY: apiKey, // 仅内存 → 子进程 env，不打印
     DOUBAOYA_BASE_URL: baseUrl,
   });
-  if (code !== 0) fail(`保存草稿子进程失败（退出码 ${code}）。`);
+  if (code !== 0) {
+    fail(
+      `保存草稿子进程失败（退出码 ${code}）。\n` +
+        "   到这一步为止：渲染已完成；子进程可能已上传部分正文图，封面（永久素材 thumb）也可能已上传。\n" +
+        "   草稿箱状态：draft/add 未确认成功——请去公众号后台草稿箱核对；重跑不幂等，草稿已在时会多存一份。\n" +
+        "   残留素材怎么处理、哪些错误码退点、从哪一步重来：见 references/recovery.md。"
+    );
+  }
 
-  // 解析子进程输出用于回报
-  const mediaId = (out.match(/mediaId：\s*(\S+)/) || [])[1] || "(见上方子进程输出)";
+  // 解析子进程输出用于回报。
+  // 🔴 mediaId 是「已存入草稿箱」的唯一凭据：子进程退出码 0 却抓不到它（多半是输出格式漂了），
+  //    就不打「完成」横幅——改报「结果待确认」并以非零码退出，让用户去后台核对而不是误信已完成。
+  const mediaId = (out.match(/mediaId：\s*(\S+)/) || [])[1] || null;
+  if (!mediaId) {
+    step(6, "结果待确认");
+    process.stdout.write(
+      "\n══════════ 结果待确认 · 未拿到 mediaId ══════════\n" +
+        `  标题:        ${title}\n` +
+        `  公众号:      ${nickname}（${appid}）\n` +
+        "  发生了什么:  保存草稿子进程正常退出，但输出里没有 mediaId——草稿可能已存入，也可能没有。\n" +
+        "  怎么核对:    去公众号后台 → 草稿箱，按标题找这一篇。\n" +
+        "  要重跑:      先核对再跑——draft/add 不幂等，草稿已在时重跑会多一份。见 references/recovery.md。\n" +
+        "══════════════════════════════════════════════\n"
+    );
+    process.exit(1);
+  }
   const imgCount = (out.match(/预上传本地图片：\s*(\d+)/) || [])[1] || "?";
   const withCover = /含封面/.test(out) || coverIsLocal;
 
-  // ===== 步骤 9：验证回报 ================================================
-  step(9, "验证回报");
+  // ===== 步骤 6：验证回报 ================================================
+  step(6, "验证回报");
   process.stdout.write(
     "\n══════════ 完成 · 已存入公众号草稿箱 ══════════\n" +
       `  标题:        ${title}\n` +

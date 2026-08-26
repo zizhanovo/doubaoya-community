@@ -37,6 +37,10 @@ BASE_URL = "https://doubaoya.com"
 STATUS_ENDPOINT = BASE_URL + "/api/wechat/status"
 PUBLISH_ENDPOINT = BASE_URL + "/api/wechat/publish"
 
+# 信封层的 notice =「你安装的 skill 有更新」，与 data 里的业务字段不是一回事。
+# 一次运行会发两次请求（status + publish），同一条 notice 去重后只提示一次。
+_NOTICES_SEEN = set()
+
 
 
 def _skill_user_agent() -> str:
@@ -88,6 +92,14 @@ def _request(url, api_key, method, payload=None):
         envelope = json.loads(body)
     except json.JSONDecodeError:
         return None, "BAD_RESPONSE", "服务端返回非 JSON 内容"
+
+    # 转达信封层 notice。走 stderr——stdout 留给最终结果报告，别污染它。
+    # 放在 success 判断之前：HTTPError 分支已提前 return，这里只会是 200 响应的信封，
+    # 而 success:false 的业务失败同样该把「skill 有更新」透出来。
+    notice = envelope.get("notice")
+    if notice and notice not in _NOTICES_SEEN:
+        _NOTICES_SEEN.add(notice)
+        sys.stderr.write("[notice] %s\n" % notice)
 
     if envelope.get("success") is not True:
         err = envelope.get("error") or {}

@@ -107,17 +107,12 @@ node ../scripts/pipeline.mjs --md article.md --title "标题" --theme magazine.j
 
 `render-wechat-html.mjs` 不传 `--theme` 时，输出与历史中性渲染器**逐字节一致**（向后兼容）。
 
-### 流水线的主题优先级（服务端编译主题）
+### 流水线里主题从哪来
 
-`pipeline.mjs --md` 按下面顺序取第一个成立的：
-
-1. `--theme <path|neutral>`（含 `--design` 折算的主题）；
-2. `config.json` 里显式写成**路径**的 `mdTheme`；
-3. **服务端编译主题**——用 `DOUBAOYA_API_KEY` 拉 `GET /api/wechat/theme?format=compiled`，
-   即你在 doubaoya.com 排版工作室设置的默认排版（engine-2 主题已在服务端编译成本机渲染器
-   认识的全字面量形状）。拉不到（401/404/网络错/超时 5s）就**优雅回退**下一级，不中断不重试；
-4. 项目默认 `benya-clean.json`。
+那套「本机四级优先级 + 拉服务端编译主题回退」已**整个退场**——渲染由平台做，主题也由平台套，
+流水线不显式指定就一个主题字段都不送。唯一事实源见
+[`references/rendering.md`](../references/rendering.md) 的「主题从哪来」。
 
 > ⚠️ **engine-2 主题（`meta.engine:2` / top-level `tokens` / 带点号 `{{ref.xxx}}` token）本机渲染器
-> 不认识**——直接喂给 `--theme` 会被 `validate-theme.mjs` 以**硬错误**拦下。这类主题只能走上面
-> 第 3 条：由服务端编译后自动拉取。
+> 不认识**——喂给 `--theme <path>` 会被 `validate-theme.mjs` 以**硬错误**拦下。想用这类排版：
+> 把它保存到 doubaoya.com 排版工作室然后**不写 `--theme`**，或用裸 id（`--theme <id>`）交服务端解析。

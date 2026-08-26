@@ -15,11 +15,10 @@ python3 "$SKILL_PATH/scripts/publish_draft.py" \
 0 个提示先去绑定），再 `POST /api/wechat/publish` 存草稿，成功打印 `mediaId`。参数：`--title`（必填）、
 `--content` 或 `--content-file`（二选一必填）、`--appid`（可选）、`--digest`（可选）。
 微信侧上限（脚本先拦再花钱）：标题 ≤ 32 字（后台放宽到 64，32–64 只警告）、摘要 ≤ 120 字（不传默认抓正文前 54 字）、
-正文少于 2 万字符且小于 1MB。
+正文少于 2 万字符且小于 1MB。stderr 里的 `[notice] …` 是「你安装的 skill 有更新」，请原样转达给用户。
 
-计费：**只在成功时扣点**——存草稿成功了才扣；发布失败（`502 WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED`）服务端会
-**自动把已扣的点数退回**，参数被前置拦下的 `400 VALIDATION_ERROR` 则压根不扣。（具体扣多少以详情端点的实时点数字段为准，别照文档里的数字替用户算钱。）
+计费：**只在成功时扣点**。哪些错误码退点、失败/中断后怎么恢复重跑，见[恢复与重跑](./recovery.md)——口径只写在那一处。
 
 > 正文里若含**本地图片**或**本地封面**，`publish_draft.py` 读不到本机文件，图会被静默丢弃——
-> 这种情况改用 `scripts/preprocess-and-publish.mjs`（见下方[组合结构](#组合结构不重复造轮子)）或走完整的
+> 这种情况改用 `scripts/preprocess-and-publish.mjs`（见[组合结构](./modules.md)）或走完整的
 > `pipeline.mjs`。

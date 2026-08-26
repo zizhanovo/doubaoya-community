@@ -1,0 +1,3 @@
+# 个人配置与身份卡——含账号邮箱/手机号与 appid，绝不提交（见 config.example.README.md）
+config.json
+profiles/my-*.json

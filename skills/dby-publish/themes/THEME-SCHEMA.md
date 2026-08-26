@@ -38,8 +38,9 @@ the **validator** (`scripts/validate-theme.mjs`), and how the renderer **applies
 }
 ```
 
-Only these five top-level keys are allowed: `meta`, `palette`, `page`, `elements`,
-`decorations`. Any other top-level key is a **hard error**.
+The set of allowed top-level keys is enforced by `scripts/validate-theme.mjs`
+(`TOP_LEVEL_KEYS`) — that list is the single source of truth; any key outside it
+is a **hard error**. Always run the validator after generating a theme.
 
 **Everything is OPTIONAL.** A theme is deep-merged **over** the built-in default
 theme, so a partial theme (e.g. only `palette` + `elements.h2`) renders fine —

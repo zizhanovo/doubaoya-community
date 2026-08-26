@@ -19,7 +19,7 @@
 
 ## 安装
 
-把整个 `wechat-article-pipeline/` 目录放进你的 skills 目录即可，无需 `npm install`。
+把整个 `dby-publish/` 目录放进你的 skills 目录即可，无需 `npm install`。
 
 ## 快速开始
 
@@ -57,13 +57,17 @@ node scripts/pipeline.mjs --html article.html --title "标题"
 ## 目录
 
 ```
-wechat-article-pipeline/
+dby-publish/
 ├── SKILL.md
 ├── README.md
 ├── LICENSE
-├── pipeline.json                 # 单一事实源：9 步 SOP + 硬规则
+├── pipeline.json                 # 10 步 SOP + 硬规则（人读的约定文档，脚本不读取）
 ├── config.example.json           # 配置模板（复制成 config.json 再填）
 ├── config.example.README.md      # 配置字段逐项说明
+├── references/                   # 条件式细节文档（SKILL.md 按需指路，含 recovery.md）
+├── themes/                       # 主题契约 THEME-SCHEMA.md + 起手主题 JSON（服务端主题的旧副本）
+├── schemas/                      # design-config.schema.json（设计工作台产物校验）
+├── assets/                       # 生图风格库 styles/ 与卡通 IP 图 ip/
 ├── profiles/
 │   ├── example-ip.json           # 虚构示例身份卡（演示 schema）
 │   └── README.md
@@ -83,6 +87,14 @@ MIT — 见 [`LICENSE`](./LICENSE)。
 
 ## 最近变更
 
+- **2.5.0**：发布失败/中断有恢复文档了——新增 `references/recovery.md`（重跑不幂等、素材残留怎么处理、
+  哪些错误码退点、从哪一步重来）；保存草稿抓不到 `mediaId` 时不再打「完成」横幅，改报「结果待确认」
+  并以非零码退出（`mediaId` 是唯一凭据），失败信息也会说明已做过什么、现在什么状态；
+  修掉 11 条文档断链；「服务端编译主题四级回退」等过期主题文档收敛到 `references/rendering.md`；
+  主题顶层键清单收敛到 `scripts/validate-theme.mjs`；加 `.gitignore` 防止误提交 `config.json`；
+  脚本步序日志去掉硬编码的 `/9` 分母。
+- **2.4.2**：SKILL.md frontmatter 新增 `changelog:` 变更说明字段。
+- **2.4.1**：把「报错码」从「绕开脚本才读」的条件里摘出来——429 按 IP 分桶、该退避不该重试，写进正文。
 - **2.4.0**：按微信 draft/add 官方文档补字段上限前置校验（`scripts/lib/draft-limits.mjs`，三条入口共用：
   标题 >64 拒 / 32–64 警告、摘要 >120 拒、正文 ≥2 万字符或 ≥1MB 拒）；封面护栏 `COVER_GUARD` 改成
   「主体进居中正方形安全区」——公众号封面除 2.35:1 外还会从正中裁 1:1，原来只防上下。调研见 `docs/research/dby-publish/`。

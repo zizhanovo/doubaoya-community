@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T03:41:32.797970+00:00",
+  "generatedAt": "2026-08-26T06:10:48.198073+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -179,6 +179,7 @@
       "e7a976940e02",
       "e88557062157",
       "ec58027fccdc",
+      "eff5ef724697",
       "fdf279bc684e"
     ],
     "dby-rewrite": [
@@ -3002,6 +3003,12 @@
         "version": "3.4.1",
         "date": "2026-08-25",
         "subject": "fix(dby-update): 发布后头几分钟 GitHub raw 缓存滞后于 Gitee，不再误判镜像不齐"
+      },
+      {
+        "hash": "269a56ceb3b9",
+        "version": "3.4.4",
+        "date": "2026-08-25",
+        "subject": "feat(dby-update): 回复用户改成普通人能看懂的三段式 —— 结果一句话 / 变了什么 / 下一步，通过时不提路径、哈希、ref、lock、钥匙、健康检查"
       },
       {
         "hash": "72d2d98f5f23",
