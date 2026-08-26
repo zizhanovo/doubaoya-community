@@ -56,8 +56,7 @@ class StampVersionsTests(unittest.TestCase):
             root = Path(tmp)
             self._make_skill(root, "alpha", "# alpha\n", "print('a')\n")
             self._make_skill(root, "beta", "# beta\n", "print('b')\n")
-            versions_file = root / "versions.json"
-            result = stamp_versions.stamp_all(root / "skills", versions_file)
+            result = stamp_versions.stamp_all(root / "skills", root / "index.json", warn=lambda _m: None)
 
             self.assertEqual(set(result.keys()), {"alpha", "beta"})
             for name, value in result.items():
@@ -66,17 +65,22 @@ class StampVersionsTests(unittest.TestCase):
                 self.assertTrue(version_file.is_file())
                 self.assertEqual(version_file.read_text(encoding="utf-8").strip(), value)
 
-            manifest = json.loads(versions_file.read_text(encoding="utf-8"))
+            # 兼容视图 versions.json 仍然长老样子：主仓同步脚本与老对账器读的是它。
+            manifest = json.loads((root / "versions.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["skills"], result)
             self.assertIn("generatedAt", manifest)
+            index = json.loads((root / "index.json").read_text(encoding="utf-8"))
+            for name in result:
+                entry = index["skills"][name]
+                self.assertEqual(entry["status"], "active")
+                self.assertEqual(entry["versions"][0]["hash"], result[name].rsplit("@", 1)[1])
 
     def test_stamp_all_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._make_skill(root, "alpha", "# alpha\n", "print('a')\n")
-            versions_file = root / "versions.json"
-            first = stamp_versions.stamp_all(root / "skills", versions_file)
-            second = stamp_versions.stamp_all(root / "skills", versions_file)
+            first = stamp_versions.stamp_all(root / "skills", root / "index.json", warn=lambda _m: None)
+            second = stamp_versions.stamp_all(root / "skills", root / "index.json", warn=lambda _m: None)
             self.assertEqual(first, second, "内容不变时重复盖戳必须产出相同结果")
 
     def test_manifest_carries_release_ref(self):
@@ -85,25 +89,27 @@ class StampVersionsTests(unittest.TestCase):
             root = Path(tmp)
             self._make_skill(root, "alpha", "# alpha\n", "print('a')\n")
             versions_file = root / "versions.json"
-            stamp_versions.stamp_all(root / "skills", versions_file)
+            stamp_versions.stamp_all(root / "skills", root / "index.json", warn=lambda _m: None)
             manifest = json.loads(versions_file.read_text(encoding="utf-8"))
             self.assertRegex(manifest["ref"], r"^release-\d{8}-\d{4}$")
             self.assertEqual(stamp_versions.read_manifest_ref(versions_file), manifest["ref"])
+            index = json.loads((root / "index.json").read_text(encoding="utf-8"))
+            self.assertEqual(index["ref"], manifest["ref"], "视图的 ref 必须来自索引")
 
     def test_ref_is_kept_when_nothing_changed_and_rotated_when_hash_changes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             skill_dir = self._make_skill(root, "alpha", "# alpha\n", "print('a')\n")
-            versions_file = root / "versions.json"
-            stamp_versions.stamp_all(root / "skills", versions_file)
+            index_file, versions_file = root / "index.json", root / "versions.json"
+            stamp_versions.stamp_all(root / "skills", index_file, warn=lambda _m: None)
             # 把上一次的 ref 换成一个明显不同的合法值，看它是否被沿用
-            manifest = json.loads(versions_file.read_text(encoding="utf-8"))
-            manifest["ref"] = "release-20000101-0000"
-            versions_file.write_text(json.dumps(manifest), encoding="utf-8")
-            stamp_versions.stamp_all(root / "skills", versions_file)
+            index = json.loads(index_file.read_text(encoding="utf-8"))
+            index["ref"] = "release-20000101-0000"
+            index_file.write_text(json.dumps(index), encoding="utf-8")
+            stamp_versions.stamp_all(root / "skills", index_file, warn=lambda _m: None)
             self.assertEqual(stamp_versions.read_manifest_ref(versions_file), "release-20000101-0000", "哈希没变时不该凭空换一个没人打过的 tag 名")
             (skill_dir / "scripts" / "run.py").write_text("print('b')\n", encoding="utf-8")
-            stamp_versions.stamp_all(root / "skills", versions_file)
+            stamp_versions.stamp_all(root / "skills", index_file, warn=lambda _m: None)
             self.assertNotEqual(stamp_versions.read_manifest_ref(versions_file), "release-20000101-0000", "哈希变了必须换新 ref")
 
     def test_make_ref_format_and_tag_reminder(self):
@@ -121,6 +127,111 @@ class StampVersionsTests(unittest.TestCase):
             self.assertIsNone(stamp_versions.read_manifest_ref(versions_file))
             versions_file.write_text(json.dumps({"ref": "main", "skills": {}}), encoding="utf-8")
             self.assertIsNone(stamp_versions.read_manifest_ref(versions_file), "ref 只认 release-YYYYMMDD-HHMM 这一种形态")
+
+
+FRONTMATTER = "---\nname: alpha\ndescription: 演示\nversion: {version}\n{changelog}---\n\n# alpha\n"
+
+
+class IndexVersionsTests(unittest.TestCase):
+    """索引的 versions[]：变了插条目、没变不插；changelog 有写记 user、没写按档位生成 auto。"""
+
+    def _skill(self, root: Path, version: str, changelog: str = "", script: str = "print('a')\n") -> Path:
+        skill_dir = root / "skills" / "alpha"
+        (skill_dir / "scripts").mkdir(parents=True, exist_ok=True)
+        line = f"changelog: {changelog}\n" if changelog else ""
+        (skill_dir / "SKILL.md").write_text(FRONTMATTER.format(version=version, changelog=line), encoding="utf-8")
+        (skill_dir / "scripts" / "run.py").write_text(script, encoding="utf-8")
+        return skill_dir
+
+    def _stamp(self, root: Path) -> tuple[dict, list[str]]:
+        warnings: list[str] = []
+        stamp_versions.stamp_all(root / "skills", root / "index.json", warn=warnings.append)
+        return json.loads((root / "index.json").read_text(encoding="utf-8")), warnings
+
+    def test_changed_hash_inserts_a_new_version_entry_with_user_changelog(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._skill(root, "1.0.0", changelog="首发")
+            index, _ = self._stamp(root)
+            first = index["skills"]["alpha"]["versions"]
+            self.assertEqual(len(first), 1)
+            self.assertEqual((first[0]["version"], first[0]["changelog"], first[0]["changelogSource"]), ("1.0.0", "首发", "user"))
+            self.assertRegex(first[0]["ref"], r"^release-\d{8}-\d{4}$")
+            self.assertTrue(first[0]["releasedAt"])
+
+            self._skill(root, "1.1.0", changelog="加了一个开关", script="print('b')\n")
+            index, warnings = self._stamp(root)
+            versions = index["skills"]["alpha"]["versions"]
+            self.assertEqual(len(versions), 2, "哈希变了必须在头部插一条")
+            self.assertEqual(versions[0]["version"], "1.1.0")
+            self.assertEqual(versions[0]["changelog"], "加了一个开关")
+            self.assertEqual(versions[0]["changelogSource"], "user")
+            self.assertEqual(versions[1]["version"], "1.0.0", "旧条目原样往后排")
+            self.assertEqual(versions[0]["hash"], (root / "skills" / "alpha" / ".version").read_text().strip().rsplit("@", 1)[1])
+            self.assertFalse([w for w in warnings if "changelog" in w], warnings)
+
+    def test_unchanged_hash_only_touches_generated_at(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._skill(root, "1.0.0", changelog="首发")
+            before, _ = self._stamp(root)
+            after, _ = self._stamp(root)
+            self.assertEqual(before["skills"], after["skills"], "内容没变，versions 一个字都不许动")
+            self.assertEqual(before["ref"], after["ref"])
+            self.assertIn("generatedAt", after)
+
+    def test_missing_changelog_gets_auto_placeholder_by_semver_level(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._skill(root, "1.0.0")
+            index, warnings = self._stamp(root)
+            head = index["skills"]["alpha"]["versions"][0]
+            self.assertEqual(head["changelogSource"], "auto")
+            self.assertIn("自动生成", head["changelog"])
+            self.assertTrue(any("没写 changelog" in w for w in warnings), warnings)
+
+            self._skill(root, "2.0.0", script="print('c')\n")
+            index, warnings = self._stamp(root)
+            head = index["skills"]["alpha"]["versions"][0]
+            self.assertEqual(head["changelogSource"], "auto")
+            self.assertIn("契约变更", head["changelog"], "major 档位的占位文案要说清老用法可能失效")
+            self.assertTrue(any("major" in w for w in warnings), warnings)
+
+    def test_user_changelog_wins_over_auto(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._skill(root, "1.0.0")
+            self._stamp(root)
+            self._skill(root, "1.0.1", changelog="修了个错别字", script="print('d')\n")
+            index, warnings = self._stamp(root)
+            head = index["skills"]["alpha"]["versions"][0]
+            self.assertEqual((head["changelog"], head["changelogSource"]), ("修了个错别字", "user"))
+            self.assertNotIn("自动生成", head["changelog"])
+
+    def test_stale_user_changelog_is_warned_not_blocked(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._skill(root, "1.0.0", changelog="同一句")
+            self._stamp(root)
+            self._skill(root, "1.0.1", changelog="同一句", script="print('e')\n")
+            index, warnings = self._stamp(root)
+            self.assertEqual(index["skills"]["alpha"]["versions"][0]["changelogSource"], "user")
+            self.assertTrue(any("一字未改" in w for w in warnings), warnings)
+
+    def test_hand_written_fields_survive_restamping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._skill(root, "1.0.0", changelog="首发")
+            index, _ = self._stamp(root)
+            index["skills"]["alpha"]["displayName"] = "阿尔法"
+            index["skills"]["alpha"]["topics"] = ["演示"]
+            (root / "index.json").write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+            self._skill(root, "1.0.1", changelog="改一下", script="print('f')\n")
+            index, _ = self._stamp(root)
+            self.assertEqual(index["skills"]["alpha"]["displayName"], "阿尔法")
+            self.assertEqual(index["skills"]["alpha"]["topics"], ["演示"])
+            clawhub = json.loads((root / "tools" / "clawhub.json").read_text(encoding="utf-8"))
+            self.assertEqual(clawhub["skills"]["alpha"], {"displayName": "阿尔法", "topics": ["演示"]})
 
 
 class DriftReminderTests(unittest.TestCase):

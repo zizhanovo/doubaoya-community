@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# 内容改动与它的派生物（版本戳 + 历史闭集）**同笔提交**。
+# 内容改动与它的派生物（版本戳 + index.json + 历史闭集 + 四个兼容视图）**同笔提交**。
 #
 # 为什么有这个钩子：本仓此前每改一次 skill 要落三笔 —— 内容 → 版本戳 → 闭集，
 # 而后两笔全是派生物。两天里两个会话各自重复了五轮以上。
+# 2026-08-25 起事实源是仓库根 index.json（stamp 写 versions[]，build_known_hashes 写 knownHashes），
+# versions.json / known-hashes.json / renames.json / tools/clawhub.json 都从它生成（过渡期兼容视图）。
 #
 # 🔴 但真正的理由不是"烦"，是那条**静默**的失败模式：漏掉版本戳那一笔时，
 #    .version 停在旧哈希，而服务端从主仓同步的快照算出的是新哈希；
@@ -30,6 +32,7 @@ fi
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
+# stamp 的 stdout 是流水账，stderr 是警告（frontmatter 没写 changelog: 之类）——警告要让人看见。
 python3 tools/stamp_versions.py >/dev/null || {
   echo "🔴 盖版本戳失败。修好再提交；确实要跳过：git commit --no-verify" >&2
   echo "   ⚠️ 跳过的后果：戳与内容不一致 → 已装该版本的用户陷入" >&2
@@ -51,7 +54,7 @@ for slug in $touched; do
   [ -f "skills/$slug/.version" ] && git add "skills/$slug/.version"
 done
 
-# ⚠️ versions.json 与 known-hashes.json 是全仓聚合物，天然无法只带一部分。
+# ⚠️ index.json 与它的四个视图是全仓聚合物，天然无法只带一部分。
 # 它们此刻的内容里可能含别人在途包的哈希 —— 但那是**工作树**的事实，
 # 而闭集读的是**已提交**历史，所以 known-hashes.json 不受影响；
 # versions.json 确实会含在途值。这一条由 tools/tests 的闸兜底：
@@ -70,6 +73,6 @@ python3 tools/build_known_hashes.py >/dev/null || {
   exit 1
 }
 
-git add versions.json known-hashes.json 2>/dev/null || true
+git add index.json versions.json known-hashes.json renames.json tools/clawhub.json 2>/dev/null || true
 
 exit 0

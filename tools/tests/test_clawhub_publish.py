@@ -40,15 +40,40 @@ class ClawhubManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(publisher.ManifestError, r"extra=\['gone'\]"):
             publisher.check_coverage(manifest, ["a"])
 
+    @staticmethod
+    def _index(skills: dict) -> dict:
+        return {"schemaVersion": 1, "generatedAt": "x", "ref": "release-20260101-0000", "owner": "acme", "skills": skills}
+
     def test_load_manifest_rejects_a_blank_display_name(self):
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "clawhub.json"
+            path = Path(directory) / "index.json"
             path.write_text(
-                json.dumps({"schema_version": 1, "owner": "acme", "skills": {"a": {"displayName": "  "}}}),
+                json.dumps(self._index({"a": {"displayName": "  ", "topics": [], "status": "active", "knownHashes": [], "versions": []}})),
                 encoding="utf-8",
             )
             with self.assertRaisesRegex(publisher.ManifestError, "displayName"):
                 publisher.load_manifest(path)
+
+    def test_load_manifest_takes_version_and_changelog_from_the_index_and_skips_non_active(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "index.json"
+            head = {"version": "1.2.3", "hash": "a" * 12, "ref": "release-20260101-0000", "releasedAt": "x",
+                    "changelog": "这一版改了什么", "changelogSource": "user"}
+            path.write_text(json.dumps(self._index({
+                "a": {"displayName": "甲", "topics": ["t"], "status": "active", "knownHashes": ["a" * 12], "versions": [head]},
+                "old-a": {"displayName": "old-a", "topics": [], "status": "renamed", "redirectTo": "a", "knownHashes": [], "versions": []},
+                "gone": {"displayName": "gone", "topics": [], "status": "retired", "knownHashes": [], "versions": []},
+            }), ensure_ascii=False), encoding="utf-8")
+            manifest = publisher.load_manifest(path)
+            self.assertEqual(set(manifest["skills"]), {"a"}, "改名 / 下架的条目不上架")
+            self.assertEqual(manifest["owner"], "acme")
+            self.assertEqual(manifest["skills"]["a"], {"displayName": "甲", "topics": ["t"], "version": "1.2.3", "changelog": "这一版改了什么"})
+
+    def test_real_index_gives_every_skill_a_version_and_changelog(self):
+        manifest = publisher.load_manifest()
+        for slug, entry in manifest["skills"].items():
+            self.assertRegex(entry["version"], r"^\d+\.\d+\.\d+$", slug)
+            self.assertTrue(entry["changelog"].strip(), f"{slug} 的当前版没有 changelog")
 
 
 class ClawhubCommandTests(unittest.TestCase):
@@ -80,7 +105,17 @@ class ClawhubCommandTests(unittest.TestCase):
 
     def test_no_topics_means_no_empty_flag(self):
         manifest = {"schema_version": 1, "owner": "acme", "skills": {"a": {"displayName": "甲"}}}
-        self.assertNotIn("--topics", publisher.build_command(manifest, "a"))
+        command = publisher.build_command(manifest, "a")
+        self.assertNotIn("--topics", command)
+        self.assertNotIn("--version", command)
+        self.assertNotIn("--changelog", command)
+
+    def test_command_carries_version_and_changelog_from_the_index(self):
+        manifest = {"schema_version": 1, "owner": "acme", "skills": {
+            "a": {"displayName": "甲", "topics": ["t"], "version": "2.0.0", "changelog": "契约变更，老用法可能失效"}}}
+        command = publisher.build_command(manifest, "a")
+        self.assertEqual(command[command.index("--version") + 1], "2.0.0")
+        self.assertEqual(command[command.index("--changelog") + 1], "契约变更，老用法可能失效")
 
 
 class RetirementGateTests(unittest.TestCase):

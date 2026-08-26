@@ -5,12 +5,14 @@
   - `sync` 不接受 `--name`，displayName 会由 slug 机械 title-case（`wechat-cover` -> `Wechat Cover`），
     商店卡片上就是一串没人搜得到的英文；本仓的 Skill 名是中文的，必须逐个 `--name` 显式给。
   - ClawHub **不读** SKILL.md 的 frontmatter（displayName 只来自 `--name`，version 只来自
-    `--version` 或自动递补），所以元数据必须外置——就是 tools/clawhub.json 这份清单。
+    `--version` 或自动递补），所以元数据必须外置——就是仓库根 index.json 这份索引。
   - 裸 slug 是全局先到先得，本仓有一批 slug 已被别的发布者占用；带 `--owner` 发布走
     `/<owner>/skills/<slug>` 命名空间，能绕开占用。
 
-单一事实源：`tools/clawhub.json`。每个 `skills/<slug>/` 目录在清单里有且只有一条，
-两边对不上就直接失败（这个仓库的清单已经漂移过两次，见 validate_community 里的同类校验）。
+单一事实源：仓库根 `index.json`（2026-08-25 起；`tools/clawhub.json` 只是它的生成视图）。
+每个 `skills/<slug>/` 目录在索引里有且只有一条 active 条目，两边对不上就直接失败
+（这个仓库的清单已经漂移过两次，见 validate_community 里的同类校验）。
+displayName / topics / 当前 semver / changelog 全部从索引取，changelog 原样传给 `--changelog`。
 
 发布闸：SKILL.md 的 frontmatter description 正文以 `⛔ 已下架` 开头的，一律**不发**——
 连打印出来的命令里都不会有它（不然那行命令会被人复制到终端里跑掉）。挂牌写在 SKILL.md 里，
@@ -25,7 +27,7 @@
 
 前置（人工，一次性）：
     clawhub login                    # 设备流，浏览器里用 GitHub 账号授权
-    clawhub publisher create doubaoya    # 建发布者组织，handle 要与 clawhub.json 的 owner 一致
+    clawhub publisher create doubaoya    # 建发布者组织，handle 要与 index.json 的 owner 一致
 """
 from __future__ import annotations
 
@@ -38,7 +40,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / "tools" / "clawhub.json"
+MANIFEST = ROOT / "index.json"
 SOURCE_REPO = "https://github.com/zizhanovo/doubaoya-community"
 
 # 下架标记：SKILL.md frontmatter 的 description **正文开头**写 `⛔ 已下架`。
@@ -53,25 +55,43 @@ class ManifestError(RuntimeError):
 
 
 def load_manifest(path: Path = MANIFEST) -> dict:
-    manifest = json.loads(path.read_text(encoding="utf-8"))
-    if manifest.get("schema_version") != 1:
-        raise ManifestError(f"unsupported clawhub manifest schema: {manifest.get('schema_version')}")
-    owner = manifest.get("owner")
+    """从 index.json 取发布用的清单：{schema_version, owner, skills: {slug: {displayName, topics, version, changelog}}}。
+
+    只收 status: active 的条目——改名 / 合并 / 下架的 slug 不上架。形状沿用老 clawhub.json 的清单
+    （schema_version / owner / skills），下游 check_coverage / build_command 不用改口径。
+    """
+    index = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(index, dict) or index.get("schemaVersion") != 1:
+        raise ManifestError(f"unsupported index.json schemaVersion: {index.get('schemaVersion') if isinstance(index, dict) else index!r}")
+    owner = index.get("owner")
     if not isinstance(owner, str) or not owner:
-        raise ManifestError("clawhub manifest needs a non-empty owner handle")
-    skills = manifest.get("skills")
-    if not isinstance(skills, dict) or not skills:
-        raise ManifestError("clawhub manifest needs a non-empty skills map")
-    for slug, entry in skills.items():
+        raise ManifestError("index.json needs a non-empty owner handle")
+    entries = index.get("skills")
+    if not isinstance(entries, dict) or not entries:
+        raise ManifestError("index.json needs a non-empty skills map")
+    skills: dict[str, dict] = {}
+    for slug, entry in entries.items():
         if not isinstance(entry, dict):
-            raise ManifestError(f"clawhub manifest entry must be an object: {slug}")
+            raise ManifestError(f"index.json entry must be an object: {slug}")
+        if entry.get("status") != "active":
+            continue
         name = entry.get("displayName")
         if not isinstance(name, str) or not name.strip():
-            raise ManifestError(f"clawhub manifest entry needs a displayName: {slug}")
+            raise ManifestError(f"index.json entry needs a displayName: {slug}")
         topics = entry.get("topics", [])
         if not isinstance(topics, list) or not all(isinstance(t, str) and t.strip() for t in topics):
-            raise ManifestError(f"clawhub manifest topics must be non-empty strings: {slug}")
-    return manifest
+            raise ManifestError(f"index.json topics must be non-empty strings: {slug}")
+        versions = entry.get("versions") or []
+        head = versions[0] if versions and isinstance(versions[0], dict) else {}
+        skills[slug] = {
+            "displayName": name,
+            "topics": topics,
+            "version": head.get("version", ""),
+            "changelog": head.get("changelog", ""),
+        }
+    if not skills:
+        raise ManifestError("index.json has no active skills to publish")
+    return {"schema_version": 1, "owner": owner, "skills": skills}
 
 
 def discover_slugs(root: Path = ROOT) -> list[str]:
@@ -182,6 +202,11 @@ def build_command(
     ]
     if entry.get("topics"):
         command += ["--topics", ",".join(entry["topics"])]
+    # 语义版本与变更说明都来自 index.json 的 versions[0]——商店展示的与 dby-update 预检显示的是同一句。
+    if entry.get("version"):
+        command += ["--version", entry["version"]]
+    if entry.get("changelog"):
+        command += ["--changelog", entry["changelog"]]
     if commit:
         command += ["--source-commit", commit]
     if dry_run:
@@ -194,7 +219,12 @@ def self_check() -> None:
     manifest = load_manifest()
     check_coverage(manifest, discover_slugs())
 
-    fake = {"schema_version": 1, "owner": "acme", "skills": {"a": {"displayName": "甲", "topics": ["x"]}}}
+    for slug, entry in manifest["skills"].items():
+        assert entry["version"] and entry["changelog"], f"index.json 里 {slug} 的当前版缺 version/changelog：先跑 tools/stamp_versions.py"
+    real = build_command(manifest, next(iter(manifest["skills"])))
+    assert "--version" in real and "--changelog" in real, real
+
+    fake = {"schema_version": 1, "owner": "acme", "skills": {"a": {"displayName": "甲", "topics": ["x"], "version": "1.2.3", "changelog": "改了"}}}
     try:
         check_coverage(fake, ["a", "b"])
     except ManifestError as exc:
@@ -207,11 +237,14 @@ def self_check() -> None:
     assert "--owner" in command and command[command.index("--owner") + 1] == "acme", command
     assert command[command.index("--name") + 1] == "甲", command
     assert command[command.index("--topics") + 1] == "x", command
+    assert command[command.index("--version") + 1] == "1.2.3", command
+    assert command[command.index("--changelog") + 1] == "改了", command
     assert command[command.index("--source-commit") + 1] == "deadbeef", command
     assert command[-1] == "--dry-run", command
 
     no_topics = {"schema_version": 1, "owner": "acme", "skills": {"a": {"displayName": "甲"}}}
     assert "--topics" not in build_command(no_topics, "a"), "没有 topics 时不该传空 --topics"
+    assert "--changelog" not in build_command(no_topics, "a"), "没有 changelog 时不该传空 --changelog"
 
     # 发布闸：真仓库里挂了下架牌的都得被拦下，其余照发。
     publishable, refused = partition_publishable(discover_slugs())
@@ -283,5 +316,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except ManifestError as exc:
-        print(f"clawhub manifest error: {exc}", file=sys.stderr)
+        print(f"clawhub manifest (index.json) error: {exc}", file=sys.stderr)
         raise SystemExit(1)

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""把「我们发布过的每一版 skill」聚成一份闭集，写进仓库根 known-hashes.json。
+"""把「我们发布过的每一版 skill」聚成一份闭集，填进仓库根 index.json 每个 slug 的 knownHashes，
+再从索引生成过渡期兼容视图 known-hashes.json（形状不变，见 tools/skill_index.py）：
 
-    {"generatedAt": ..., "skills": {"<slug>": ["<hash>", ...]}}
+    {"generatedAt": ..., "skills": {"<slug>": ["<hash>", ...]}, "retiredEndpoints": ..., "versionLog": ...}
+
+索引里由本脚本负责的字段：knownHashes / history（= 旧 versionLog）/ retiredEndpoints / retiredTriggerWords。
+git 历史里有、索引里没有的 slug（早已下架、从未进过索引）会补一条 status: retired 的骨架条目。
 
 哈希口径与 tools/stamp_versions.py 完全一致（sha256 覆盖 skills/<slug>/ 下除 .version
 与点开头路径外的全部「文件名+内容」，取前 12 位），只不过这里的输入不是工作区，而是
@@ -26,8 +30,11 @@ import hashlib
 import json
 import re
 import subprocess
-from datetime import datetime, timezone
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import skill_index  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "skills/"
@@ -297,24 +304,43 @@ def build() -> tuple[dict, dict, dict, dict]:
     return dict(sorted(known.items())), endpoints, triggers, dict(sorted(version_log.items()))
 
 
+def fill_index(index: dict, known: dict, endpoints: dict, triggers: dict, version_log: dict, current: set) -> list[str]:
+    """把 git 历史算出的闭集写进索引条目；返回「盖过戳的版本哈希不在闭集里」的告警行。"""
+    skills = index["skills"]
+    for slug, hashes in known.items():
+        entry = skills.get(slug)
+        if entry is None:
+            entry = skills[slug] = skill_index.new_entry(slug, "active" if slug in current else "retired")
+        entry["knownHashes"] = list(hashes)
+        for field, table in (("history", version_log), ("retiredEndpoints", endpoints), ("retiredTriggerWords", triggers)):
+            if slug in table:
+                entry[field] = table[slug]
+            else:
+                entry.pop(field, None)
+    # versions[].hash ⊆ knownHashes 是索引的不变量。这里只告警不打红：工作树里改了但还没
+    # git add 的包，其当前哈希本来就进不了 write-tree——提交那一刻钩子会再算一遍。
+    return [
+        f"⚠️  {slug} 盖过戳的版本 {v['hash']} 不在历史闭集里（内容还没 git add？提交时钩子会重算）"
+        for slug, entry in sorted(skills.items())
+        for v in entry.get("versions", [])
+        if v.get("hash") not in entry.get("knownHashes", [])
+    ]
+
+
 def main() -> int:
     known, endpoints, triggers, version_log = build()
-    payload = {
-        "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "skills": known,
-        "retiredEndpoints": endpoints,
-        "retiredTriggerWords": triggers,
-        # 每一版的「什么时候发的、那一笔叫什么、当时的语义版本」。
-        # 供更新提示说出「1.4.0 → 2.0.0，这几版改了什么」——哈希答不了这个问题。
-        "versionLog": version_log,
-    }
-    (ROOT / "known-hashes.json").write_text(
-        json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
-    pairs = sum(len(v) for v in known.values())
     current = {p.name for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").is_file()}
+    index_file = ROOT / skill_index.INDEX_NAME
+    index = skill_index.load_or_bootstrap(index_file)
+    warnings = fill_index(index, known, endpoints, triggers, version_log, current)
+    index["generatedAt"] = skill_index.now_iso()
+    skill_index.save_index(index, index_file)
+    skill_index.write_views(index, ROOT)
+    for line in warnings:
+        print(line, file=sys.stderr)
+    pairs = sum(len(v) for v in known.values())
     print(
-        f"known-hashes.json: {len(known)} 个 slug（其中 {len(set(known) - current)} 个已下架）, "
+        f"index.json / known-hashes.json: {len(known)} 个 slug（其中 {len(set(known) - current)} 个已下架）, "
         f"{pairs} 个历史版本"
     )
     return 0

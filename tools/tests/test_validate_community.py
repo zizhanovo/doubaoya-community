@@ -17,6 +17,11 @@ assert SPEC and SPEC.loader
 validator = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(validator)
 
+INDEX_SPEC = importlib.util.spec_from_file_location("doubaoya_skill_index_for_validator", VALIDATOR.parent / "skill_index.py")
+assert INDEX_SPEC and INDEX_SPEC.loader
+skill_index = importlib.util.module_from_spec(INDEX_SPEC)
+INDEX_SPEC.loader.exec_module(skill_index)
+
 
 class CommunityValidatorTests(unittest.TestCase):
     def test_repository_is_valid(self):
@@ -1197,3 +1202,98 @@ class EntryGuardGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SkillIndexGateTests(unittest.TestCase):
+    """index.json 闸：索引↔旧文件一致、status/redirectTo 合法、active 的 versions[0].hash == .version。"""
+
+    def _repo(self, root: Path, *, renamed: bool = True) -> dict:
+        index = skill_index.empty_index(ref="release-20260101-0000")
+        for slug, h in (("dby-alpha", "a" * 12), ("dby-beta", "b" * 12)):
+            skill = root / "skills" / slug
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(f"---\nname: {slug}\ndescription: 演示\nversion: 1.0.0\n---\n", encoding="utf-8")
+            (skill / ".version").write_text(f"doubaoya-skill/{slug}@{h}\n", encoding="utf-8")
+            index["skills"][slug] = {
+                **skill_index.new_entry(slug),
+                "displayName": f"{slug} 展示名",
+                "knownHashes": [h],
+                "versions": [{"version": "1.0.0", "hash": h, "ref": index["ref"], "releasedAt": "2026-01-01",
+                              "changelog": "首发", "changelogSource": "user"}],
+            }
+        if renamed:
+            index["skills"]["old-alpha"] = {**skill_index.new_entry("old-alpha", "renamed"), "redirectTo": "dby-alpha",
+                                            "userFiles": [], "knownHashes": ["c" * 12]}
+        index["skills"]["gone"] = {**skill_index.new_entry("gone", "retired"), "knownHashes": ["d" * 12]}
+        skill_index.save_index(index, root / "index.json")
+        skill_index.write_views(index, root)
+        return index
+
+    def _rewrite(self, root: Path, index: dict) -> None:
+        skill_index.save_index(index, root / "index.json")
+
+    def test_consistent_fixture_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._repo(Path(tmp))
+            validator.validate_skill_index(Path(tmp))
+
+    def test_hand_edited_versions_json_is_rejected_and_names_the_slug(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            manifest = json.loads((root / "versions.json").read_text(encoding="utf-8"))
+            manifest["skills"]["dby-beta"] = "doubaoya-skill/dby-beta@" + "9" * 12
+            (root / "versions.json").write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, r"versions\.json.*skills\.dby-beta"):
+                validator.validate_skill_index(root)
+
+    def test_hand_edited_renames_json_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            table = json.loads((root / "renames.json").read_text(encoding="utf-8"))
+            table["renames"]["old-alpha"]["to"] = "dby-beta"
+            (root / "renames.json").write_text(json.dumps(table), encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, r"renames\.json.*renames\.old-alpha"):
+                validator.validate_skill_index(root)
+
+    def test_unknown_status_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            index = self._repo(root)
+            index["skills"]["gone"]["status"] = "deleted"
+            self._rewrite(root, index)
+            with self.assertRaisesRegex(validator.ValidationError, "status = 'deleted'"):
+                validator.validate_skill_index(root)
+
+    def test_redirect_must_point_to_an_active_entry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            index = self._repo(root)
+            index["skills"]["old-alpha"]["redirectTo"] = "gone"
+            self._rewrite(root, index)
+            skill_index.write_views(index, root)
+            with self.assertRaisesRegex(validator.ValidationError, "redirectTo = 'gone' 不是索引里的 active"):
+                validator.validate_skill_index(root)
+            del index["skills"]["old-alpha"]["redirectTo"]
+            self._rewrite(root, index)
+            skill_index.write_views(index, root)
+            with self.assertRaisesRegex(validator.ValidationError, "必须有 redirectTo"):
+                validator.validate_skill_index(root)
+
+    def test_active_head_hash_must_match_the_version_stamp(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._repo(root)
+            (root / "skills" / "dby-alpha" / ".version").write_text("doubaoya-skill/dby-alpha@" + "f" * 12 + "\n", encoding="utf-8")
+            with self.assertRaisesRegex(validator.ValidationError, r"versions\[0\]\.hash 与 skills/dby-alpha/\.version 不一致"):
+                validator.validate_skill_index(root)
+
+    def test_active_set_must_match_skill_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            index = self._repo(root)
+            index["skills"]["gone"]["status"] = "active"
+            self._rewrite(root, index)
+            with self.assertRaisesRegex(validator.ValidationError, "是 active，但 skills/gone/ 不存在"):
+                validator.validate_skill_index(root)

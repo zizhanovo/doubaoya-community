@@ -29,6 +29,7 @@ import json
 import re
 import subprocess
 import sys
+import warnings
 from pathlib import Path
 
 import pytest
@@ -37,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 
 import stamp_versions as sv  # noqa: E402
+import skill_index  # noqa: E402
 
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
@@ -172,3 +174,61 @@ def test_versions_manifest_与_frontmatter_不冲突() -> None:
                 f"{d.name}: versions.json 变成了语义版本形态 —— 它该存内容哈希。"
                 "两者答的不是同一个问题，合并即失去其中一个。"
             )
+
+
+def _committed_text(slug: str) -> str | None:
+    r = subprocess.run(["git", "show", f"HEAD:skills/{slug}/SKILL.md"], cwd=ROOT, capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else None
+
+
+def stale_changelogs(pairs: list[tuple[str, str, str]]) -> list[str]:
+    """(slug, 上一版 SKILL.md, 当前 SKILL.md) → 「内容变了但 changelog 一字未改」的 slug。
+
+    只看被点名的包（调用方已经判定哈希变了）。两边都没写也算「未改」——那正是 auto 占位会顶上的情形。
+    """
+    return [
+        slug for slug, old, new in pairs
+        if skill_index.frontmatter_field(old, "changelog") == skill_index.frontmatter_field(new, "changelog")
+    ]
+
+
+def test_哈希变了但_changelog_未变_只警告不红() -> None:
+    """changelog 是给用户看的「这次改了什么」；哈希变了它没跟着变，用户看到的就是一句过期说明。
+
+    🔴 只 warning 不 fail：第一趟发布时 11 个包都还没养成写 changelog 的习惯，红了等于把整仓卡住；
+    盖戳会用 semver 档位生成 auto 占位顶上。升为阻断留给第二趟决定（design.md 风险表）。
+    """
+    pairs = []
+    for d in _skills():
+        slug = d.name
+        old_stamp = _committed_stamp(slug)
+        old_text = _committed_text(slug)
+        if old_stamp is None or old_text is None:
+            continue
+        new_stamp = f"doubaoya-skill/{slug}@{sv.compute_skill_hash(d)}"
+        if new_stamp != old_stamp:
+            pairs.append((slug, old_text, (d / "SKILL.md").read_text(encoding="utf-8")))
+    stale = stale_changelogs(pairs)
+    if stale:
+        warnings.warn(
+            f"这些包的内容变了、frontmatter 的 changelog: 却一字未改：{stale}。"
+            "用户在 dby-update 预检里看到的会是一句过期的变更说明——请在 SKILL.md 里更新 changelog:。",
+            UserWarning,
+            stacklevel=1,
+        )
+
+
+def test_stale_changelog_判定_合成样本() -> None:
+    """闸的判据本身：同一句 ⇒ 过期；改了 ⇒ 不报；折叠块与单行同一口径。"""
+    old = "---\nname: x\nversion: 1.0.0\nchangelog: 首发\n---\n"
+    same = "---\nname: x\nversion: 1.0.1\nchangelog: 首发\n---\n"
+    folded_same = "---\nname: x\nversion: 1.0.1\nchangelog: >-\n  首发\n---\n"
+    changed = "---\nname: x\nversion: 1.0.1\nchangelog: 修了个错别字\n---\n"
+    none_both = "---\nname: x\nversion: 1.0.1\n---\n"
+    assert stale_changelogs([("a", old, same)]) == ["a"]
+    assert stale_changelogs([("a", old, folded_same)]) == ["a"]
+    assert stale_changelogs([("a", old, changed)]) == []
+    assert stale_changelogs([("a", none_both, none_both)]) == ["a"], "两边都没写也算未改"
+    with pytest.warns(UserWarning, match="一字未改"):
+        if stale_changelogs([("a", old, same)]):
+            warnings.warn("这些包的内容变了、changelog 一字未改", UserWarning, stacklevel=1)

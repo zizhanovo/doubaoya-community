@@ -12,6 +12,9 @@ import stat
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import skill_index  # noqa: E402  —— 索引结构与兼容视图的单一定义
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
@@ -617,7 +620,8 @@ def validate_call_routes(root: Path = ROOT) -> None:
         # known-hashes.json 记的是**已下架包当年调过什么**，是历史账本不是调用点。里面的
         # 端点本来就该是死的（能力跟着包一起下架了），扫它等于要求历史永远不许下架。
         # 「这些死端点有没有让还活着的能力失联」由 validate_retired_discoverability 管。
-        if relative == "known-hashes.json":
+        # index.json 是它的事实源（retiredEndpoints 就存在各条目里），同样是账本不是调用点。
+        if relative in ("known-hashes.json", skill_index.INDEX_NAME):
             continue
         text = path.read_text(encoding="utf-8")
 
@@ -791,6 +795,85 @@ def validate_readme(root: Path = ROOT) -> None:
     listed = set(listed_names)
     actual = {path.name for path in skill_dirs}
     require(listed == actual, f"README Skill inventory mismatch: missing={sorted(actual - listed)}, extra={sorted(listed - actual)}")
+
+
+
+def validate_skill_index(root: Path = ROOT) -> None:
+    """仓库根 ``index.json`` 是每个 skill 元信息的唯一事实源（规格：openspec/changes/unify-skill-index）。
+
+    守三件事：① 条目形状与生命周期状态合法（`status` 四选一；renamed/merged 必须 `redirectTo` 一个在架的
+    active）；② active 集合与 ``skills/`` 目录一一对应，且每条 active 的 ``versions[0].hash`` 等于该包
+    ``.version`` 里的哈希——盖戳与索引是同一次运行写出来的，漂了就是有人手改了其中一边；③ 过渡期四个旧文件
+    是索引的生成视图，逐字段必须一致——装在用户机器上的老对账器还在读它们，手改旧文件等于把真相劈成两份。
+
+    ponytail: `versions[].hash ⊆ knownHashes` 放在 tools/tests/test_skill_index.py 里（要跳过在途包，
+    得读 git status），这里不重复。
+    """
+    path = root / skill_index.INDEX_NAME
+    require(path.is_file(), "index.json 不存在：先跑 python3 tools/stamp_versions.py && python3 tools/build_known_hashes.py")
+    index = load_json(path)
+    require(isinstance(index, dict), "index.json must be an object")
+    require(index.get("schemaVersion") == skill_index.SCHEMA_VERSION, f"unsupported index.json schemaVersion: {index.get('schemaVersion')!r}")
+    require(isinstance(index.get("generatedAt"), str) and index["generatedAt"], "index.json 缺 generatedAt")
+    require(isinstance(index.get("ref"), str) and skill_index.REF_PATTERN.match(index["ref"]), f"index.json 的 ref 不是 release-YYYYMMDD-HHMM：{index.get('ref')!r}")
+    require(isinstance(index.get("owner"), str) and index["owner"], "index.json 缺 owner（ClawHub 发布者 handle）")
+    skills = index.get("skills")
+    require(isinstance(skills, dict) and skills, "index.json 的 skills 必须是非空对象")
+
+    installed = {d.name for d in discover_skill_dirs(root)}
+    for slug, entry in sorted(skills.items()):
+        label = f"index.json[{slug!r}]"
+        require(isinstance(entry, dict), f"{label} must be an object")
+        unknown = set(entry) - set(skill_index.ENTRY_KEYS)
+        require(not unknown, f"{label} 有不认识的键：{sorted(unknown)}")
+        missing = [key for key in skill_index.ENTRY_REQUIRED if key not in entry]
+        require(not missing, f"{label} 缺必填键：{missing}")
+        require(isinstance(entry["displayName"], str) and entry["displayName"].strip(), f"{label}.displayName 必须是非空字符串")
+        require(isinstance(entry["topics"], list) and all(isinstance(t, str) and t.strip() for t in entry["topics"]), f"{label}.topics 必须是非空字符串数组")
+        status = entry["status"]
+        require(status in skill_index.STATUSES, f"{label}.status = {status!r}，只认 {skill_index.STATUSES}")
+        if status in skill_index.REDIRECT_STATUSES:
+            target = entry.get("redirectTo")
+            require(isinstance(target, str) and target, f"{label} 是 {status}，必须有 redirectTo")
+            require(target in skills and skills[target].get("status") == "active", f"{label}.redirectTo = {target!r} 不是索引里的 active 条目——对账器会去装一个装不上的包")
+            require(target != slug, f"{label}.redirectTo 指向自己")
+        else:
+            require("redirectTo" not in entry, f"{label} 是 {status}，不该有 redirectTo")
+        require(isinstance(entry.get("userFiles", []), list), f"{label}.userFiles 必须是数组")
+        require(
+            isinstance(entry["knownHashes"], list) and all(isinstance(h, str) and skill_index.HASH_PATTERN.match(h) for h in entry["knownHashes"]),
+            f"{label}.knownHashes 必须是 12 位十六进制字符串数组——老对账器做的是 includes(hash)，形状变了每台机器都认错包",
+        )
+        require(isinstance(entry["versions"], list), f"{label}.versions 必须是数组")
+        for position, version in enumerate(entry["versions"]):
+            vlabel = f"{label}.versions[{position}]"
+            require(isinstance(version, dict) and set(version) == set(skill_index.VERSION_KEYS), f"{vlabel} 的键必须恰好是 {skill_index.VERSION_KEYS}")
+            require(skill_index.HASH_PATTERN.match(version["hash"] or ""), f"{vlabel}.hash 不是 12 位哈希")
+            require(version["changelogSource"] in skill_index.CHANGELOG_SOURCES, f"{vlabel}.changelogSource 只认 user/auto")
+            require(isinstance(version["changelog"], str) and version["changelog"].strip(), f"{vlabel}.changelog 为空——没写也该有 auto 占位")
+        if status == "active":
+            require(slug in installed, f"{label} 是 active，但 skills/{slug}/ 不存在——下架请改 status")
+            require(entry["versions"], f"{label} 是 active 却没有盖过戳的版本，先跑 tools/stamp_versions.py")
+            stamp_file = root / "skills" / slug / ".version"
+            require(stamp_file.is_file(), f"{slug} 缺 .version")
+            stamp = stamp_file.read_text(encoding="utf-8").strip()
+            require(
+                stamp == f"doubaoya-skill/{slug}@{entry['versions'][0]['hash']}",
+                f"{label}.versions[0].hash 与 skills/{slug}/.version 不一致（{entry['versions'][0]['hash']} vs {stamp}）——两边由同一次盖戳写出，漂了就是有人手改了一边",
+            )
+        else:
+            require(slug not in installed, f"{label} 的 status 是 {status}，但 skills/{slug}/ 仍在架")
+
+    active = {slug for slug, e in skills.items() if e.get("status") == "active"}
+    require(active == installed, f"index.json 的 active 集合与 skills/ 不一致：缺少 {sorted(installed - active)}，多出 {sorted(active - installed)}")
+
+    drift = skill_index.view_drift(index, root)
+    require(
+        not drift,
+        "旧文件与 index.json 漂了（它们是生成视图，别手改）："
+        + "；".join(f"{relative} 的 {fields}" for relative, fields in drift.items())
+        + "。改 index.json 后跑 python3 tools/stamp_versions.py && python3 tools/build_known_hashes.py 重新生成",
+    )
 
 
 def validate_clawhub_manifest(root: Path = ROOT) -> None:
@@ -1855,6 +1938,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_skill_slug_prefix(root)
     validate_skill_size(root)
     validate_readme(root)
+    validate_skill_index(root)
     validate_clawhub_manifest(root)
     validate_renames_table(root)
     validate_routing(root)
