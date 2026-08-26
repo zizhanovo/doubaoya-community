@@ -28,6 +28,7 @@ ponytail: 暂无 CI 钩子自动跑；升级路径 = push 时的 CI 步骤自动
 from __future__ import annotations
 
 import hashlib
+import subprocess
 import json
 import os
 import re
@@ -87,6 +88,20 @@ def _warn_stderr(message: str) -> None:
     print(message, file=sys.stderr)
 
 
+def _tag_exists(ref: str, root: Path) -> bool:
+    """本地 git 里有没有这个 tag。不是 git 仓库 / git 不可用 ⇒ 答不了，当作已发过（沿用老行为：插新条目）。
+    只有「确实在 git 仓库里、且 tag 确实不在」才判未发布——这是能实证的唯一情形。"""
+    try:
+        res = subprocess.run(
+            ["git", "tag", "-l", ref], cwd=root, capture_output=True, text=True, check=False, timeout=10
+        )
+    except (OSError, subprocess.SubprocessError):
+        return True
+    if res.returncode != 0:
+        return True
+    return ref in res.stdout.split()
+
+
 def stamp_all(
     skills_dir: Path,
     index_file: Path,
@@ -124,7 +139,11 @@ def stamp_all(
     changed = sorted(slug for slug, h in hashes.items() if previous.get(slug) != h)
     # 幂等：哈希一个没变就沿用上一次的 ref——否则每重跑一次就换一个 tag 名，而那个 tag 谁也没打过。
     previous_ref = index.get("ref") if REF_PATTERN.match(index.get("ref") or "") else None
-    ref = previous_ref if (not changed and previous_ref) else make_ref(now)
+    # 🔴 同一批还没打 tag 的改动反复盖戳（提交前手跑一次、钩子再跑一次）不能堆出两个版本条目：
+    #    上一个 ref 的 tag 还不存在 ⇒ 那一版从没发出去过 ⇒ 沿用它的 ref，并在下面**替换**而不是插入。
+    #    否则 versions[] 里留下一条谁也装不到的幽灵哈希，闭集校验当场报红（2026-08-26 实证）。
+    unreleased_ref = previous_ref if (previous_ref and not _tag_exists(previous_ref, root)) else None
+    ref = previous_ref if (not changed and previous_ref) else (unreleased_ref or make_ref(now))
 
     for slug in changed:
         entry = skills.get(slug)
@@ -135,7 +154,9 @@ def stamp_all(
             # 目录在、索引却说它不在架：状态是人手写的事实，这里不替人改，交给 validate_community 报红。
             warn(f"⚠️  skills/{slug}/ 在架，但 index.json 里 status = {entry.get('status')!r}——请改回 active 或删目录。")
         fm = skill_index.read_frontmatter(skills_dir / slug / "SKILL.md")
-        prior = entry["versions"][0] if entry.get("versions") else None
+        head = entry["versions"][0] if entry.get("versions") else None
+        replacing = bool(unreleased_ref and head and head.get("ref") == unreleased_ref)  # 同一批未发布的戳 ⇒ 覆盖头条
+        prior = (entry["versions"][1] if len(entry.get("versions", [])) > 1 else None) if replacing else head
         prior_version = prior["version"] if prior else None
         if fm["changelog"]:
             changelog, source = fm["changelog"], "user"
@@ -147,14 +168,18 @@ def stamp_all(
                 f"⚠️  {slug} 的 frontmatter 没写 changelog:，已按 semver 档位生成占位文案"
                 f"（{skill_index.bump_level(fm['version'], prior_version)}）。请在 SKILL.md 里补一句。"
             )
-        entry.setdefault("versions", []).insert(0, {
+        record = {
             "version": fm["version"],
             "hash": hashes[slug],
             "ref": ref,
             "releasedAt": now.isoformat(),
             "changelog": changelog,
             "changelogSource": source,
-        })
+        }
+        if replacing:
+            entry["versions"][0] = record
+        else:
+            entry.setdefault("versions", []).insert(0, record)
 
     for slug, entry in skills.items():
         if entry.get("status") == "active" and slug not in hashes:

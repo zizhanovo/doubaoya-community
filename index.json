@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T01:03:13.417676+00:00",
+  "generatedAt": "2026-08-26T01:06:31.366832+00:00",
   "ref": "release-20260826-0103",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -666,6 +666,12 @@
           "version": "1.2.0",
           "date": "2026-08-24",
           "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "054b6535ba16",
+          "version": "1.3.1",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -783,6 +789,12 @@
           "version": "1.1.0",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "acae0014e410",
+          "version": "1.3.2",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -865,6 +877,12 @@
           "version": "1.1.0",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "5de93933d77a",
+          "version": "1.2.2",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -988,6 +1006,12 @@
           "version": "1.1.0",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "b478b3935700",
+          "version": "1.2.1",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -1076,6 +1100,12 @@
           "version": "1.2.0",
           "date": "2026-08-24",
           "subject": "fix(dby): 20 场景模拟测试后的路由与文档修正"
+        },
+        {
+          "hash": "18b04d9d8613",
+          "version": "1.3.2",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -1207,6 +1237,12 @@
           "version": "1.1.1",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "63c13c5ffbeb",
+          "version": "1.2.2",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -1423,6 +1459,12 @@
           "version": "2.4.0",
           "date": "2026-08-24",
           "subject": "refactor(dby): 逐包领域调研后的规则更正与触发词补齐"
+        },
+        {
+          "hash": "87b714968274",
+          "version": "2.4.2",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -1491,6 +1533,12 @@
           "version": "1.0.1",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "27129afe12be",
+          "version": "1.1.1",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -1573,6 +1621,12 @@
           "version": "1.2.0",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 主体压到 ≤6000 字符——冷门分支下沉 references/，协议改引用不再内联；违禁词入口统一指 dby-banned-words"
+        },
+        {
+          "hash": "0a8f19dad810",
+          "version": "1.3.1",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         }
       ]
     },
@@ -1614,14 +1668,6 @@
           "hash": "912ad0771767",
           "ref": "release-20260826-0103",
           "releasedAt": "2026-08-26T01:03:09.201922+00:00",
-          "changelog": "新增变更说明字段",
-          "changelogSource": "user"
-        },
-        {
-          "version": "3.3.1",
-          "hash": "96ddb6edcb35",
-          "ref": "release-20260825-1804",
-          "releasedAt": "2026-08-25T18:04:17.230426+00:00",
           "changelog": "新增变更说明字段",
           "changelogSource": "user"
         },
@@ -1906,6 +1952,12 @@
           "version": "1.3.1",
           "date": "2026-08-24",
           "subject": "refactor(dby): 11 个 SKILL.md 按写作手艺去废话——删解释/元叙述/历史叙事/跨包重复红线，两处 description 去流程复述"
+        },
+        {
+          "hash": "3cf369dcb74d",
+          "version": "1.9.1",
+          "date": "2026-08-25",
+          "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
         },
         {
           "hash": "563e4254655a",

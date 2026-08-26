@@ -354,3 +354,43 @@ class ReadManifestSkillsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UnreleasedRestampTests(unittest.TestCase):
+    """同一批还没打 tag 的改动反复盖戳，不能堆出第二条版本（2026-08-26 幽灵哈希实证）。"""
+
+    def test_restamp_before_tag_replaces_head_entry(self) -> None:
+        import subprocess
+        from datetime import datetime, timezone
+        sv = stamp_versions
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            skills = root / "skills"
+            (skills / "a").mkdir(parents=True)
+            (skills / "a" / "SKILL.md").write_text(
+                "---\nname: a\ndescription: x\nversion: 1.0.0\nchangelog: 第一版\n---\n", encoding="utf-8"
+            )
+            index_file = root / "index.json"
+            t0 = datetime(2000, 1, 1, tzinfo=timezone.utc)
+            sv.stamp_all(skills, index_file, now=t0, warn=lambda _m: None)
+            (skills / "a" / "SKILL.md").write_text(
+                "---\nname: a\ndescription: y\nversion: 1.0.1\nchangelog: 第二版\n---\n", encoding="utf-8"
+            )
+            sv.stamp_all(skills, index_file, now=datetime(2000, 1, 2, tzinfo=timezone.utc), warn=lambda _m: None)
+            entry = json.loads(index_file.read_text(encoding="utf-8"))["skills"]["a"]
+            self.assertEqual(len(entry["versions"]), 1, "tag 没打过 ⇒ 第二次盖戳应覆盖头条，不堆第二条")
+            self.assertEqual(entry["versions"][0]["version"], "1.0.1")
+            # 打了 tag 之后再改 ⇒ 才插新条目
+            ref = entry["versions"][0]["ref"]
+            subprocess.run(["git", "add", "-A"], cwd=root, check=True)
+            subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "x"], cwd=root, check=True)
+            subprocess.run(["git", "tag", ref], cwd=root, check=True)
+            (skills / "a" / "SKILL.md").write_text(
+                "---\nname: a\ndescription: z\nversion: 1.0.2\nchangelog: 第三版\n---\n", encoding="utf-8"
+            )
+            sv.stamp_all(skills, index_file, now=datetime(2000, 1, 3, tzinfo=timezone.utc), warn=lambda _m: None)
+            entry = json.loads(index_file.read_text(encoding="utf-8"))["skills"]["a"]
+            self.assertEqual([v["version"] for v in entry["versions"]], ["1.0.2", "1.0.1"])
+            self.assertNotEqual(entry["versions"][0]["ref"], ref)
