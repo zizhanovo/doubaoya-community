@@ -4,15 +4,12 @@
 
 > **服务端默认主题**(`POST`/`PUT` + `isDefault:true`,存在 `userWechatTheme` 表里)决定
 > **doubaoya.com 网页排版工作室**和 **`POST /api/wechat/render`** 渲染出来的 HTML。
-> **`dby-publish` 发文**时的主题按
-> `--theme x.json` > `config.json` 里写成路径的 `mdTheme` > **服务端编译主题**
-> (`GET /api/wechat/theme?format=compiled`,即上面存回的默认主题,拉不到就回退) >
-> 项目默认(`themes/benya-clean.json`)取。
+> **存回服务端设为默认 → 未钉本机主题的 `dby-publish` 发文也会用到它**——它内部具体怎么取、
+> 按什么优先级取,是 `dby-publish` 自己的实现细节,不在本包描述;要细读读
+> `dby-publish/references/rendering.md`（若已装）。
 >
-> 所以:**存回服务端设为默认是主路**——发文机器只要配了 `DOUBAOYA_API_KEY` 且**没有**用
-> `--theme` / `config.mdTheme` 钉死本机主题,pipeline 发文会自动拉到这份默认排版,无需再落本机文件。
-> **仍需落本机文件**的情形:发文时钉着本机主题(`--theme`/`config.mdTheme` 路径)、离线/拉取失败要兜底、
-> 或用的是不带自动拉取的旧版 pipeline——这些情况下只存服务端,发出去的还是旧(本机)排版。
+> **仍需落本机文件**的情形:发文时钉着本机主题(`--theme`/`config.mdTheme` 路径)、或要离线兜底——
+> 这些情况下只存服务端,发出去的还是本机那份旧排版。
 
 **第一步 · 存回服务端(网页工作室 + `/api/wechat/render` + 未钉本机主题的 pipeline 发文这条路生效):**
 
@@ -48,9 +45,35 @@ node scripts/pipeline.mjs --md a.md --title "标题" --theme themes/my-theme.jso
 
 落完再向用户汇报,并**如实说清各自的生效范围**:
 **服务端默认排版已更新——网页排版工作室和 `POST /api/wechat/render` 立刻生效;
-发文机器配了 `DOUBAOYA_API_KEY` 且未钉本机主题时,pipeline 发文也会自动拉到这份默认排版
-(拉不到会回退本机主题,不中断)。**若发文时钉着本机主题(`--theme` 或 `config.mdTheme` 路径),
-则以刚落下的 `themes/my-theme.json` 为准——别混着说,按用户的实际配置讲清楚哪条路生效。
+发文机器配了 `DOUBAOYA_API_KEY` 且未钉本机主题时,pipeline 发文也会读到这份默认排版。**
+若发文时钉着本机主题(`--theme` 或 `config.mdTheme` 路径),则以刚落下的
+`themes/my-theme.json` 为准——别混着说,按用户的实际配置讲清楚哪条路生效。
+
+---
+
+## 回滚（改坏了怎么办）
+
+第 1 步的 GET 命令已经把改前的默认主题落盘到 `$BACKUP`（红线 4）。存回服务端之后发现效果不对，
+把备份的 `themeJson` 原样 PUT 回去，服务端就恢复成改前的样子：
+
+```bash
+# 备份里有主题 id 才能回滚(id 来自 data.theme.id);没有 id 说明改之前用户还没有默认主题,
+# 这种情况无需回滚——直接把这次新建的主题 DELETE 掉即可(先用 GET 确认它不是别的默认主题)
+THEME_ID="$(jq -r '.data.theme.id // empty' "$BACKUP")"
+if [ -n "$THEME_ID" ]; then
+  curl -s -X PUT -H "$AUTH" -H 'Content-Type: application/json' \
+    -d "$(jq -n --slurpfile b "$BACKUP" '{themeJson:$b[0].data.theme.themeJson, isDefault:true}')" \
+    "$BASE/api/wechat/theme/$THEME_ID" | jq '.data.theme.updatedAt'
+else
+  echo "备份里没有主题 id(改之前没有默认主题),无需回滚"
+fi
+```
+
+若还落过本机文件（第二步），把它也换回备份内容：
+
+```bash
+jq '.data.theme.themeJson' "$BACKUP" > <dby-publish>/themes/my-theme.json
+```
 
 ---
 

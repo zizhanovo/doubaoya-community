@@ -4,9 +4,9 @@ description: >-
   公众号排版主题工作室 · 按你的口语改公众号文章的**默认排版样式**（配色 / 标题 / 引用 / 图注），本地即时预览，
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
-  Trigger: customize WeChat article theme, change layout / palette / heading style.
-version: 1.3.1
-changelog: 新增变更说明字段
+  Trigger words: customize WeChat article theme, change layout / palette / heading style.
+version: 1.4.0
+changelog: 改主题前强制落盘备份并给出回滚命令、DELETE 加护栏；deploy-scope 与顶层键清单改指真实来源（校验器 / dby-publish/references/rendering.md）
 compatibility: >-
   需要 Node ≥ 18（校验脚本用全局 fetch）与 curl；正文示例用 jq 拼 JSON body，
   不想装 jq 也可以手写 JSON。不装任何 npm 包。
@@ -16,13 +16,13 @@ compatibility: >-
 # 公众号排版主题工作室（都爆鸭）
 
 排版是一份声明式的 **`themeJson`**（配色 palette + 每个标签的 inline-style 模板），渲染器按它把
-Markdown 确定性地渲成公众号内联样式 HTML。你（agent）的活是**按描述生成 / 修改合法的 themeJson**，
-本地自检 + 预览，再**存回服务端设为默认**，按需再落一份本机 theme 文件（生效范围见 §5）。
+Markdown 确定性地渲成公众号内联样式 HTML。按描述生成 / 修改合法的 themeJson，
+本地自检 + 预览，再**存回服务端设为默认**；发文钉了 `--theme` / `config.mdTheme` 时再落一份本机文件。
 渲染 / 存主题都**免费不扣点**。
 
 ---
 
-## ⚠️ 三条硬红线（先读，全程守住）
+## ⚠️ 四条硬红线（先读，全程守住）
 
 ### 红线 1 · 微信兼容:标题装饰只能挂在有文字的元素自身
 
@@ -39,18 +39,18 @@ Markdown 确定性地渲成公众号内联样式 HTML。你（agent）的活是*
 
 ### 红线 3 · 安全:themeJson 会内联进公众号草稿,服务端会拒收不合法主题
 
-服务端 `POST/PUT/render` 都会 `validateTheme`,不过直接 **400**。
-生成的主题**必须**满足（详见 [`scripts/validate-theme.mjs`](./scripts/validate-theme.mjs) 与下文 schema）:
-
-- top-level 只允许 `meta` / `palette` / `page` / `elements` / `decorations` / `components`,其余键 = 硬错。
-- `palette` 值必须像颜色（`#hex` / `rgb()` / `hsl()` / 具名色 / `{{token}}`）。8 个标准键:`text heading accent accent2 muted bgSoft border link`。
-- `page` 键:`fontFamily fontSize lineHeight letterSpacing color`,值都是字符串。
-- `elements.<tag>.style` 是 inline CSS,**不能含 `<` 或 `>`**（markup 放 `wrapBefore`/`wrapAfter`/`hr.html`）。
-- **六条硬红线**:任何字符串都不得出现 `<script` / `<style` / `class=` / `src=` / `javascript:` / `onX=`（如 `onclick=`）。
-- 整个 themeJson **≤ 64KB**。
+服务端 `POST`/`PUT`/`render` 都会 `validateTheme`，不过直接 **400**。生成后先跑
+[`scripts/validate-theme.mjs`](./scripts/validate-theme.mjs) 自检——具体校验规则（顶层键、
+palette/page 必填字段、style 禁写清单、体积上限）以它为准，不在这里另存一份会漂移的清单。
 
 微信编辑器官方规范另有八条「不拒但走样」的写法（`position`、`text-align:start`、固定像素宽、自定义字体栈、文字底下铺渐变…），
 清单与可读性基线见 `references/theme-schema.md` 末尾；校验器对其中四条打 warning。
+
+### 红线 4 · 数据安全:动手改前必须落盘备份,没有备份不改
+
+改主题是**就地覆写**（`PUT` / `POST + isDefault:true`），服务端不保留历史版本，改坏了没有第二处能找回。
+第 1 步的 GET 命令已经把落盘备份写进命令本身——**照抄不删**；备份文件路径记下来，改坏了照
+`references/deploy-scope.md`「回滚」一节把它 PUT 回去。
 
 ---
 
@@ -73,11 +73,13 @@ AUTH="Authorization: Bearer $DOUBAOYA_API_KEY"
 
 ## 闭环步骤
 
-### 1. 读起点主题
+### 1. 读起点主题并落盘备份（红线 4，照抄不删）
 
 ```bash
-# a) 读我当前的默认主题(有就在它上面改)；主题体在 data.theme.themeJson
-curl -s -H "$AUTH" "$BASE/api/wechat/theme"
+# a) 读我当前的默认主题(有就在它上面改)并强制落盘备份——主题体在 data.theme.themeJson
+BACKUP="/tmp/dby-theme-backup-$(date +%s).json"
+curl -s -H "$AUTH" "$BASE/api/wechat/theme" | tee "$BACKUP"
+echo "已备份到 $BACKUP —— 改坏了见 references/deploy-scope.md「回滚」一节"
 
 # b) 或列出内置主题,挑一个复制起步(推荐 benya-clean——已按红线 1 / 2 改造过)
 curl -s -H "$AUTH" "$BASE/api/wechat/themes"
@@ -88,7 +90,7 @@ curl -s -H "$AUTH" "$BASE/api/wechat/themes"
 ### 2. 按用户口语描述改 themeJson
 
 把「换成暖橘色 / 标题要竖条 / 引用做成卡片 / 字再大一点 / 排版长得像某某号」翻译成合法 themeJson。
-字段全貌见 `references/theme-schema.md`;守住上面三条红线。改配色最省事:**只动 `palette` 八个键**。
+字段全貌见 `references/theme-schema.md`;守住上面四条红线。改配色最省事:**只动 `palette` 八个键**。
 
 ### 3. 本地先自检
 
@@ -120,7 +122,7 @@ open /tmp/preview.html    # macOS;别的平台用浏览器打开
 ### 5. ⚠️ 落地生效范围（两条渲染路的主题源）
 
 → 主题调好、要存回去时读 `references/deploy-scope.md`——它回答「存了之后哪条路会变、
-哪条不会」，并给出存回服务端 / 落本机文件的两条命令。
+哪条不会」，并给出存回服务端 / 落本机文件 / 改坏了回滚的完整命令。
 
 **存回服务端设为默认是主路**（`POST`/`PUT` + `isDefault:true`）：doubaoya.com 网页排版
 工作室、`POST /api/wechat/render`、以及**未钉本机主题的 `dby-publish` 发文**都读它。
@@ -130,7 +132,7 @@ open /tmp/preview.html    # macOS;别的平台用浏览器打开
 
 ## themeJson 结构（速查）
 
-→ 真要动手写 / 改 themeJson 的字段时读 `references/theme-schema.md`（top-level 五段、
+→ 真要动手写 / 改 themeJson 的字段时读 `references/theme-schema.md`（top-level 键、
 `elements` 支持的标签、`{{token}}` 插值、`li.marker` / `img.figureStyle` / `hr.html` 这些位置），
 不需要就别读。**只换配色的话改 `palette` 八个键就够**，其余用 `{{token}}` 自动跟随。
 

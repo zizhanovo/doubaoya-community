@@ -18,7 +18,7 @@ AUTH="Authorization: Bearer $DOUBAOYA_API_KEY"
 | `POST /api/wechat/render` | `{ markdown, title?, themeId?, themeJson? }` | `{ html, themeSource, warnings? }` | Markdown→公众号 HTML(**免费,不扣点**) |
 | `POST /api/wechat/theme` | `{ name?, themeJson, isDefault? }` | `{ theme: <新建行> }`（HTTP 201） | 新建主题;`isDefault:true` 置为默认 |
 | `PUT /api/wechat/theme/:id` | `{ name?, themeJson?, isDefault? }` | `{ theme: <更新行> }` | 改已有主题(仅本人的) |
-| `DELETE /api/wechat/theme/:id` | — | `{ deleted:true, id }` | 删主题(仅本人的) |
+| `DELETE /api/wechat/theme/:id` | — | `{ deleted:true, id }` | 删主题(仅本人的,⚠️ 见下) |
 
 要点（都来自真实代码）:
 - **主题行字段**:`{ id, userId, name, themeJson, isDefault, createdAt, updatedAt }`（`themeJson` 就是那份 JSON）。
@@ -26,6 +26,10 @@ AUTH="Authorization: Bearer $DOUBAOYA_API_KEY"
 - **一人一默认**:`isDefault:true` 时服务端在事务里把我其他主题的 `isDefault` 置反,保证只有一份默认。
 - **name 缺省** = `"我的主题"`；**PUT 只更传了的字段**（`themeJson`/`name`/`isDefault` 按需）。
 - `themeId` 非法 → 400 `UNKNOWN_THEME`；`themeJson` 不合法 → 400 `UNSAFE_THEME`/`VALIDATION_ERROR`/`THEME_TOO_LARGE`。
+
+⚠️ **DELETE 无历史版本可找回。** 删之前先 `GET /api/wechat/theme` 确认要删的 id 不是当前默认主题
+（`isDefault:true`）——删掉默认主题后，未钉主题的渲染/发文会静默回退到内置 `benya-clean`，
+且服务端不保留被删主题的任何副本。不确定就先按红线 4 落盘备份再删。
 
 ---
 

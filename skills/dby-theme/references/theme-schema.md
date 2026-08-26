@@ -2,7 +2,7 @@
 
 > 真要动手写 / 改 themeJson 的字段时读它。只换配色的话，改 `palette` 八个键就够，不必读。
 
-top-level 五段（+ 进阶 `components`）:
+top-level 键以 [`scripts/validate-theme.mjs`](../scripts/validate-theme.mjs) 的 `TOP_LEVEL_KEYS` 为准，生成后先跑它。最常用的几段:
 
 ```jsonc
 {

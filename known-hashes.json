@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T06:11:49.786287+00:00",
+  "generatedAt": "2026-08-26T06:12:07.787376+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -199,6 +199,7 @@
       "895210b408a4",
       "9c3df5a11c54",
       "a1b7ed58c9fe",
+      "a7722b9c56db",
       "af370a32f818",
       "b1b4f5ebb9e6",
       "c5cfbb362507",
@@ -2541,6 +2542,12 @@
         "version": "1.3.2",
         "date": "2026-08-25",
         "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+      },
+      {
+        "hash": "7e9c0e95aa56",
+        "version": "1.3.3",
+        "date": "2026-08-25",
+        "subject": "fix(dby-gateway): routing-pitfalls 教用户调一条 capability-index 自己标着 ⛔ 不可调的能力"
       }
     ],
     "dby-image": [
