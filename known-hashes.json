@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T12:28:54.606417+00:00",
+  "generatedAt": "2026-08-26T13:29:44.400864+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -186,6 +186,7 @@
       "693ee316248d",
       "76caa2a60c4e",
       "87b714968274",
+      "915ea7bae745",
       "93bdab968731",
       "afeb6e003c90",
       "c24c940f04d9",
@@ -2289,6 +2290,12 @@
         "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
       },
       {
+        "hash": "09352feb3301",
+        "version": "1.4.1",
+        "date": "2026-08-26",
+        "subject": "fix(dby-update): 补两道安全闸 —— 上游 slug 先过形状校验再拼路径；复原命令的路径改走参数传递"
+      },
+      {
         "hash": "71cd62a50402",
         "version": "1.4.0",
         "date": "2026-08-26",
@@ -3223,6 +3230,12 @@
         "version": "3.3.3",
         "date": "2026-08-25",
         "subject": "fix(dby-update): 3.3.3 —— changelog 一句缩到 6000 字上限内，重新盖戳"
+      },
+      {
+        "hash": "29458b8b722e",
+        "version": "3.6.0",
+        "date": "2026-08-26",
+        "subject": "fix(dby-update): 补两道安全闸 —— 上游 slug 先过形状校验再拼路径；复原命令的路径改走参数传递"
       },
       {
         "hash": "7fc8162f40ea",

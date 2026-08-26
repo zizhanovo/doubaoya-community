@@ -8,11 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 4.0.0
-changelog: 出图与设计工作台整套下线——gen-image.mjs、design-studio.mjs、assets/ 风格库、引导式设计、
-  pipeline.mjs 的 --design 参数全部移除，这些老用法会坏；封面与配图统一由 dby-image 出图，
-  拿到本地文件路径后封面走 --cover、配图以 <img src> 落进正文再渲染；
-  配图位置规划脚本 plan-figures.mjs 迁往 dby-image。
+version: 4.0.1
+changelog: 许可证从 MIT 换成 PolyForm Noncommercial 1.0.0（附 doubaoya 终端用户额外许可），脚本与行为零变化；wewrite 移植部分仍保留 MIT 声明。
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。

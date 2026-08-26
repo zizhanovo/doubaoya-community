@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T12:28:54.606417+00:00",
-  "ref": "release-20260826-1225",
+  "generatedAt": "2026-08-26T13:29:44.400864+00:00",
+  "ref": "release-20260826-1329",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -698,6 +698,12 @@
           "version": "1.3.2",
           "date": "2026-08-25",
           "subject": "test(dby): 补触发用例基线（evals/triggers.jsonl），正文未动"
+        },
+        {
+          "hash": "09352feb3301",
+          "version": "1.4.1",
+          "date": "2026-08-26",
+          "subject": "fix(dby-update): 补两道安全闸 —— 上游 slug 先过形状校验再拼路径；复原命令的路径改走参数传递"
         },
         {
           "hash": "71cd62a50402",
@@ -1438,6 +1444,7 @@
         "693ee316248d",
         "76caa2a60c4e",
         "87b714968274",
+        "915ea7bae745",
         "93bdab968731",
         "afeb6e003c90",
         "c24c940f04d9",
@@ -1453,6 +1460,14 @@
         "fdf279bc684e"
       ],
       "versions": [
+        {
+          "version": "4.0.1",
+          "hash": "915ea7bae745",
+          "ref": "release-20260826-1329",
+          "releasedAt": "2026-08-26T13:29:42.004888+00:00",
+          "changelog": "许可证从 MIT 换成 PolyForm Noncommercial 1.0.0（附 doubaoya 终端用户额外许可），脚本与行为零变化；wewrite 移植部分仍保留 MIT 声明。",
+          "changelogSource": "user"
+        },
         {
           "version": "4.0.0",
           "hash": "c3582315f2c5",
@@ -2238,6 +2253,12 @@
           "version": "3.3.3",
           "date": "2026-08-25",
           "subject": "fix(dby-update): 3.3.3 —— changelog 一句缩到 6000 字上限内，重新盖戳"
+        },
+        {
+          "hash": "29458b8b722e",
+          "version": "3.6.0",
+          "date": "2026-08-26",
+          "subject": "fix(dby-update): 补两道安全闸 —— 上游 slug 先过形状校验再拼路径；复原命令的路径改走参数传递"
         },
         {
           "hash": "7fc8162f40ea",

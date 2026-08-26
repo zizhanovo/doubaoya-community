@@ -144,4 +144,8 @@ Content-Type: application/json
 
 ## License
 
-MIT —— 见 [LICENSE](./LICENSE)。© 都爆鸭 / doubaoya。
+PolyForm Noncommercial 1.0.0 —— 见 [LICENSE](./LICENSE)。© 2026 深圳观原生息科技有限公司（都爆鸭 / doubaoya）。
+
+一句话：**你作为 doubaoya 用户装来给自己的号用，随便用、随便改，赚不赚钱都算非商业**；
+拿去当自己产品 / 服务 / 数据接口的一部分分发或售卖，需要另谈商用授权（support@doubaoya.com）。
+2026-08-26 之前的版本按 MIT 发布，已拿到的 MIT 副本不受影响。

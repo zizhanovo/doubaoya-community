@@ -79,7 +79,7 @@ dby-publish/
 
 ## License
 
-MIT — 见 [`LICENSE`](./LICENSE)。
+PolyForm Noncommercial 1.0.0（随仓库整体）— 见根目录 LICENSE；本目录 [`LICENSE`](./LICENSE) 列出移植自 oaker-io/wewrite 的 MIT 组件。
 
 ---
 
