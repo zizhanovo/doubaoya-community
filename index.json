@@ -1,8 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-26T18:51:57.649097+00:00",
-  "ref": "release-20260826-1329",
-  "productVersion": "1.0.0",
+  "generatedAt": "2026-08-27T16:09:18.882101+00:00",
+  "ref": "release-20260827-1609",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -23,6 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
+  "productVersion": "1.0.1",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -746,9 +746,18 @@
         "bcf26b4eca1f",
         "ce8326e3dbd2",
         "d7e863f5577a",
+        "e603a50797a0",
         "ed6a2f86bffc"
       ],
       "versions": [
+        {
+          "version": "2.0.2",
+          "hash": "e603a50797a0",
+          "ref": "release-20260827-1609",
+          "releasedAt": "2026-08-27T16:09:16.047126+00:00",
+          "changelog": "调用方式改为优先 dby CLI（@doubaoya/cli），旧 scripts/doubaoya.mjs 保留为无 CLI 时的兜底",
+          "changelogSource": "user"
+        },
         {
           "version": "2.0.1",
           "hash": "5f6a8c8b5a66",
@@ -1007,6 +1016,7 @@
       "status": "active",
       "knownHashes": [
         "069d68bd5b30",
+        "1ef3638615ce",
         "289a7e8efa11",
         "5c113e2fefe3",
         "7d8ce219936b",
@@ -1022,6 +1032,14 @@
         "d9423fc38116"
       ],
       "versions": [
+        {
+          "version": "1.2.2",
+          "hash": "1ef3638615ce",
+          "ref": "release-20260827-1609",
+          "releasedAt": "2026-08-27T16:09:16.047126+00:00",
+          "changelog": "章程读写改为优先 dby CLI（@doubaoya/cli 的 charter profiles|get|put），charter.mjs 保留为兜底",
+          "changelogSource": "user"
+        },
         {
           "version": "1.2.1",
           "hash": "b478b3935700",
@@ -2281,6 +2299,12 @@
           "version": "3.5.0",
           "date": "2026-08-26",
           "subject": "fix(dby-update): 装完重扫核对，该刷的没刷到就非零退出 —— 此前安装器报失败却退出码 0 时，对账跟着说「全部通过」"
+        },
+        {
+          "hash": "cf6033c0ce35",
+          "version": "4.0.0",
+          "date": "2026-08-26",
+          "subject": "feat(dby-update)!: 旁路安装 + 目录级原子切换 —— 失败不再留下半新半旧的包"
         }
       ]
     },
@@ -2294,6 +2318,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "18aff256cafd",
         "274536af5420",
         "376c6d363adc",
         "37ae6db8310f",
@@ -2316,6 +2341,14 @@
         "fc92fb4bf92f"
       ],
       "versions": [
+        {
+          "version": "1.10.2",
+          "hash": "18aff256cafd",
+          "ref": "release-20260827-1609",
+          "releasedAt": "2026-08-27T16:09:16.047126+00:00",
+          "changelog": "取数改为优先 dby CLI（@doubaoya/cli 的 write prep|topics|review），write.mjs 保留为兜底",
+          "changelogSource": "user"
+        },
         {
           "version": "1.10.1",
           "hash": "7b2ebef991b0",

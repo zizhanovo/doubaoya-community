@@ -7,8 +7,8 @@ description: >-
   触发词：帮我写篇公众号文章、写篇文章、写个初稿、按我的风格写、代笔、公众号写作、
   帮我起草、这篇怎么写、写作全流程、这篇为什么没人看、复盘、复盘一下、数据怎么样、
   上次那篇效果、阅读量为什么低、文章表现、发出去没人看。
-version: 1.10.1
-changelog: 交棒说明的终态纪律改为本地陈述，不再引用他包的路由判据文件
+version: 1.10.2
+changelog: 取数改为优先 dby CLI（@doubaoya/cli 的 write prep|topics|review），write.mjs 保留为兜底
 compatibility: >-
   需要 Node ≥18（取数与复盘算术走 scripts/write.mjs，零依赖不装 npm 包）；
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
@@ -52,7 +52,7 @@ compatibility: >-
 
 **九步一口气走完，别逐步征求同意。** 只停两处：第 3 步让用户选标题、第 9 步后问终态。
 
-请求全由 `write.mjs` 代发；绕开脚本自己拼请求才读 `dby-gateway/references/protocol.md`。
+取数**优先 `dby write prep|topics|review`**（CLI ≥0.1：`npm i -g @doubaoya/cli`，没装用 `npx -y @doubaoya/cli` 兜底；非 TTY 输出 `{ok,data,error}` JSON，warnings 走 stderr，no_account/no_articles 退出码 3）。articles / material 子命令、或没装 CLI 时，用旧 `write.mjs`；绕开两者自己拼请求才读 `dby-gateway/references/protocol.md`。
 
 ### 第 1 步 · 读档案 + 拉写作规范（必须早于任何生成动作）
 

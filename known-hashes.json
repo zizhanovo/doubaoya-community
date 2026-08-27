@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T18:51:57.649097+00:00",
+  "generatedAt": "2026-08-27T16:09:18.882101+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -104,6 +104,7 @@
       "bcf26b4eca1f",
       "ce8326e3dbd2",
       "d7e863f5577a",
+      "e603a50797a0",
       "ed6a2f86bffc"
     ],
     "dby-banned-words": [
@@ -120,6 +121,7 @@
     ],
     "dby-charter": [
       "069d68bd5b30",
+      "1ef3638615ce",
       "289a7e8efa11",
       "5c113e2fefe3",
       "7d8ce219936b",
@@ -261,6 +263,7 @@
       "e88f976ec4bb"
     ],
     "dby-write": [
+      "18aff256cafd",
       "274536af5420",
       "376c6d363adc",
       "37ae6db8310f",
@@ -3249,6 +3252,12 @@
         "version": "3.5.0",
         "date": "2026-08-26",
         "subject": "fix(dby-update): 装完重扫核对，该刷的没刷到就非零退出 —— 此前安装器报失败却退出码 0 时，对账跟着说「全部通过」"
+      },
+      {
+        "hash": "cf6033c0ce35",
+        "version": "4.0.0",
+        "date": "2026-08-26",
+        "subject": "feat(dby-update)!: 旁路安装 + 目录级原子切换 —— 失败不再留下半新半旧的包"
       }
     ],
     "dby-write": [
