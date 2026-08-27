@@ -1,0 +1,28 @@
+# 打 release-* tag 时自动创建 GitHub Release：
+# 标题与正文由 tools/release_notes.py 从两个 tag 的 index.json 差异生成（人写的 changelog，不是 commit log）。
+# Gitee 不同步 Releases，这条只服务 GitHub 页面；安装链路走 clone，不依赖这里的任何产物。
+name: release
+on:
+  push:
+    tags: ["release-*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 要能 git show 上一个 tag 的 index.json
+      - name: Generate notes and create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if ! python3 tools/release_notes.py "$TAG" > notes.txt; then
+            echo "该 tag 早于索引机制，跳过"; exit 0
+          fi
+          TITLE=$(head -1 notes.txt)
+          tail -n +3 notes.txt > body.md
+          gh release create "$TAG" --verify-tag --title "$TITLE" --notes-file body.md
