@@ -1,0 +1,24 @@
+{
+  "name": "@doubaoya/cli",
+  "version": "0.1.0",
+  "description": "都爆鸭 dby CLI —— 统一鉴权、输出契约、退出码契约与计费确认协议",
+  "type": "module",
+  "bin": {
+    "dby": "bin/dby.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "commander": "^14.0.0"
+  },
+  "license": "MIT"
+}
