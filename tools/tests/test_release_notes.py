@@ -45,3 +45,14 @@ def test_首个tag():
     cur = _idx(a={"status": "active", "versions": [{"version": "1.0.0", "hash": "h0"}]})
     title, _ = rn.build_notes(cur, None)
     assert title == "首次盖戳发布：全集 1 个 skill"
+
+
+def test_产品版本前缀走main路径():
+    # build_notes 不加前缀（main 里加），这里钉 bump 规则
+    import importlib.util as iu
+    from pathlib import Path as P
+    spec = iu.spec_from_file_location("si", P(__file__).resolve().parents[1] / "skill_index.py")
+    si = iu.module_from_spec(spec); spec.loader.exec_module(si)
+    assert si.bump_product_version(None, ["patch"]) == "1.0.0"
+    assert si.bump_product_version("1.3.2", ["patch", "minor"]) == "1.3.3"
+    assert si.bump_product_version("1.3.3", ["major", "patch"]) == "1.4.0"

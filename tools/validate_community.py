@@ -817,6 +817,22 @@ def validate_readme(root: Path = ROOT) -> None:
 
 
 
+def _semver_tuple(v: str) -> tuple[int, int, int]:
+    return tuple(int(x) for x in v.split("."))  # type: ignore[return-value]
+
+
+def _read_head_product_version() -> str | None:
+    import subprocess
+    res = subprocess.run(["git", "show", "HEAD:index.json"], capture_output=True, text=True)
+    if res.returncode != 0:
+        return None
+    try:
+        pv = json.loads(res.stdout).get("productVersion")
+    except json.JSONDecodeError:
+        return None
+    return pv if isinstance(pv, str) and re.match(r"^\d+\.\d+\.\d+$", pv) else None
+
+
 def validate_skill_index(root: Path = ROOT) -> None:
     """仓库根 ``index.json`` 是每个 skill 元信息的唯一事实源（规格：openspec/changes/unify-skill-index）。
 
@@ -835,6 +851,13 @@ def validate_skill_index(root: Path = ROOT) -> None:
     require(index.get("schemaVersion") == skill_index.SCHEMA_VERSION, f"unsupported index.json schemaVersion: {index.get('schemaVersion')!r}")
     require(isinstance(index.get("generatedAt"), str) and index["generatedAt"], "index.json 缺 generatedAt")
     require(isinstance(index.get("ref"), str) and skill_index.REF_PATTERN.match(index["ref"]), f"index.json 的 ref 不是 release-YYYYMMDD-HHMM：{index.get('ref')!r}")
+    pv = index.get("productVersion")
+    if pv is not None:
+        require(isinstance(pv, str) and re.match(r"^\d+\.\d+\.\d+$", pv), f"index.json 的 productVersion 不是 semver：{pv!r}")
+        # 单调不回退：和 HEAD 里的比（不在 git 仓库 / HEAD 没有该文件或字段则跳过）
+        head = _read_head_product_version()
+        if head is not None:
+            require(_semver_tuple(pv) >= _semver_tuple(head), f"productVersion 回退了：HEAD 是 {head}，工作树是 {pv}")
     require(isinstance(index.get("owner"), str) and index["owner"], "index.json 缺 owner（ClawHub 发布者 handle）")
     skills = index.get("skills")
     require(isinstance(skills, dict) and skills, "index.json 的 skills 必须是非空对象")

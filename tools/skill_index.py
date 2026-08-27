@@ -136,6 +136,17 @@ def read_frontmatter(skill_md: Path) -> dict[str, str]:
 
 # ── semver / changelog ───────────────────────────────────────────────────────
 
+def bump_product_version(current: str | None, batch_levels: list[str]) -> str:
+    """产品级版本递增：批次含 skill major → 产品 minor+1（patch 归零）；其余变更 → patch+1；
+    无变更由调用方保证不调本函数。字段缺失（首次）→ 1.0.0。产品 major 只由维护者手改，这里不动。"""
+    if not current or not SEMVER.match(current):
+        return "1.0.0"
+    major, minor, patch = (int(x) for x in SEMVER.match(current).groups())
+    if any(l == "major" for l in batch_levels):
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
+
+
 def bump_level(new: str, previous: str | None) -> str:
     """两个 semver 之间的档位：major / minor / patch / first（无上一版）/ none（没递增或不合法）。"""
     if not previous:

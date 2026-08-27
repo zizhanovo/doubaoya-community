@@ -94,6 +94,9 @@ def main() -> int:
         return 1
     prev = _git_show(prev_tag, "index.json") if prev_tag else None
     title, body = build_notes(cur, prev)
+    pv = cur.get("productVersion")
+    if isinstance(pv, str) and pv:
+        title = f"v{pv}：{title}"
     if prev_tag:
         body += f"\n\n**Full Changelog**: {REPO_URL}/compare/{prev_tag}...{tag}"
     print(title)

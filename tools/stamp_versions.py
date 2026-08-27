@@ -145,6 +145,7 @@ def stamp_all(
     unreleased_ref = previous_ref if (previous_ref and not _tag_exists(previous_ref, root)) else None
     ref = previous_ref if (not changed and previous_ref) else (unreleased_ref or make_ref(now))
 
+    batch_levels = []
     for slug in changed:
         entry = skills.get(slug)
         if entry is None:
@@ -158,6 +159,7 @@ def stamp_all(
         replacing = bool(unreleased_ref and head and head.get("ref") == unreleased_ref)  # 同一批未发布的戳 ⇒ 覆盖头条
         prior = (entry["versions"][1] if len(entry.get("versions", [])) > 1 else None) if replacing else head
         prior_version = prior["version"] if prior else None
+        batch_levels.append(skill_index.bump_level(fm["version"], prior_version))
         if fm["changelog"]:
             changelog, source = fm["changelog"], "user"
             if prior and prior.get("changelog") == changelog and prior.get("changelogSource") == "user":
@@ -187,6 +189,8 @@ def stamp_all(
 
     index["generatedAt"] = now.isoformat()
     index["ref"] = ref
+    if changed:
+        index["productVersion"] = skill_index.bump_product_version(index.get("productVersion"), batch_levels)
     skill_index.save_index(index, index_file)
     skill_index.write_views(index, root)
     return versions
