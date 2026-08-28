@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-27T16:09:18.882101+00:00",
-  "ref": "release-20260827-1609",
+  "generatedAt": "2026-08-28T05:55:35.189603+00:00",
+  "ref": "release-20260828-0555",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.1",
+  "productVersion": "1.0.2",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -893,6 +893,12 @@
           "version": "1.3.3",
           "date": "2026-08-26",
           "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
+        },
+        {
+          "hash": "e603a50797a0",
+          "version": "2.0.2",
+          "date": "2026-08-27",
+          "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
         }
       ]
     },
@@ -1141,6 +1147,12 @@
           "version": "1.2.1",
           "date": "2026-08-25",
           "subject": "chore(skills): 11 个 SKILL.md 加 changelog 字段，patch 递增；盖戳生成 index.json 与四份兼容视图"
+        },
+        {
+          "hash": "1ef3638615ce",
+          "version": "1.2.2",
+          "date": "2026-08-27",
+          "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
         }
       ]
     },
@@ -1275,6 +1287,7 @@
         "63c13c5ffbeb",
         "6a04472552de",
         "73f91dda7bd6",
+        "9a144098dc88",
         "a807c7cef9be",
         "c1227d1f5988",
         "c6ca0ad17c66",
@@ -1284,6 +1297,14 @@
         "f80e00b562e4"
       ],
       "versions": [
+        {
+          "version": "1.6.1",
+          "hash": "9a144098dc88",
+          "ref": "release-20260828-0555",
+          "releasedAt": "2026-08-28T05:55:33.272636+00:00",
+          "changelog": "402 排错行不再写「提示充值」——点数只赠不卖，改为指引用户到账户页查看余额与获取方式；脚本与行为零变化。",
+          "changelogSource": "user"
+        },
         {
           "version": "1.6.0",
           "hash": "5a21a05f4764",
@@ -1461,6 +1482,7 @@
         "5784c51d996d",
         "5e2022f6120b",
         "693ee316248d",
+        "6bcccc2e63e6",
         "76caa2a60c4e",
         "87b714968274",
         "915ea7bae745",
@@ -1479,6 +1501,14 @@
         "fdf279bc684e"
       ],
       "versions": [
+        {
+          "version": "4.0.2",
+          "hash": "6bcccc2e63e6",
+          "ref": "release-20260828-0555",
+          "releasedAt": "2026-08-28T05:55:33.272636+00:00",
+          "changelog": "补回「存草稿成功才扣点、扣多少以详情端点实时字段为准」一句（上一轮瘦身时误删，主仓草稿发布计价闸要求它在场），402 指引改为账户页；脚本与行为零变化。",
+          "changelogSource": "user"
+        },
         {
           "version": "4.0.1",
           "hash": "915ea7bae745",
@@ -2494,6 +2524,12 @@
           "version": "1.10.1",
           "date": "2026-08-26",
           "subject": "fix(dby-write): 交棒说明的终态纪律改成本地一句话，不再引用他包的路由判据文件"
+        },
+        {
+          "hash": "18aff256cafd",
+          "version": "1.10.2",
+          "date": "2026-08-27",
+          "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
         }
       ]
     },

@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 4.0.1
-changelog: 许可证从 MIT 换成 PolyForm Noncommercial 1.0.0（附 doubaoya 终端用户额外许可），脚本与行为零变化；wewrite 移植部分仍保留 MIT 声明。
+version: 4.0.2
+changelog: 补回「存草稿成功才扣点、扣多少以详情端点实时字段为准」一句（上一轮瘦身时误删，主仓草稿发布计价闸要求它在场），402 指引改为账户页；脚本与行为零变化。
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -77,6 +77,8 @@ compatibility: >-
   `--html` 直发路径**原样**发出、没有去重，开头别放 `<h1>`。`--md` 路径兜了什么底见 `references/rendering.md`。
 - 正文**不是走 `dby-write` 写的** → 先拉写作规范，读 `references/writing-spec.md`
   （`dby-write` 第 1 步已经拉过这一份，别再拉一次）。
+- **计费只在存草稿成功时发生**，失败自动退回；具体扣多少以详情端点的实时点数字段为准，
+  别照文档里的数字替用户算钱。`402 INSUFFICIENT_CREDITS` 时提示用户到账户页查看余额与获取方式（点数只赠不卖），不要重试。
 - **不写 `--theme` 就是用你在排版工作室保存的默认排版**；md→HTML 只走平台
   `POST /api/wechat/render`（免费），**失败一律中止、绝不回退本机渲染器**。
   套哪套排版 / 老稿子重跑为什么长得不一样 / `> [!NOTE]` 提示块 → 读 `references/rendering.md`。

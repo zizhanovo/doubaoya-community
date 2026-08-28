@@ -8,9 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 1.6.0
-changelog: 接手 dby-publish 下线的配图位置规划——plan-figures.mjs 迁入本包，确定性规则挑
-  「哪些 h2 小节末尾配图」与画面建议（免费、不出图、不接 LLM），出好图交 dby-publish 上传排版
+version: 1.6.1
+changelog: 402 排错行不再写「提示充值」——点数只赠不卖，改为指引用户到账户页查看余额与获取方式；脚本与行为零变化。
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。零依赖，不用 npm install。
@@ -166,7 +165,7 @@ node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-fi
 | 现象 | 处置 |
 |---|---|
 | `缺 DOUBAOYA_API_KEY` | 怎么拿见 `dby-gateway/references/protocol.md`，`export` 后再跑 |
-| `402 INSUFFICIENT_CREDITS` | 提示充值，**不要重试** |
+| `402 INSUFFICIENT_CREDITS` | 点数不足，提示用户到 doubaoya.com 账户页查看余额与获取方式（点数只赠不卖），**不要重试** |
 | `401` | 密钥问题，更新 skill 治不了 |
 | `503 CAPABILITY_UNAVAILABLE` | **不要重试**，如实告知 |
 | 请求未完成 / 超时 | **不要重试**（正文「失败之后不要重试」）。可能已扣费，交给用户决定 |
