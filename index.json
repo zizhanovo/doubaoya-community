@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-28T05:55:35.189603+00:00",
+  "generatedAt": "2026-08-28T05:57:13.534365+00:00",
   "ref": "release-20260828-0555",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.2",
+  "productVersion": "1.0.3",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -1452,6 +1452,12 @@
           "version": "1.5.0",
           "date": "2026-08-26",
           "subject": "feat(dby-image): 接手出图话术 —— 配图 / 首图灵感等 8 个词从 dby-api 迁入，补 negative scope"
+        },
+        {
+          "hash": "9a144098dc88",
+          "version": "1.6.1",
+          "date": "2026-08-27",
+          "subject": "docs(skills): 402 指引不再写「提示充值」，dby-publish 补回计费句"
         }
       ]
     },
@@ -1750,6 +1756,12 @@
           "version": "4.0.0",
           "date": "2026-08-26",
           "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
+        },
+        {
+          "hash": "6bcccc2e63e6",
+          "version": "4.0.2",
+          "date": "2026-08-27",
+          "subject": "docs(skills): 402 指引不再写「提示充值」，dby-publish 补回计费句"
         }
       ]
     },
@@ -1763,6 +1775,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "0ec795bc6772",
         "27129afe12be",
         "61ba5adaec10",
         "64eb94c6e436",
@@ -1772,6 +1785,14 @@
         "e6f18ded0432"
       ],
       "versions": [
+        {
+          "version": "1.2.1",
+          "hash": "0ec795bc6772",
+          "ref": "release-20260828-0555",
+          "releasedAt": "2026-08-28T05:57:11.451006+00:00",
+          "changelog": "头注不再指向已下线的云端改写接口（skill.wechat.rewrite 2026-08-28 整条删除）；行为零变化。",
+          "changelogSource": "user"
+        },
         {
           "version": "1.2.0",
           "hash": "61ba5adaec10",
