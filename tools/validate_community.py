@@ -179,6 +179,9 @@ PENDING_UPSTREAM_ROUTES = {("media", "asr")}
 # 同样是**会自动清账的**豁免表：哪天它们又出现在能力索引里，下面的断言会反过来要求把
 # 这里删掉，免得豁免留成永久的洞。
 RETIRED_WITH_CAPABILITY = {
+    # 2026-08-28 主仓把 api.douyin.comments 归档 hidden（出参含评论者昵称/头像/secUid/IP 属地，
+    # 个人信息敞口），发现接口过滤、调用 503；能力索引同日摘掉，壳早已下架，两边都没有可发现的东西。
+    "douyin-comment",
     "seedance-video-gen",
     "video-downloader",
     "xiaohongshu-similar-account",  # 只剩 douyin / gongzhonghao 两个同类，小红书这条没了
