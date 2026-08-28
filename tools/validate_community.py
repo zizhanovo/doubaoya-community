@@ -128,8 +128,8 @@ GATEWAY_PROTOCOL_VOCAB = frozenset({
     "notice", "detailUrl", "noResult",
     # 402 错误信封的 extra（INSUFFICIENT_CREDITS / NO_CREDIT_ACCOUNT 专属，但字段名本身
     # 与能力无关——换一条能力撞上余额不足，还是叫这三个名字。balance/required 是小写词，
-    # 不会被驼峰正则命中；rechargeUrl 会，显式列进来。
-    "rechargeUrl",
+    # 不会被驼峰正则命中；helpUrl 会，显式列进来（2026-08-28 前叫 rechargeUrl）。
+    "helpUrl",
     # HTTP 请求头。跟能力无关，换一条能力还是这两个。
     "Authorization", "Content-Type",
     # 发现 / 详情 DTO

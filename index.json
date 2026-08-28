@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-28T05:57:13.534365+00:00",
+  "generatedAt": "2026-08-28T06:47:32.399227+00:00",
   "ref": "release-20260828-0555",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.3",
+  "productVersion": "1.0.4",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -730,6 +730,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "1f85fe64a731",
         "50cdd6a062be",
         "53d2c3fb1e80",
         "596f05f4d505",
@@ -750,6 +751,14 @@
         "ed6a2f86bffc"
       ],
       "versions": [
+        {
+          "version": "2.0.3",
+          "hash": "1f85fe64a731",
+          "ref": "release-20260828-0555",
+          "releasedAt": "2026-08-28T06:47:30.275720+00:00",
+          "changelog": "能力速查表摘掉已归档的 api.douyin.comments（主仓 2026-08-28 hidden，调用返回 503）；行为零变化。",
+          "changelogSource": "user"
+        },
         {
           "version": "2.0.2",
           "hash": "e603a50797a0",
@@ -1165,6 +1174,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "04e33c971797",
         "0a3b3433cbe5",
         "18b04d9d8613",
         "1d294368f7d7",
@@ -1177,6 +1187,14 @@
         "e1dc9e3d282e"
       ],
       "versions": [
+        {
+          "version": "1.3.4",
+          "hash": "04e33c971797",
+          "ref": "release-20260828-0555",
+          "releasedAt": "2026-08-28T06:47:30.275720+00:00",
+          "changelog": "402 处置改读 extra.helpUrl（主仓 2026-08-28 起 rechargeUrl 改名，点数只赠不卖）；能力索引摘掉已归档的 api.douyin.comments；行为零变化。",
+          "changelogSource": "user"
+        },
         {
           "version": "1.3.3",
           "hash": "7e9c0e95aa56",
@@ -1860,6 +1878,12 @@
           "version": "1.2.0",
           "date": "2026-08-25",
           "subject": "feat(dby-rewrite): 补交付前自检与 Recovery —— 把「标题 ≤20 字」标成硬上限却没有一步去数字数"
+        },
+        {
+          "hash": "0ec795bc6772",
+          "version": "1.2.1",
+          "date": "2026-08-27",
+          "subject": "docs(dby-rewrite): 头注不再指向已下线的云端改写接口（主仓 2026-08-28 删除 skill.wechat.rewrite）"
         }
       ]
     },

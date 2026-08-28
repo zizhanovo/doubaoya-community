@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-28T05:57:13.534365+00:00",
+  "generatedAt": "2026-08-28T06:47:32.399227+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -88,6 +88,7 @@
       "fccf378e28ef"
     ],
     "dby-api": [
+      "1f85fe64a731",
       "50cdd6a062be",
       "53d2c3fb1e80",
       "596f05f4d505",
@@ -137,6 +138,7 @@
       "d9423fc38116"
     ],
     "dby-gateway": [
+      "04e33c971797",
       "0a3b3433cbe5",
       "18b04d9d8613",
       "1d294368f7d7",
@@ -3005,6 +3007,12 @@
         "version": "1.2.0",
         "date": "2026-08-25",
         "subject": "feat(dby-rewrite): 补交付前自检与 Recovery —— 把「标题 ≤20 字」标成硬上限却没有一步去数字数"
+      },
+      {
+        "hash": "0ec795bc6772",
+        "version": "1.2.1",
+        "date": "2026-08-27",
+        "subject": "docs(dby-rewrite): 头注不再指向已下线的云端改写接口（主仓 2026-08-28 删除 skill.wechat.rewrite）"
       }
     ],
     "dby-theme": [

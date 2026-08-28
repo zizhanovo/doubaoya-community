@@ -38,7 +38,6 @@
 |---|---|---|---|
 | "搜抖音作品 / 抖音搜索 / 抖音综合搜索 / 扒抖音作品 / 短视频选题" | `api.douyin.searchWork` | 搜索抖音作品 | `/api/apis/douyin/search-work` |
 | "抖音实时搜索 / 抖音最新发布 / 刚发出来的那批" | `api.douyin.realtimeSearch` | 抖音实时搜索 | `/api/apis/douyin/realtime-search` |
-| "扒评论区 / 抖音评论 / 评论分析 / 评论风向 / 用户需求" | `api.douyin.comments` | 抖音作品评论 | `/api/apis/douyin/comments` |
 
 **公众号**
 

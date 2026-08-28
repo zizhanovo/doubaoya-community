@@ -99,7 +99,6 @@
 | `api.douyin.queryWorkList` | 查询抖音账号作品列表 | `/api/apis/douyin/query-work-list` |
 | `api.douyin.searchWork` | 搜索抖音作品 | `/api/apis/douyin/search-work` |
 | `api.douyin.realtimeSearch` | 抖音实时搜索 | `/api/apis/douyin/realtime-search` |
-| `api.douyin.comments` | 抖音作品评论 | `/api/apis/douyin/comments` |
 | `api.douyin.riseFansRank` | 抖音涨粉榜 | `/api/apis/douyin/douyin-rise-fans-rank` |
 | `api.douyin.topAccount` | 抖音最具影响力账号榜 | `/api/apis/douyin/douyin-top-account` |
 | `api.douyin.userWorks` | 抖音账号作品采集 | `/api/apis/douyin/douyin-user-works` |
