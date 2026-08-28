@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-28T06:47:32.399227+00:00",
+  "generatedAt": "2026-08-28T06:48:06.403441+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -142,6 +142,7 @@
       "0a3b3433cbe5",
       "18b04d9d8613",
       "1d294368f7d7",
+      "4c71eb312624",
       "64220c7bed79",
       "7e9c0e95aa56",
       "7e9d8e2c7fa6",
@@ -2421,6 +2422,12 @@
         "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
       },
       {
+        "hash": "1f85fe64a731",
+        "version": "2.0.3",
+        "date": "2026-08-27",
+        "subject": "docs(skills): 402 处置改读 extra.helpUrl，能力表摘掉已归档的 api.douyin.comments"
+      },
+      {
         "hash": "e603a50797a0",
         "version": "2.0.2",
         "date": "2026-08-27",
@@ -2641,6 +2648,12 @@
         "version": "1.3.3",
         "date": "2026-08-25",
         "subject": "fix(dby-gateway): routing-pitfalls 教用户调一条 capability-index 自己标着 ⛔ 不可调的能力"
+      },
+      {
+        "hash": "04e33c971797",
+        "version": "1.3.4",
+        "date": "2026-08-27",
+        "subject": "docs(skills): 402 处置改读 extra.helpUrl，能力表摘掉已归档的 api.douyin.comments"
       }
     ],
     "dby-image": [
