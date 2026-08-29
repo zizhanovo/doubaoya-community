@@ -8,8 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 1.6.1
-changelog: 402 排错行不再写「提示充值」——点数只赠不卖，改为指引用户到账户页查看余额与获取方式；脚本与行为零变化。
+version: 1.6.2
+changelog: 补上 1.6.1 漏改的脚本内 402 提示——gen.mjs 里仍写着「去充值」，与点数只赠不卖矛盾，改为指引账户页。
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。零依赖，不用 npm install。

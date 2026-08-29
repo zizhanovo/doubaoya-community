@@ -167,7 +167,7 @@ async function main() {
   if (!j.success) {
     const { code, message } = j.error || {};
     const hint = {
-      INSUFFICIENT_CREDITS: "额度不足，去 doubaoya.com 充值。不要重试。",
+      INSUFFICIENT_CREDITS: "点数不足。让用户到 doubaoya.com 账户页查看余额与点数获取方式。不要重试。",
       CAPABILITY_UNAVAILABLE: "能力不可用。不要重试，如实告知用户。"
     }[code] || "看 message 改入参。";
     die(`失败 [${res.status} ${code}] ${message}\n${hint}`);

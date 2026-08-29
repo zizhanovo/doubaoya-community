@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-28T06:48:06.403441+00:00",
+  "generatedAt": "2026-08-29T06:19:24.836529+00:00",
   "ref": "release-20260828-0555",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.5",
+  "productVersion": "1.0.6",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -1293,6 +1293,12 @@
           "version": "1.3.4",
           "date": "2026-08-27",
           "subject": "docs(skills): 402 处置改读 extra.helpUrl，能力表摘掉已归档的 api.douyin.comments"
+        },
+        {
+          "hash": "4c71eb312624",
+          "version": "1.3.4",
+          "date": "2026-08-27",
+          "subject": "docs(dby-gateway): changelog 措辞避开协议外驼峰标识符（验证器闸）"
         }
       ]
     },
@@ -1313,6 +1319,7 @@
         "25fcd0d0d1ba",
         "2a3ffb3fc5b2",
         "47bee0597b99",
+        "542ea41d2b75",
         "5a21a05f4764",
         "5f652a0700eb",
         "63c13c5ffbeb",
@@ -1329,11 +1336,11 @@
       ],
       "versions": [
         {
-          "version": "1.6.1",
-          "hash": "9a144098dc88",
+          "version": "1.6.2",
+          "hash": "542ea41d2b75",
           "ref": "release-20260828-0555",
-          "releasedAt": "2026-08-28T05:55:33.272636+00:00",
-          "changelog": "402 排错行不再写「提示充值」——点数只赠不卖，改为指引用户到账户页查看余额与获取方式；脚本与行为零变化。",
+          "releasedAt": "2026-08-29T06:19:23.097168+00:00",
+          "changelog": "补上 1.6.1 漏改的脚本内 402 提示——gen.mjs 里仍写着「去充值」，与点数只赠不卖矛盾，改为指引账户页。",
           "changelogSource": "user"
         },
         {
