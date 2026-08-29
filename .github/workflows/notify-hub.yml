@@ -1,0 +1,29 @@
+# notify-hub —— push 到 main 时通知主仓（zizhanovo/doubaoyahub）立刻跑 sync-community。
+#
+# 需要仓库 secret `HUB_DISPATCH_TOKEN`（一个对主仓有 repo 权限的 fine-grained PAT，
+# 权限只勾 Contents: read-write 即可）。**没配 secret 时本 job 静默跳过、恒绿**——
+# 主仓那边有每小时的兜底轮询，本钩子只是把延迟从「最多一小时」压成「秒级」。
+name: notify-hub
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    env:
+      TOKEN: ${{ secrets.HUB_DISPATCH_TOKEN }}
+    steps:
+      - name: repository_dispatch 到主仓
+        if: env.TOKEN != ''
+        run: |
+          curl -sS -o /dev/null -w "dispatch http %{http_code}\n" \
+            -X POST \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/zizhanovo/doubaoyahub/dispatches \
+            -d '{"event_type":"community-push","client_payload":{"sha":"${{ github.sha }}"}}'
+      - name: 未配 token 的说明
+        if: env.TOKEN == ''
+        run: echo "HUB_DISPATCH_TOKEN 未配置——跳过即时通知，主仓靠小时级轮询兜底。"
