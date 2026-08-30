@@ -1,8 +1,8 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、公众号违禁词、跨平台合规、合规检测、过审、违禁词检测、敏感词、违规词、极限词、绝对化用语、限流自查、审核不过、广告法。不做：改文风或换平台调性走 dby-rewrite；从零写正文走 dby-write。
-version: 1.3.0
-changelog: 接手合规话术（过审 / 合规检测 / 公众号违禁词），补 negative scope：改文风走 dby-rewrite
+version: 1.4.0
+changelog: 出岔子时提一句可以用 dby-feedback 把情况报给维护者
 compatibility: >-
   需要 Python 3（`scripts/check_multi.py` 只用标准库，不装任何 pip 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
@@ -119,6 +119,7 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 
 脚本逐平台处理 `HTTPError` / `URLError`，把错误写进对应平台条目并继续其它平台：
 **单平台失败不影响其余平台**，报错码怎么办照 `dby-gateway/references/protocol.md` 第 6 条。
+问题绕不过去、或想吐槽 → 可提一句用 `dby-feedback` 当场写成反馈（可忽略，不再重复提）。
 
 ---
 

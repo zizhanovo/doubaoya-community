@@ -5,8 +5,8 @@ description: >-
   装上新增的、刷新落后的，最后自检。按内容哈希认包，别人家的和用户自己改过的一个字不动；下架的移进归档目录而不是删除。
   Reconciles the installed doubaoya skills to the upstream set, then self-checks.
   触发方式：/dby-update、更新本鸭、更新都爆鸭、升级 doubaoya skill、检查本鸭更新、把本鸭更新到最新版。
-version: 4.0.0
-changelog: 更新改成旁路安装 + 目录级切换——新版先装到一边、校验通过才整个换进去，换完不对就自动退回更新前那版。以前失败会留下一半新一半旧的包，现在不会了
+version: 4.1.0
+changelog: 「找维护者」不再是死路——改为指向 dby-feedback，由现场 agent 把情况写清楚再提交
 compatibility: >-
   需要 Node ≥ 18（`scripts/reconcile.mjs` 用全局 fetch），不装任何 npm 包。
   需要能对 GitHub / Gitee 的官方仓库发 HTTPS 请求以拉取上游全集。
@@ -99,7 +99,7 @@ scope 猜错时脚本会打 ⚠️ 警告，看到就先确认 scope；不确定
 
 > 🔴 **结论不高于证据。** 上游目录 / 索引这一跑没核到时，脚本会降级但不中止（不归档、或退回旧三文件），
 > **结论要如实说降级了**，别说「完全一致」。GitHub 限流会自动换 Gitee 镜像同一 tag；`mirrorMismatch` 才是真没推齐，
-> 找维护者；镜像新但那版本在 GitHub 上已存在 = **只是缓存没刷新**——告诉用户「刚发布，几分钟后重跑就到新版」，别说联系维护者。
+> 用 `dby-feedback` 报给维护者；镜像新但那版本在 GitHub 上已存在 = **只是缓存没刷新**——告诉用户「刚发布，几分钟后重跑就到新版」，别说联系维护者。
 > 字段与判据细节 → `references/index-and-lock.md`。
 
 > 🧩 旧版遗留副本（`agent/skills/`）的处置 → `references/edge-cases.md`。

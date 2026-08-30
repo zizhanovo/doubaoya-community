@@ -1,0 +1,12 @@
+{
+  "_comment": "反馈接收端契约（后端形态未定，见 openspec change dby-feedback 的 Open Questions）。url 为 null = 未配置，send 会降级落本地文件。后端上线后只改这里，不动代码。环境变量 DOUBAOYA_FEEDBACK_URL 可临时覆盖 url（仅限 https 或本机回环）。",
+  "url": null,
+  "method": "POST",
+  "fields": {
+    "category": "category",
+    "report": "report",
+    "machineFacts": "machineFacts",
+    "installId": "installId",
+    "skillVersion": "skillVersion"
+  }
+}

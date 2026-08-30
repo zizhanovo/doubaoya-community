@@ -36,6 +36,7 @@ ENVELOPE_READERS = [
     "skills/dby-write/scripts/write.mjs",
     "skills/dby-banned-words/scripts/check_multi.py",
     "skills/dby-publish/scripts/publish_draft.py",
+    "skills/dby-feedback/scripts/submit_feedback.py",
 ]
 
 

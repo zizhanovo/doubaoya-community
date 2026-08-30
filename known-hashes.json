@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T06:19:24.836529+00:00",
+  "generatedAt": "2026-08-30T16:33:44.570011+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -64,6 +64,7 @@
       "04545b184f2e",
       "054b6535ba16",
       "09352feb3301",
+      "18504ded094b",
       "1c068c859c03",
       "259fd3762f29",
       "2db0a55a86c2",
@@ -88,6 +89,7 @@
       "fccf378e28ef"
     ],
     "dby-api": [
+      "156c3151a72a",
       "1f85fe64a731",
       "50cdd6a062be",
       "53d2c3fb1e80",
@@ -109,6 +111,7 @@
       "ed6a2f86bffc"
     ],
     "dby-banned-words": [
+      "0ca3048ae86c",
       "3b6f51b83da1",
       "5de93933d77a",
       "8967a5bf1cbe",
@@ -137,6 +140,9 @@
       "d4483ee94803",
       "d9423fc38116"
     ],
+    "dby-feedback": [
+      "7b5a56fdd05a"
+    ],
     "dby-gateway": [
       "04e33c971797",
       "0a3b3433cbe5",
@@ -155,6 +161,7 @@
       "000e1d567391",
       "06cc8d2245f3",
       "098a5bb943f2",
+      "189afc24c465",
       "219886ee0a77",
       "25fcd0d0d1ba",
       "2a3ffb3fc5b2",
@@ -257,6 +264,7 @@
       "8b15b3b187e6",
       "912ad0771767",
       "9a2708863bc4",
+      "a9251e4e159c",
       "aec11ba4ae73",
       "b34999536b26",
       "b4198f5ec4a3",
@@ -2783,6 +2791,12 @@
         "version": "1.6.1",
         "date": "2026-08-27",
         "subject": "docs(skills): 402 指引不再写「提示充值」，dby-publish 补回计费句"
+      },
+      {
+        "hash": "542ea41d2b75",
+        "version": "1.6.2",
+        "date": "2026-08-28",
+        "subject": "fix(dby-image): 1.6.1 漏改脚本——gen.mjs 的 402 提示仍写「去充值」，改为指引账户页"
       }
     ],
     "dby-publish": [

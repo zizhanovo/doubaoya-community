@@ -10,7 +10,7 @@
 ## 跑挂在「拉取上游」
 
 脚本已**自动把本轮归档按 manifest 移回原处**，只剩 skills CLI 的安装记录没补——**重跑同一条命令即可**，
-不用手动清理。clone 报 `"Remote branch … not found"` = 发布时 tag 没打上去，这是维护者的事，找维护者。
+不用手动清理。clone 报 `"Remote branch … not found"` = 发布时 tag 没打上去，这是维护者的事，用 `dby-feedback` 反馈给维护者。
 
 ## 本轮名单含 `dby-update` 自己
 

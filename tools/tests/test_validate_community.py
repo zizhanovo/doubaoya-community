@@ -1304,3 +1304,51 @@ class SkillIndexGateTests(unittest.TestCase):
             self._rewrite(root, index)
             with self.assertRaisesRegex(validator.ValidationError, "是 active，但 skills/gone/ 不存在"):
                 validator.validate_skill_index(root)
+
+
+class CollectWhitelistGateTests(unittest.TestCase):
+    """采集白名单敏感字段闸：白名单决定哪些数据会离开用户机器，加错一个字段名就得当场红。"""
+
+    @staticmethod
+    def whitelist_fixture(root: Path, source: str, with_feedback_pkg: bool = False) -> None:
+        pkg = "dby-feedback" if with_feedback_pkg else "dby-somepkg"
+        scripts = root / "skills" / pkg / "scripts"
+        scripts.mkdir(parents=True)
+        (scripts / "collect.py").write_text(source, encoding="utf-8")
+
+    def test_rejects_business_sensitive_field(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.whitelist_fixture(root, 'ORIGIN_FIELD_WHITELIST = ("slug", "version", "appid")\n')
+            with self.assertRaisesRegex(validator.ValidationError, "敏感字段名.*appid"):
+                validator.validate_collect_whitelists(root)
+
+    def test_rejects_credential_shaped_field_case_insensitively(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.whitelist_fixture(root, 'FACTS_ALLOWED = ["os", "apiKey"]\n')
+            with self.assertRaisesRegex(validator.ValidationError, "敏感字段名.*apiKey"):
+                validator.validate_collect_whitelists(root)
+
+    def test_passes_clean_whitelist(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.whitelist_fixture(root, 'ORIGIN_FIELD_WHITELIST = ("slug", "version", "hash", "ref", "installedAt")\n')
+            validator.validate_collect_whitelists(root)
+
+    def test_ignores_non_literal_and_non_string_values(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.whitelist_fixture(root, 'A_WHITELIST = make()\nB_WHITELIST = (1, 2)\n')
+            validator.validate_collect_whitelists(root)
+
+    def test_fails_loudly_when_feedback_pkg_has_no_scannable_whitelist(self):
+        # 🔴 dby-feedback 在架却一张白名单都没扫到 = 闸在空转，而空转长得和真通过一模一样。
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.whitelist_fixture(root, 'collected = read_everything()\n', with_feedback_pkg=True)
+            with self.assertRaisesRegex(validator.ValidationError, "闸在空转"):
+                validator.validate_collect_whitelists(root)
+
+    def test_real_repo_whitelists_are_clean_and_scanned(self):
+        validator.validate_collect_whitelists()

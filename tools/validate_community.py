@@ -1181,6 +1181,73 @@ def validate_no_key_paste_instruction(root: Path = ROOT) -> None:
         )
 
 
+# ── 采集白名单敏感字段闸 ─────────────────────────────────────────────────────
+# 🔴 **采集白名单里不许出现已知敏感字段名。** `dby-feedback` 是全仓第一个会把用户机器上的
+# 信息主动发出去的包，它的隐私边界整个压在「采集层白名单」这一层上（design D5：现有脱敏
+# 工具认不得「这是公众号 appid」「这是用户的文章正文」，检测层兜不住，只能不采）。白名单
+# 是代码里的显式常量——好处是可审计，坏处是**改它只需要一行 diff**，而那一行 diff 不会
+# 触发任何既有闸。本闸补的就是这个缝：谁往白名单里加了敏感字段名，validate 当场红。
+#
+# 判据：AST 遍历 skills/*/scripts/*.py 的**模块级赋值**，凡目标名以 _WHITELIST / _ALLOWED
+# 结尾、值是字符串元组/列表/集合字面量的，逐元素对表——命中两类即红：
+#   1. 业务敏感字段名（等值，大小写不敏感）：appid / author / publicAccountName /
+#      targetAccount / ipProfile —— 与 spec「MUST NOT 采集」清单一致；
+#   2. 凭证类（子串）：名字里带 key / token / secret / password / credential 的任何字段。
+# 另有空转自检：dby-feedback 在架时必须至少扫到它的三张白名单——扫到 0 张的绿灯是假绿灯
+# （闸空转长得跟通过一模一样，本仓在 validate_gate_registration 上已经吃过这一课）。
+#
+# ponytail: 天花板 = 常量换个不带 _WHITELIST/_ALLOWED 的名字、或用运算拼出来（AST 只认
+# 字面量赋值）就看不见。行为侧的兜底在包内 selfcheck：造一个含禁止字段的源文件，断言采集
+# 结果零命中。升级路径是把两侧接起来做一致性断言，而不是把这里的名字匹配越放越宽。
+SENSITIVE_COLLECT_EQUAL = {"appid", "author", "publicaccountname", "targetaccount", "ipprofile"}
+SENSITIVE_COLLECT_SUBSTR = ("key", "token", "secret", "password", "credential")
+COLLECT_WHITELIST_NAME = re.compile(r"(?:_WHITELIST|_ALLOWED)$")
+
+
+def validate_collect_whitelists(root: Path = ROOT) -> None:
+    """🔴 采集白名单不得包含已知敏感字段名。判据与理由见上面那段注释。"""
+    import ast
+
+    scanned = 0
+    for relative, text in scanned_text_files(root):
+        if relative.parts[:1] != ("skills",) or "scripts" not in relative.parts or relative.suffix != ".py":
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError as exc:
+            raise ValidationError(f"{relative.as_posix()} 解析失败：{exc}") from exc
+        for node in tree.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            if not any(COLLECT_WHITELIST_NAME.search(n) for n in names):
+                continue
+            try:
+                value = ast.literal_eval(node.value)
+            except (ValueError, SyntaxError):
+                continue
+            if not isinstance(value, (tuple, list, set, frozenset)):
+                continue
+            fields = [f for f in value if isinstance(f, str)]
+            if not fields:
+                continue
+            scanned += 1
+            for field in fields:
+                low = field.lower()
+                require(
+                    low not in SENSITIVE_COLLECT_EQUAL and not any(w in low for w in SENSITIVE_COLLECT_SUBSTR),
+                    f"采集白名单里出现敏感字段名：{relative.as_posix()} 的 {names[0]} 含 {field!r}——"
+                    "这张清单决定哪些数据会离开用户机器；appid / author / 账号身份 / 凭证类字段"
+                    "在采集层就不许采（检测层认不得它们，兜不住），把它从白名单里拿掉。",
+                )
+    if (root / "skills" / "dby-feedback" / "scripts").is_dir():
+        require(
+            scanned >= 3,
+            f"采集白名单闸只扫到 {scanned} 张白名单常量（dby-feedback 在架时应有 ≥3 张）——"
+            "闸在空转，空转的绿灯长得跟通过一模一样。查常量命名是否还以 _WHITELIST/_ALLOWED 结尾。",
+        )
+
+
 # ── 价格字面量闸 ────────────────────────────────────────────────────────────
 # 🔴 **分发物里不许写死价格 / 点数。** 价格和入参一样是**会漂的服务端事实**，抄进 skill 包
 # 当天就开始腐烂。而且它比字段名更危险：字段名写错了有 `VALIDATION_ERROR` 兜底，用户当场看得见；
@@ -2088,6 +2155,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_no_key_material(root)
     validate_no_key_prefix_instruction(root)
     validate_no_key_paste_instruction(root)
+    validate_collect_whitelists(root)
     validate_untrusted_upstream_rule(root)
     validate_runtime_declaration(root)
     validate_entry_guards_resolve_symlinks(root)
