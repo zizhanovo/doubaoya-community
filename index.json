@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T11:39:15.093343+00:00",
+  "generatedAt": "2026-08-31T12:52:33.376372+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.19",
+  "productVersion": "1.0.20",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -965,6 +965,7 @@
       "status": "active",
       "knownHashes": [
         "0ca3048ae86c",
+        "1cce17094948",
         "3b6f51b83da1",
         "57a5bff134c0",
         "5de93933d77a",
@@ -979,11 +980,11 @@
       ],
       "versions": [
         {
-          "version": "1.4.4",
-          "hash": "57a5bff134c0",
+          "version": "1.4.5",
+          "hash": "1cce17094948",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T10:24:25.840085+00:00",
-          "changelog": "执行层判据分三层（design D10）：确定性判据（三平台扇出/检出透传/命中词 span 粒度/无改写字段/无语境过滤）下沉到脚本层 tools/tests/test_check_multi.py，agent 用例 5→2 只留编排与解释，check 改打 tools.txt 不打摘要（实测原短语只在工具结果里、摘要里没有）；包行为零变化",
+          "releasedAt": "2026-08-31T12:45:42.044708+00:00",
+          "changelog": "删掉语境豁免用例里一条冗余且不稳的断言（兄弟用例已覆盖同一件事）；包行为零变化",
           "changelogSource": "user"
         },
         {
@@ -1278,6 +1279,12 @@
         }
       ],
       "history": [
+        {
+          "hash": "316f2d2c8c7e",
+          "version": "1.0.2",
+          "date": "2026-08-31",
+          "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+        },
         {
           "hash": "bcbbab0055cd",
           "version": "1.0.0",
@@ -1683,6 +1690,12 @@
           "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         },
         {
+          "hash": "2a70b5288a44",
+          "version": "1.7.4",
+          "date": "2026-08-31",
+          "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+        },
+        {
           "hash": "329fe617871a",
           "version": "1.7.3",
           "date": "2026-08-31",
@@ -2001,6 +2014,12 @@
           "version": "4.0.2",
           "date": "2026-08-27",
           "subject": "docs(skills): 402 指引不再写「提示充值」，dby-publish 补回计费句"
+        },
+        {
+          "hash": "aa22e0e657ae",
+          "version": "4.0.6",
+          "date": "2026-08-31",
+          "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
         },
         {
           "hash": "f3c94f436a09",

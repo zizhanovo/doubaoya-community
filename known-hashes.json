@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T11:39:15.093343+00:00",
+  "generatedAt": "2026-08-31T12:52:33.376372+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -113,6 +113,7 @@
     ],
     "dby-banned-words": [
       "0ca3048ae86c",
+      "1cce17094948",
       "3b6f51b83da1",
       "57a5bff134c0",
       "5de93933d77a",
@@ -2650,6 +2651,12 @@
     ],
     "dby-deai": [
       {
+        "hash": "316f2d2c8c7e",
+        "version": "1.0.2",
+        "date": "2026-08-31",
+        "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+      },
+      {
         "hash": "bcbbab0055cd",
         "version": "1.0.0",
         "date": "2026-08-31",
@@ -2884,6 +2891,12 @@
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       },
       {
+        "hash": "2a70b5288a44",
+        "version": "1.7.4",
+        "date": "2026-08-31",
+        "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+      },
+      {
         "hash": "329fe617871a",
         "version": "1.7.3",
         "date": "2026-08-31",
@@ -3088,6 +3101,12 @@
         "version": "4.0.2",
         "date": "2026-08-27",
         "subject": "docs(skills): 402 指引不再写「提示充值」，dby-publish 补回计费句"
+      },
+      {
+        "hash": "aa22e0e657ae",
+        "version": "4.0.6",
+        "date": "2026-08-31",
+        "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
       },
       {
         "hash": "f3c94f436a09",
