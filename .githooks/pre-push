@@ -20,3 +20,14 @@ python3 -m pytest tools/tests/test_version_stamp_consistency.py -q --no-header 2
   echo "   （启用 git config core.hooksPath .githooks 之后 pre-commit 会自动做，见 docs/hooks.md）" >&2
   exit 1
 }
+
+# ── 推 tag 时提醒建 Release（只提醒，不阻塞、不联网）──
+# tag 和 Release 是两码事：git push 只推 tag，Release 要单独建，于是很容易漏——
+# 本仓实测漏过一次，Releases 页比 tag 列表少一截。
+# 🔴 刻意**不**在这里跑 sync_releases.py --check：它要联网调 gh，慢且在没网/没登录时
+#    会假阳性——正是本文件开头警告的那类闸（一旦吵，第二次就有人 --no-verify）。
+#    这里只打一行提示，零成本、零假阳性；真正的对齐由 tools/sync_releases.py 做。
+echo "" >&2
+echo "📦 推完别忘了同步 GitHub Release（tag ≠ Release）：" >&2
+echo "   python3 tools/sync_releases.py --check    # 看差异" >&2
+echo "   python3 tools/sync_releases.py --all      # 补齐" >&2
