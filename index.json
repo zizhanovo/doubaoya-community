@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T15:10:16.271352+00:00",
+  "generatedAt": "2026-08-31T17:15:31.563872+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.25",
+  "productVersion": "1.0.26",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -974,6 +974,12 @@
           "version": "2.1.1",
           "date": "2026-08-31",
           "subject": "refactor(skills)!: 退役 dby-image —— 服务端生图能力因合规要求整体下架"
+        },
+        {
+          "hash": "afae2f05a5ed",
+          "version": "2.1.2",
+          "date": "2026-08-31",
+          "subject": "fix(dby-api): 补回被 dby-image 退役连带丢失的 8 个图像类触发词，并压回 6000 字符闸"
         }
       ]
     },
@@ -1294,15 +1300,16 @@
       "status": "active",
       "knownHashes": [
         "316f2d2c8c7e",
+        "48c04d2ad062",
         "bcbbab0055cd",
         "dc1aa44b50b6"
       ],
       "versions": [
         {
           "version": "1.0.2",
-          "hash": "bae847a7cc4e",
+          "hash": "48c04d2ad062",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T12:54:58.734934+00:00",
+          "releasedAt": "2026-08-31T17:13:52.145981+00:00",
           "changelog": "首版基线复查（D10）：deai-detect-only-default 的 check 从 output.txt（agent 摘要，措辞会变，3 轮挂 2 轮）改打 tools.txt（deai.py 的确定性输出）；检出/不误报/具体度等确定性判据下沉到 tools/tests/test_deai_script.py；脚本行为零变化",
           "changelogSource": "user"
         }
