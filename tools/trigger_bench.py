@@ -30,11 +30,13 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import runners  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
@@ -91,33 +93,20 @@ def build_prompt(catalog: dict[str, dict], q: str) -> str:
     )
 
 
-def ask(prompt: str, model: str, valid: set[str], tries: int = 2) -> str | None:
+def ask(prompt: str, model: str | None, valid: set[str], runner: str = "claude",
+        meta: dict | None = None) -> str | None:
     """返回模型挑中的 slug；拿不到可信答案返回 None（计为不可用，不编一个）。
 
-    🔴 不要把 stdout 的最后一行**当作**答案——要**校验**它。CLI 会往 stdout 混进自己的
-       诊断行（实测见过 `Client.listTools() called but server does not advertise tools
-       capability - returning empty list`），照单全收会把噪声记成一次"模型选择"，
-       再被多轮比较判成"抖动"，于是真实抖动率被噪声顶高、判据失真。
-       判据只认候选集里的名字或 none，其余一律不算数。
+    🔴 「不把 stdout 最后一行**当作**答案，而是**校验**它落在候选集或 none 里」
+       这条教训（CLI 会往 stdout 混诊断行，照单全收会把噪声记成一次"模型选择"、
+       再被多轮比较判成"抖动"，顶高真实抖动率）已随后端抽象下沉到 tools/runners.py
+       ——取值域校验与后端无关，任何 runner 都适用。这里只负责把候选集扩成
+       「slug ∪ none」再交给 runner；默认 runner 仍是 claude，行为与旧版一致。
+
+    model=None = 用后端 CLI 自己的默认（pi 只有这个形态实测可用，见 runners.py）；
+    meta 传 dict 时会被写入实际使用的 provider/model 及其来源。
     """
-    for _ in range(tries):
-        try:
-            p = subprocess.run(
-                ["claude", "-p", "--model", model, prompt],
-                capture_output=True, text=True, timeout=120,
-            )
-        except FileNotFoundError:
-            print("🔴 找不到 `claude` CLI —— 装了才能跑真实盲测；只想自检用例用 --dry。", file=sys.stderr)
-            raise SystemExit(2)
-        except subprocess.TimeoutExpired:
-            continue
-        if p.returncode != 0:
-            continue
-        for line in reversed(p.stdout.strip().split("\n")):
-            tok = line.strip().strip("`'\"。 ")
-            if tok in valid or tok == "none":
-                return tok
-    return None
+    return runners.ask(runner, prompt, model, valid | {"none"}, meta=meta)
 
 
 def main() -> int:
@@ -125,10 +114,17 @@ def main() -> int:
     ap.add_argument("--skills", help="逗号分隔，只测这几个包；默认测所有有 evals 的包")
     ap.add_argument("--rounds", type=int, default=3, help="跑几轮（默认 3，判定只认每轮一致的用例）")
     ap.add_argument("--dry", action="store_true", help="不调模型，只自检候选集与用例")
-    ap.add_argument("--model", default="sonnet", help="盲测用哪个模型（默认 sonnet）")
+    # 🔴 模型默认按后端解析（runners.DEFAULT_MODELS）：sonnet 只对 claude 成立，
+    #    实测 `pi --model sonnet` 被解析到无 key 的 amazon-bedrock 直接报错。
+    ap.add_argument("--model", default=None,
+                    help="盲测用哪个模型（默认按后端定：claude=sonnet，其余用 CLI 自己的默认）")
+    ap.add_argument("--runner", default="claude", choices=sorted(runners.RUNNERS),
+                    help="盲测用哪个后端（默认 claude，与旧版行为一致；见 tools/runners.py）")
     ap.add_argument("--workers", type=int, default=8, help="并发数（默认 8）")
     ap.add_argument("--json", help="把逐轮原始结果写进这个文件")
     args = ap.parse_args()
+    if args.model is None:
+        args.model = runners.DEFAULT_MODELS[args.runner]
 
     catalog = discover()
     print(f"候选集：{len(catalog)} 个包 —— {', '.join(catalog)}")
@@ -156,11 +152,15 @@ def main() -> int:
         print("\n--dry：未调用模型。用例格式与候选集自检通过。")
         return 0
 
-    print(f"模型 {args.model}，并发 {args.workers}")
+    print(f"后端 {args.runner}，模型 {args.model or '(CLI 默认)'}，并发 {args.workers}")
     done = [0]
+    # 实际使用的 provider/model（design.md D4：基线记实际的尺子）。
+    # 多线程共享一个 dict：各轮回报同一身份，重复覆盖无害。
+    blind_meta: dict = {}
 
     def run_one(c):
-        pick = ask(build_prompt(catalog, c["q"]), args.model, set(catalog))
+        pick = ask(build_prompt(catalog, c["q"]), args.model, set(catalog),
+                   runner=args.runner, meta=blind_meta)
         done[0] += 1
         print(f"\r  {done[0]}/{len(cases) * args.rounds}", end="", file=sys.stderr)
         return pick
@@ -226,8 +226,19 @@ def main() -> int:
             print(f"  [{r['owner']}:{r['line']}] {r['q']}  {r['picks']}")
 
     if args.json:
+        # blind 身份块（design.md D4）：model 尽量记实际值（pi 的 JSON 会回报），
+        # model_source 区分 "reported"（实测值）与 "requested"（请求值，claude/codex
+        # 拿不到实际模型 ID 时的退路）——两种来源不许混在一个字段里看不出差别。
+        if blind_meta.get("source") == "reported":
+            blind = {"runner": args.runner, "model": blind_meta.get("model"),
+                     "provider": blind_meta.get("provider"), "model_source": "reported",
+                     "model_requested": args.model}
+        else:
+            blind = {"runner": args.runner, "model": args.model,
+                     "model_source": "requested", "model_requested": args.model}
         Path(args.json).write_text(
-            json.dumps({"rounds": args.rounds, "stable": stable, "flaky": flaky, "unusable": unusable,
+            json.dumps({"rounds": args.rounds, "blind": blind,
+                        "stable": stable, "flaky": flaky, "unusable": unusable,
                         "per_skill": {k: dict(v) for k, v in per.items()}},
                        ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\n逐轮原始结果 → {args.json}")
