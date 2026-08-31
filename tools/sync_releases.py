@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -40,6 +41,16 @@ INDEX = ROOT / "index.json"
 
 # 标题里出现这些包名时，把它当作"这一版的主角"——它们是用户直接使用的入口，
 # 而不是被别的包带着一起 bump 的。主角决定标题怎么写。
+# 「入口包」——用户直接使用的那些。只有它们的 major 才顶整体主版本号。
+# dby-update / dby-gateway 是基础设施：它们的破坏性变更（改安装机制、改协议措辞）
+# 用户是无感的，顶主版本号只会制造"这东西又大改了"的错觉。
+# 实测差别：按"任何包 major"算，五天从 v1 跑到 v5；按入口包算是 v1→v3，
+# 两次 major 都是 dby-publish 真的删了东西（主题副本、出图栈），用户确实会被影响。
+ENTRY_PACKAGES = frozenset({
+    "dby", "dby-write", "dby-publish", "dby-image", "dby-feedback",
+    "dby-rewrite", "dby-charter", "dby-banned-words", "dby-theme",
+})
+
 HEADLINE_PRIORITY = (
     "dby-feedback", "dby-write", "dby-publish", "dby-image", "dby-rewrite",
     "dby-banned-words", "dby-charter", "dby-theme", "dby", "dby-api", "dby-update", "dby-gateway",
@@ -79,7 +90,7 @@ def is_new_package(index: dict, slug: str, ref: str) -> bool:
     return bool(versions) and versions[-1].get("ref") == ref
 
 
-def build_title(index: dict, ref: str, rows: list[tuple[str, dict]]) -> str:
+def build_title(index: dict, ref: str, rows: list[tuple[str, dict]], suite: str = "") -> str:
     """标题规则（唯一实现，别在别处再写一份）：
 
     1. 有新包 → 「新增 <包名>：<它的 changelog 第一句>」——新包是这版最值得说的事
@@ -95,32 +106,41 @@ def build_title(index: dict, ref: str, rows: list[tuple[str, dict]]) -> str:
     if new_pkgs and len(new_pkgs) < len(rows):
         slug = new_pkgs[0]
         entry = dict(rows)[slug]
-        return f"新增 {slug}：{first_clause(entry.get('changelog', ''))}"
+        return f"{suite}：新增 {slug}——{first_clause(entry.get('changelog', ''))}"
     if new_pkgs and len(new_pkgs) == len(rows):
-        return f"首发：{len(rows)} 个都爆鸭 skill"
+        return f"{suite}：首发 {len(rows)} 个都爆鸭 skill"
 
     for want in HEADLINE_PRIORITY:
         for slug, entry in rows:
             if slug == want:
                 name = index["skills"][slug].get("displayName") or slug
-                return f"{name} {entry['version']}：{first_clause(entry.get('changelog', ''))}"
+                return f"{suite}：{name} {entry['version']}——{first_clause(entry.get('changelog', ''))}"
 
-    return f"更新 {len(rows)} 个 skill"
+    return f"{suite}：更新 {len(rows)} 个 skill"
 
 
 def first_clause(text: str, limit: int = 40) -> str:
-    """取 changelog 的第一个短句做标题尾巴。
+    """取 changelog 里第一个**有信息量**的短句做标题尾巴。
 
-    标题要短，正文才展开——一条一百多字的技术腔标题在 Releases 页会把整行撑爆。
+    标题要短，正文才展开——一条一百多字的技术腔标题会把 Releases 页整行撑爆。
+
+    🔴 两个坑都踩过：
+    - 切出来的片段太短（「首版」两个字）不能直接采用，也不能因此回退到"截断整串"——
+      要**跳过它继续往后找**下一段。实测 dby-feedback 的 changelog 是「首版——三类反馈…」，
+      不跳过就会得到「新增 dby-feedback——首版——三类反馈…」这种双破折号标题。
+    - 片段首尾可能挂着断点符号，拼接前要剥掉，否则和外层的连接符撞在一起。
     """
     text = (text or "").strip()
-    # 从最"硬"的断点往下试：破折号 > 分号 > 句号 > 逗号。取第一个落在长度区间里的。
-    for sep in ("——", "—", "；", ";", "。", "，", "：", ","):
-        if sep in text:
-            head = text.split(sep)[0].strip()
-            if 4 <= len(head) <= limit:
-                return head
-    return text[:limit] + ("…" if len(text) > limit else "")
+    if not text:
+        return ""
+    # 按所有断点切碎，取第一个长度合适的段；太短的（如「首版」）跳过继续找。
+    parts = re.split(r"——|—|；|;|。|，|：|,", text)
+    for part in parts:
+        part = part.strip().strip("—-：: ")
+        if 6 <= len(part) <= limit:
+            return part
+    # 没有合适长度的段就截断整串——这是最后手段，不是首选。
+    return text[:limit].strip().strip("—-：: ") + ("…" if len(text) > limit else "")
 
 
 def build_notes(index: dict, ref: str, rows: list[tuple[str, dict]]) -> str:
@@ -148,6 +168,59 @@ def build_notes(index: dict, ref: str, rows: list[tuple[str, dict]]) -> str:
     lines.append("/dby-update")
     lines.append("```")
     return "\n".join(lines) + "\n"
+
+
+def bump_kind(prev: str | None, cur: str) -> str:
+    """这个包这一版是什么档。prev 为 None = 首次发布。"""
+    if prev is None:
+        return "new"
+    p = [int(x) for x in prev.split(".")]
+    c = [int(x) for x in cur.split(".")]
+    if c[0] > p[0]:
+        return "major"
+    if c[1] > p[1]:
+        return "minor"
+    return "patch"
+
+
+def suite_versions(index: dict) -> dict[str, str]:
+    """给每个 ref 算一个整体版本号 `vX.Y.Z`——**推导出来的，不是手填的**。
+
+    规则：
+      - 入口包（ENTRY_PACKAGES）有 major ⇒ 整体 major
+      - 否则有 minor 或新包        ⇒ 整体 minor
+      - 全是 patch                 ⇒ 整体 patch
+
+    为什么要有这个号：每个包各有各的 semver，用户装的却是一整套，
+    他需要一个"我现在在哪一版"的说法。而这个号必须**可推导**——
+    手填的整体号跟包版本对不上时，没人知道该信哪个。
+
+    🔴 这个函数从完整历史重算，所以是确定性的：同样的 index.json 永远得到同样的序列。
+    不落盘存储也不会漂。代价是改规则会让历史号整体位移——真要改规则，
+    得同时用 --overwrite 重刷全部 Release，别让新旧两套号混在一页上。
+    """
+    hist: dict[str, list[tuple[str, str | None, str]]] = {}
+    for slug, meta in index["skills"].items():
+        versions = meta.get("versions") or []
+        for i, entry in enumerate(versions):
+            prev = versions[i + 1]["version"] if i + 1 < len(versions) else None
+            hist.setdefault(entry["ref"], []).append((slug, prev, entry["version"]))
+
+    out: dict[str, str] = {}
+    major, minor, patch = 1, 0, 0
+    refs = sorted(hist)
+    for i, ref in enumerate(refs):
+        rows = [(slug, bump_kind(prev, cur)) for slug, prev, cur in hist[ref]]
+        if i == 0:
+            pass  # 首发就是 v1.0.0
+        elif any(k == "major" and slug in ENTRY_PACKAGES for slug, k in rows):
+            major, minor, patch = major + 1, 0, 0
+        elif any(k in ("minor", "new") for _, k in rows):
+            minor, patch = minor + 1, 0
+        else:
+            patch += 1
+        out[ref] = f"v{major}.{minor}.{patch}"
+    return out
 
 
 def existing_releases() -> set[str]:
@@ -181,6 +254,7 @@ def main() -> int:
         return 2
 
     index = load_index()
+    suite_map = suite_versions(index)
     have = existing_releases()
     tags = remote_tags()
     missing = [t for t in tags if t not in have]
@@ -208,7 +282,8 @@ def main() -> int:
             print(f"⏭  {ref}：index.json 里没有挂在这个 ref 上的包，跳过（早于盖戳机制的 tag）")
             continue
 
-        title = build_title(index, ref, rows)
+        suite = suite_map.get(ref, "")
+        title = build_title(index, ref, rows, suite)
         notes = build_notes(index, ref, rows)
 
         if ref in have:
