@@ -8,8 +8,8 @@ description: >-
   改得像人写的、说点人话、说人话、没有人味、没人味、太官方了、太套路了、全是套话、文章太干、
   改得自然点、降AI率、AI率太高、过AI检测。纯本地运行，不联网、不需要 key。
   不做规避 AI 标识、不做学术降重、不承诺过检测器。
-version: 1.0.1
-changelog: 执行层用例 prompt 显式调起本包（判定器要验证 skill 真被调起，隐式路由在大候选集里不中）；包行为零变化
+version: 1.0.2
+changelog: 首版基线复查（D10）：deai-detect-only-default 的 check 从 output.txt（agent 摘要，措辞会变，3 轮挂 2 轮）改打 tools.txt（deai.py 的确定性输出）；检出/不误报/具体度等确定性判据下沉到 tools/tests/test_deai_script.py；脚本行为零变化
 compatibility: >-
   需要 Python 3（`scripts/deai.py` 只用标准库，不装任何 pip 包）。
   纯本地运行：不联网、不调用任何外部接口、不需要 key、不计费。

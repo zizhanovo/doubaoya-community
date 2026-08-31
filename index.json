@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T10:34:02.593015+00:00",
+  "generatedAt": "2026-08-31T11:39:15.093343+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.18",
+  "productVersion": "1.0.19",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -1263,16 +1263,17 @@
       ],
       "status": "active",
       "knownHashes": [
+        "316f2d2c8c7e",
         "bcbbab0055cd",
         "dc1aa44b50b6"
       ],
       "versions": [
         {
-          "version": "1.0.1",
-          "hash": "dc1aa44b50b6",
+          "version": "1.0.2",
+          "hash": "316f2d2c8c7e",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T10:33:42.395747+00:00",
-          "changelog": "执行层用例 prompt 显式调起本包（判定器要验证 skill 真被调起，隐式路由在大候选集里不中）；包行为零变化",
+          "releasedAt": "2026-08-31T11:35:26.027449+00:00",
+          "changelog": "首版基线复查（D10）：deai-detect-only-default 的 check 从 output.txt（agent 摘要，措辞会变，3 轮挂 2 轮）改打 tools.txt（deai.py 的确定性输出）；检出/不误报/具体度等确定性判据下沉到 tools/tests/test_deai_script.py；脚本行为零变化",
           "changelogSource": "user"
         }
       ],
@@ -1282,6 +1283,12 @@
           "version": "1.0.0",
           "date": "2026-08-31",
           "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
+        },
+        {
+          "hash": "dc1aa44b50b6",
+          "version": "1.0.1",
+          "date": "2026-08-31",
+          "subject": "test(dby-deai): 执行层 prompt 显式调起本包 —— 否则整包判不可用"
         }
       ]
     },
@@ -1474,6 +1481,7 @@
         "219886ee0a77",
         "25fcd0d0d1ba",
         "2a3ffb3fc5b2",
+        "2a70b5288a44",
         "329fe617871a",
         "47bee0597b99",
         "542ea41d2b75",
@@ -1493,11 +1501,11 @@
       ],
       "versions": [
         {
-          "version": "1.7.3",
-          "hash": "329fe617871a",
+          "version": "1.7.4",
+          "hash": "2a70b5288a44",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T10:24:25.840085+00:00",
-          "changelog": "执行层判据分三层（design D10）：确定性判据（参考图上限/字节签名/空文件/402 指引账户页/plan-figures 确定性）下沉到脚本层 tools/tests/test_image_scripts.py（402 用本机回环罐头服务复现，零费用），agent 用例 7→2 只留不注入画风与 costly 真出图；脚本行为零变化",
+          "releasedAt": "2026-08-31T11:35:26.027449+00:00",
+          "changelog": "首版基线复查（D10）：image-no-injected-style 的否定式语义断言（grader 曾判 unclear，属用例缺陷）改写为带判定规则的正向陈述（描述文字须完全由画面内容构成，风格词须能在用户原话找到出处）；gen.mjs 不回显组装后的 prompt、tools.txt 只收工具结果，确定性 check 无处可打，故留 assert；脚本行为零变化",
           "changelogSource": "user"
         },
         {
@@ -1714,6 +1722,7 @@
         "87b714968274",
         "915ea7bae745",
         "93bdab968731",
+        "aa22e0e657ae",
         "afeb6e003c90",
         "c24c940f04d9",
         "c3582315f2c5",
@@ -1730,11 +1739,11 @@
       ],
       "versions": [
         {
-          "version": "4.0.5",
-          "hash": "f3c94f436a09",
+          "version": "4.0.6",
+          "hash": "aa22e0e657ae",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T10:25:30.080559+00:00",
-          "changelog": "执行层判据分三层（design D10）：新增 validate-theme / render-wechat-html / preprocess-and-publish 三个 *.selfcheck.mjs 把确定性判据（主题安全、渲染保真、本地图判定）下沉到脚本层，标题/摘要上限与 --dry-run 扫描由 tools/tests/test_publish_scripts.py 钉住，agent 用例 7→2 只留编排（渲染编排、拒绝群发）；脚本行为零变化",
+          "releasedAt": "2026-08-31T11:35:26.027449+00:00",
+          "changelog": "首版基线复查（D10）：删除 agent 用例 publish-mass-send-refused——群发请求裸模型也会拒（3/3 unusable，归因不到 skill 头上），且 pipeline.mjs 的 MASS_SEND_RE 白名单让群发在代码层面不存在路径，该保证下沉为 tools/tests/test_publish_scripts.py 的脚本层测试；脚本行为零变化",
           "changelogSource": "user"
         },
         {

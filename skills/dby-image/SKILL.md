@@ -8,8 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 1.7.3
-changelog: 执行层判据分三层（design D10）：确定性判据（参考图上限/字节签名/空文件/402 指引账户页/plan-figures 确定性）下沉到脚本层 tools/tests/test_image_scripts.py（402 用本机回环罐头服务复现，零费用），agent 用例 7→2 只留不注入画风与 costly 真出图；脚本行为零变化
+version: 1.7.4
+changelog: 首版基线复查（D10）：image-no-injected-style 的否定式语义断言（grader 曾判 unclear，属用例缺陷）改写为带判定规则的正向陈述（描述文字须完全由画面内容构成，风格词须能在用户原话找到出处）；gen.mjs 不回显组装后的 prompt、tools.txt 只收工具结果，确定性 check 无处可打，故留 assert；脚本行为零变化
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。零依赖，不用 npm install。

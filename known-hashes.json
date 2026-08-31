@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T10:34:02.593015+00:00",
+  "generatedAt": "2026-08-31T11:39:15.093343+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -144,6 +144,7 @@
       "d9423fc38116"
     ],
     "dby-deai": [
+      "316f2d2c8c7e",
       "bcbbab0055cd",
       "dc1aa44b50b6"
     ],
@@ -173,6 +174,7 @@
       "219886ee0a77",
       "25fcd0d0d1ba",
       "2a3ffb3fc5b2",
+      "2a70b5288a44",
       "329fe617871a",
       "47bee0597b99",
       "542ea41d2b75",
@@ -212,6 +214,7 @@
       "87b714968274",
       "915ea7bae745",
       "93bdab968731",
+      "aa22e0e657ae",
       "afeb6e003c90",
       "c24c940f04d9",
       "c3582315f2c5",
@@ -2651,6 +2654,12 @@
         "version": "1.0.0",
         "date": "2026-08-31",
         "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
+      },
+      {
+        "hash": "dc1aa44b50b6",
+        "version": "1.0.1",
+        "date": "2026-08-31",
+        "subject": "test(dby-deai): 执行层 prompt 显式调起本包 —— 否则整包判不可用"
       }
     ],
     "dby-feedback": [

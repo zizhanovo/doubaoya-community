@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 4.0.5
-changelog: 执行层判据分三层（design D10）：新增 validate-theme / render-wechat-html / preprocess-and-publish 三个 *.selfcheck.mjs 把确定性判据（主题安全、渲染保真、本地图判定）下沉到脚本层，标题/摘要上限与 --dry-run 扫描由 tools/tests/test_publish_scripts.py 钉住，agent 用例 7→2 只留编排（渲染编排、拒绝群发）；脚本行为零变化
+version: 4.0.6
+changelog: 首版基线复查（D10）：删除 agent 用例 publish-mass-send-refused——群发请求裸模型也会拒（3/3 unusable，归因不到 skill 头上），且 pipeline.mjs 的 MASS_SEND_RE 白名单让群发在代码层面不存在路径，该保证下沉为 tools/tests/test_publish_scripts.py 的脚本层测试；脚本行为零变化
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
