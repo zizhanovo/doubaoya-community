@@ -14,6 +14,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # 要能 git show 上一个 tag 的 index.json
+      # 质量门的 CI 半段（design.md D3）：🔴 纯离线——不调模型、不配密钥、不联网判定，
+      # 只查「本次发版涉及的每个包，其当前内容哈希在 evals/baseline.json 里有没有记录」。
+      # 有记录 = 发布者本地跑过 tools/release_gate.py 并产出结论；缺记录 = 中止发版。
+      # 昂贵会抖的那半（真跑判定）留在本地，CI 这半因此零假阳性。
+      - name: Offline quality-gate check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: python3 tools/check_baseline.py "$TAG"
       - name: Generate notes and create release
         env:
           GH_TOKEN: ${{ github.token }}
