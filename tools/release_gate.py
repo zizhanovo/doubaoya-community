@@ -228,6 +228,46 @@ def build_entries(targets: "list[str]", hashes: "dict[str, str]",
     return entries
 
 
+# ---------------------------------------------------------------- 基线洞（unusable）
+
+def unusable_holes(data: dict, entries: "list[dict]") -> "list[tuple[str, str, list[str]]]":
+    """写入后仍留在基线里的 unusable 洞：[(skill, kind, 用例清单)]。
+
+    🔴 为什么盯这个（design.md D4b，2026-08-31 实测教训）：首版 --establish
+    （243 条触发用例 × 3 轮 = 729 次调用、8 并发、30+ 分钟）把 dby-charter 判出
+    18 条话术 14 条 unusable；单独重跑同一包 18/18 稳定、正例 10/10、负例 0/8、
+    零不可用——洞是大并发撞限流的产物，不是包的缺陷。可怕的不是洞本身，是它
+    悄无声息：CI 旧实现只查「(skill, hash) 有没有记录」，有洞照样放行；比对又
+    只认「基线 pass、本次 fail」，基线是 unusable 就永远比不出退步——那 14 条
+    话术从此不受监控，且没有任何地方会红。所以洞必须在这里点名、由门 exit 2
+    拒绝当作结论，并由 check_baseline.py 在 CI 兜底拦住发版。
+
+    以**写入后**的条目为准（baseline.match 找回落盘的那条）：同哈希时历史结果
+    已回填的瞬时洞不算洞（baseline.upsert 规则 2），只报真正留在基线里的。"""
+    out = []
+    for e in entries:
+        stored = baseline.match(data, e) or e
+        cs = baseline.unusable_cases(stored)
+        if cs:
+            out.append((e["skill"], e["kind"], cs))
+    return out
+
+
+def report_unusable_holes(holes: "list[tuple[str, str, list[str]]]") -> None:
+    """点名基线里的 unusable 洞并提示重跑——不能静默，静默就是监控盲区的开端。"""
+    print("\n🔴 以下条目含 unusable（拿不到可信答案的洞），不构成质量门结论；"
+          "洞已随条目写入基线（diff 可见），CI 离线校验会因此拦住这些包的发版：",
+          file=sys.stderr)
+    for skill, kind, cs in holes:
+        print(f"  [{skill}/{kind}] {len(cs)} 条：{'、'.join(cs)}", file=sys.stderr)
+    slugs = sorted({s for s, _, _ in holes})
+    print("   成片的 unusable 多为大并发撞限流/超时（实测 2026-08-31：8 并发 729 次"
+          "调用产出 14 条假性不可用，单独重跑 18/18 稳定）。runners.ask 已带指数退避，"
+          f"仍出现时请降低并发、只对受影响的包重跑补上洞：\n"
+          f"   python3 tools/release_gate.py --establish --skills {','.join(slugs)}",
+          file=sys.stderr)
+
+
 # ---------------------------------------------------------------- 主流程
 
 def main(argv: "list[str] | None" = None) -> int:
@@ -351,10 +391,17 @@ def main(argv: "list[str] | None" = None) -> int:
         baseline.save(data, BASELINE_PATH)
         print(f"\n--establish：已写入基线 {len(entries)} 条条目 → {BASELINE_PATH}"
               "（未做退步判定；首版结果请人工过一遍，失败项要么修、要么显式标注理由）")
+        rc = 0
+        # 🔴 有洞的条目不许静默成为「基线已建立」的一部分（实测：首版就这样漏进了
+        #    14 条不受监控的话术）——点名、提示重跑，并以 exit 2 表明未产生完整结论。
+        holes = unusable_holes(data, entries)
+        if holes:
+            report_unusable_holes(holes)
+            rc = 2
         if case_slugs and not exec_ran:
             print("🔴 执行层未跑（缺前置条件），本次基线不含执行层条目。", file=sys.stderr)
-            return 2
-        return 0
+            rc = 2
+        return rc
 
     # ---- 比对 ----
     incomparable, regressions, improvements, fresh = [], [], [], []
@@ -429,11 +476,19 @@ def main(argv: "list[str] | None" = None) -> int:
         print("结论：无退步（与基线一致），基线文件无变化。"
               if not wrote else "结论：无退步，基线已更新。")
 
+    rc = 0
+    # 🔴 洞不放行：写入后基线里仍含 unusable 的条目（同哈希历史回填不上的那些）
+    #    说明质量门对这些用例没拿到可信答案——不是退步，但也绝不是「无退步放行」。
+    #    exit 2 与「未跑」同一态度：拿不到结论 ≠ 通过。CI 侧 check_baseline 会兜底。
+    holes = unusable_holes(data, entries)
+    if holes:
+        report_unusable_holes(holes)
+        rc = 2
     if case_slugs and not exec_ran:
         print("\n🔴 执行层未跑（缺 DOUBAOYA_API_KEY 或沙箱等前置条件，见上方判定器输出）："
               "未跑 ≠ 通过，执行层基线条目未改写，本次不构成放行依据。", file=sys.stderr)
-        return 2
-    return 0
+        rc = 2
+    return rc
 
 
 if __name__ == "__main__":

@@ -29,6 +29,19 @@
   - 退步 = 基线 pass、本次 fail（spec 原文，flaky/unclear 都不算退步的证据）；
   - not_run（缺 DOUBAOYA_API_KEY 等前置）绝不记为通过，也绝不覆盖历史结果
     （design.md D7）——upsert() 里落实；
+  - 含 unusable 的条目是**洞**，不构成有效证据（design.md D4b，2026-08-31 实测教训）：
+    首版 --establish（243 条触发用例 × 3 轮、8 并发、30+ 分钟）把 dby-charter 判出
+    18 条话术 14 条 unusable；单独重跑同一包 18/18 稳定、零不可用——洞是大并发撞
+    限流的产物，不是包的缺陷。可怕的不是洞，是它悄无声息：CI 旧实现只查
+    「(skill, hash) 有没有记录」（全文不含 unusable 字样），一条塞满 unusable 的
+    条目照样放行；而比对里退步只认「基线 pass、本次 fail」，基线是 unusable 就
+    永远比不出退步——那 14 条话术从此不受监控，且没有任何地方会红。
+    看着覆盖了，其实没有。对策分两半：
+      · 同哈希时用历史结果回填瞬时的 unusable（upsert 规则 2）——同一份内容上
+        量过的数还作数，瞬时限流不许污染干净的基线；
+      · 回填后仍留洞的条目**照写入**（洞在 diff 里明白可见），但 unusable_cases()
+        把它标为洞：release_gate 点名并 exit 2 拒绝放行，check_baseline.py（CI）
+        识别到洞即拦住发版。任何情况下不许出现「CI 放行了但有话术不受监控」。
   - 接受退步 MUST 附理由，理由与条目一并写入基线、随 diff 可见——accept() 里落实，
     这挡不住铁了心的人，但让「悄悄接受」变成留痕的动作（design.md Risks）。
 """
@@ -50,6 +63,8 @@ SCHEMA = 1
 
 # 逐用例结果的全部合法取值。pass/fail/unclear 与 case_bench 的稳定判定同名；
 # flaky / unusable 是「稳定不下来 / 拿不到可信答案」的档，记录在案但不参与退步判定；
+# 其中 unusable 还被视为**洞**（见 unusable_cases 与模块 docstring）：含洞的条目
+# 不构成有效证据，release_gate 拒绝放行、CI（check_baseline.py）拦住发版。
 # not_run 是「前置条件缺失，本次没跑」——绝不等于 pass，也绝不覆盖历史（D7）。
 RESULTS = ("pass", "fail", "unclear", "flaky", "unusable", "not_run")
 
@@ -64,6 +79,17 @@ IDENTITY_FIELDS = {
 def identity(entry: dict) -> tuple:
     """条目的判定身份。kind 不在表里就炸——静默容忍未知 kind 会让比对悄悄失真。"""
     return tuple(entry.get(f) for f in IDENTITY_FIELDS[entry["kind"]])
+
+
+def unusable_cases(entry: dict) -> "list[str]":
+    """条目里的**洞**：结果为 unusable（拿不到可信答案）的用例清单，排序稳定。
+
+    洞的定义只在这里一处——release_gate（本地点名 + 拒绝放行）与 check_baseline
+    （CI 拦发版）都复用它。为什么洞不算证据见模块 docstring 的实测教训：
+    dby-charter 14/18 unusable 是 8 并发限流的产物，单独重跑 18/18 稳定；
+    但基线里的 unusable 既过得了「有没有记录」的 CI 存在性检查，又永远比不出
+    退步（退步只认「基线 pass、本次 fail」）——不拦住它，就是无声的监控盲区。"""
+    return sorted(cid for cid, v in (entry.get("results") or {}).items() if v == "unusable")
 
 
 # ---------------------------------------------------------------- 读写与稳定序列化
@@ -175,8 +201,15 @@ def upsert(data: dict, entry: dict) -> bool:
             return False  # 规则 1：未跑不覆盖历史
         if old.get("hash") == entry.get("hash"):
             for cid, v in old.get("results", {}).items():
-                if results.get(cid, "not_run") == "not_run":
-                    results[cid] = v  # 规则 2：同内容，历史结果作数
+                # 规则 2：同内容，历史结果作数。回填两种「本次没量到」：
+                #   not_run  —— 本次没跑（如 costly 用例没选入）；
+                #   unusable —— 本次跑了但拿不到可信答案。实测（2026-08-31）这多是
+                #     大并发限流的瞬时产物（dby-charter 14/18 unusable，单独重跑
+                #     18/18 稳定），不许让它覆盖同一份内容上已量到的有效结果。
+                # 回填的是「同内容的旧有效测量」，不是把不可用洗成可用——
+                # 没有历史可回填的洞会原样留在条目里，被 release_gate / CI 拦住。
+                if results.get(cid, "not_run") in ("not_run", "unusable"):
+                    results[cid] = v
         entry = dict(entry, results=results)
         if "accepted_regressions" not in entry and old.get("accepted_regressions"):
             entry["accepted_regressions"] = list(old["accepted_regressions"])  # 规则 4

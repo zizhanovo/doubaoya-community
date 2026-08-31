@@ -379,3 +379,40 @@ def test_真实现_selfcheck失败即返回1并点名文件(monkeypatch, tmp_pat
     assert rg.run_script_layer() == 1
     err = capsys.readouterr().err
     assert "boom.selfcheck.mjs" in err and "不烧模型调用" in err
+
+
+# ---------------------------------------------------------------- 基线洞的封堵（design.md D4b）
+# 实测背景（2026-08-31）：首版 --establish（243 条 × 3 轮 = 729 次调用、8 并发）撞限流，
+# dby-charter 被判出 14/18 unusable；单独重跑 18/18 稳定、零不可用。旧行为：洞随条目
+# 静默写入基线，CI 只查存在性照样放行，比对又永远比不出退步——话术无声失去监控。
+
+def test_establish_有洞条目点名并exit2_洞写入基线可见(gate, capsys):
+    tj = _trig_json()
+    tj["stable"] = []
+    tj["unusable"] = [{"owner": "p1", "q": "话术A", "expect": True, "line": 1,
+                       "picks": [None, "p1", "p1"]}]
+    gate.trig = (0, tj)
+    assert rg.main(["--establish"]) == 2  # 有洞 ⇒ 未产生完整结论，不算「基线已建好」
+    err = capsys.readouterr().err
+    assert "unusable" in err and "p1" in err and "话术A" in err  # 点名到包和话术
+    assert "重跑" in err  # 提示重跑，不静默
+    data = json.loads(gate.bpath.read_text(encoding="utf-8"))
+    trig = next(e for e in data["entries"] if e["kind"] == "triggers")
+    assert trig["results"]["话术A"] == "unusable"  # 洞随条目写入，diff 可见可审计
+    cases = next(e for e in data["entries"] if e["kind"] == "cases")
+    assert cases["results"]["c1"] == "pass"  # 干净的执行层条目照常入册
+
+
+def test_同哈希重跑_瞬时unusable被历史回填_不打红也不改基线(gate, capsys):
+    assert rg.main(["--establish"]) == 0  # 干净首版
+    before = gate.bpath.read_bytes()
+    tj = _trig_json()
+    tj["stable"] = []
+    tj["unusable"] = [{"owner": "p1", "q": "话术A", "expect": True, "line": 1,
+                       "picks": [None, "p1", "p1"]}]
+    gate.trig = (0, tj)
+    capsys.readouterr()
+    # 同内容重跑撞了一次限流：历史 pass 回填瞬时洞 ⇒ 无洞、无退步、基线字节不变。
+    assert rg.main([]) == 0
+    assert "无退步" in capsys.readouterr().out
+    assert gate.bpath.read_bytes() == before

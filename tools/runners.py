@@ -33,10 +33,23 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 
 # 各后端「不显式指定时」的默认模型。None = 不给 CLI 传模型参数（用 CLI 自己的默认）。
 # 别把 claude 的 "sonnet" 复制给别的后端——见模块 docstring 里 pi 的实测报错。
 DEFAULT_MODELS = {"claude": "sonnet", "codex": None, "pi": None}
+
+# 重试的指数退避参数（2026-08-31 实测教训）：首版 --establish 一次跑 243 条触发
+# 用例 × 3 轮 = 729 次调用、8 并发、持续 30+ 分钟，dby-charter 的 18 条话术被判出
+# 14 条 unusable；随后单独重跑同一包 18/18 稳定、正例 10/10、负例 0/8、零不可用——
+# 那 14 条是大并发撞限流/超时的产物，不是包的缺陷。旧实现 tries=2 且失败后立刻
+# 重试，瞬时限流两枪都撞在同一堵墙上，被直接记成不可用。
+# 现在第 n 次重试前睡 BACKOFF_BASE * 2**(n-1) 秒（2 → 4 → 8…），封顶 BACKOFF_CAP，
+# 给瞬时故障一个恢复窗口，把「瞬时限流」和「真正的不可用」区分开。
+# 🔴 判据不因此放宽：重试耗尽仍拿不到可信答案，照旧返回 None 计为不可用、不编造——
+#    退避只是给瞬时故障一个机会，不是把不可用洗成可用。
+BACKOFF_BASE = 2.0
+BACKOFF_CAP = 8.0
 
 
 def _norm(token: str) -> str:
@@ -205,7 +218,7 @@ def observed_identity(runner: str, stdout: str, model: "str | None",
 
 
 def ask(runner: str, prompt: str, model: "str | None", valid: set,
-        provider: "str | None" = None, tries: int = 2, timeout: int = 120,
+        provider: "str | None" = None, tries: int = 3, timeout: int = 120,
         meta: "dict | None" = None) -> "str | None":
     """跑一次后端调用并提取答案。返回落在 valid 里的 token；拿不到可信答案返回 None。
 
@@ -214,10 +227,15 @@ def ask(runner: str, prompt: str, model: "str | None", valid: set,
     把实际身份写进去：{"provider","model","source"}，source 见 observed_identity。
 
     退出语义与 trigger_bench 保持一致：后端 CLI 不存在直接 SystemExit(2)
-    （模型调用不可用），调用失败/超时在 tries 内重试，重试耗尽返回 None。"""
+    （模型调用不可用），调用失败/超时/提取不到答案在 tries 内**带指数退避**重试
+    （参数与实测依据见 BACKOFF_BASE / BACKOFF_CAP 的注释：大并发下的瞬时限流
+    曾把 14 条好话术记成不可用），重试耗尽仍返回 None、不编造。"""
     r = RUNNERS[runner]
     cmd = r["build"](model, prompt, provider)
-    for _ in range(tries):
+    for attempt in range(tries):
+        if attempt:
+            # 指数退避：2 → 4 → 8…封顶。只睡在重试之间，最后一次失败后不白等。
+            time.sleep(min(BACKOFF_BASE * (2 ** (attempt - 1)), BACKOFF_CAP))
         try:
             p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         except FileNotFoundError:

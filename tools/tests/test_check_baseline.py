@@ -117,3 +117,38 @@ def test_模块纯离线_不含子进程与网络调用():
     src = (_TOOLS / "check_baseline.py").read_text(encoding="utf-8")
     for banned in ("subprocess", "urllib", "requests", "socket", "http.client", "os.system"):
         assert banned not in src, f"CI 离线校验里不许出现 {banned}——不调模型、不联网是 D3 的核心"
+
+
+# ---------------------------------------------------------------- 基线洞（unusable ⇒ 无结论）
+
+def test_基线条目含unusable洞_视为无结论并拦住(tmp_path, monkeypatch, capsys):
+    # 实测缺陷复现（2026-08-31）：首版 --establish 8 并发撞限流，dby-charter 的
+    # 18 条话术 14 条 unusable 进了基线（单独重跑 18/18 稳定——洞是限流产物）；
+    # 而旧实现全文不含 unusable 字样，只查「(skill, hash) 有没有记录」——有洞照样
+    # 放行，且比对只认「基线 pass、本次 fail」，这些话术从此不受监控。现在必须拦。
+    skills_dir = _mk_repo(tmp_path, monkeypatch, ["p1"], {"p1": _idx()}, [])
+    h = cbl.compute_skill_hash(skills_dir / "p1")
+    ent = _bent("p1", h)
+    ent["results"] = {"话术A": "pass", "话术B": "unusable"}
+    (tmp_path / "evals" / "baseline.json").write_text(
+        json.dumps({"schema": 1, "entries": [ent]}, ensure_ascii=False), encoding="utf-8")
+    assert cbl.main(["release-1"]) == 1
+    err = capsys.readouterr().err
+    assert "p1" in err and "unusable" in err and "话术B" in err and "中止发版" in err
+    assert "话术A" not in err  # 量到了的用例不背锅，点名的是洞
+
+
+def test_同哈希另一条目干净_有洞的那条仍拦住(tmp_path, monkeypatch, capsys):
+    # 「部分覆盖」不算覆盖：triggers 条目干净、cases 条目有洞 ⇒ 该哈希仍无完整结论。
+    # 只查「存在一条干净的」会把洞藏在兄弟条目背后——同一类「看着覆盖了其实没有」。
+    skills_dir = _mk_repo(tmp_path, monkeypatch, ["p1"], {"p1": _idx()}, [])
+    h = cbl.compute_skill_hash(skills_dir / "p1")
+    clean = _bent("p1", h)
+    holed = dict(_bent("p1", h), kind="cases", grader_runner="pi",
+                 results={"c1": "unusable", "c2": "pass"})
+    (tmp_path / "evals" / "baseline.json").write_text(
+        json.dumps({"schema": 1, "entries": [clean, holed]}, ensure_ascii=False),
+        encoding="utf-8")
+    assert cbl.main(["release-1"]) == 1
+    err = capsys.readouterr().err
+    assert "cases:c1" in err and "中止发版" in err

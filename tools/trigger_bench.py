@@ -224,6 +224,13 @@ def main() -> int:
         print("\n取不到可信答案的用例（模型没回候选集里的名字 / 调用失败）：")
         for r in unusable:
             print(f"  [{r['owner']}:{r['line']}] {r['q']}  {r['picks']}")
+        # 🔴 实测教训（2026-08-31）：首版 --establish 一次跑 243 条 × 3 轮 = 729 次
+        #    调用、8 并发，dby-charter 被判出 14/18 不可用；单独重跑同一包 18/18
+        #    稳定、零不可用——成片 unusable 多是大并发撞限流/超时的产物，不是包的
+        #    缺陷。runners.ask 已带指数退避兜瞬时故障；仍成片时降并发重跑受影响的包。
+        print("  提示：成片的 unusable 多为大并发撞限流/超时——"
+              f"建议降低 --workers（本次 {args.workers}）后只对受影响的包重跑，"
+              "别把假性不可用当包的缺陷。")
 
     if args.json:
         # blind 身份块（design.md D4）：model 尽量记实际值（pi 的 JSON 会回报），

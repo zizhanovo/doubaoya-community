@@ -707,6 +707,10 @@ def main(argv: "list[str] | None" = None) -> int:
             if any(d == SKILL_NOT_INVOKED for d in r["rounds_detail"]):
                 tag = "  ← 有轮次本包 skill 未被调用（design.md D9：测的是裸模型，不算数）"
             print(f"  [{r['case']['owner']}:{r['case']['id']}] 各轮判定 {r['verdicts']}{tag}")
+        # 与 trigger_bench 同一条实测教训（2026-08-31，8 并发 729 次调用产出 14 条
+        # 假性不可用、单独重跑全稳）：成片 unusable 先怀疑并发撞限流，再怀疑包。
+        print("  提示：成片的 unusable（且非「skill 未被调用」）多为大并发撞限流/超时——"
+              f"建议降低 --workers（本次 {args.workers}）后只对受影响的包重跑。")
 
     if args.rounds < 3:
         print(f"\n⚠️ 本次只跑了 {args.rounds} 轮（少于 3 轮）：结果不构成放行依据，"

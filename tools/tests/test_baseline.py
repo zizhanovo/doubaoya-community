@@ -183,3 +183,37 @@ def test_接受记录随条目延续():
     data = {"schema": 1, "entries": [old]}
     bl.upsert(data, _entry(h="bbbbbbbbbbbb", results={"q1": "fail", "q2": "pass"}))
     assert data["entries"][0]["accepted_regressions"][0]["reason"] == "已知"
+
+
+# ---------------------------------------------------------------- 基线洞（unusable 不构成证据）
+# 实测背景（2026-08-31）：首版 --establish 大并发（8 并发 729 次调用）撞限流，把
+# dby-charter 判出 14/18 unusable；单独重跑 18/18 稳定、零不可用——洞是限流产物。
+# 而 CI 旧实现只查「(skill, hash) 有没有记录」、比对只认「基线 pass、本次 fail」：
+# 有洞的条目既放行又永远比不出退步——看着覆盖了，其实没有。以下钉死三件事：
+# 洞有唯一定义且可见、同内容的瞬时洞被历史回填、洞不覆盖同内容的有效历史。
+
+def test_unusable_cases_列出洞且排序稳定():
+    e = _entry(results={"b": "unusable", "a": "unusable", "c": "pass", "d": "flaky"})
+    assert bl.unusable_cases(e) == ["a", "b"]  # flaky 不是洞：答案拿到了，只是不稳定
+    assert bl.unusable_cases(_entry(results={"c": "pass"})) == []
+    assert bl.unusable_cases(_entry(results=None)) == []
+
+
+def test_同内容_瞬时unusable被历史结果回填_不污染干净基线():
+    # 同哈希：历史 pass 是对同一份内容的有效测量，本次的 unusable（限流产物）
+    # 不许把它覆盖掉——回填后与历史一致，条目一字不动、不刷日期。
+    old = _entry(results={"q1": "pass", "q2": "pass"})
+    data = {"schema": 1, "entries": [old]}
+    assert bl.upsert(data, _entry(results={"q1": "pass", "q2": "unusable"})) is False
+    assert data["entries"][0]["results"] == {"q1": "pass", "q2": "pass"}
+
+
+def test_换内容_unusable原样写入_洞在基线里可见不算证据():
+    # 哈希变了：旧结果量的是旧内容，不可回填；洞随条目写入（diff 可见），
+    # 由 release_gate（exit 2）与 check_baseline（CI 拦发版）负责挡住——
+    # 写入是为了可见与可审计，不等于把洞当作有效证据。
+    old = _entry(results={"q1": "pass"})
+    data = {"schema": 1, "entries": [old]}
+    assert bl.upsert(data, _entry(h="bbbbbbbbbbbb", results={"q1": "unusable"})) is True
+    assert data["entries"][0]["results"] == {"q1": "unusable"}
+    assert bl.unusable_cases(data["entries"][0]) == ["q1"]

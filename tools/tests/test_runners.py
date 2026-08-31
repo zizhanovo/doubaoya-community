@@ -220,3 +220,52 @@ def test_找不到CLI_退出码2(monkeypatch):
     with pytest.raises(SystemExit) as e:
         rn.ask("pi", "p", "m", VALID)
     assert e.value.code == 2
+
+
+# ---------------------------------------------------------------- 退避重试（2026-08-31 实测教训）
+# 首版 --establish 大并发（243 条触发用例 × 3 轮 = 729 次调用、8 并发、30+ 分钟）撞限流，
+# 把 dby-charter 判出 14/18 不可用；单独重跑同一包 18/18 稳定、零不可用——假性不可用
+# 是瞬时限流的产物，不是包的缺陷。对策：ask() 在重试之间指数退避（2 → 4 → 8s 封顶），
+# 给瞬时故障一个恢复窗口。🔴 判据不因此放宽：重试耗尽仍拿不到可信答案照旧 None，不编造。
+
+@pytest.fixture(autouse=True)
+def sleeps(monkeypatch):
+    """退避引入 time.sleep；测试里一律换成记录器——不真睡，且能断言退避序列。"""
+    recorded = []
+    monkeypatch.setattr(rn.time, "sleep", recorded.append)
+    return recorded
+
+
+def test_退避_瞬时失败后第二次成功(monkeypatch, sleeps):
+    calls = []
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        if len(calls) == 1:  # 第一枪撞限流（非零退出码）
+            return SimpleNamespace(returncode=1, stdout="", stderr="rate limited")
+        return SimpleNamespace(returncode=0, stdout="pass", stderr="")
+
+    monkeypatch.setattr(rn.subprocess, "run", run)
+    assert rn.ask("claude", "p", "m", VALID) == "pass"
+    assert len(calls) == 2
+    assert sleeps == [2.0]  # 重试前退避了 2s——瞬时限流有了恢复窗口，不再被记成不可用
+
+
+def test_退避序列_指数增长且封顶(monkeypatch, sleeps):
+    monkeypatch.setattr(rn.subprocess, "run", _fake_run("", returncode=1))
+    assert rn.ask("claude", "p", "m", VALID, tries=5) is None  # 耗尽仍 None，不编造
+    assert sleeps == [2.0, 4.0, 8.0, 8.0]  # 2 → 4 → 8，封顶 BACKOFF_CAP；最后一败后不白等
+
+
+def test_退避不放宽判据_耗尽仍返回None不编造(monkeypatch, sleeps):
+    # returncode 0 但输出始终是域外噪声：退避给了机会，答案还是拿不到 ⇒ None。
+    calls = []
+
+    def run(cmd, **kw):
+        calls.append(cmd)
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(rn.subprocess, "run", run)
+    assert rn.ask("claude", "p", "m", VALID) is None
+    assert len(calls) == 3  # 默认 tries=3：重试了，但没把域外的「ok」洗成合法答案
+    assert sleeps == [2.0, 4.0]
