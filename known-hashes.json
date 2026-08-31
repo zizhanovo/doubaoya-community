@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T10:30:16.111612+00:00",
+  "generatedAt": "2026-08-31T10:34:02.593015+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -144,7 +144,8 @@
       "d9423fc38116"
     ],
     "dby-deai": [
-      "bcbbab0055cd"
+      "bcbbab0055cd",
+      "dc1aa44b50b6"
     ],
     "dby-feedback": [
       "7b5a56fdd05a"
@@ -2538,6 +2539,12 @@
         "version": "1.4.0",
         "date": "2026-08-30",
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+      },
+      {
+        "hash": "57a5bff134c0",
+        "version": "1.4.4",
+        "date": "2026-08-31",
+        "subject": "test(skills): 三个「错了有后果」的包补两层判据"
       }
     ],
     "dby-charter": [
@@ -2866,6 +2873,12 @@
         "version": "1.7.0",
         "date": "2026-08-30",
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+      },
+      {
+        "hash": "329fe617871a",
+        "version": "1.7.3",
+        "date": "2026-08-31",
+        "subject": "test(skills): 三个「错了有后果」的包补两层判据"
       }
     ],
     "dby-publish": [
@@ -3066,6 +3079,12 @@
         "version": "4.0.2",
         "date": "2026-08-27",
         "subject": "docs(skills): 402 指引不再写「提示充值」，dby-publish 补回计费句"
+      },
+      {
+        "hash": "f3c94f436a09",
+        "version": "4.0.5",
+        "date": "2026-08-31",
+        "subject": "test(skills): 三个「错了有后果」的包补两层判据"
       }
     ],
     "dby-rewrite": [
