@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T09:29:10.191645+00:00",
+  "generatedAt": "2026-08-31T10:29:47.788166+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -126,6 +126,7 @@
     ],
     "dby-charter": [
       "069d68bd5b30",
+      "0f62651630ed",
       "1ef3638615ce",
       "289a7e8efa11",
       "5c113e2fefe3",
@@ -152,6 +153,7 @@
       "0a3b3433cbe5",
       "18b04d9d8613",
       "1d294368f7d7",
+      "3a88323fc388",
       "4c71eb312624",
       "64220c7bed79",
       "7e9c0e95aa56",
@@ -236,6 +238,7 @@
       "895210b408a4",
       "9c3df5a11c54",
       "a1b7ed58c9fe",
+      "a48c0f8f0e5f",
       "a7722b9c56db",
       "af370a32f818",
       "b1b4f5ebb9e6",
@@ -257,6 +260,7 @@
       "3a1ce2acce36",
       "4bbc2e85239b",
       "53d92b2192de",
+      "5d53d4148c04",
       "60aec394ab7b",
       "6d90a69f9f2b",
       "6f72e665fa97",
@@ -2335,6 +2339,12 @@
         "version": "1.5.0",
         "date": "2026-08-30",
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+      },
+      {
+        "hash": "f3a12fbfb260",
+        "version": "1.6.0",
+        "date": "2026-08-31",
+        "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
       }
     ],
     "dby-api": [
@@ -2617,6 +2627,14 @@
         "version": "1.2.2",
         "date": "2026-08-27",
         "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+      }
+    ],
+    "dby-deai": [
+      {
+        "hash": "bcbbab0055cd",
+        "version": "1.0.0",
+        "date": "2026-08-31",
+        "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
       }
     ],
     "dby-feedback": [

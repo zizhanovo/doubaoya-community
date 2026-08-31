@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T09:29:10.191645+00:00",
+  "generatedAt": "2026-08-31T10:29:47.788166+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.13",
+  "productVersion": "1.0.17",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -741,6 +741,12 @@
           "version": "1.5.0",
           "date": "2026-08-30",
           "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+        },
+        {
+          "hash": "f3a12fbfb260",
+          "version": "1.6.0",
+          "date": "2026-08-31",
+          "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
         }
       ]
     },
@@ -972,11 +978,11 @@
       ],
       "versions": [
         {
-          "version": "1.4.1",
-          "hash": "9c0adbdec064",
+          "version": "1.4.4",
+          "hash": "57a5bff134c0",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T08:09:50.189987+00:00",
-          "changelog": "新增执行层判据 evals/cases.jsonl（5 条用例，含一条专测漏检的用例）；包行为零变化",
+          "releasedAt": "2026-08-31T10:24:25.840085+00:00",
+          "changelog": "执行层判据分三层（design D10）：确定性判据（三平台扇出/检出透传/命中词 span 粒度/无改写字段/无语境过滤）下沉到脚本层 tools/tests/test_check_multi.py，agent 用例 5→2 只留编排与解释，check 改打 tools.txt 不打摘要（实测原短语只在工具结果里、摘要里没有）；包行为零变化",
           "changelogSource": "user"
         },
         {
@@ -1091,6 +1097,7 @@
       "status": "active",
       "knownHashes": [
         "069d68bd5b30",
+        "0f62651630ed",
         "1ef3638615ce",
         "289a7e8efa11",
         "5c113e2fefe3",
@@ -1254,6 +1261,14 @@
           "changelog": "新包：去 AI 味体检 / 改写 / 加人味三档",
           "changelogSource": "user"
         }
+      ],
+      "history": [
+        {
+          "hash": "bcbbab0055cd",
+          "version": "1.0.0",
+          "date": "2026-08-31",
+          "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
+        }
       ]
     },
     "dby-feedback": {
@@ -1295,6 +1310,7 @@
         "0a3b3433cbe5",
         "18b04d9d8613",
         "1d294368f7d7",
+        "3a88323fc388",
         "4c71eb312624",
         "64220c7bed79",
         "7e9c0e95aa56",
@@ -1456,11 +1472,11 @@
       ],
       "versions": [
         {
-          "version": "1.7.1",
-          "hash": "06ef10aef309",
+          "version": "1.7.3",
+          "hash": "329fe617871a",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T08:09:50.189987+00:00",
-          "changelog": "新增执行层判据 evals/cases.jsonl（7 条用例，6 条不真出图 + 1 条 costly 真出图）；包行为零变化",
+          "releasedAt": "2026-08-31T10:24:25.840085+00:00",
+          "changelog": "执行层判据分三层（design D10）：确定性判据（参考图上限/字节签名/空文件/402 指引账户页/plan-figures 确定性）下沉到脚本层 tools/tests/test_image_scripts.py（402 用本机回环罐头服务复现，零费用），agent 用例 7→2 只留不注入画风与 costly 真出图；脚本行为零变化",
           "changelogSource": "user"
         },
         {
@@ -1686,11 +1702,11 @@
       ],
       "versions": [
         {
-          "version": "4.0.3",
-          "hash": "49e89c5a8f74",
+          "version": "4.0.5",
+          "hash": "f3c94f436a09",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T08:09:50.189987+00:00",
-          "changelog": "新增执行层判据 evals/cases.jsonl（7 条用例，只覆盖到载荷拼装正确为止，不真推草稿箱）；包行为零变化。",
+          "releasedAt": "2026-08-31T10:25:30.080559+00:00",
+          "changelog": "执行层判据分三层（design D10）：新增 validate-theme / render-wechat-html / preprocess-and-publish 三个 *.selfcheck.mjs 把确定性判据（主题安全、渲染保真、本地图判定）下沉到脚本层，标题/摘要上限与 --dry-run 扫描由 tools/tests/test_publish_scripts.py 钉住，agent 用例 7→2 只留编排（渲染编排、拒绝群发）；脚本行为零变化",
           "changelogSource": "user"
         },
         {
@@ -2070,6 +2086,7 @@
         "895210b408a4",
         "9c3df5a11c54",
         "a1b7ed58c9fe",
+        "a48c0f8f0e5f",
         "a7722b9c56db",
         "af370a32f818",
         "b1b4f5ebb9e6",
@@ -2223,6 +2240,7 @@
         "3a1ce2acce36",
         "4bbc2e85239b",
         "53d92b2192de",
+        "5d53d4148c04",
         "60aec394ab7b",
         "6d90a69f9f2b",
         "6f72e665fa97",
