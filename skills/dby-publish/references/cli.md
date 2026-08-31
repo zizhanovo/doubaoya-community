@@ -21,7 +21,7 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run
 # D'. 只渲染拿在线预览链接：跳过草稿前置检查，要密钥、不要绑号
 node scripts/pipeline.mjs --md a.md --title "标题" --render-only
 
-# E. 带本地封面与配图（图先用 dby-image 出好；配图以 <img src=本地路径> 落进 a.md 正文）
+# E. 带本地封面与配图（图靠用户自备或 agent 自己的生图工具出好；配图以 <img src=本地路径> 落进 a.md 正文）
 node scripts/pipeline.mjs --md a.md --title "标题" --cover ./cover.jpg
 ```
 

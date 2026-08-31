@@ -1,8 +1,8 @@
 {
   "metadata": {
     "name": "dby-publish",
-    "version": "4.0.0",
-    "description": "都爆鸭 · 公众号图文流水线：把一篇写好的 Markdown/HTML 走确定性的机械步骤——加载身份上下文 → 校验目标账号 → 前置检查 → 渲染 → 封面 / 配图（可选，图由 dby-image 出）→ 本地图片预上传 → 封面 → 存入公众号草稿箱。只存草稿，绝不群发。"
+    "version": "4.0.7",
+    "description": "都爆鸭 · 公众号图文流水线：把一篇写好的 Markdown/HTML 走确定性的机械步骤——加载身份上下文 → 校验目标账号 → 前置检查 → 渲染 → 封面 / 配图（可选，本包不出图）→ 本地图片预上传 → 封面 → 存入公众号草稿箱。只存草稿，绝不群发。"
   },
   "hardRules": [
     "只存草稿绝不群发",
@@ -51,9 +51,9 @@
     },
     {
       "id": 6,
-      "title": "封面 / 配图（可选，图归 dby-image）",
+      "title": "封面 / 配图（可选，本包不出图）",
       "type": "design",
-      "rule": "需要封面或配图时由 agent 走 dby-image 出图（本包不再自带生图脚本），拿到本地文件路径后接回机械步骤：封面走 --cover <本地路径>；配图以 <img src=本地路径> 落进 Markdown 源对应 h2 小节末尾（配图位置可先用 dby-image 的 plan-figures.mjs 按确定性规则规划），入源后回到渲染步重跑，使配图获得主题图样式（图注/圆角/间距）。用户没提封面/配图时不主动出图，只提示一次「不传封面就走兜底封面」。此步由 agent 执行，非 pipeline.mjs 机械步骤，不改发布链路契约。",
+      "rule": "本仓已不提供生图能力（服务端 skill.ai.imageGen 因合规要求整体下架，dby-image 包连同 plan-figures.mjs 配图位置规划器同期退役）。需要封面或配图时，图片只能来自用户自备或 agent 自己的生图工具，拿到本地文件路径后接回机械步骤：封面走 --cover <本地路径>；配图以 <img src=本地路径> 手工判断位置落进 Markdown 源对应 h2 小节末尾，入源后回到渲染步重跑，使配图获得主题图样式（图注/圆角/间距）。用户没提封面/配图时不主动张罗，只提示一次「不传封面就走兜底封面」。此步由 agent 执行，非 pipeline.mjs 机械步骤，不改发布链路契约。",
       "mustPass": false
     },
     {
@@ -61,7 +61,7 @@
       "title": "图片预处理",
       "type": "image-preprocess",
       "endpoint": "POST /api/wechat/media/upload",
-      "rule": "扫描正文 <img>，本地图片（含 dby-image 生成的配图）由客户端预上传到公众号图床（>1MB 先压缩），拿回 mmbiz 地址改写 HTML；外链图片原样保留（服务端会自动搬运）。由 vendored preprocess-and-publish.mjs 完成。",
+      "rule": "扫描正文 <img>，本地图片（用户自备或 agent 生成的配图）由客户端预上传到公众号图床（>1MB 先压缩），拿回 mmbiz 地址改写 HTML；外链图片原样保留（服务端会自动搬运）。由 vendored preprocess-and-publish.mjs 完成。",
       "mustPass": true
     },
     {
@@ -69,7 +69,7 @@
       "title": "封面",
       "type": "cover",
       "endpoint": "POST /api/wechat/media/upload (purpose=thumb)",
-      "rule": "若 --cover/config.coverDir 指向本地文件（含 dby-image 生成的封面），作为封面（thumb）预上传。若无封面，走都爆鸭兜底封面（config.coverFallback），并在回报中注明。",
+      "rule": "若 --cover/config.coverDir 指向本地文件（用户自备或 agent 生成的封面），作为封面（thumb）预上传。若无封面，走都爆鸭兜底封面（config.coverFallback），并在回报中注明。",
       "mustPass": false
     },
     {

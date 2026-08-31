@@ -47,14 +47,14 @@ INDEX = ROOT / "index.json"
 # 实测差别：按"任何包 major"算，五天从 v1 跑到 v5；按入口包算是 v1→v3，
 # 两次 major 都是 dby-publish 真的删了东西（主题副本、出图栈），用户确实会被影响。
 ENTRY_PACKAGES = frozenset({
-    "dby", "dby-write", "dby-publish", "dby-image", "dby-feedback",
+    "dby", "dby-write", "dby-publish", "dby-feedback",
     "dby-rewrite", "dby-charter", "dby-banned-words", "dby-theme",
 })
 
 HEADLINE_PRIORITY = (
-    "dby-feedback", "dby-write", "dby-publish", "dby-image", "dby-rewrite",
+    "dby-feedback", "dby-write", "dby-publish", "dby-rewrite",
     "dby-banned-words", "dby-charter", "dby-theme", "dby", "dby-api", "dby-update", "dby-gateway",
-)  # 覆盖全部 12 个包——漏一个就会退化成「更新 1 个 skill」这种没信息量的标题
+)  # 覆盖全部 11 个包（dby-image 已随服务端生图能力一起退役）——漏一个就会退化成「更新 1 个 skill」这种没信息量的标题
 
 
 def sh(*args: str, check: bool = True) -> str:

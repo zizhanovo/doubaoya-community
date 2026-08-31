@@ -85,6 +85,10 @@ PolyForm Noncommercial 1.0.0（随仓库整体）— 见根目录 LICENSE；本�
 
 ## 最近变更
 
+- **4.0.7**：`dby-image` 已随服务端生图能力（`skill.ai.imageGen`）一起整体下架（合规要求，
+  非临时故障）——4.0.0 那次「封面与配图统一由 `dby-image` 出图」的安排到此走到头，本包也没有
+  替代包可指。封面 / 配图现在只能来自**用户自备**或**你自己 agent 的生图工具**：本包只消费
+  它们落盘的本地文件，`--cover`、兜底封面等机制不变。
 - **4.0.0**：出图与设计工作台整套下线。删除 `scripts/gen-image.mjs`（生图薄壳）、
   `scripts/design-studio.mjs` + 页面（本地可视化设计工作台）、`assets/`（6 张风格样图与 IP 图目录）、
   `references/guided-design.md` / `references/design-studio.md`、`schemas/design-config.schema.json`，

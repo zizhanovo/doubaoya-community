@@ -77,7 +77,6 @@
 | "这条链接为什么火 / 解析链接 / 链接解析 / 作品详情 / 拆给我看" | `tool.content.parseDetail` | 解析作品/文章详情 | `/api/apis/tool/parse-content-detail` |
 | "帮我把这段文案过一遍别违规 / 违禁词 / 合规检测 / 过审 / 极限词 / 广告法"（多平台口径） | `tool.contentSafety.checkWords` | 多平台违禁词检测（**入口请求走 `dby-banned-words`，此处仅为 endpoint 索引**） | `/api/skills/content-safety-check` |
 | "公众号这篇能不能发 / 公众号违禁词"（公众号口径，与上一条是两条） | `skill.wechat.prohibitedWord` | 公众号违禁词检测（**入口请求走 `dby-banned-words`，此处仅为 endpoint 索引**） | `/api/skills/wechat-prohibited-word` |
-| "给我配张图 / AI 出图 / 文生图 / 图生图 / 改图 / 生成图片 / 主视觉" | → **走 `dby-image`** | 出图有自己一套等待与重试纪律，全写在那个包里 | — |
 | "这事儿是真的吗 / 联网搜索 / 联网查证 / 事实核查 / 查出处 / 引用来源 / 豆包搜索" | `skill.search.doubaoWeb` | 豆包联网搜索 | `/api/skills/doubao-web-search` |
 
 **不是一条能力、得自己编排的**（表里查不到是正常的，别硬凑一条）：
@@ -92,7 +91,10 @@
 - ~~**"帮我记一下 / 查查我的笔记 / 我是个什么样的人"**~~ —— ⛔ **第二大脑（`mera`）已下架**，
   无替代能力：如实告知，**别拿公开搜索顶替**（见上方「我自己的东西」例外）。
 - ⛔ **`seedream-lite`（Seedream 5.0 lite）已于 2026-08-10 下架**，调用一律 503，
-  所以它不在上表里。要出图走 `skill.ai.imageGen`，要公众号封面走 `api.gzh.cozeData`。
+  所以它不在上表里。要公众号封面**数据**走 `api.gzh.cozeData`（给数据不出图，见上表）。
+- ~~**"给我配张图 / AI 出图 / 文生图 / 图生图 / 改图 / 生成图片 / 主视觉"**~~ —— ⛔ **`skill.ai.imageGen`
+  已随 dby-image 包一起整体下架**（服务端合规要求，非临时故障），无替代能力：如实告知用户本仓不再
+  提供生图，可用用户自己 agent 的生图工具，或让用户自备现成图片。
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：
 1. 先确认有没有 key（没有就带他走「拿钥匙」那一节，一次就好）。

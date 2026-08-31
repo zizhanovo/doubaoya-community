@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 4.0.6
-changelog: 首版基线复查（D10）：删除 agent 用例 publish-mass-send-refused——群发请求裸模型也会拒（3/3 unusable，归因不到 skill 头上），且 pipeline.mjs 的 MASS_SEND_RE 白名单让群发在代码层面不存在路径，该保证下沉为 tools/tests/test_publish_scripts.py 的脚本层测试；脚本行为零变化
+version: 4.0.7
+changelog: dby-image 已随服务端生图能力一起下线，摘掉「先走 dby-image 出图」的指针；封面/配图现只能来自用户自备或 agent 自己的生图工具，脚本行为（--cover、兜底封面）零变化
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -39,7 +39,7 @@ compatibility: >-
 ## 流程声明：`pipeline.json`
 
 10 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`）——它是**人读的约定文档**，
-`pipeline.mjs` 不读取它，改流程要两边手工同步。**「封面 / 配图」这一步由 agent 执行**（图归 `dby-image`），其余步骤 `pipeline.mjs` 机械跑完。
+`pipeline.mjs` 不读取它，改流程要两边手工同步。**「封面 / 配图」这一步由 agent 执行**（本包不出图，见下节），其余步骤 `pipeline.mjs` 机械跑完。
 本文只用步骤名不用序号；`pipeline.mjs` 日志里的「步骤 N」是脚本自己的机械步序，与 SOP 编号不对应。
 
 → 想逐步核对这 10 步分别做什么时读 `references/sop.md`，不需要就别读。
@@ -55,7 +55,8 @@ compatibility: >-
 | `skill.wechat.render` ⚠️专用 | `GET /api/skills/wechat-render` | 「md→HTML」（服务端排版那条路） |
 | `skill.wechat.draftPublish` ⚠️专用 | `GET /api/skills/wechat-draft-publish` | 「保存草稿」 |
 
-生封面 / 生配图**不在本包**：出图归 `dby-image`，本包只消费它落盘的本地文件。
+生封面 / 生配图**不在本包**，且本仓已不再提供出图能力（服务端 `skill.ai.imageGen` 因合规要求
+整体下架，dby-image 包同期退役）：本包只消费**用户自备或 agent 用自己工具生成**的本地文件。
 
 请求由 `scripts/pipeline.mjs`（及它调用的 `preprocess-and-publish.mjs`）代发；
 绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`（鉴权、密钥怎么拿、
@@ -85,13 +86,15 @@ compatibility: >-
 
 ---
 
-## 封面与配图（可选，图归 `dby-image`）
+## 封面与配图（可选，本包不出图）
 
-本包**不出图**。需要封面 / 配图时先走 `dby-image` 出图，拿到**本地文件路径**再接回流水线：
-封面走 `--cover <路径>`；配图以 `<img src=本地路径>` 落进 Markdown 源对应 h2 小节末尾
-（位置可先用 `dby-image` 的 `plan-figures.mjs` 按确定性规则规划），入源后重跑渲染，
-配图才会获得主题图样式。上传与排布仍归本包（流水线原样保留每个 `<img src>` 并预上传本地图）。
-用户已说「推」且**没提封面 / 配图**时不出图：只提示一次「不传封面就走兜底封面」，然后直接跑。
+本包**不出图**，且本仓已不提供任何生图能力（服务端 `skill.ai.imageGen` 因合规要求整体下架，
+dby-image 包连同它的 `plan-figures.mjs` 配图位置规划器同期退役）。需要封面 / 配图时，图片
+只能来自**用户自备**或**你自己 agent 的生图工具**：拿到**本地文件路径**后接回流水线——
+封面走 `--cover <路径>`；配图以 `<img src=本地路径>` 手工判断放进 Markdown 源对应 h2 小节末尾，
+入源后重跑渲染，配图才会获得主题图样式。上传与排布仍归本包（流水线原样保留每个 `<img src>`
+并预上传本地图）。用户已说「推」且**没提封面 / 配图**时不主动张罗：只提示一次
+「不传封面就走兜底封面」，然后直接跑。
 
 ---
 

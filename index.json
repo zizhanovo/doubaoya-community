@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T12:52:33.376372+00:00",
+  "generatedAt": "2026-08-31T14:57:36.209133+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.20",
+  "productVersion": "1.0.22",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -525,11 +525,11 @@
       ],
       "versions": [
         {
-          "version": "1.6.0",
-          "hash": "f3a12fbfb260",
+          "version": "1.7.0",
+          "hash": "dd507e5dc624",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T09:12:04.105400+00:00",
-          "changelog": "路由表新增一行：AI 味太重 / 读着像机器写的走 dby-deai",
+          "releasedAt": "2026-08-31T14:57:15.640318+00:00",
+          "changelog": "dby-image 已随服务端生图能力一起下线，路由表两处「要出图」不再指向它——改成明确告知用户生图能力已下线、无替代包，别再假装能路由过去",
           "changelogSource": "user"
         },
         {
@@ -782,6 +782,14 @@
         "ed6a2f86bffc"
       ],
       "versions": [
+        {
+          "version": "2.1.1",
+          "hash": "91278f530a2b",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T14:57:15.640318+00:00",
+          "changelog": "dby-image 已随服务端生图能力一起下线，摘掉对它的指针；出图 / 配图请求如实告知不可用，不再假装能路由过去",
+          "changelogSource": "user"
+        },
         {
           "version": "2.1.0",
           "hash": "156c3151a72a",
@@ -1088,6 +1096,12 @@
           "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         },
         {
+          "hash": "1cce17094948",
+          "version": "1.4.5",
+          "date": "2026-08-31",
+          "subject": "feat(evals): 落首版回归基线 —— 17 条条目，零洞"
+        },
+        {
           "hash": "57a5bff134c0",
           "version": "1.4.4",
           "date": "2026-08-31",
@@ -1271,9 +1285,9 @@
       "versions": [
         {
           "version": "1.0.2",
-          "hash": "316f2d2c8c7e",
+          "hash": "bae847a7cc4e",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T11:35:26.027449+00:00",
+          "releasedAt": "2026-08-31T12:54:58.734934+00:00",
           "changelog": "首版基线复查（D10）：deai-detect-only-default 的 check 从 output.txt（agent 摘要，措辞会变，3 轮挂 2 轮）改打 tools.txt（deai.py 的确定性输出）；检出/不误报/具体度等确定性判据下沉到 tools/tests/test_deai_script.py；脚本行为零变化",
           "changelogSource": "user"
         }
@@ -1479,7 +1493,7 @@
         "AI绘图",
         "内容创作"
       ],
-      "status": "active",
+      "status": "retired",
       "knownHashes": [
         "000e1d567391",
         "06cc8d2245f3",
@@ -1701,6 +1715,32 @@
           "date": "2026-08-31",
           "subject": "test(skills): 三个「错了有后果」的包补两层判据"
         }
+      ],
+      "retiredEndpoints": [],
+      "retiredTriggerWords": [
+        "AI 出图",
+        "P 一下",
+        "做张封面",
+        "做张视觉图",
+        "公众号封面",
+        "出图",
+        "图生图",
+        "封面",
+        "封面图",
+        "帮我画",
+        "按这个描述画",
+        "改一下这张图",
+        "改图",
+        "文生图",
+        "来张主视觉",
+        "生成一张图",
+        "生成图片",
+        "画张图",
+        "配一张插图",
+        "配图",
+        "配张图",
+        "配张封面图",
+        "首图灵感"
       ]
     },
     "dby-publish": {
@@ -1752,11 +1792,11 @@
       ],
       "versions": [
         {
-          "version": "4.0.6",
-          "hash": "aa22e0e657ae",
+          "version": "4.0.7",
+          "hash": "bede4b73e27b",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T11:35:26.027449+00:00",
-          "changelog": "首版基线复查（D10）：删除 agent 用例 publish-mass-send-refused——群发请求裸模型也会拒（3/3 unusable，归因不到 skill 头上），且 pipeline.mjs 的 MASS_SEND_RE 白名单让群发在代码层面不存在路径，该保证下沉为 tools/tests/test_publish_scripts.py 的脚本层测试；脚本行为零变化",
+          "releasedAt": "2026-08-31T14:57:15.640318+00:00",
+          "changelog": "dby-image 已随服务端生图能力一起下线，摘掉「先走 dby-image 出图」的指针；封面/配图现只能来自用户自备或 agent 自己的生图工具，脚本行为（--cover、兜底封面）零变化",
           "changelogSource": "user"
         },
         {

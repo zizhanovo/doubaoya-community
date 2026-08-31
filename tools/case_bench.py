@@ -64,7 +64,6 @@ OUTPUT_CAP = 30_000   # grader prompt 里产出的截断上限（字符）
 EXTERNAL_CONSEQUENCE = {
     "dby-update": "会写用户磁盘（对账并改动本机安装的包）",
     "dby-publish": "会改远端状态（推公众号草稿箱）",
-    "dby-image": "会产生外部费用（真出图扣费）",
     "dby-banned-words": "输出被用户当作合规结论使用",
 }
 

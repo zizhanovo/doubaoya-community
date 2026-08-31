@@ -30,7 +30,6 @@ SKILLS = ROOT / "skills"
 ENTRY_FLAGS: dict[str, list[str]] = {
     "dby-update/scripts/reconcile.mjs": ["--help"],
     "dby-api/scripts/doubaoya.mjs": [],
-    "dby-image/scripts/plan-figures.mjs": ["--help"],
     "dby-publish/scripts/account-verify.mjs": ["--help"],
     "dby-publish/scripts/extract-theme.mjs": ["--help"],
     "dby-publish/scripts/fetch-article.mjs": ["--help"],

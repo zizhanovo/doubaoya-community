@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T12:52:33.376372+00:00",
+  "generatedAt": "2026-08-31T14:57:36.209133+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -941,6 +941,7 @@
     "cultural-tourism-xiaohongshu-feed": [
       "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
     ],
+    "dby-image": [],
     "doubao-websearch": [
       "/api/skills/doubao-web-search"
     ],
@@ -1286,6 +1287,31 @@
       "扒文章",
       "解析链接",
       "链接解析"
+    ],
+    "dby-image": [
+      "AI 出图",
+      "P 一下",
+      "做张封面",
+      "做张视觉图",
+      "公众号封面",
+      "出图",
+      "图生图",
+      "封面",
+      "封面图",
+      "帮我画",
+      "按这个描述画",
+      "改一下这张图",
+      "改图",
+      "文生图",
+      "来张主视觉",
+      "生成一张图",
+      "生成图片",
+      "画张图",
+      "配一张插图",
+      "配图",
+      "配张图",
+      "配张封面图",
+      "首图灵感"
     ],
     "doubao-websearch": [
       "事实核查",
@@ -2543,6 +2569,12 @@
         "version": "1.4.0",
         "date": "2026-08-30",
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+      },
+      {
+        "hash": "1cce17094948",
+        "version": "1.4.5",
+        "date": "2026-08-31",
+        "subject": "feat(evals): 落首版回归基线 —— 17 条条目，零洞"
       },
       {
         "hash": "57a5bff134c0",
