@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T10:29:47.788166+00:00",
+  "generatedAt": "2026-08-31T10:30:16.111612+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -114,6 +114,7 @@
     "dby-banned-words": [
       "0ca3048ae86c",
       "3b6f51b83da1",
+      "57a5bff134c0",
       "5de93933d77a",
       "8967a5bf1cbe",
       "9875773c9a77",
@@ -171,6 +172,7 @@
       "219886ee0a77",
       "25fcd0d0d1ba",
       "2a3ffb3fc5b2",
+      "329fe617871a",
       "47bee0597b99",
       "542ea41d2b75",
       "5a21a05f4764",
@@ -220,6 +222,7 @@
       "e88557062157",
       "ec58027fccdc",
       "eff5ef724697",
+      "f3c94f436a09",
       "fdf279bc684e"
     ],
     "dby-rewrite": [
@@ -2627,6 +2630,12 @@
         "version": "1.2.2",
         "date": "2026-08-27",
         "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+      },
+      {
+        "hash": "0f62651630ed",
+        "version": "1.2.3",
+        "date": "2026-08-31",
+        "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
       }
     ],
     "dby-deai": [
@@ -2717,6 +2726,12 @@
         "version": "1.3.4",
         "date": "2026-08-27",
         "subject": "docs(dby-gateway): changelog 措辞避开协议外驼峰标识符（验证器闸）"
+      },
+      {
+        "hash": "3a88323fc388",
+        "version": "1.3.5",
+        "date": "2026-08-31",
+        "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
       }
     ],
     "dby-image": [
@@ -3175,6 +3190,12 @@
         "version": "1.4.3",
         "date": "2026-08-26",
         "subject": "feat(dby-publish)!: 出图与设计工作台整套下线 —— 与 dby-image 是同一条上游能力的两套实现"
+      },
+      {
+        "hash": "a48c0f8f0e5f",
+        "version": "1.4.4",
+        "date": "2026-08-31",
+        "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
       }
     ],
     "dby-update": [
@@ -3387,6 +3408,12 @@
         "version": "4.1.0",
         "date": "2026-08-30",
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+      },
+      {
+        "hash": "5d53d4148c04",
+        "version": "4.1.1",
+        "date": "2026-08-31",
+        "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
       }
     ],
     "dby-write": [
