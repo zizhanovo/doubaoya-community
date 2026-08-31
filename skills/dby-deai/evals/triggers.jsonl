@@ -1,0 +1,20 @@
+{"q":"这篇文章 AI 味太重了，帮我看看","expect":true}
+{"q":"帮我去一下 AI 味","expect":true}
+{"q":"读着像机器写的，怎么改","expect":true}
+{"q":"把这段改得像人写的","expect":true}
+{"q":"这段是不是 AI 写的","expect":true}
+{"q":"太官方了，说点人话","expect":true}
+{"q":"我这篇文章没有人味","expect":true}
+{"q":"帮我检查一下 AI 痕迹","expect":true}
+{"q":"一眼就看出来是 AI 写的，怎么办","expect":true}
+{"q":"这稿子太套路了，全是套话","expect":true}
+{"q":"AI 率太高了怎么办","expect":true}
+{"q":"帮我去 AI 化","expect":true}
+{"q":"把这段改成小红书风格","expect":false}
+{"q":"帮我写篇公众号文章","expect":false}
+{"q":"这篇为什么没人看，帮我复盘一下","expect":false}
+{"q":"帮我查一下这段有没有违禁词","expect":false}
+{"q":"帮我画一张封面图","expect":false}
+{"q":"文章排好版了，推进我的草稿箱","expect":false}
+{"q":"更新一下本鸭 skill","expect":false}
+{"q":"帮我起几个公众号标题","expect":false}

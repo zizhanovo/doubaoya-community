@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T16:33:44.570011+00:00",
+  "generatedAt": "2026-08-31T09:29:10.191645+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -86,6 +86,7 @@
       "d5cfe53c21dd",
       "e0ef82da64ee",
       "eeb802ec9c70",
+      "f3a12fbfb260",
       "fccf378e28ef"
     ],
     "dby-api": [
@@ -139,6 +140,9 @@
       "c3738aab09a9",
       "d4483ee94803",
       "d9423fc38116"
+    ],
+    "dby-deai": [
+      "bcbbab0055cd"
     ],
     "dby-feedback": [
       "7b5a56fdd05a"
@@ -2325,6 +2329,12 @@
         "version": "1.3.2",
         "date": "2026-08-26",
         "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
+      },
+      {
+        "hash": "18504ded094b",
+        "version": "1.5.0",
+        "date": "2026-08-30",
+        "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       }
     ],
     "dby-api": [
@@ -2441,6 +2451,12 @@
         "version": "2.0.2",
         "date": "2026-08-27",
         "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+      },
+      {
+        "hash": "156c3151a72a",
+        "version": "2.1.0",
+        "date": "2026-08-30",
+        "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       }
     ],
     "dby-banned-words": [
@@ -2503,6 +2519,12 @@
         "version": "1.3.0",
         "date": "2026-08-26",
         "subject": "feat(dby-banned-words): 接手合规话术 —— 过审 / 合规检测 / 公众号违禁词从 dby-api 迁入"
+      },
+      {
+        "hash": "0ca3048ae86c",
+        "version": "1.4.0",
+        "date": "2026-08-30",
+        "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       }
     ],
     "dby-charter": [
@@ -2595,6 +2617,14 @@
         "version": "1.2.2",
         "date": "2026-08-27",
         "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+      }
+    ],
+    "dby-feedback": [
+      {
+        "hash": "7b5a56fdd05a",
+        "version": "1.0.0",
+        "date": "2026-08-30",
+        "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       }
     ],
     "dby-gateway": [
@@ -2797,6 +2827,12 @@
         "version": "1.6.2",
         "date": "2026-08-28",
         "subject": "fix(dby-image): 1.6.1 漏改脚本——gen.mjs 的 402 提示仍写「去充值」，改为指引账户页"
+      },
+      {
+        "hash": "189afc24c465",
+        "version": "1.7.0",
+        "date": "2026-08-30",
+        "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       }
     ],
     "dby-publish": [
@@ -3327,6 +3363,12 @@
         "version": "4.0.0",
         "date": "2026-08-26",
         "subject": "feat(dby-update)!: 旁路安装 + 目录级原子切换 —— 失败不再留下半新半旧的包"
+      },
+      {
+        "hash": "a9251e4e159c",
+        "version": "4.1.0",
+        "date": "2026-08-30",
+        "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
       }
     ],
     "dby-write": [

@@ -47,6 +47,15 @@
         "内容策略"
       ]
     },
+    "dby-deai": {
+      "displayName": "去 AI 味体检与改写",
+      "topics": [
+        "去AI味",
+        "AI痕迹检测",
+        "中文写作",
+        "本地运行"
+      ]
+    },
     "dby-feedback": {
       "displayName": "dby-feedback",
       "topics": []

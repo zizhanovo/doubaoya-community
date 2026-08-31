@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-30T16:33:44.570011+00:00",
-  "ref": "release-20260828-0555",
+  "generatedAt": "2026-08-31T09:29:10.191645+00:00",
+  "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.8",
+  "productVersion": "1.0.13",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -520,9 +520,18 @@
         "d5cfe53c21dd",
         "e0ef82da64ee",
         "eeb802ec9c70",
+        "f3a12fbfb260",
         "fccf378e28ef"
       ],
       "versions": [
+        {
+          "version": "1.6.0",
+          "hash": "f3a12fbfb260",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T09:12:04.105400+00:00",
+          "changelog": "路由表新增一行：AI 味太重 / 读着像机器写的走 dby-deai",
+          "changelogSource": "user"
+        },
         {
           "version": "1.5.0",
           "hash": "18504ded094b",
@@ -726,6 +735,12 @@
           "version": "1.3.2",
           "date": "2026-08-26",
           "subject": "feat(dby-image): 公众号封面验收补裁切模拟 —— 微信只收一张封面，1:1 是裁出来的不是另画一张"
+        },
+        {
+          "hash": "18504ded094b",
+          "version": "1.5.0",
+          "date": "2026-08-30",
+          "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         }
       ]
     },
@@ -924,6 +939,12 @@
           "version": "2.0.2",
           "date": "2026-08-27",
           "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+        },
+        {
+          "hash": "156c3151a72a",
+          "version": "2.1.0",
+          "date": "2026-08-30",
+          "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         }
       ]
     },
@@ -950,6 +971,14 @@
         "f2ae13c9d572"
       ],
       "versions": [
+        {
+          "version": "1.4.1",
+          "hash": "9c0adbdec064",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T08:09:50.189987+00:00",
+          "changelog": "新增执行层判据 evals/cases.jsonl（5 条用例，含一条专测漏检的用例）；包行为零变化",
+          "changelogSource": "user"
+        },
         {
           "version": "1.4.0",
           "hash": "0ca3048ae86c",
@@ -1043,6 +1072,12 @@
           "version": "1.3.0",
           "date": "2026-08-26",
           "subject": "feat(dby-banned-words): 接手合规话术 —— 过审 / 合规检测 / 公众号违禁词从 dby-api 迁入"
+        },
+        {
+          "hash": "0ca3048ae86c",
+          "version": "1.4.0",
+          "date": "2026-08-30",
+          "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         }
       ]
     },
@@ -1072,6 +1107,14 @@
         "d9423fc38116"
       ],
       "versions": [
+        {
+          "version": "1.2.3",
+          "hash": "0f62651630ed",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T07:56:29.195030+00:00",
+          "changelog": "新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化",
+          "changelogSource": "user"
+        },
         {
           "version": "1.2.2",
           "hash": "1ef3638615ce",
@@ -1190,6 +1233,29 @@
         }
       ]
     },
+    "dby-deai": {
+      "displayName": "去 AI 味体检与改写",
+      "topics": [
+        "去AI味",
+        "AI痕迹检测",
+        "中文写作",
+        "本地运行"
+      ],
+      "status": "active",
+      "knownHashes": [
+        "bcbbab0055cd"
+      ],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "hash": "bcbbab0055cd",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T09:21:53.437159+00:00",
+          "changelog": "新包：去 AI 味体检 / 改写 / 加人味三档",
+          "changelogSource": "user"
+        }
+      ]
+    },
     "dby-feedback": {
       "displayName": "dby-feedback",
       "topics": [],
@@ -1205,6 +1271,14 @@
           "releasedAt": "2026-08-30T15:55:01.588965+00:00",
           "changelog": "首版——三类反馈（bug/friction/idea）现场成文，白名单采集 + 双闸后提交，端点不通降级本地文件",
           "changelogSource": "user"
+        }
+      ],
+      "history": [
+        {
+          "hash": "7b5a56fdd05a",
+          "version": "1.0.0",
+          "date": "2026-08-30",
+          "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         }
       ]
     },
@@ -1231,6 +1305,14 @@
         "e1dc9e3d282e"
       ],
       "versions": [
+        {
+          "version": "1.3.5",
+          "hash": "3a88323fc388",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T07:56:29.195030+00:00",
+          "changelog": "新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化",
+          "changelogSource": "user"
+        },
         {
           "version": "1.3.4",
           "hash": "4c71eb312624",
@@ -1373,6 +1455,14 @@
         "f80e00b562e4"
       ],
       "versions": [
+        {
+          "version": "1.7.1",
+          "hash": "06ef10aef309",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T08:09:50.189987+00:00",
+          "changelog": "新增执行层判据 evals/cases.jsonl（7 条用例，6 条不真出图 + 1 条 costly 真出图）；包行为零变化",
+          "changelogSource": "user"
+        },
         {
           "version": "1.7.0",
           "hash": "189afc24c465",
@@ -1540,6 +1630,12 @@
           "version": "1.6.2",
           "date": "2026-08-28",
           "subject": "fix(dby-image): 1.6.1 漏改脚本——gen.mjs 的 402 提示仍写「去充值」，改为指引账户页"
+        },
+        {
+          "hash": "189afc24c465",
+          "version": "1.7.0",
+          "date": "2026-08-30",
+          "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         }
       ]
     },
@@ -1589,6 +1685,14 @@
         "fdf279bc684e"
       ],
       "versions": [
+        {
+          "version": "4.0.3",
+          "hash": "49e89c5a8f74",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T08:09:50.189987+00:00",
+          "changelog": "新增执行层判据 evals/cases.jsonl（7 条用例，只覆盖到载荷拼装正确为止，不真推草稿箱）；包行为零变化。",
+          "changelogSource": "user"
+        },
         {
           "version": "4.0.2",
           "hash": "6bcccc2e63e6",
@@ -1976,6 +2080,14 @@
       ],
       "versions": [
         {
+          "version": "1.4.4",
+          "hash": "a48c0f8f0e5f",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T07:56:29.195030+00:00",
+          "changelog": "新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化 另主题契约指针指本包校验器 scripts/validate-theme.mjs",
+          "changelogSource": "user"
+        },
+        {
           "version": "1.4.3",
           "hash": "ffbf27bdc3ec",
           "ref": "release-20260826-1004",
@@ -2136,6 +2248,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "4.1.1",
+          "hash": "5d53d4148c04",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-08-31T07:56:29.195030+00:00",
+          "changelog": "新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化",
+          "changelogSource": "user"
+        },
         {
           "version": "4.1.0",
           "hash": "a9251e4e159c",
@@ -2453,6 +2573,12 @@
           "version": "4.0.0",
           "date": "2026-08-26",
           "subject": "feat(dby-update)!: 旁路安装 + 目录级原子切换 —— 失败不再留下半新半旧的包"
+        },
+        {
+          "hash": "a9251e4e159c",
+          "version": "4.1.0",
+          "date": "2026-08-30",
+          "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
         }
       ]
     },
