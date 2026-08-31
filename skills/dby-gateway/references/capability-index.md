@@ -30,6 +30,8 @@
 >
 > 标记：⚠️专用 = `execution` 的 `mode` 是 `dedicated`，调用地址与详情端点无关，**必须读 `target`**；
 > ⛔ = 实拉时 `mode` 为 `unavailable`，当前不可调。
+>
+> 出图与封面生成能力当前暂时下架，不列入可选路能力；未来是否恢复需重新评估，当前不承诺恢复时间。
 
 <!-- 本表由发现接口生成，勿手改。重新生成：
      curl -s https://doubaoya.com/api/apis 与 /api/skills，
@@ -42,7 +44,6 @@
 | `skill.playlet.wechatFeed` | 短剧-公众号信息源 | `/api/skills/playlet-wechat-feed` |
 | `skill.search.doubaoWeb` | 豆包联网搜索 | `/api/skills/doubao-web-search` |
 | `skill.social.last30Days` | Last 30 Days—CN版 | `/api/skills/cn-last30days` |
-| `skill.ai.imageGen` | GPT-image2 | `/api/skills/gpt-image-gen` |
 | `skill.wechatChannels.aiFeed` | AI视频号信息源 | `/api/skills/wechat-channels-ai-feed` |
 | `skill.trend.radar` | 跨平台趋势雷达 | `/api/skills/trend-radar` |
 | `skill.xhs.viralNotes` | 小红书爆款笔记发现 | `/api/skills/xiaohongshu-viral-notes` |
@@ -55,7 +56,6 @@
 | `skill.wechat.fastestGrowing` | 公众号黑马账号推荐 | `/api/skills/wechat-fastest-growing` |
 | `skill.wechat.hotSearch` | 公众号热门文章查询 | `/api/skills/wechat-search` |
 | `skill.wechat.prohibitedWord` | 公众号违禁词检测 | `/api/skills/wechat-prohibited-word` |
-| `skill.wechat.coverDesign` | 公众号封面图制作 | `/api/skills/wechat-cover` |
 
 ### 平台数据能力集合 —— 详情端点 `GET /api/apis/<platform>/<slug>`
 
@@ -211,4 +211,3 @@ comm -23 /tmp/live.txt /tmp/idx.txt   # 生产有、表里没有 = 新上但表�
 （2026-08-22 实测：不对齐时报 77 条"漂移"，对齐后是 0 条）。
 
 两个方向都空 = 索引与生产一致。**任一方向非空就回来改表**，别让它继续教已下架的能力。
-

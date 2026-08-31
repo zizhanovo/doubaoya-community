@@ -6,8 +6,8 @@ description: >-
   Trigger words: doubaoya 调用协议 / 调用网关 / DOUBAOYA_API_KEY / operationKey / execution.target /
   inputContract / 入参规格 / 统一信封 / SKILL_NOT_FOUND / ENDPOINT_NOT_FOUND / DEDICATED_ROUTE /
   NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由；以及调都爆鸭接口时「401 / 404 / 429 报错了」「调不通」「怎么鉴权」「requestId」。
-version: 1.3.5
-changelog: 新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化
+version: 1.3.6
+changelog: 能力索引移除当前暂时下架的出图与封面生成路由；未来是否恢复需重新评估，当前不承诺恢复时间
 compatibility: >-
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对
   https://doubaoya.com 发 HTTPS 请求。发现与详情端点免鉴权且免费，调用端点必须带 Bearer 且计费。

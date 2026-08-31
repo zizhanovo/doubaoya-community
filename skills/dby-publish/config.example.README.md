@@ -22,9 +22,9 @@ cp config.example.json config.json
 | `mdTheme` | Markdown→HTML 默认主题。`null` = 不送任何主题字段，由**服务端**套你在 doubaoya.com 排版工作室保存的默认排版。写成路径（如 `"themes/magazine.json"`）= 钉本机主题 JSON（先本机校验再整套送出；相对路径按配置文件所在目录解析）；写成裸 id（如 `"benya-clean"`）或 `"neutral"` = 送 `themeId` 交服务端解析（`neutral` 是平台的中性排版）。CLI 的 `--theme` 永远优先。细节与唯一事实源见 `references/rendering.md`「主题从哪来」。 | `null` |
 | `draftsDir` | 本地草稿/产物目录（可选，供你归档渲染出的 HTML）。`""` = 用临时目录。 | `"./drafts"` |
 
-> **生封面/配图不在本包，本仓也已不提供出图能力**（服务端 `skill.ai.imageGen` 因合规要求整体
-> 下架，`dby-image` 包同期退役）：图片只能来自用户自备或 agent 自己的生图工具，出好图落成本地
-> 文件后，封面走 `--cover <路径>`、配图以 `<img src=本地路径>` 落进正文，与 `config.json` 的字段无关。
+> **生封面/配图不在本包，出图能力当前暂时下架**；未来是否恢复需重新评估，当前不承诺恢复时间。
+> 不调用已下架能力或旧包，图片只能来自用户自备或 agent 自己的生图工具。出好图落成本地文件后，
+> 封面走 `--cover <路径>`、配图以 `<img src=本地路径>` 落进正文，与 `config.json` 的字段无关。
 
 > 提醒：`config.json` 属于你个人，**不要**提交到公共仓库。仓库里只保留 `config.example.json`（全空/占位）。
 

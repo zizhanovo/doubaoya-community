@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T17:15:31.563872+00:00",
+  "generatedAt": "2026-08-31T19:23:38.614761+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.26",
+  "productVersion": "1.0.27",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -520,17 +520,18 @@
         "d5cfe53c21dd",
         "dd507e5dc624",
         "e0ef82da64ee",
+        "e562a7c121c6",
         "eeb802ec9c70",
         "f3a12fbfb260",
         "fccf378e28ef"
       ],
       "versions": [
         {
-          "version": "1.7.0",
-          "hash": "dd507e5dc624",
+          "version": "1.7.1",
+          "hash": "e562a7c121c6",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T14:57:15.640318+00:00",
-          "changelog": "dby-image 已随服务端生图能力一起下线，路由表两处「要出图」不再指向它——改成明确告知用户生图能力已下线、无替代包，别再假装能路由过去",
+          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
+          "changelog": "出图能力统一标记为当前暂时下架，移除不可逆下线话术；未来是否恢复需重新评估，当前不承诺恢复时间",
           "changelogSource": "user"
         },
         {
@@ -781,6 +782,7 @@
         "96330502a048",
         "9b545f2f647a",
         "9b9682a7a602",
+        "a39a83239eaa",
         "a59d7a4e7157",
         "acae0014e410",
         "afae2f05a5ed",
@@ -792,11 +794,11 @@
       ],
       "versions": [
         {
-          "version": "2.1.2",
-          "hash": "afae2f05a5ed",
+          "version": "2.1.3",
+          "hash": "a39a83239eaa",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T15:09:16.992123+00:00",
-          "changelog": "description 补回「doubaoya」老名字遗留的 8 个图像类触发词并标注一概不承接——它们此前靠 dby-image 的存在被间接覆盖，dby-image 退役后曾一度失联，现由本包 description 显式接住（说明不可用，不是承诺能路由）",
+          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
+          "changelog": "出图能力统一标记为当前暂时下架，删除已不存在的封面生成路由；未来是否恢复需重新评估，当前不承诺恢复时间",
           "changelogSource": "user"
         },
         {
@@ -1322,6 +1324,12 @@
           "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
         },
         {
+          "hash": "48c04d2ad062",
+          "version": "1.0.2",
+          "date": "2026-08-31",
+          "subject": "feat(dby-deai): 1.2.0 体检改成两遍 —— 逐句删套话碰不到的那一层，单独立一遍"
+        },
+        {
           "hash": "bcbbab0055cd",
           "version": "1.0.0",
           "date": "2026-08-31",
@@ -1382,15 +1390,16 @@
         "9818d9fd10e5",
         "b798cca6be87",
         "e19a51009f8d",
-        "e1dc9e3d282e"
+        "e1dc9e3d282e",
+        "ea70e80e9a05"
       ],
       "versions": [
         {
-          "version": "1.3.5",
-          "hash": "3a88323fc388",
+          "version": "1.3.6",
+          "hash": "ea70e80e9a05",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T07:56:29.195030+00:00",
-          "changelog": "新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化",
+          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
+          "changelog": "能力索引移除当前暂时下架的出图与封面生成路由；未来是否恢复需重新评估，当前不承诺恢复时间",
           "changelogSource": "user"
         },
         {
@@ -1799,6 +1808,7 @@
         "93bdab968731",
         "aa22e0e657ae",
         "afeb6e003c90",
+        "b3d4d48e9f81",
         "bede4b73e27b",
         "c24c940f04d9",
         "c3582315f2c5",
@@ -1815,11 +1825,11 @@
       ],
       "versions": [
         {
-          "version": "4.0.7",
-          "hash": "bede4b73e27b",
+          "version": "4.0.8",
+          "hash": "b3d4d48e9f81",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T14:57:15.640318+00:00",
-          "changelog": "dby-image 已随服务端生图能力一起下线，摘掉「先走 dby-image 出图」的指针；封面/配图现只能来自用户自备或 agent 自己的生图工具，脚本行为（--cover、兜底封面）零变化",
+          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
+          "changelog": "出图能力统一标记为当前暂时下架，保留本地图片接入路径；未来是否恢复需重新评估，当前不承诺恢复时间",
           "changelogSource": "user"
         },
         {

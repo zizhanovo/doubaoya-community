@@ -47,7 +47,6 @@
 | "公众号爆文 / 爆款文章 / 爆款仿写 / 写公众号先拉样本" | `api.gzh.hotArticle` | 公众号爆文搜索 | `/api/apis/gongzhonghao/hot-article` |
 | "公众号热门文章 / 只要真火过的（阅读量有下限那种）"（与上一条是两条能力：这条按阅读量门槛筛，拿的是"确实火过"的样本） | `skill.wechat.hotSearch` | 公众号热门文章查询 | `/api/skills/wechat-search` |
 | "公众号封面怎么做 / 爆款封面 / 起个公众号标题 / 标题套路 / 高点击标题" | `api.gzh.cozeData` | 公众号爆款封面数据（返回同赛道爆款的封面图 + 标题 + 点击量，**给你数据自己提炼**） | `/api/apis/gongzhonghao/gongzhonghao-coze-cover` |
-| "帮我把封面设计出来 / 直接给我一版封面方案"（与上一条是两条能力：那条给**素材数据**，这条直接产出**封面设计方案**） | `skill.wechat.coverDesign` | 公众号封面图制作 | `/api/skills/wechat-cover` |
 | "追更某个号 / 盯公众号 / 订阅公众号 / 账号发文列表 / 竞品发文复盘 / 某公众号发了什么" | `api.gzh.workList` | 公众号账号发文列表。🔴 **必须先过 `api.gzh.searchUser` 拿账号 ID**，上游只认 ID 不认中文昵称 | `/api/apis/gongzhonghao/gongzhonghao-work-list` |
 | "公众号 10 万+ / 原创爆文 / 原创热文 / 原创热门榜" | `api.gzh.categoryTime` | 公众号10万+/原创榜 | `/api/apis/gongzhonghao/category-time-hot` |
 | "头部账号 / 公众号排行 / 公众号榜单 / 热度指数 / 热门账号" | `api.gzh.indexRank` | 公众号热门账号榜 | `/api/apis/gongzhonghao/gongzhonghao-index-rank` |
@@ -92,9 +91,9 @@
   无替代能力：如实告知，**别拿公开搜索顶替**（见上方「我自己的东西」例外）。
 - ⛔ **`seedream-lite`（Seedream 5.0 lite）已于 2026-08-10 下架**，调用一律 503，
   所以它不在上表里。要公众号封面**数据**走 `api.gzh.cozeData`（给数据不出图，见上表）。
-- ~~**"给我配张图 / AI 出图 / 文生图 / 图生图 / 改图 / 生成图片 / 主视觉"**~~ —— ⛔ **`skill.ai.imageGen`
-  已随 dby-image 包一起整体下架**（服务端合规要求，非临时故障），无替代能力：如实告知用户本仓不再
-  提供生图，可用用户自己 agent 的生图工具，或让用户自备现成图片。
+- ~~**"给我配张图 / AI 出图 / 文生图 / 图生图 / 改图 / 生成图片 / 主视觉"**~~ —— ⛔ **出图能力
+  当前暂时下架**，不要调用已下架能力或旧包。未来是否恢复需重新评估，当前不承诺恢复时间；现阶段
+  可用用户自己 agent 的生图工具，或让用户自备现成图片。
 
 **首次上手三句话**（用户第一次用时，可主动这么引导）：
 1. 先确认有没有 key（没有就带他走「拿钥匙」那一节，一次就好）。

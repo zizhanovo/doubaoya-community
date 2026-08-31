@@ -10,7 +10,7 @@
 | md → 公众号内联样式 HTML（本地出稿 / 看排版效果，**无在线链接**） | 无 | `node scripts/render-wechat-html.mjs --md a.md --theme themes/benya-clean.json --out a.html` |
 | 校主题 / 写主题 / 导入外部主题格式 | 无 | `scripts/validate-theme.mjs`、`scripts/import-theme.mjs`、`scripts/extract-theme.mjs --html ref.html` |
 | 复刻某篇**公开**文章的排版 | 公网（**不要密钥**） | `scripts/fetch-article.mjs --url …`、`scripts/extract-theme.mjs --url …` |
-| AI 生封面 / 生配图 | ⛔ 无——本仓不再提供 | 服务端生图能力已因合规要求整体下架（dby-image 包同期退役）；只能用用户自备或 agent 自己的生图工具产出本地文件，封面喂 `--cover`、配图以 `<img src>` 落进正文 |
+| AI 生封面 / 生配图 | ⛔ 当前暂时下架 | 未来是否恢复需重新评估，当前不承诺恢复时间；不要调用已下架能力或旧包。现阶段只能用用户自备或 agent 自己的生图工具产出本地文件，封面喂 `--cover`、配图以 `<img src>` 落进正文 |
 | 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`** | 跑 `pipeline.mjs` 时**不写 `--theme`** 即可（渲染在平台做，主题也在平台套；失败中止不回退） |
 | **只渲染拿在线预览链接**（`--render-only`，**不绑号也行**） | 一条 **`DOUBAOYA_API_KEY`**（渲染免费） | `node scripts/pipeline.mjs --md a.md --title "标题" --render-only` |
 | **跑 `pipeline.mjs`（含 `--dry-run`）** | **密钥 + 已在 doubaoya.com 绑定公众号** | `node scripts/pipeline.mjs --md a.md --title "标题" --dry-run` |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T17:15:31.563872+00:00",
+  "generatedAt": "2026-08-31T19:23:38.614761+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -86,6 +86,7 @@
       "d5cfe53c21dd",
       "dd507e5dc624",
       "e0ef82da64ee",
+      "e562a7c121c6",
       "eeb802ec9c70",
       "f3a12fbfb260",
       "fccf378e28ef"
@@ -105,6 +106,7 @@
       "96330502a048",
       "9b545f2f647a",
       "9b9682a7a602",
+      "a39a83239eaa",
       "a59d7a4e7157",
       "acae0014e410",
       "afae2f05a5ed",
@@ -169,7 +171,8 @@
       "9818d9fd10e5",
       "b798cca6be87",
       "e19a51009f8d",
-      "e1dc9e3d282e"
+      "e1dc9e3d282e",
+      "ea70e80e9a05"
     ],
     "dby-image": [
       "000e1d567391",
@@ -221,6 +224,7 @@
       "93bdab968731",
       "aa22e0e657ae",
       "afeb6e003c90",
+      "b3d4d48e9f81",
       "bede4b73e27b",
       "c24c940f04d9",
       "c3582315f2c5",
@@ -2710,6 +2714,12 @@
         "version": "1.0.2",
         "date": "2026-08-31",
         "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+      },
+      {
+        "hash": "48c04d2ad062",
+        "version": "1.0.2",
+        "date": "2026-08-31",
+        "subject": "feat(dby-deai): 1.2.0 体检改成两遍 —— 逐句删套话碰不到的那一层，单独立一遍"
       },
       {
         "hash": "bcbbab0055cd",
