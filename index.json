@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-31T19:23:38.614761+00:00",
+  "generatedAt": "2026-09-01T05:18:46.993800+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.27",
+  "productVersion": "1.0.29",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -751,6 +751,12 @@
           "subject": "refactor(skills)!: 退役 dby-image —— 服务端生图能力因合规要求整体下架"
         },
         {
+          "hash": "e562a7c121c6",
+          "version": "1.7.1",
+          "date": "2026-08-31",
+          "subject": "fix(skills): 将出图能力标记为暂时下架"
+        },
+        {
           "hash": "f3a12fbfb260",
           "version": "1.6.0",
           "date": "2026-08-31",
@@ -976,6 +982,12 @@
           "version": "2.1.1",
           "date": "2026-08-31",
           "subject": "refactor(skills)!: 退役 dby-image —— 服务端生图能力因合规要求整体下架"
+        },
+        {
+          "hash": "a39a83239eaa",
+          "version": "2.1.3",
+          "date": "2026-08-31",
+          "subject": "fix(skills): 将出图能力标记为暂时下架"
         },
         {
           "hash": "afae2f05a5ed",
@@ -1301,6 +1313,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "21756004f245",
         "316f2d2c8c7e",
         "48c04d2ad062",
         "bcbbab0055cd",
@@ -1308,11 +1321,11 @@
       ],
       "versions": [
         {
-          "version": "1.0.2",
-          "hash": "48c04d2ad062",
+          "version": "1.1.0",
+          "hash": "21756004f245",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T17:13:52.145981+00:00",
-          "changelog": "首版基线复查（D10）：deai-detect-only-default 的 check 从 output.txt（agent 摘要，措辞会变，3 轮挂 2 轮）改打 tools.txt（deai.py 的确定性输出）；检出/不误报/具体度等确定性判据下沉到 tools/tests/test_deai_script.py；脚本行为零变化",
+          "releasedAt": "2026-09-01T05:17:52.743160+00:00",
+          "changelog": "阈值改用作者自己的基线（--make-baseline / --baseline），不再拿通用数字卡人——实测作者本人「首先/其次」就有每千字 10.5，通用词表会直接误判他；新增 references/结构审读.md（体检第二遍：标题错位 / 发现被埋 / 依据缺失 / 前提缺失四问 + 骨架减法测试）、references/文风锚定.md、references/沉淀.md（deai-偏好.md 格式，--profile 读豁免词并在报告里留痕）；改法.md 第 8 条加例外：删了会让下游悬空的因果不许删只许标记；脚本补程式化过渡 / 每段收束 / 对称小标题 / 首段预告 / 空洞候选段五项检测",
           "changelogSource": "user"
         }
       ],
@@ -1513,6 +1526,12 @@
           "version": "1.3.5",
           "date": "2026-08-31",
           "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+        },
+        {
+          "hash": "ea70e80e9a05",
+          "version": "1.3.6",
+          "date": "2026-08-31",
+          "subject": "fix(skills): 将出图能力标记为暂时下架"
         }
       ]
     },
@@ -2093,6 +2112,12 @@
           "version": "4.0.6",
           "date": "2026-08-31",
           "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+        },
+        {
+          "hash": "b3d4d48e9f81",
+          "version": "4.0.8",
+          "date": "2026-08-31",
+          "subject": "fix(skills): 将出图能力标记为暂时下架"
         },
         {
           "hash": "bede4b73e27b",

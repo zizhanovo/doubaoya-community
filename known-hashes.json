@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-31T19:23:38.614761+00:00",
+  "generatedAt": "2026-09-01T05:18:46.993800+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -150,6 +150,7 @@
       "d9423fc38116"
     ],
     "dby-deai": [
+      "21756004f245",
       "316f2d2c8c7e",
       "48c04d2ad062",
       "bcbbab0055cd",
@@ -2390,6 +2391,12 @@
         "subject": "refactor(skills)!: 退役 dby-image —— 服务端生图能力因合规要求整体下架"
       },
       {
+        "hash": "e562a7c121c6",
+        "version": "1.7.1",
+        "date": "2026-08-31",
+        "subject": "fix(skills): 将出图能力标记为暂时下架"
+      },
+      {
         "hash": "f3a12fbfb260",
         "version": "1.6.0",
         "date": "2026-08-31",
@@ -2522,6 +2529,12 @@
         "version": "2.1.1",
         "date": "2026-08-31",
         "subject": "refactor(skills)!: 退役 dby-image —— 服务端生图能力因合规要求整体下架"
+      },
+      {
+        "hash": "a39a83239eaa",
+        "version": "2.1.3",
+        "date": "2026-08-31",
+        "subject": "fix(skills): 将出图能力标记为暂时下架"
       },
       {
         "hash": "afae2f05a5ed",
@@ -2820,6 +2833,12 @@
         "version": "1.3.5",
         "date": "2026-08-31",
         "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+      },
+      {
+        "hash": "ea70e80e9a05",
+        "version": "1.3.6",
+        "date": "2026-08-31",
+        "subject": "fix(skills): 将出图能力标记为暂时下架"
       }
     ],
     "dby-image": [
@@ -3172,6 +3191,12 @@
         "version": "4.0.6",
         "date": "2026-08-31",
         "subject": "test(skills,tools): 首版基线复查 —— 三条判据缺陷按三层原则修掉"
+      },
+      {
+        "hash": "b3d4d48e9f81",
+        "version": "4.0.8",
+        "date": "2026-08-31",
+        "subject": "fix(skills): 将出图能力标记为暂时下架"
       },
       {
         "hash": "bede4b73e27b",

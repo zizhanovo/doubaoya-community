@@ -23,6 +23,8 @@
 
 - **不给 AI 率分数**。老舍《林海》被检测判 99.9% AI，OpenAI 自家分类器因真阳性率仅 26% 下架——
   分数会把注意力从「哪一句该改」引到「数字降没降」。本包只给位置和密度。
+- **尺子是你自己**。中文侧没有任何公开的实证阈值，通用词表会把「你一直这么写」判成 AI 味。
+  把你的旧文压成基线，报告就变成「套话每千字 31，你平时 10.5，3 倍」——这才是能下判断的数字。
 - **有豁免层**。判据清单每一族都带「什么不算」：真人也说「首先」，说明书本来就该整齐，
   公关稿的公文腔是体裁要求。报告里必须有「可以不改」那一栏。
 - **看聚簇不看孤证**。单个词命中不报，同族反复出现或多族挤在一段才报。
@@ -41,11 +43,15 @@
 python3 scripts/deai.py 稿件.md          # 体检报告
 cat 稿件.md | python3 scripts/deai.py -  # 从 stdin 读
 python3 scripts/deai.py 稿件.md --json   # 机器读
-python3 scripts/deai.py --selfcheck      # 离线自检
+python3 scripts/deai.py --make-baseline 旧文*.md > 基线.json   # 压出你自己的尺子
+python3 scripts/deai.py 稿件.md --baseline 基线.json           # 对照着看
+python3 scripts/deai.py 稿件.md --profile deai-偏好.md         # 按沉淀的豁免词跳过误报
+python3 scripts/deai.py --selfcheck                           # 离线自检
 ```
 
 脚本定位这些：套话连接词、公文腔、通胀大词、「不是A而是B」否定式对比、三段式并列、虚假范围、
-连续同长句、公式化开头、结尾升华、破折号与加粗密度、数字与第一人称密度。
+程式化过渡句、每段收束、对称小标题、连续同长句、公式化开头、首段预告、结尾升华、
+空洞候选段（够长却没有数字与引语）、破折号与加粗密度、数字与第一人称密度。
 
 判断该不该改，交给 agent 对着 `references/病灶清单.md` 逐条过。
 
@@ -71,7 +77,9 @@ B站 / 头条）都要求主动声明 AI 生成，不标注的典型后果是限
 SKILL.md                     主流程与红线
 references/病灶清单.md        五层判据，每族带 ❌/✅ 与豁免例
 references/改法.md            改写档的 14 条可执行动作：先删→再换→再拆→读一遍
-references/结构审读.md        体检第二遍：标题错位 / 发现被埋 / 依据缺失 / 前提缺失四问
+references/结构审读.md        体检第二遍：标题错位 / 发现被埋 / 依据缺失 / 前提缺失四问 + 骨架
+references/文风锚定.md        「改得像我写的」：取样本 → 压基线 → 提特征卡，及它的边界
+references/沉淀.md            deai-偏好.md 的格式；豁免词被脚本读，改法与触发给 agent 读
 references/加人味.md          四不纪律与索料清单
 references/平台标注.md        法规与六平台口径（快照）
 scripts/deai.py              离线体检脚本，只用标准库

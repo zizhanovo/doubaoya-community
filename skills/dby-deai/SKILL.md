@@ -8,8 +8,8 @@ description: >-
   改得像人写的、说点人话、说人话、没有人味、没人味、太官方了、太套路了、全是套话、文章太干、
   改得自然点、降AI率、AI率太高、过AI检测。纯本地运行，不联网、不需要 key。
   不做规避 AI 标识、不做学术降重、不承诺过检测器。
-version: 1.0.2
-changelog: 首版基线复查（D10）：deai-detect-only-default 的 check 从 output.txt（agent 摘要，措辞会变，3 轮挂 2 轮）改打 tools.txt（deai.py 的确定性输出）；检出/不误报/具体度等确定性判据下沉到 tools/tests/test_deai_script.py；脚本行为零变化
+version: 1.1.0
+changelog: 阈值改用作者自己的基线（--make-baseline / --baseline），不再拿通用数字卡人——实测作者本人「首先/其次」就有每千字 10.5，通用词表会直接误判他；新增 references/结构审读.md（体检第二遍：标题错位 / 发现被埋 / 依据缺失 / 前提缺失四问 + 骨架减法测试）、references/文风锚定.md、references/沉淀.md（deai-偏好.md 格式，--profile 读豁免词并在报告里留痕）；改法.md 第 8 条加例外：删了会让下游悬空的因果不许删只许标记；脚本补程式化过渡 / 每段收束 / 对称小标题 / 首段预告 / 空洞候选段五项检测
 compatibility: >-
   需要 Python 3（`scripts/deai.py` 只用标准库，不装任何 pip 包）。
   纯本地运行：不联网、不调用任何外部接口、不需要 key、不计费。
@@ -45,9 +45,14 @@ compatibility: >-
 ## 模式 A：体检
 
 ```bash
-python3 scripts/deai.py 稿件.md          # 或 cat 稿件.md | python3 scripts/deai.py -
-python3 scripts/deai.py --selfcheck      # 离线自检，不联网
+python3 scripts/deai.py 稿件.md                       # 或 cat 稿件.md | python3 scripts/deai.py -
+python3 scripts/deai.py 稿件.md --profile deai-偏好.md  # 用户工作区有这份就必须带上
+python3 scripts/deai.py 稿件.md --baseline 基线.json    # 有作者范文时，用他自己的尺子
+python3 scripts/deai.py --selfcheck                   # 离线自检，不联网
 ```
+
+🔑 **拿得到作者范文就先做基线**（`--make-baseline`，流程见 `references/文风锚定.md`）。
+中文侧没有公开的实证阈值，通用词表会把「他一直这么写」判成 AI 味；作者自己的基线没有这个问题。
 
 **体检是两遍，缺一遍就是漏掉一半。**
 
@@ -89,9 +94,9 @@ python3 scripts/deai.py --selfcheck      # 离线自检，不联网
 
 ❌ **绝不做**：同义词随机替换、故意加错别字或方言、故意制造病句、重写整段。
 
-> 🔀 用户说「改得像我写的」→ 那是**文风锚定**，不是去 AI 味：先去 `dby-charter` 取他的创作 DNA
-> （从他自己范文蒸出来的文风特征卡）当锚点再回来。锚定解决「像你说话」，解决不了「像你思考」——
-> 后者只能走模式 C 索料。
+> 🔀 用户说「改得像我写的」→ 那是**文风锚定**，不是去 AI 味，走 `references/文风锚定.md`
+> （优先取 `dby-charter` 的创作 DNA，再用 `--make-baseline` 压出他自己的密度基线）。
+> 锚定解决「像你说话」，解决不了「像你思考」——后者只能走模式 C 索料。
 
 ## 模式 C：加人味
 
@@ -103,11 +108,8 @@ python3 scripts/deai.py --selfcheck      # 离线自检，不联网
 ## 交付之后：把判据的缺口记下来
 
 用户手改了你的改写、或者说你哪条建议不对——那是**判据的缺陷**，不是这次会话的插曲。
-只在用户明确说「记下来」、或那明显是通用规律时才记；一次会话的个人口味不算。
-
-记到**用户工作区**的 `deai-偏好.md`（下次改写前先读它），三类各一行：
-被用户否掉的命中 → 该进豁免栏；用户自己改出来、你没想到的改法 → 该进改法库；
-一句话触发错了档 → 该进触发用例。
+按 `references/沉淀.md` 记进**用户工作区**的 `deai-偏好.md`（那份格式脚本读得懂，
+下次带 `--profile` 就自动生效）。只在用户明确说「记下来」、或那明显是通用规律时才记。
 
 ⚠️ 不要写进本包目录：`dby-update` 对账时会覆盖包内文件，写回去下次更新就没了。
 
@@ -119,5 +121,6 @@ python3 scripts/deai.py --selfcheck      # 离线自检，不联网
 - [ ] 走过结构审读四问，「不是文风问题」那一栏给了结论（没发现问题也要明说）
 - [ ] 没有删掉任何「删了会让下游结论悬空」的句子
 - [ ] 改写档：照 `改法.md` 走过一遍，保护区间逐项对回原文，附了「改了什么」，没有整段重写
+- [ ] 用户工作区有 `deai-偏好.md` 就带了 `--profile`；有范文就先做了基线
 - [ ] 没给分数、没承诺过检测
 - [ ] 提了按平台要求主动声明 AI 参与
