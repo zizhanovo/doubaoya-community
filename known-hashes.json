@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T05:18:46.993800+00:00",
+  "generatedAt": "2026-09-01T19:40:11.213506+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -150,6 +150,7 @@
       "d9423fc38116"
     ],
     "dby-deai": [
+      "1e19b29c4f68",
       "21756004f245",
       "316f2d2c8c7e",
       "48c04d2ad062",
@@ -2722,6 +2723,12 @@
       }
     ],
     "dby-deai": [
+      {
+        "hash": "21756004f245",
+        "version": "1.1.0",
+        "date": "2026-08-31",
+        "subject": "feat(dby-deai): 1.1.0 尺子换成作者自己 —— 通用阈值在中文里根本不存在"
+      },
       {
         "hash": "316f2d2c8c7e",
         "version": "1.0.2",

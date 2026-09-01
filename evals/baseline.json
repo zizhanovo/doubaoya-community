@@ -1,8 +1,8 @@
 {
   "entries": [
     {
-      "date": "2026-08-31",
-      "hash": "f3a12fbfb260",
+      "date": "2026-09-01",
+      "hash": "e562a7c121c6",
       "kind": "triggers",
       "model": "sonnet",
       "model_source": "requested",
@@ -31,20 +31,20 @@
       "skill": "dby"
     },
     {
-      "date": "2026-08-31",
-      "hash": "156c3151a72a",
+      "date": "2026-09-01",
+      "hash": "a39a83239eaa",
       "kind": "triggers",
       "model": "sonnet",
       "model_source": "requested",
       "results": {
-        "AI出图，画一张春天的插画": "pass",
+        "AI出图，画一张春天的插画": "flaky",
         "分析一下对标账号最近的爆文": "pass",
         "同赛道最近封面都用什么套路，给我参考": "pass",
         "我该用哪个skill开始弄公众号的事": "pass",
         "把这段改成公众号风格": "pass",
         "拉一下这个号最近发了什么": "pass",
         "接下来该做什么": "pass",
-        "改一下这张图，把背景换掉": "pass",
+        "改一下这张图，把背景换掉": "flaky",
         "极限词有哪些，帮我挑出来": "pass",
         "查一下今天全网的热搜话题": "pass",
         "查这个公众号的历史文章": "pass",
@@ -53,17 +53,17 @@
         "过审了吗，帮我检测一下": "pass",
         "这个赛道最近什么爆款笔记": "pass",
         "这段文案有没有违禁词": "pass",
-        "这篇文章的封面数据在同赛道里表现怎么样": "pass",
+        "这篇文章的封面数据在同赛道里表现怎么样": "flaky",
         "这篇文章的说法哪里来的，帮我核实一下出处": "pass",
-        "配张封面图": "pass",
-        "首图灵感，帮我出一张": "pass"
+        "配张封面图": "flaky",
+        "首图灵感，帮我出一张": "flaky"
       },
       "rounds": 3,
       "runner": "claude",
       "skill": "dby-api"
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-01",
       "grader_model": "deepseek-v4-flash",
       "grader_model_source": "reported",
       "grader_provider": "deepseek",
@@ -73,7 +73,7 @@
       "model": "sonnet",
       "model_source": "requested",
       "results": {
-        "banned-context-exempt-not-overflagged": "pass",
+        "banned-context-exempt-not-overflagged": "flaky",
         "banned-orchestration-e2e": "pass"
       },
       "rounds": 3,
@@ -141,19 +141,21 @@
       "skill": "dby-charter"
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-01",
       "grader_model": "deepseek-v4-flash",
       "grader_model_source": "reported",
       "grader_provider": "deepseek",
       "grader_runner": "pi",
-      "hash": "316f2d2c8c7e",
+      "hash": "0107f1cd5d4a",
       "kind": "cases",
       "model": "sonnet",
       "model_source": "requested",
       "results": {
-        "deai-detect-only-default": "pass",
-        "deai-no-false-positive-on-human-text": "pass",
-        "deai-protect-facts-and-changelog": "pass",
+        "deai-baseline-orchestration": "flaky",
+        "deai-detect-two-pass": "pass",
+        "deai-no-delete-dangling-cause": "flaky",
+        "deai-no-false-positive-on-human-text": "flaky",
+        "deai-protect-facts": "pass",
         "deai-refuse-academic": "pass",
         "deai-refuse-strip-disclosure": "pass"
       },
@@ -162,8 +164,8 @@
       "skill": "dby-deai"
     },
     {
-      "date": "2026-08-31",
-      "hash": "316f2d2c8c7e",
+      "date": "2026-09-01",
+      "hash": "0107f1cd5d4a",
       "kind": "triggers",
       "model": "sonnet",
       "model_source": "requested",
@@ -194,7 +196,7 @@
       "skill": "dby-deai"
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-01",
       "hash": "7b5a56fdd05a",
       "kind": "triggers",
       "model": "sonnet",
@@ -212,7 +214,7 @@
         "把这段旧文案改成公众号爆款风": "pass",
         "本鸭这里是不是坏了，提交个bug": "pass",
         "检查一下本鸭有没有新版本": "pass",
-        "每次都要重输一遍命令，好烦，跟维护者提一下": "pass",
+        "每次都要重输一遍命令，好烦，跟维护者提一下": "flaky",
         "给都爆鸭提个需求：希望支持批量排版": "pass",
         "能不能改改这个交互，帮我提个建议": "pass",
         "这个排版脚本怎么又失败了，帮我报个bug给作者": "pass",
@@ -227,13 +229,13 @@
       "skill": "dby-feedback"
     },
     {
-      "date": "2026-08-31",
-      "hash": "3a88323fc388",
+      "date": "2026-09-01",
+      "hash": "ea70e80e9a05",
       "kind": "triggers",
       "model": "sonnet",
       "model_source": "requested",
       "results": {
-        "429被限流了，是不是要重试": "pass",
+        "429被限流了，是不是要重试": "flaky",
         "SKILL_NOT_FOUND是什么意思": "pass",
         "execution.target是不是就是请求地址": "pass",
         "requestId是从哪儿拿的，报错要不要带上它": "pass",
@@ -306,12 +308,12 @@
       "skill": "dby-image"
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-01",
       "grader_model": "deepseek-v4-flash",
       "grader_model_source": "reported",
       "grader_provider": "deepseek",
       "grader_runner": "pi",
-      "hash": "aa22e0e657ae",
+      "hash": "b3d4d48e9f81",
       "kind": "cases",
       "model": "sonnet",
       "model_source": "requested",
@@ -323,8 +325,8 @@
       "skill": "dby-publish"
     },
     {
-      "date": "2026-08-31",
-      "hash": "aa22e0e657ae",
+      "date": "2026-09-01",
+      "hash": "b3d4d48e9f81",
       "kind": "triggers",
       "model": "sonnet",
       "model_source": "requested",
@@ -383,7 +385,7 @@
       "skill": "dby-rewrite"
     },
     {
-      "date": "2026-08-31",
+      "date": "2026-09-01",
       "hash": "a48c0f8f0e5f",
       "kind": "triggers",
       "model": "sonnet",
@@ -395,7 +397,7 @@
         "帮我把公众号默认排版换个配色": "pass",
         "引用块的样式改一下": "pass",
         "我该用哪个skill开始弄公众号的事": "pass",
-        "把标题的下划线颜色改成品牌色": "pass",
+        "把标题的下划线颜色改成品牌色": "flaky",
         "把这段改成公众号风格": "pass",
         "把默认主题改成暗色系": "pass",
         "推到草稿箱": "pass",
@@ -403,7 +405,7 @@
         "标题条想换个样式": "pass",
         "正文写好了怎么发": "pass",
         "这个排版主题预览一下效果": "pass",
-        "这套主题的圆角卡片再调调": "pass",
+        "这套主题的圆角卡片再调调": "flaky",
         "这段文案有没有违禁词": "pass",
         "配张封面图": "pass",
         "重新设成我的默认排版主题": "pass"

@@ -130,6 +130,8 @@ def run_trigger_bench(args, slugs: "list[str]") -> "tuple[int, dict | None]":
 
 def run_case_bench(args, slugs: "list[str]") -> "tuple[int, dict | None]":
     extra = ["--rounds", str(args.rounds), "--runner", args.runner]
+    if args.workers:
+        extra += ["--workers", str(args.workers)]
     if args.model:
         extra += ["--model", args.model]
     extra += ["--grader-runner", args.grader_runner]
@@ -286,6 +288,10 @@ def main(argv: "list[str] | None" = None) -> int:
     ap.add_argument("--grader-runner", default="pi", help="grader 后端（默认 pi，见 design.md D2）")
     ap.add_argument("--grader-model", default=None,
                     help="grader 模型（默认不指定，用后端 CLI 自己的默认——pi 只有这个形态实测可用）")
+    ap.add_argument("--workers", type=int, default=None,
+                    help="执行层并发（透传给 case_bench，不给就用它自己的默认 2）。"
+                         "成片 unusable / 全断言 pass 却判 fail 时降到 1 重跑——"
+                         "判定器的提示让你降并发，这个参数是它唯一的入口")
     ap.add_argument("--include-costly", action="store_true",
                     help="连 costly 用例一起跑（默认跳过，历史结果在基线里保留）")
     ap.add_argument("--establish", action="store_true",

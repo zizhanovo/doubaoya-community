@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-01T05:18:46.993800+00:00",
+  "generatedAt": "2026-09-01T19:40:11.213506+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.29",
+  "productVersion": "1.0.32",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -1313,6 +1313,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "1e19b29c4f68",
         "21756004f245",
         "316f2d2c8c7e",
         "48c04d2ad062",
@@ -1321,15 +1322,21 @@
       ],
       "versions": [
         {
-          "version": "1.1.0",
-          "hash": "21756004f245",
+          "version": "1.1.3",
+          "hash": "1e19b29c4f68",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-01T05:17:52.743160+00:00",
-          "changelog": "阈值改用作者自己的基线（--make-baseline / --baseline），不再拿通用数字卡人——实测作者本人「首先/其次」就有每千字 10.5，通用词表会直接误判他；新增 references/结构审读.md（体检第二遍：标题错位 / 发现被埋 / 依据缺失 / 前提缺失四问 + 骨架减法测试）、references/文风锚定.md、references/沉淀.md（deai-偏好.md 格式，--profile 读豁免词并在报告里留痕）；改法.md 第 8 条加例外：删了会让下游悬空的因果不许删只许标记；脚本补程式化过渡 / 每段收束 / 对称小标题 / 首段预告 / 空洞候选段五项检测",
+          "releasedAt": "2026-09-01T15:12:47.622523+00:00",
+          "changelog": "只改判据不改包：deai-no-delete-dangling-cause 里「依据句有没有被删」本来就能 grep 判，却写成了自然语言断言交给小模型读长文本，是那条用例四轮抖 50% 的真因——脱开判官手工连跑五轮，行为 5/5 全对。按 evals-format 的硬规则改成 check",
           "changelogSource": "user"
         }
       ],
       "history": [
+        {
+          "hash": "21756004f245",
+          "version": "1.1.0",
+          "date": "2026-08-31",
+          "subject": "feat(dby-deai): 1.1.0 尺子换成作者自己 —— 通用阈值在中文里根本不存在"
+        },
         {
           "hash": "316f2d2c8c7e",
           "version": "1.0.2",

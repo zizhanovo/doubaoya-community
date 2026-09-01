@@ -247,6 +247,39 @@ def test_显式传grader_model_才会下发(gate, monkeypatch):
     assert extra[extra.index("--grader-model") + 1] == "deepseek-v4"
 
 
+def test_不传workers_命令行里没有并发参数(gate, monkeypatch):
+    """不给就用 case_bench 自己的默认（2），不要在这里复述一个会漂的常数。"""
+    seen = {}
+
+    def fake_bench(script, extra):
+        seen[script] = extra
+        return (0, _trig_json() if "trigger" in script else _case_json())
+
+    monkeypatch.setattr(rg, "run_trigger_bench", _REAL_RUN_TRIGGER_BENCH)
+    monkeypatch.setattr(rg, "run_case_bench", _REAL_RUN_CASE_BENCH)
+    monkeypatch.setattr(rg, "_run_bench", fake_bench)
+    assert rg.main(["--establish"]) == 0
+    assert "--workers" not in seen["case_bench.py"]
+
+
+def test_显式传workers_透传给执行层(gate, monkeypatch):
+    """🔴 实测（2026-09-01）：判定器报成片 unusable 时提示「建议降低 --workers」，
+    但质量门没把这个参数透出来——提示指了一条走不通的路。这条钉住它走得通。"""
+    seen = {}
+
+    def fake_bench(script, extra):
+        seen[script] = extra
+        return (0, _trig_json() if "trigger" in script else _case_json())
+
+    monkeypatch.setattr(rg, "run_trigger_bench", _REAL_RUN_TRIGGER_BENCH)
+    monkeypatch.setattr(rg, "run_case_bench", _REAL_RUN_CASE_BENCH)
+    monkeypatch.setattr(rg, "_run_bench", fake_bench)
+    assert rg.main(["--establish", "--workers", "1"]) == 0
+    extra = seen["case_bench.py"]
+    assert extra[extra.index("--workers") + 1] == "1"
+    assert "--workers" not in seen["trigger_bench.py"]   # 触发层不吃这个参数
+
+
 # ---------------------------------------------------------------- D4：基线记实际模型，来源可区分
 
 def test_基线条目_实测模型与请求模型可区分(gate, capsys):
