@@ -2,8 +2,8 @@
 name: dby-rewrite
 description: >-
   都爆鸭出品的**多平台文案改写**专家（公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎 七个平台，一份原文按各平台的真实调性分别改写）。给什么文案都能转成该平台的高互动表达——公众号奔着高阅读的爆款文案去（金句与钩子），小红书要 emoji 与种草口吻，知乎要论证感，各平台的规则不混用。触发词：公众号改写、公众号文案、公众号风格、微信改写、爆款改写、内容改写、小红书改写、小红书文案、小红书风格、笔记改写、种草文案、标题钩子、抖音文案、口播文案、视频号文案、知乎风格、B站文案、多平台改写、一稿多发、全平台改写、跨平台适配。本 Skill 包纯本地运行，不联网、不调用任何外部接口、不需要 key。
-version: 1.2.1
-changelog: 头注不再指向已下线的云端改写接口（skill.wechat.rewrite 2026-08-28 整条删除）；行为零变化。
+version: 1.3.0
+changelog: 交付新增改动清单（changes[]，原句/替换/理由/技法标签），可选提交到稿件面（用户确认才写，见 references/draft/draft-changes.md）；头注不再指向已下线的云端改写接口（skill.wechat.rewrite 2026-08-28 整条删除）
 compatibility: >-
   需要 Python 3（`scripts/rewrite.py` 只用标准库，不装任何 pip 包）。
   纯本地运行：不联网、不调用任何外部接口、不需要 key。
@@ -53,6 +53,9 @@ python3 scripts/rewrite.py --selfcheck           # 离线自检：平台表与�
 ### 第 3 步：直接输出改写结果
 
 按该平台的 Workflow 改写，**直接给成品**。
+
+**同时给一份改动清单**（原文这句 → 改写成什么 → 为什么），交付后问一次要不要存进稿件——
+清单怎么拆、命令行怎么调见 [`references/draft/draft-changes.md`](references/draft/draft-changes.md)。
 
 ---
 

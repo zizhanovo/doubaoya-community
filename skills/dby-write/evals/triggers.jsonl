@@ -8,6 +8,10 @@
 {"q":"这篇文章表现怎么样，该改哪里","expect":true}
 {"q":"代笔写一篇公众号文章","expect":true}
 {"q":"这个话题写一篇公众号初稿","expect":true}
+{"q":"按审稿意见改一版","expect":true}
+{"q":"按我的评论再改一遍","expect":true}
+{"q":"读一下稿件 draft_abc123 的意见","expect":true}
+{"q":"这几处拒绝你按我的备注重新改一版","expect":true}
 {"q":"把这段改成公众号风格","expect":false}
 {"q":"帮我改写一下","expect":false}
 {"q":"正文写好了怎么发","expect":false}

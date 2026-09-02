@@ -26,6 +26,7 @@
 //
 // 🔴 本脚本绝不打印 key 的任何一部分——连前缀都不行。报错里只说「已设置 / 没设置」。
 
+import { createHash } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -310,6 +311,252 @@ function parseBody(raw) {
   }
 }
 
+// ── 稿件面 (draft-review) ──────────────────────────────────────────────────
+// 对接主仓 apps/api/src/modules/drafts/routes.ts（design: draft-review-workbench）。
+// 全部端点免费、不进 catalog、不扣点，同一把 DOUBAOYA_API_KEY，鉴权与错误处理复用上面的 request()。
+const DRAFT_MAX_REASON_CHARS = 300;
+const DRAFT_MAX_TAG_CHARS = 40;
+
+function draftAllIndexes(haystack, needle) {
+  const out = [];
+  let from = 0;
+  for (;;) {
+    const i = haystack.indexOf(needle, from);
+    if (i === -1) return out;
+    out.push(i);
+    from = i + 1;
+  }
+}
+
+function draftCommonSuffixLength(a, b) {
+  let n = 0;
+  while (n < a.length && n < b.length && a[a.length - 1 - n] === b[b.length - 1 - n]) n++;
+  return n;
+}
+
+function draftCommonPrefixLength(a, b) {
+  let n = 0;
+  while (n < a.length && n < b.length && a[n] === b[n]) n++;
+  return n;
+}
+
+/**
+ * 本地版锚点定位——镜像主仓 packages/draft-text/src/locate.ts 的 locateQuote。
+ * 🔴 两处是独立实现，服务端才是唯一执行者（design D3）；这里只为了在发请求之前提前说「会被拒」，
+ * 行为必须与服务端一致，改一处要连带看另一处。
+ */
+export function draftLocateQuote(body, anchor) {
+  const exact = anchor?.exact;
+  if (typeof exact !== "string" || exact.length === 0) return { status: "unlocated" };
+  const hits = draftAllIndexes(body, exact);
+  if (hits.length === 0) return { status: "unlocated" };
+  if (hits.length === 1) return { status: "located", start: hits[0], end: hits[0] + exact.length };
+
+  const prefix = anchor.prefix ?? "";
+  const suffix = anchor.suffix ?? "";
+  if (prefix.length === 0 && suffix.length === 0) return { status: "ambiguous", count: hits.length };
+
+  let best = null;
+  let tie = false;
+  for (const start of hits) {
+    const before = body.slice(Math.max(0, start - prefix.length), start);
+    const after = body.slice(start + exact.length, start + exact.length + suffix.length);
+    const score = draftCommonSuffixLength(before, prefix) + draftCommonPrefixLength(after, suffix);
+    if (best === null || score > best.score) {
+      best = { start, score };
+      tie = false;
+    } else if (score === best.score) {
+      tie = true;
+    }
+  }
+  if (best === null || tie || best.score === 0) return { status: "ambiguous", count: hits.length };
+  return { status: "located", start: best.start, end: best.start + exact.length };
+}
+
+/** changeId：与服务端 changeIdOf 同算法（sha256 前 12 位），用于本地判重复用同一套 id 空间。 */
+export function draftChangeId(anchor, replacement) {
+  const h = createHash("sha256");
+  h.update(JSON.stringify([anchor.prefix ?? "", anchor.exact, anchor.suffix ?? "", replacement]));
+  return h.digest("hex").slice(0, 12);
+}
+
+function draftPreview(s) {
+  const arr = [...s];
+  return arr.length > 24 ? `${arr.slice(0, 24).join("")}…` : s;
+}
+
+/** 形状校验（不定位）：镜像服务端 validateChangeInputs 的顺序与错误码。 */
+function draftValidateChangeInputs(changes) {
+  const errors = [];
+  const valid = [];
+  const seen = new Set();
+  (changes ?? []).forEach((c, index) => {
+    const a = c?.anchor;
+    if (!a || typeof a !== "object" || typeof a.exact !== "string" || a.exact.length === 0) {
+      errors.push({ index, code: "ANCHOR_INVALID", message: `第 ${index + 1} 条缺锚点：anchor.exact 必须是非空字符串` });
+      return;
+    }
+    const anchor = { exact: a.exact, prefix: typeof a.prefix === "string" ? a.prefix : undefined, suffix: typeof a.suffix === "string" ? a.suffix : undefined };
+    const replacement = c.replacement === undefined || c.replacement === null ? "" : c.replacement;
+    if (typeof replacement !== "string") {
+      errors.push({ index, code: "REPLACEMENT_INVALID", message: `第 ${index + 1} 条 replacement 必须是字符串（删除请传空串）` });
+      return;
+    }
+    const reason = typeof c.reason === "string" ? c.reason.trim() : "";
+    if (!reason) {
+      errors.push({ index, code: "REASON_MISSING", message: `第 ${index + 1} 条缺理由：每处改动都要说清为什么改` });
+      return;
+    }
+    if ([...reason].length > DRAFT_MAX_REASON_CHARS) {
+      errors.push({ index, code: "REASON_TOO_LONG", message: `第 ${index + 1} 条理由超过 ${DRAFT_MAX_REASON_CHARS} 字` });
+      return;
+    }
+    if (c.tag !== undefined && c.tag !== null && (typeof c.tag !== "string" || [...c.tag].length > DRAFT_MAX_TAG_CHARS)) {
+      errors.push({ index, code: "TAG_INVALID", message: `第 ${index + 1} 条 tag 必须是 ≤${DRAFT_MAX_TAG_CHARS} 字的字符串` });
+      return;
+    }
+    const id = draftChangeId(anchor, replacement);
+    if (seen.has(id)) {
+      errors.push({ index, code: "DUPLICATE", message: `第 ${index + 1} 条与前面某条完全相同` });
+      return;
+    }
+    seen.add(id);
+    valid.push({ index, anchor, replacement, reason });
+  });
+  return { errors, valid };
+}
+
+/** 定位 + 重叠检测：镜像服务端 placeChanges。调用前 valid 已过形状校验。 */
+function draftPlaceChanges(bodyMd, valid) {
+  const placed = [];
+  const errors = [];
+  for (const c of valid) {
+    const r = draftLocateQuote(bodyMd, c.anchor);
+    if (r.status === "unlocated") {
+      errors.push({ index: c.index, code: "ANCHOR_NOT_FOUND", message: `第 ${c.index + 1} 条锚点未命中：基准版里找不到「${draftPreview(c.anchor.exact)}」` });
+    } else if (r.status === "ambiguous") {
+      errors.push({ index: c.index, code: "ANCHOR_AMBIGUOUS", message: `第 ${c.index + 1} 条锚点不唯一（命中 ${r.count} 处）：请加长 prefix / suffix 消歧` });
+    } else {
+      placed.push({ index: c.index, start: r.start, end: r.end });
+    }
+  }
+  const sorted = [...placed].sort((a, b) => a.start - b.start || a.end - b.end);
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    if (cur.start < prev.end) {
+      errors.push({ index: cur.index, code: "OVERLAP", message: `第 ${cur.index + 1} 条与第 ${prev.index + 1} 条范围重叠，两条改的是同一段原文` });
+    }
+  }
+  return errors;
+}
+
+/**
+ * 提交改动清单前的本地预检：不发请求，把服务端一定会拒收的问题提前挡下并按相同
+ * index/code/message 形状打印（design D3：任一条未命中 / 不唯一 / 缺理由 / 重叠 → 整单拒收）。
+ * 真正的应用仍只在服务端算一次（design 全文的「派生只在一处算」），这里只做「提前告诉你会被拒」。
+ */
+export function draftPrecheckChanges(bodyMd, changes) {
+  const { errors: shapeErrors, valid } = draftValidateChangeInputs(changes);
+  const placeErrors = draftPlaceChanges(bodyMd, valid);
+  return [...shapeErrors, ...placeErrors].sort((a, b) => a.index - b.index);
+}
+
+function printChangeErrors(errors) {
+  for (const e of errors) console.error(`[${e.code}] 第 ${e.index + 1} 条: ${e.message}`);
+}
+
+async function readStdin() {
+  return await new Promise((resolve) => {
+    let buf = "";
+    process.stdin.on("data", (d) => (buf += d));
+    process.stdin.on("end", () => resolve(buf));
+  });
+}
+
+function draftJsonArg(args, positionalIndex) {
+  return args.includes("--stdin") ? readStdin() : Promise.resolve(args[positionalIndex]);
+}
+
+async function draftCommand(sub, args) {
+  switch (sub) {
+    case "create": {
+      const raw = await draftJsonArg(args, 0);
+      if (!raw) fail("用法: node doubaoya.mjs draft create '<json>' | --stdin  字段: title, bodyMd, author?, projectId?, summary?");
+      const data = await request("POST", "/api/drafts", parseBody(raw));
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case "get": {
+      const id = args[0];
+      if (!id) fail("用法: node doubaoya.mjs draft get <id>");
+      const data = await request("GET", `/api/drafts/${encodeURIComponent(id)}`);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case "version": {
+      const [id, v] = args;
+      if (!id || !v) fail("用法: node doubaoya.mjs draft version <id> <version>");
+      const data = await request("GET", `/api/drafts/${encodeURIComponent(id)}/versions/${encodeURIComponent(v)}`);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case "review-packet": {
+      const id = args[0];
+      if (!id) fail("用法: node doubaoya.mjs draft review-packet <id>");
+      const data = await request("GET", `/api/drafts/${encodeURIComponent(id)}/review-packet`);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case "precheck": {
+      const raw = await draftJsonArg(args, 0);
+      if (!raw) fail("用法: node doubaoya.mjs draft precheck '<json>' | --stdin  字段: bodyMd（基准版正文）, changes[]（不联网、不需要 key）");
+      const body = parseBody(raw);
+      if (typeof body.bodyMd !== "string") fail("precheck 需要 bodyMd（基准版正文字符串）");
+      if (!Array.isArray(body.changes)) fail("precheck 需要 changes[]（改动清单）");
+      const errors = draftPrecheckChanges(body.bodyMd, body.changes);
+      if (errors.length > 0) {
+        printChangeErrors(errors);
+        fail(`预检未通过：${errors.length} 处问题，未发送任何请求`, "CHANGES_INVALID");
+      }
+      console.log(`precheck ok: ${body.changes.length} 条改动全部可定位、互不重叠、理由齐全`);
+      break;
+    }
+    case "submit": {
+      const id = args[0];
+      if (!id) fail("用法: node doubaoya.mjs draft submit <id> '<json>' | --stdin  字段: baseVersion, author?, summary?, addresses?, changes[] 或 bodyMd");
+      const raw = await draftJsonArg(args, 1);
+      if (!raw) fail("用法: node doubaoya.mjs draft submit <id> '<json>' | --stdin");
+      const body = parseBody(raw);
+      if (!Number.isInteger(body.baseVersion)) fail("submit 需要 baseVersion（整数）：你基于哪一版改的");
+      if (Array.isArray(body.changes)) {
+        // 🔴 先本地预检再发请求：清单整单拒收是服务端的既有行为（design D3），
+        //   本地拦下只是让 agent 少挨一次 422、少读一遍 SKILL 就知道该改哪一条。
+        const base = await request("GET", `/api/drafts/${encodeURIComponent(id)}/versions/${encodeURIComponent(body.baseVersion)}`);
+        const errors = draftPrecheckChanges(base.bodyMd, body.changes);
+        if (errors.length > 0) {
+          printChangeErrors(errors);
+          fail(`本地预检未通过：${errors.length} 处问题，服务端会整单拒收——已提前拦下，未发送写请求`, "CHANGES_INVALID");
+        }
+      }
+      const data = await request("POST", `/api/drafts/${encodeURIComponent(id)}/versions`, body);
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    case "comment": {
+      const id = args[0];
+      if (!id) fail("用法: node doubaoya.mjs draft comment <id> '<json>' | --stdin  字段: body, author?, parentId?（回复）或 version?+anchor?（新评论）");
+      const raw = await draftJsonArg(args, 1);
+      if (!raw) fail("用法: node doubaoya.mjs draft comment <id> '<json>' | --stdin");
+      const data = await request("POST", `/api/drafts/${encodeURIComponent(id)}/comments`, parseBody(raw));
+      console.log(JSON.stringify(data, null, 2));
+      break;
+    }
+    default:
+      fail("用法: node doubaoya.mjs draft <create|get|version|review-packet|submit|comment|precheck> ...  跑不带子命令的 draft 看这行");
+  }
+}
+
 function matchesQuery(item, query) {
   const haystack = [item.slug, item.platform, item.title, item.summary, ...(item.tags ?? [])]
     .filter(Boolean)
@@ -332,6 +579,15 @@ const USAGE = [
   "    node doubaoya.mjs invoke xiaohongshu-viral-notes '{\"keyword\":\"减脂早餐\"}'",
   "    node doubaoya.mjs invoke trend/trending-hub-keyword '{\"platforms\":[2,5,8]}'",
   "    node doubaoya.mjs describe api.trend.hotSpotKeyword",
+  "",
+  "稿件面（draft-review，全部免费、不进 catalog）:",
+  "  node doubaoya.mjs draft create '<json>' | --stdin        建稿，字段 title/bodyMd/author?/projectId?/summary?",
+  "  node doubaoya.mjs draft get <id>                         稿件 + 版本清单 + 待处理评论数",
+  "  node doubaoya.mjs draft version <id> <v>                 读某版正文 + 改动清单 + 裁决",
+  "  node doubaoya.mjs draft review-packet <id>                agent 唯一要读的入口：最新版 + 待处理评论 + 新拒绝 + 星标",
+  "  node doubaoya.mjs draft precheck '<json>' | --stdin       离线预检 changes[]（不联网、不需要 key），字段 bodyMd/changes",
+  "  node doubaoya.mjs draft submit <id> '<json>' | --stdin    交新版，changes[] 会先本地预检再发；字段见调用方包的 api-contract.md",
+  "  node doubaoya.mjs draft comment <id> '<json>' | --stdin   划词评论 / 回复，字段 body/author?/parentId? 或 version?+anchor?",
   "",
   "钥匙: export DOUBAOYA_API_KEY=dyh_...  (doubaoya.com → 密钥中心 → 生成密钥)"
 ].join("\n");
@@ -395,7 +651,41 @@ function selfcheck() {
   assert(priceLabel({ unitPrice: 0, priceClass: "free" }) === "免费", "免费标签");
   assert(priceLabel({}) === "?", "清单缺价格字段时标 ?");
 
-  console.log("selfcheck ok: parseRef / resolveTarget / matchApisBySlug / isOperationKey / matchByOperationKey / stripRaw / priceLabel");
+  // ── 稿件面：本地预检（draftPrecheckChanges / draftLocateQuote），镜像服务端 apply-changes.ts。
+  const draftBody = "开头一句。中间这句要改一改。结尾一句。中间这句要改一改。再来一句。";
+  assert(draftLocateQuote(draftBody, { exact: "开头一句" }).status === "located", "唯一命中 → located");
+  assert(draftLocateQuote(draftBody, { exact: "不存在的句子" }).status === "unlocated", "零命中 → unlocated");
+  assert(draftLocateQuote(draftBody, { exact: "中间这句要改一改" }).status === "ambiguous", "命中两处且无前后文 → ambiguous");
+  const disambiguated = draftLocateQuote(draftBody, { exact: "中间这句要改一改", prefix: "结尾一句。" });
+  assert(disambiguated.status === "located", "带 prefix 消歧后应能唯一定位");
+
+  const okChanges = [{ anchor: { exact: "开头一句" }, replacement: "开场一句", reason: "更顺口" }];
+  assert(draftPrecheckChanges(draftBody, okChanges).length === 0, "干净清单预检应无错误");
+
+  const notFound = draftPrecheckChanges(draftBody, [{ anchor: { exact: "查无此句" }, replacement: "x", reason: "y" }]);
+  assert(notFound.length === 1 && notFound[0].code === "ANCHOR_NOT_FOUND", "零命中必须报 ANCHOR_NOT_FOUND");
+
+  const ambiguous = draftPrecheckChanges(draftBody, [{ anchor: { exact: "中间这句要改一改" }, replacement: "x", reason: "y" }]);
+  assert(ambiguous.length === 1 && ambiguous[0].code === "ANCHOR_AMBIGUOUS", "命中多处且不可消歧必须报 ANCHOR_AMBIGUOUS");
+
+  const noReason = draftPrecheckChanges(draftBody, [{ anchor: { exact: "开头一句" }, replacement: "x" }]);
+  assert(noReason.length === 1 && noReason[0].code === "REASON_MISSING", "缺理由必须报 REASON_MISSING");
+
+  const overlapBody = "abcdefgh";
+  const overlapping = draftPrecheckChanges(overlapBody, [
+    { anchor: { exact: "abcd" }, replacement: "x", reason: "y" },
+    { anchor: { exact: "cdef" }, replacement: "z", reason: "w" }
+  ]);
+  assert(overlapping.length === 1 && overlapping[0].code === "OVERLAP", "范围重叠必须报 OVERLAP");
+
+  // 🔴 本条即任务要求的「示例正文提交含重复锚点的清单，必须被本地拦下」：
+  //    两条改动锚点 + 替换内容完全相同 → DUPLICATE，且不得静默通过。
+  const dup = { anchor: { exact: "开头一句" }, replacement: "开场一句", reason: "更顺口" };
+  const duplicateAnchors = draftPrecheckChanges(draftBody, [dup, { ...dup }]);
+  assert(duplicateAnchors.length === 1 && duplicateAnchors[0].code === "DUPLICATE" && duplicateAnchors[0].index === 1, "重复锚点必须报 DUPLICATE 且指向第二条");
+  assert(draftChangeId(dup.anchor, dup.replacement) === draftChangeId({ ...dup.anchor }, dup.replacement), "changeId 对同一锚点+替换必须稳定");
+
+  console.log("selfcheck ok: parseRef / resolveTarget / matchApisBySlug / isOperationKey / matchByOperationKey / stripRaw / priceLabel / draftLocateQuote / draftPrecheckChanges");
 }
 
 async function main() {
@@ -456,6 +746,12 @@ async function main() {
       const target = resolveTarget(capability);
       console.error(target.error ? `[调用路径] ${target.error}` : `[调用路径] ${target.method} ${target.path}`);
       console.log(JSON.stringify(capability, null, 2));
+      break;
+    }
+    case "draft": {
+      const [sub, ...args] = rest;
+      if (!sub) fail("用法: node doubaoya.mjs draft <create|get|version|review-packet|precheck|submit|comment> ...  完整字段见 USAGE（不带参数跑一次本脚本）");
+      await draftCommand(sub, args);
       break;
     }
     case "selfcheck":

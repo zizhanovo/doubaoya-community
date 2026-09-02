@@ -17,6 +17,33 @@
 🔴 `GET /api/articles`（微信同步的已发文章）**只认登录态**，拿 `dyh_` 密钥调必回 `UNAUTHORIZED`——往期文章走上面的 `wechat-history`。
 
 
+## 稿件面（draft-review，模式 C 用）
+
+> `dby-api` 是选路层 Skill，正文不许带任何一条能力的入参字段（防止随目录漂移的快照契约）；
+> 稿件面是**专用路由**、不进那套目录，字段形状记在这里、随本包一起演进。
+
+命令都走 `dby-api` 的 `scripts/doubaoya.mjs draft <子命令>`（同一把 `DOUBAOYA_API_KEY`，免费、不进 catalog）：
+
+| 子命令 | 干什么 |
+|---|---|
+| `create '<json>'` | 建稿：`{title, bodyMd, author?, projectId?, summary?}` |
+| `get <id>` | 稿件 + 版本清单（不含正文）+ 待处理评论数 |
+| `version <id> <v>` | 读某版：正文 + `changes[]` + `decisions[]` |
+| `review-packet <id>` | 模式 C 唯一要读的入口：最新版正文 + 待处理评论 + 新拒绝 + 星标 |
+| `precheck '<json>'` | 离线预检 `{bodyMd, changes}`，不联网不需要 key |
+| `submit <id> '<json>'` | 交新版：`{baseVersion, author?, summary?, addresses?, changes}` 或兜底 `{baseVersion, bodyMd}` |
+| `comment <id> '<json>'` | 新评论 `{body, author?, version?, anchor:{exact,prefix?,suffix?}}` 或回复 `{body, author?, parentId}` |
+
+`changes[]` 每条：`{anchor:{exact, prefix?, suffix?}, replacement, reason, tag?}`；`anchor.exact` 必须在
+`baseVersion` 正文里恰好命中一处（命中多处用 `prefix`/`suffix` 消歧），两条改动范围不能重叠，`reason` 必填。
+`submit` 收到 `changes[]` 时会先本地预检（拉 `baseVersion` 正文、逐条判定位/重叠/理由），干净才真的发写请求。
+
+错误处置：409 `VERSION_CONFLICT`（`extra.headVersion` 是当前最新版，重拉 `get`/`version` 再交，别盲目重试原请求）；
+422 `CHANGES_INVALID`（`extra.errors` 是 `[{index, code, message}]`，按 `index` 定位第几条改动、按 `code` 判问题类型：
+`ANCHOR_NOT_FOUND` / `ANCHOR_AMBIGUOUS` / `REASON_MISSING` / `OVERLAP` / `DUPLICATE` 等）；422 `NO_DIFF`（归一化后
+与基准版逐字节相同，没产生新版本，多半是重复提交）。
+
+
 ## 交棒给 dby-publish 的两条命令行（SKILL.md 交棒节）
 
 用户只要成稿就到此为止，不交棒；终态未明先问一句。

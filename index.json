@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-01T19:40:11.213506+00:00",
+  "generatedAt": "2026-09-02T18:41:44.700149+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.32",
+  "productVersion": "1.0.33",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -792,6 +792,7 @@
         "a59d7a4e7157",
         "acae0014e410",
         "afae2f05a5ed",
+        "b04393f2476c",
         "bcf26b4eca1f",
         "ce8326e3dbd2",
         "d7e863f5577a",
@@ -800,11 +801,11 @@
       ],
       "versions": [
         {
-          "version": "2.1.3",
-          "hash": "a39a83239eaa",
+          "version": "2.2.0",
+          "hash": "b04393f2476c",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
-          "changelog": "出图能力统一标记为当前暂时下架，删除已不存在的封面生成路由；未来是否恢复需重新评估，当前不承诺恢复时间",
+          "releasedAt": "2026-09-02T18:41:42.153383+00:00",
+          "changelog": "scripts/doubaoya.mjs 新增 draft 子命令（建稿/审稿包/交改写清单/回复评论，对接稿件面专用路由），供 dby-write/dby-rewrite 调用；submit 前本地预检 changes[]",
           "changelogSource": "user"
         },
         {
@@ -1360,6 +1361,12 @@
           "version": "1.0.1",
           "date": "2026-08-31",
           "subject": "test(dby-deai): 执行层 prompt 显式调起本包 —— 否则整包判不可用"
+        },
+        {
+          "hash": "1e19b29c4f68",
+          "version": "1.1.3",
+          "date": "2026-09-01",
+          "subject": "fix(dby-deai,tools): 1.1.3 抖的是判官不是包 —— 能 grep 的断言不该交给小模型读"
         }
       ]
     },
@@ -2157,9 +2164,18 @@
         "db8a6e744f97",
         "dbc228e09916",
         "de838c0c1b1e",
-        "e6f18ded0432"
+        "e6f18ded0432",
+        "e7ff7ddeae43"
       ],
       "versions": [
+        {
+          "version": "1.3.0",
+          "hash": "e7ff7ddeae43",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-09-02T18:41:42.153383+00:00",
+          "changelog": "交付新增改动清单（changes[]，原句/替换/理由/技法标签），可选提交到稿件面（用户确认才写，见 references/draft/draft-changes.md）；头注不再指向已下线的云端改写接口（skill.wechat.rewrite 2026-08-28 整条删除）",
+          "changelogSource": "user"
+        },
         {
           "version": "1.2.1",
           "hash": "0ec795bc6772",
@@ -2807,6 +2823,7 @@
         "7091f1189cf1",
         "78f1efdf04ad",
         "7b2ebef991b0",
+        "8d7070871b20",
         "acc07fe1a5e9",
         "b40023ac688b",
         "cadb7e558fce",
@@ -2818,6 +2835,14 @@
         "fc92fb4bf92f"
       ],
       "versions": [
+        {
+          "version": "1.11.0",
+          "hash": "8d7070871b20",
+          "ref": "release-20260831-0756",
+          "releasedAt": "2026-09-02T18:41:42.153383+00:00",
+          "changelog": "增模式 C「按审稿意见改一版」（拉稿件面审稿包逐条回应后提交新版，见 references/review-turn.md）；取数改为优先 dby CLI（@doubaoya/cli 的 write prep|topics|review），write.mjs 保留为兜底",
+          "changelogSource": "user"
+        },
         {
           "version": "1.10.2",
           "hash": "18aff256cafd",
