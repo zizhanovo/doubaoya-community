@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-02T18:41:44.700149+00:00",
+  "generatedAt": "2026-09-02T18:52:14.259181+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.33",
+  "productVersion": "1.0.34",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -516,6 +516,7 @@
         "9f20f18cca31",
         "a4d72b56310c",
         "b2ccb38b1d96",
+        "c54af4f55e52",
         "c820f9aa0c6d",
         "d5cfe53c21dd",
         "dd507e5dc624",
@@ -527,11 +528,11 @@
       ],
       "versions": [
         {
-          "version": "1.7.1",
-          "hash": "e562a7c121c6",
+          "version": "1.7.2",
+          "hash": "c54af4f55e52",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
-          "changelog": "出图能力统一标记为当前暂时下架，移除不可逆下线话术；未来是否恢复需重新评估，当前不承诺恢复时间",
+          "releasedAt": "2026-09-02T18:52:11.601430+00:00",
+          "changelog": "飞轮与公众号路由表补上审稿回路指针（用户在审稿台裁决/评论后，由 dby-write 按审稿意见改一版）",
           "changelogSource": "user"
         },
         {
@@ -995,6 +996,12 @@
           "version": "2.1.2",
           "date": "2026-08-31",
           "subject": "fix(dby-api): 补回被 dby-image 退役连带丢失的 8 个图像类触发词，并压回 6000 字符闸"
+        },
+        {
+          "hash": "b04393f2476c",
+          "version": "2.2.0",
+          "date": "2026-09-02",
+          "subject": "feat(dby-api,dby-rewrite,dby-write): 接主仓稿件面 API（建稿/审稿包/改动清单/评论）"
         }
       ]
     },
@@ -2257,6 +2264,12 @@
           "version": "1.2.1",
           "date": "2026-08-27",
           "subject": "docs(dby-rewrite): 头注不再指向已下线的云端改写接口（主仓 2026-08-28 删除 skill.wechat.rewrite）"
+        },
+        {
+          "hash": "e7ff7ddeae43",
+          "version": "1.3.0",
+          "date": "2026-09-02",
+          "subject": "feat(dby-api,dby-rewrite,dby-write): 接主仓稿件面 API（建稿/审稿包/改动清单/评论）"
         }
       ]
     },
@@ -3002,6 +3015,12 @@
           "version": "1.10.2",
           "date": "2026-08-27",
           "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+        },
+        {
+          "hash": "8d7070871b20",
+          "version": "1.11.0",
+          "date": "2026-09-02",
+          "subject": "feat(dby-api,dby-rewrite,dby-write): 接主仓稿件面 API（建稿/审稿包/改动清单/评论）"
         }
       ]
     },

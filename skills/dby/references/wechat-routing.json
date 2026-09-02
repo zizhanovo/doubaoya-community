@@ -19,7 +19,8 @@
         "user requests title, cover, or compliance work on an article they are writing",
         "user requests layout rendering into Official Account HTML",
         "user requests saving an article into their own draft box",
-        "user asks which step of the writing flywheel comes next"
+        "user asks which step of the writing flywheel comes next",
+        "user asks to revise a draft according to review comments or rejected changes from the draft workbench (dby-write review turn)"
       ],
       "target_state_gates": [
         "The user's stated target state decides how far along this route to travel; ask when it is unstated.",
