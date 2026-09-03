@@ -58,6 +58,11 @@ node <dby-publish>/scripts/pipeline.mjs --md 稿子.md --title "标题" --render
 ```bash
 node <dby-publish>/scripts/pipeline.mjs --md 稿子.md --title "标题" --digest "<摘要>"
 ```
+正文来自稿件面（用户在网页审稿台裁决过的稿，见 review-turn.md）时**必须**带上稿件 id，
+服务端存草稿箱成功后会把稿件自动关联到发布记录，文章中心里这篇从「写作中」滑到「草稿箱」：
+```bash
+node <dby-publish>/scripts/pipeline.mjs --md 稿子.md --title "标题" --digest "<摘要>" --draft <稿件 id> [--draft-version <n>]
+```
 
 ⚠️ 第 8 步的留言流水线没有地方放，随成稿交给用户手动贴。
 

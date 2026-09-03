@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-03T02:34:46.593181+00:00",
+  "generatedAt": "2026-09-03T02:36:49.846522+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.35",
+  "productVersion": "1.0.36",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -2158,6 +2158,12 @@
           "version": "4.0.5",
           "date": "2026-08-31",
           "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+        },
+        {
+          "hash": "e48ecdf5cfa5",
+          "version": "4.1.0",
+          "date": "2026-09-02",
+          "subject": "feat(dby-publish): pipeline.mjs 新增 --draft/--draft-version，透传稿件 id 给存草稿接口"
         }
       ]
     },
@@ -2831,6 +2837,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "0e0354e9f8ca",
         "18aff256cafd",
         "274536af5420",
         "376c6d363adc",
@@ -2856,11 +2863,11 @@
       ],
       "versions": [
         {
-          "version": "1.11.0",
-          "hash": "8d7070871b20",
+          "version": "1.11.1",
+          "hash": "0e0354e9f8ca",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-02T18:41:42.153383+00:00",
-          "changelog": "增模式 C「按审稿意见改一版」（拉稿件面审稿包逐条回应后提交新版，见 references/review-turn.md）；取数改为优先 dby CLI（@doubaoya/cli 的 write prep|topics|review），write.mjs 保留为兜底",
+          "releasedAt": "2026-09-03T02:36:47.134474+00:00",
+          "changelog": "交棒 dby-publish 的存草稿命令补 --draft <稿件 id>（正文来自审稿台时必带，服务端自动关联发布记录）",
           "changelogSource": "user"
         },
         {

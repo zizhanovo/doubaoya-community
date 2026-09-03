@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T02:34:46.593181+00:00",
+  "generatedAt": "2026-09-03T02:36:49.846522+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -309,6 +309,7 @@
       "e88f976ec4bb"
     ],
     "dby-write": [
+      "0e0354e9f8ca",
       "18aff256cafd",
       "274536af5420",
       "376c6d363adc",
@@ -3239,6 +3240,12 @@
         "version": "4.0.5",
         "date": "2026-08-31",
         "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+      },
+      {
+        "hash": "e48ecdf5cfa5",
+        "version": "4.1.0",
+        "date": "2026-09-02",
+        "subject": "feat(dby-publish): pipeline.mjs 新增 --draft/--draft-version，透传稿件 id 给存草稿接口"
       }
     ],
     "dby-rewrite": [

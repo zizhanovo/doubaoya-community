@@ -7,8 +7,8 @@ description: >-
   触发词：帮我写篇公众号文章、写篇文章、写个初稿、按我的风格写、代笔、公众号写作、帮我起草、这篇怎么写、写作全流程、
   这篇为什么没人看、复盘、复盘一下、数据怎么样、上次那篇效果、阅读量为什么低、文章表现、发出去没人看、
   按审稿意见改一版、按我的评论再改一遍、读一下稿件的意见、按拒绝重新改一版。
-version: 1.11.0
-changelog: 增模式 C「按审稿意见改一版」（拉稿件面审稿包逐条回应后提交新版，见 references/review-turn.md）；取数改为优先 dby CLI（@doubaoya/cli 的 write prep|topics|review），write.mjs 保留为兜底
+version: 1.11.1
+changelog: 交棒 dby-publish 的存草稿命令补 --draft <稿件 id>（正文来自审稿台时必带，服务端自动关联发布记录）
 compatibility: >-
   需要 Node ≥18（取数与复盘算术走 scripts/write.mjs，零依赖不装 npm 包）；
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
