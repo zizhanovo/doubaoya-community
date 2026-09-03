@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 4.0.8
-changelog: 出图能力统一标记为当前暂时下架，保留本地图片接入路径；未来是否恢复需重新评估，当前不承诺恢复时间
+version: 4.1.0
+changelog: pipeline.mjs 新增 --draft/--draft-version，正文来自稿件面时透传稿件 id，服务端存草稿箱成功后自动关联到发布记录
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
@@ -113,6 +113,10 @@ node scripts/pipeline.mjs --md a.md --title "标题" --dry-run             # 发
 ```
 
 本机有多条 key 对应不同账号时，账号校验会停下要 `--account <账号>`，按报错列出的账号补上重跑。
+
+正文来自**稿件面**（用户在网页审稿页审过的稿）时带 `--draft <稿件 id>`（可选 `--draft-version <n>`，
+省略 = 最新版）——存草稿箱成功后服务端会把稿件自动关联到这条发布记录；不带就是普通发布。
+带了但那条稿件不属于你 → 422 `VALIDATION_ERROR`，发布不执行、不扣点。
 
 🔴 **跑完只认最终回报里的 `mediaId`**——它是「已存入草稿箱」的唯一凭据，没有它就不当已存入。
 存草稿失败 / 中途 Ctrl-C / 不确定草稿箱里有没有 → 读 `references/recovery.md`（重跑不幂等，会多存一份）。

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-02T18:52:14.259181+00:00",
+  "generatedAt": "2026-09-03T02:34:46.593181+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.34",
+  "productVersion": "1.0.35",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -762,6 +762,12 @@
           "version": "1.6.0",
           "date": "2026-08-31",
           "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
+        },
+        {
+          "hash": "c54af4f55e52",
+          "version": "1.7.2",
+          "date": "2026-09-02",
+          "subject": "docs(dby): 飞轮与公众号路由表补审稿回路指针 1.7.2"
         }
       ]
     },
@@ -1855,6 +1861,7 @@
         "ccf7d50a327d",
         "d7c7ce4c8a76",
         "da136cf9613a",
+        "e48ecdf5cfa5",
         "e6cc1f2a871c",
         "e7a976940e02",
         "e88557062157",
@@ -1865,11 +1872,11 @@
       ],
       "versions": [
         {
-          "version": "4.0.8",
-          "hash": "b3d4d48e9f81",
+          "version": "4.1.0",
+          "hash": "e48ecdf5cfa5",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T19:21:41.197985+00:00",
-          "changelog": "出图能力统一标记为当前暂时下架，保留本地图片接入路径；未来是否恢复需重新评估，当前不承诺恢复时间",
+          "releasedAt": "2026-09-03T02:34:43.740392+00:00",
+          "changelog": "pipeline.mjs 新增 --draft/--draft-version，正文来自稿件面时透传稿件 id，服务端存草稿箱成功后自动关联到发布记录",
           "changelogSource": "user"
         },
         {

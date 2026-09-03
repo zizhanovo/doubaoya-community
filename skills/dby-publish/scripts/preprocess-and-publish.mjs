@@ -25,6 +25,10 @@
 //   node preprocess-and-publish.mjs --html a.html --title "标题" --cover cover.png
 //   node preprocess-and-publish.mjs --html a.html --title "标题" --appid wx123 --digest "摘要"
 //   node preprocess-and-publish.mjs --html a.html --title "标题" --dry-run   # 只扫描本地图，不上传/不发布
+//   node preprocess-and-publish.mjs --html a.html --title "标题" --draft cmtk_xxx [--draft-version 2]
+//     # 正文来自网页审稿过的稿件时带上 --draft <稿件 id>：存草稿箱成功后服务端自动把稿件
+//     # 关联到发布出来的文章记录；--draft-version 指定发布稿件第几版，省略 = 最新版，
+//     # 必须搭配 --draft 一起用。带了 --draft 但不属于调用者 → 422 VALIDATION_ERROR（不扣点）。
 //
 // 鉴权 / 环境:
 //   DOUBAOYA_API_KEY   密钥（形如 dyh_…），必填。绝不打印、绝不写文件。
@@ -342,6 +346,11 @@ async function main() {
     if (args.cover && args.cover !== true) {
       process.stdout.write(`封面：${args.cover}（${isLocalImageSrc(args.cover) ? "本地→purpose=thumb 预上传" : "外链/已是图床"}）\n`);
     }
+    const draftId = args.draft && args.draft !== true ? args.draft : null;
+    if (draftId) {
+      const draftVersion = args["draft-version"] && args["draft-version"] !== true ? args["draft-version"] : null;
+      process.stdout.write(`draftId: "${draftId}"${draftVersion ? `, draftVersion: ${draftVersion}` : "（省略 = 最新版）"}\n`);
+    }
     return;
   }
 
@@ -353,6 +362,18 @@ async function main() {
     const lim = checkDraftLimits({ title, digest: args.digest && args.digest !== true ? args.digest : undefined, contentHtml: html });
     for (const w of lim.warnings) process.stderr.write(`[warn] ${w}\n`);
     if (lim.errors.length) die("VALIDATION_ERROR: " + lim.errors.join(" "));
+  }
+
+  // 稿件面：正文来自网页审稿过的稿件时带 --draft <稿件 id>，服务端会把稿件自动关联到
+  // 发布出来的文章记录。--draft-version 只在带了 --draft 时才有意义（省略 = 稿件最新版）。
+  const draftId = args.draft && args.draft !== true ? args.draft : undefined;
+  let draftVersion;
+  if (args["draft-version"] && args["draft-version"] !== true) {
+    if (!draftId) die("VALIDATION_ERROR: --draft-version 必须搭配 --draft <稿件 id> 一起用。");
+    draftVersion = Number(args["draft-version"]);
+    if (!Number.isInteger(draftVersion) || draftVersion <= 0) {
+      die(`VALIDATION_ERROR: --draft-version 必须是正整数，收到「${args["draft-version"]}」。`);
+    }
   }
 
   const apiKey = process.env.DOUBAOYA_API_KEY;
@@ -401,6 +422,8 @@ async function main() {
   const payload = { authorizerAppid: appid, title, contentHtml: rewritten };
   if (thumbMediaId) payload.thumbMediaId = thumbMediaId;
   if (args.digest && args.digest !== true) payload.digest = args.digest;
+  if (draftId) payload.draftId = draftId;
+  if (draftVersion) payload.draftVersion = draftVersion;
 
   const r = await apiRequest(PUBLISH_ENDPOINT, apiKey, "POST", payload);
   if (!r.ok) die(`${r.code}: ${r.message}`);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T18:52:14.259181+00:00",
+  "generatedAt": "2026-09-03T02:34:46.593181+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -235,6 +235,7 @@
       "ccf7d50a327d",
       "d7c7ce4c8a76",
       "da136cf9613a",
+      "e48ecdf5cfa5",
       "e6cc1f2a871c",
       "e7a976940e02",
       "e88557062157",
@@ -2406,6 +2407,12 @@
         "version": "1.6.0",
         "date": "2026-08-31",
         "subject": "feat(dby-deai): 新增去 AI 味包 —— 默认只出体检报告，不改稿"
+      },
+      {
+        "hash": "c54af4f55e52",
+        "version": "1.7.2",
+        "date": "2026-09-02",
+        "subject": "docs(dby): 飞轮与公众号路由表补审稿回路指针 1.7.2"
       }
     ],
     "dby-api": [

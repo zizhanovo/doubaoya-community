@@ -107,6 +107,8 @@ const VALUE_FLAGS = new Set([
   "theme",
   "output-processed-html",
   "base-url",
+  "draft",
+  "draft-version",
 ]);
 const BOOL_FLAGS = new Set(["dry-run", "render-only", "help"]);
 // 任何带这些意图的 flag 都视为"群发"，直接拒绝并解释本流水线只存草稿。
@@ -159,7 +161,7 @@ function parseArgs(argv) {
     throw new ArgError(
       `未知参数 --${key}。可用参数：` +
         `--md --html --title --account --appid --cover --digest --config --profile --theme ` +
-        `--output-processed-html --base-url --dry-run --render-only --help。` +
+        `--output-processed-html --base-url --draft --draft-version --dry-run --render-only --help。` +
         `（注意：本流水线只存草稿，不存在任何群发参数。）`
     );
   }
@@ -203,6 +205,10 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   --theme default             项目默认主题的服务端那份（等价 --theme benya-clean）
   --output-processed-html <p> 渲染出的 HTML 落地路径（默认写临时文件）
   --base-url <url>            API 基址（默认 $DOUBAOYA_BASE_URL 或 https://doubaoya.com）
+  --draft <稿件 id>            正文来自稿件面（用户在网页审稿过的稿）时带上：存草稿箱成功后
+                              服务端自动把稿件关联到发布出来的文章记录。不带就是普通发布。
+                              带了但不属于你 → 422 VALIDATION_ERROR（不扣点、不发布）。
+  --draft-version <n>         发布的是该稿件第几版；省略 = 最新版。必须搭配 --draft 一起用。
   --render-only               **只渲染，不发布**：产出 HTML + 在线预览链接就结束。
                               🔴 跳过草稿前置检查 ⇒ **不需要绑定公众号**，有密钥就能用。
                               与 --dry-run 的分工：dry-run 是「发布前彩排」，故意保留
@@ -480,6 +486,18 @@ async function main() {
     const lim = checkDraftLimits({ title, digest: args.digest });
     lim.warnings.forEach(warn);
     if (lim.errors.length) fail(lim.errors.join(" "));
+  }
+  // 稿件面：--draft 透传给存草稿子进程，服务端存草稿箱成功后自动把稿件关联到发布出来的文章记录。
+  const draftId = args.draft || null;
+  if (args.draftVersion !== undefined && !draftId) {
+    fail("--draft-version 必须搭配 --draft <稿件 id> 一起用。");
+  }
+  let draftVersion = null;
+  if (args.draftVersion !== undefined) {
+    draftVersion = Number(args.draftVersion);
+    if (!Number.isInteger(draftVersion) || draftVersion <= 0) {
+      fail(`--draft-version 必须是正整数，收到「${args.draftVersion}」。`);
+    }
   }
 
   const baseUrl =
@@ -764,6 +782,8 @@ async function main() {
     step(5, "DRY-RUN · 扫描本地图片（不发布）");
     const childArgs = ["--html", processedHtmlPath, "--title", title, "--dry-run"];
     if (coverPath) childArgs.push("--cover", coverPath);
+    if (draftId) childArgs.push("--draft", draftId);
+    if (draftVersion) childArgs.push("--draft-version", String(draftVersion));
     const { out } = await runChild(childArgs, {
       ...process.env,
       DOUBAOYA_BASE_URL: baseUrl,
@@ -779,6 +799,7 @@ async function main() {
         `  身份:        ${(profile && (profile.displayName || profile.slug)) || "(未加载)"}\n` +
         `  待预上传本地图: ${localCount} 张\n` +
         `  封面:        ${coverIsLocal ? `已就绪本地封面 ${coverPath}` : `无本地封面 → 走都爆鸭兜底（${config.coverFallback}）`}\n` +
+        (draftId ? `  draftId:     "${draftId}"${draftVersion ? `, draftVersion: ${draftVersion}` : "（省略 = 最新版）"}\n` : "") +
         `  whoami 校验: 通过\n` +
         `  前置检查:    通过\n` +
         (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
@@ -796,6 +817,8 @@ async function main() {
   if (coverIsLocal) childArgs.push("--cover", path.resolve(coverPath));
   const digest = args.digest || config.digestTemplate || null;
   if (digest) childArgs.push("--digest", digest);
+  if (draftId) childArgs.push("--draft", draftId);
+  if (draftVersion) childArgs.push("--draft-version", String(draftVersion));
 
   const { code, out } = await runChild(childArgs, {
     ...process.env,
@@ -842,6 +865,7 @@ async function main() {
       `  正文图上传数: ${imgCount} 张\n` +
       `  封面:        ${withCover ? "已上传本地封面" : `走都爆鸭兜底（${config.coverFallback}）`}\n` +
       `  mediaId:     ${mediaId}\n` +
+      (draftId ? `  draftId:     "${draftId}"${draftVersion ? `, draftVersion: ${draftVersion}` : "（省略 = 最新版）"}\n` : "") +
       (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
       (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
       "  群发:        否（本流水线只存草稿）\n" +
