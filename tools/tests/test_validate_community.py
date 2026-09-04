@@ -372,6 +372,21 @@ class CommunityValidatorTests(unittest.TestCase):
             with self.assertRaisesRegex(validator.ValidationError, "规范上限"):
                 validator.validate_description_budget(root)
 
+    def test_description_budget_warns_above_the_spec_soft_limit(self):
+        """900 < size ≤ 1024：只黄不红——硬限之前要有一道能看见的余量线。"""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"fragile": "词" * (validator.SPEC_DESCRIPTION_SOFT_LIMIT + 1)})
+            warnings = validator.validate_description_budget(root)
+            self.assertTrue(any("软警戒线" in w for w in warnings), warnings)
+
+    def test_description_budget_stays_quiet_below_the_spec_soft_limit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.budget_fixture(root, {"calm": "词" * validator.SPEC_DESCRIPTION_SOFT_LIMIT})
+            warnings = validator.validate_description_budget(root)
+            self.assertFalse([w for w in warnings if "软警戒线" in w], warnings)
+
     def test_description_budget_warns_at_the_legacy_host_limit(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

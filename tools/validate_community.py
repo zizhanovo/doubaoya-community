@@ -1692,6 +1692,10 @@ def validate_routing_skill_pointers(root: Path = ROOT) -> None:
 #         而且是自作自受、我们能控也该控的那一半。
 #    ⚠️ 占满 8000 只是"刚好不自成溢出源"，不是"安全"——预算终究要和用户其他 skill 共享。
 SPEC_DESCRIPTION_LIMIT = 1024
+# 软警戒线：硬限只在**超限**才红，没有它，一条 1021 字符的 description 直到撞墙前都是绿的
+# （2026-08-20 审计已在 dby-api 949 字符时点名「再加两个词会截断」，之后仍涨到 1021）。
+# 过线只黄不红——留给下一次改动的余量至少 124 字符，够一组触发词或一句否定声明。
+SPEC_DESCRIPTION_SOFT_LIMIT = 900
 HOST_DESCRIPTION_LIMIT = 1536
 HOST_LEGACY_SOFT_LIMIT = 250
 SHARED_DESCRIPTION_BUDGET = 8000
@@ -1747,6 +1751,11 @@ def validate_description_budget(root: Path = ROOT) -> list[str]:
             size <= HOST_DESCRIPTION_LIMIT,
             f"description 超出宿主单条上限：{directory.name} 有 {size} 字符 > {HOST_DESCRIPTION_LIMIT}",
         )
+        if size > SPEC_DESCRIPTION_SOFT_LIMIT:
+            warnings.append(
+                f"⚠️ {directory.name} 的 description 有 {size} 字符 > 软警戒线 {SPEC_DESCRIPTION_SOFT_LIMIT}，"
+                f"距规范硬限 {SPEC_DESCRIPTION_LIMIT} 只剩 {SPEC_DESCRIPTION_LIMIT - size} 字符——先删字面重复的触发词再加新词"
+            )
         if size > HOST_LEGACY_SOFT_LIMIT:
             warnings.append(f"⚠️ {directory.name} 的 description 有 {size} 字符 > {HOST_LEGACY_SOFT_LIMIT}，在旧版宿主上会被砍")
     require(
