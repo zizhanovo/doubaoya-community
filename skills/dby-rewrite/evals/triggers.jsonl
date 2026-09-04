@@ -16,3 +16,5 @@
 {"q":"配张封面图","expect":false}
 {"q":"拉一下这个号最近发了什么","expect":false}
 {"q":"我该用哪个skill开始弄公众号的事","expect":false}
+{"q":"按审稿意见改一版","expect":false}
+{"q":"按我的评论再改一遍","expect":false}
