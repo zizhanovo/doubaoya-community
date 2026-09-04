@@ -9,6 +9,13 @@ on:
   push:
     branches: [main]
 
+# 本 job 用的是 PAT（HUB_DISPATCH_TOKEN），GITHUB_TOKEN 一个权限都不需要。
+permissions: {}
+
+concurrency:
+  group: notify-hub
+  cancel-in-progress: true
+
 jobs:
   dispatch:
     runs-on: ubuntu-latest
@@ -18,12 +25,23 @@ jobs:
       - name: repository_dispatch 到主仓
         if: env.TOKEN != ''
         run: |
-          curl -sS -o /dev/null -w "dispatch http %{http_code}\n" \
+          set -uo pipefail
+          # 🔴 刻意不 fail：本钩子只压延迟，主仓有小时级轮询兜底，绝不该拦住 push。
+          #    但也不能像以前那样只打印状态码就完事——PAT 过期返回 401 时任务照样绿，
+          #    「配错的 token」和「没配 token」长得一模一样，你会毫不知情地退回小时级。
+          #    所以这里判一下码，非 2xx 打 ::warning:: 让它在 Actions 页面上显形。
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/zizhanovo/doubaoyahub/dispatches \
-            -d '{"event_type":"community-push","client_payload":{"sha":"${{ github.sha }}"}}'
+            -d '{"event_type":"community-push","client_payload":{"sha":"${{ github.sha }}"}}' || echo 000)
+          echo "dispatch http $code"
+          case "$code" in
+            2*) echo "已通知主仓" ;;
+            401|403) echo "::warning::HUB_DISPATCH_TOKEN 被拒（http $code），多半是 PAT 过期或权限不足；已退回主仓小时级轮询。" ;;
+            *)  echo "::warning::dispatch 未成功（http $code）；已退回主仓小时级轮询。" ;;
+          esac
       - name: 未配 token 的说明
         if: env.TOKEN == ''
         run: echo "HUB_DISPATCH_TOKEN 未配置——跳过即时通知，主仓靠小时级轮询兜底。"
