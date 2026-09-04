@@ -7,3 +7,6 @@ __pycache__/
 .worktrees/
 openspec/
 docs/
+# 多会话写入者锁：逐工作树各一份，本就该是未跟踪文件（见文件首行）。
+# 6899c46 被一次全量 add 卷进历史，之后还跟了三笔 chore(writer) —— 跟踪它会让各会话的锁状态互相冲突。
+.WRITER
