@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-03T02:36:49.846522+00:00",
+  "generatedAt": "2026-09-04T04:58:28.829717+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.0.36",
+  "productVersion": "1.2.1",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -528,11 +528,11 @@
       ],
       "versions": [
         {
-          "version": "1.7.2",
-          "hash": "c54af4f55e52",
+          "version": "1.7.3",
+          "hash": "dfcfb6b9154e",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-02T18:52:11.601430+00:00",
-          "changelog": "飞轮与公众号路由表补上审稿回路指针（用户在审稿台裁决/评论后，由 dby-write 按审稿意见改一版）",
+          "releasedAt": "2026-09-04T03:46:11.065440+00:00",
+          "changelog": "SKILL.md 说清 references/wechat-routing.json 只覆盖「写作→交付主链」与「云端公开数据」两条有歧义的路由，其余包的路由依据是模式 A 表格与 navigation.md（原文写成「路由以此为准」，与该文件的实际覆盖面不符）",
           "changelogSource": "user"
         },
         {
@@ -800,6 +800,7 @@
         "acae0014e410",
         "afae2f05a5ed",
         "b04393f2476c",
+        "bb0e6ad5cb98",
         "bcf26b4eca1f",
         "ce8326e3dbd2",
         "d7e863f5577a",
@@ -808,11 +809,11 @@
       ],
       "versions": [
         {
-          "version": "2.2.0",
-          "hash": "b04393f2476c",
+          "version": "3.0.0",
+          "hash": "bb0e6ad5cb98",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-02T18:41:42.153383+00:00",
-          "changelog": "scripts/doubaoya.mjs 新增 draft 子命令（建稿/审稿包/交改写清单/回复评论，对接稿件面专用路由），供 dby-write/dby-rewrite 调用；submit 前本地预检 changes[]",
+          "releasedAt": "2026-09-04T03:50:00.266524+00:00",
+          "changelog": "description 从 1021 降到 957 字符，给硬限 1024 留余量：删触发词「写作」（与本包「只给数据、写正文归 dby-write」自相矛盾），另删字面重复与子串词面、压缩出图下架段措辞（8 个否定词面未动）；补 3 条写作类负例。过 codex 与 pi 双后端盲测：本包与 dby-write / dby-rewrite 正例 100% 未劣化、负例零误触",
           "changelogSource": "user"
         },
         {
@@ -1186,11 +1187,11 @@
       ],
       "versions": [
         {
-          "version": "1.2.3",
-          "hash": "0f62651630ed",
+          "version": "1.2.4",
+          "hash": "daab02fbd05e",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T07:56:29.195030+00:00",
-          "changelog": "新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化",
+          "releasedAt": "2026-09-04T03:46:11.065440+00:00",
+          "changelog": "「优先 dby charter…，没装用 npx -y @doubaoya/cli 兜底」改为如实表述：@doubaoya/cli 尚未发布到 npm，npx 会 404，本机 dby 在才优先用它（照原文做会先撞一次 404）",
           "changelogSource": "user"
         },
         {
@@ -1336,11 +1337,11 @@
       ],
       "versions": [
         {
-          "version": "1.1.3",
-          "hash": "1e19b29c4f68",
+          "version": "1.2.0",
+          "hash": "7f432da65f47",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-01T15:12:47.622523+00:00",
-          "changelog": "只改判据不改包：deai-no-delete-dangling-cause 里「依据句有没有被删」本来就能 grep 判，却写成了自然语言断言交给小模型读长文本，是那条用例四轮抖 50% 的真因——脱开判官手工连跑五轮，行为 5/5 全对。按 evals-format 的硬规则改成 check",
+          "releasedAt": "2026-09-04T03:46:11.065440+00:00",
+          "changelog": "新增 references/draft/draft-changes.md：改动清单可按 {anchor,replacement,reason,tag} 契约提交到稿件面，与 dby-write 模式 C、dby-rewrite 共用同一套 changes[]（用户确认才写，「改不改由用户定」的红线不变）；SKILL.md 补「下一步」指回稿件面/dby-rewrite/dby-publish；补 2 条 dby-charter 文风蒸馏类负例",
           "changelogSource": "user"
         }
       ],
@@ -2189,11 +2190,11 @@
       ],
       "versions": [
         {
-          "version": "1.3.0",
-          "hash": "e7ff7ddeae43",
+          "version": "1.3.1",
+          "hash": "b411a624fcfe",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-02T18:41:42.153383+00:00",
-          "changelog": "交付新增改动清单（changes[]，原句/替换/理由/技法标签），可选提交到稿件面（用户确认才写，见 references/draft/draft-changes.md）；头注不再指向已下线的云端改写接口（skill.wechat.rewrite 2026-08-28 整条删除）",
+          "releasedAt": "2026-09-04T03:46:11.065440+00:00",
+          "changelog": "标题字数口径统一到 references/公众号.md 一处（官方上限 64 字、列表页约 25–31 字后省略号，依据调研 02），SKILL.md 那处改为纯指针，消除包内「超 30 截断」与「上限 64」两套说法；极限词删掉自带词表改为指向 dby-banned-words 的纯指针（约束本身保留）；补 2 条 dby-write 模式 C 负例",
           "changelogSource": "user"
         },
         {
@@ -2863,11 +2864,11 @@
       ],
       "versions": [
         {
-          "version": "1.11.1",
-          "hash": "0e0354e9f8ca",
+          "version": "1.12.0",
+          "hash": "ef4f177d9b41",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-03T02:36:47.134474+00:00",
-          "changelog": "交棒 dby-publish 的存草稿命令补 --draft <稿件 id>（正文来自审稿台时必带，服务端自动关联发布记录）",
+          "releasedAt": "2026-09-04T03:58:20.782848+00:00",
+          "changelog": "模式 C 补稿件 id 未知时的处置；选题补每月一篇复利文与常青回看，复盘补复利资产识别；素材第 1 层纳入读者留言/私信原话；补回被静默删掉的标题截断位（列表约 25–31 字、核心信息前 20 字，原「前 15 字」无出处）与完读降权机制；第 9 步增「AI 声明」一项；极限词与广告法条改为指针；下一步补 dby-deai 路径；取数说明改为如实（@doubaoya/cli 未发布）；新增执行层判据 cases.jsonl（7 条）与 4 条负例",
           "changelogSource": "user"
         },
         {
@@ -3029,6 +3030,12 @@
           "version": "1.10.2",
           "date": "2026-08-27",
           "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+        },
+        {
+          "hash": "0e0354e9f8ca",
+          "version": "1.11.1",
+          "date": "2026-09-02",
+          "subject": "docs(dby-write): 交棒 dby-publish 的存草稿命令补 --draft 1.11.1"
         },
         {
           "hash": "8d7070871b20",

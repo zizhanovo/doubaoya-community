@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-03T02:36:49.846522+00:00",
+  "generatedAt": "2026-09-04T04:58:28.829717+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -112,6 +112,7 @@
       "acae0014e410",
       "afae2f05a5ed",
       "b04393f2476c",
+      "bb0e6ad5cb98",
       "bcf26b4eca1f",
       "ce8326e3dbd2",
       "d7e863f5577a",
@@ -3728,6 +3729,12 @@
         "version": "1.10.2",
         "date": "2026-08-27",
         "subject": "docs(skills): dby-api/dby-write/dby-charter 改为优先走 dby CLI，旧 scripts/ 过渡兜底"
+      },
+      {
+        "hash": "0e0354e9f8ca",
+        "version": "1.11.1",
+        "date": "2026-09-02",
+        "subject": "docs(dby-write): 交棒 dby-publish 的存草稿命令补 --draft 1.11.1"
       },
       {
         "hash": "8d7070871b20",
