@@ -4,6 +4,9 @@
 用法：
     python3 tools/release_notes.py <tag> [<prev-tag>]   # prev 省略 = 按 tag 名排序取上一个
 输出：第一行标题，空行，之后是 Markdown 正文。
+退出码：0 成功；2 用法错；3 该 tag 早于索引机制（无 index.json，正常跳过）；
+        其余非零 = 真失败。3 必须与 1/2 区分开——调用方（.github/workflows/release.yml）
+        只吞 3；若与 traceback 的 1 混用，任何崩溃都会被当成「tag 太老」而静默绿灯。
 为什么读 index.json 而不读 commit log：索引里每个 skill 的 versions[] 本来就带
 人写的 changelog（谁、从几到几、改了什么），commit log 是给维护者看的。
 """
@@ -91,7 +94,7 @@ def main() -> int:
     cur = _git_show(tag, "index.json")
     if cur is None:
         print(f"{tag} 上没有 index.json（早于索引机制的 tag），不生成", file=sys.stderr)
-        return 1
+        return 3  # 专用码：只有这一种情况允许调用方当成「跳过」而非失败
     prev = _git_show(prev_tag, "index.json") if prev_tag else None
     title, body = build_notes(cur, prev)
     pv = cur.get("productVersion")

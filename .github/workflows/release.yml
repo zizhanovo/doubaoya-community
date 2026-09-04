@@ -28,9 +28,33 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          if ! python3 tools/release_notes.py "$TAG" > notes.txt; then
-            echo "该 tag 早于索引机制，跳过"; exit 0
+          # 🔴 只吞退出码 3（该 tag 早于索引机制）。其余非零一律让这步红。
+          #    以前写的是 `if ! ...; then exit 0`，把 traceback、参数错、JSON 崩全部
+          #    伪装成「tag 太老」——绿灯 + 没有 Release，安静地错，正是 .githooks/pre-push
+          #    开头警告的那类闸。
+          rc=0
+          python3 tools/release_notes.py "$TAG" > notes.txt || rc=$?
+          if [ "$rc" -eq 3 ]; then
+            echo "$TAG 早于索引机制，不建 Release（正常跳过）"; exit 0
+          elif [ "$rc" -ne 0 ]; then
+            echo "::error::release_notes.py 失败，退出码 $rc"; exit "$rc"
           fi
           TITLE=$(head -1 notes.txt)
           tail -n +3 notes.txt > body.md
-          gh release create "$TAG" --verify-tag --title "$TITLE" --notes-file body.md
+          # 🔴 Latest 显式判定，不交给 gh 的默认行为。
+          #    GitHub 的 "Latest" 取 published_at 最大的那条 release，而建 release 的先后
+          #    不保证等于版本先后：2026-08-30 补建首发那条（release-20260825-1709 / v1.0.0）
+          #    排在 v3.3.0 之后，仓库首页的 Latest 就被顶成了 v1.0.0，一直挂着。
+          #    tag 名是日期戳不是 semver，GitHub 没有任何按版本纠正的余地，只能自己判。
+          #    判据用 tag 名排序：命名本身就是可排序的时间戳，不依赖 git 元数据。
+          if [ "$TAG" = "$(git tag -l 'release-*' | sort | tail -1)" ]; then
+            LATEST=true
+          else
+            LATEST=false
+          fi
+          # 幂等：这步若因网络抖动失败后重跑，create 会死在 "release already exists"。
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file body.md --latest="$LATEST"
+          else
+            gh release create "$TAG" --verify-tag --title "$TITLE" --notes-file body.md --latest="$LATEST"
+          fi
