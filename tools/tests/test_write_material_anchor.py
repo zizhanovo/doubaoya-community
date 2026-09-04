@@ -80,7 +80,8 @@ def test_常青豁免的是手段不是目标() -> None:
     """最可能的误读：把「常青不强制缺口」读成「常青不用管点开率」。"""
     s = _skill()
     assert "手段" in s and "目标" in s, "没有写明放宽的是手段不是目标"
-    tbl = s[s.index("| 检查项 "):s.index("→ 标题写法清单")]
+    # 表尾锚用 title.md 的指针本身，不用那句会随措辞变的引导语
+    tbl = s[s.index("| 检查项 "):s.index("`references/title.md`")]
     for item in ("受众匹配", "搜索适配"):
         row = next((l for l in tbl.split("\n") if l.startswith(f"| {item} ")), None)
         assert row, f"自检表里找不到「{item}」"
@@ -197,8 +198,14 @@ def test_被证伪的旧表述已清除() -> None:
             ctx = t[max(0, m.start() - 60):m.end() + 20]
             if not re.search(r"目标|涨粉|变现|常青", ctx):
                 stale.append(f"{name}: 无条件的「二选一」")
-        if re.search(r"留言.{0,12}必[须要]|必[须要].{0,12}留言", t):
-            stale.append(f"{name}: 留言仍写成必做")
+        # 护的是第 8 步「作者给自己文章的第一条留言」不许被写成必做。
+        # 🔴 「留言」还有第二个意思：读者留言 / 私信原话，它是 materials.md 第 1 层的素材来源，
+        # 「变现文的痛点必须能在留言区找到原话」是要保留的规则，不是要清除的旧表述。
+        # 所以按上下文豁免——与上面「二选一」那条同一手法。
+        for m in re.finditer(r"留言.{0,12}必[须要]|必[须要].{0,12}留言", t):
+            ctx = t[max(0, m.start() - 40):m.end() + 40]
+            if not re.search(r"留言区|私信|原话|读者留言", ctx):
+                stale.append(f"{name}: 留言仍写成必做")
         if "不铺垫" in t:
             stale.append(f"{name}: 「不铺垫」字面表述未重定义")
     assert not stale, "旧表述残留：\n  " + "\n  ".join(stale)

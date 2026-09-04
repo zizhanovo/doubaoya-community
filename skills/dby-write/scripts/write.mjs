@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 // write.mjs — 都爆鸭 · 写作主干的取数与复盘算术
+// ponytail: prep / topics / review 三个子命令与仓内 cli/src/commands/write.mjs（`dby write …`）重复，
+//   天花板 = 两份实现要同步改、同一个坑要修两次（对拍测试 cli/test/write-parity.test.mjs 只保证当下一致）。
+//   升级路径 = @doubaoya/cli 发布到 npm 且 SKILL.md 改为只走 CLI 后，删掉这三个子命令，本脚本只留
+//   articles / material / selfcheck；在那之前本脚本是唯一能跑的取数路径（CLI 尚未发布，npx 会 404）。
 // -----------------------------------------------------------------------------
 // 这个脚本只做**机械**的那两段，判断仍归你：
 //

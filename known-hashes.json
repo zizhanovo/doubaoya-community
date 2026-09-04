@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T04:59:32.959497+00:00",
+  "generatedAt": "2026-09-04T05:00:15.668859+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -335,6 +335,7 @@
       "dbaa900ce8ae",
       "e039d2615adb",
       "e75c09cb73fd",
+      "ef4f177d9b41",
       "f61cb9659a4a",
       "fc92fb4bf92f"
     ],
@@ -3331,6 +3332,12 @@
         "version": "1.3.0",
         "date": "2026-09-02",
         "subject": "feat(dby-api,dby-rewrite,dby-write): 接主仓稿件面 API（建稿/审稿包/改动清单/评论）"
+      },
+      {
+        "hash": "b411a624fcfe",
+        "version": "1.3.1",
+        "date": "2026-09-03",
+        "subject": "fix(dby-rewrite): 标题字数与极限词两处口径统一为单一来源"
       }
     ],
     "dby-theme": [
