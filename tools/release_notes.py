@@ -4,9 +4,10 @@
 用法：
     python3 tools/release_notes.py <tag> [<prev-tag>]   # prev 省略 = 按 tag 名排序取上一个
 输出：第一行标题，空行，之后是 Markdown 正文。
-退出码：0 成功；2 用法错；3 该 tag 早于索引机制（无 index.json，正常跳过）；
-        其余非零 = 真失败。3 必须与 1/2 区分开——调用方（.github/workflows/release.yml）
-        只吞 3；若与 traceback 的 1 混用，任何崩溃都会被当成「tag 太老」而静默绿灯。
+退出码：0 成功；2 用法错；3 该 tag 早于索引机制（tag 在，但那上面没有 index.json，
+        正常跳过）；其余非零 = 真失败（含 tag 不存在、index.json 坏）。
+        3 必须与 1/2 区分开——调用方（.github/workflows/release.yml）只吞 3；
+        若与 traceback 的 1 混用，任何崩溃都会被当成「tag 太老」而静默绿灯。
 为什么读 index.json 而不读 commit log：索引里每个 skill 的 versions[] 本来就带
 人写的 changelog（谁、从几到几、改了什么），commit log 是给维护者看的。
 """
@@ -20,13 +21,20 @@ REPO_URL = "https://github.com/zizhanovo/doubaoya-community"
 
 
 def _git_show(ref: str, path: str) -> dict | None:
+    """返回 ref 上那份 JSON；None 只表示一件事：**该 ref 上没有这个文件**。
+
+    🔴 别把其它失败也退化成 None。上面 main() 把 None 判成「早于索引机制的 tag」
+       并返回可跳过的 3——ref 打错、index.json 坏掉如果也走这条路，就会变成
+       「绿灯 + 没有 Release」，正是退出码 3 这套区分要防的那种静默。
+       所以：ref 不存在 → 退出码 1；JSON 坏 → 让 JSONDecodeError 带着行号炸出来。
+    """
+    if subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+                      capture_output=True).returncode != 0:
+        raise SystemExit(f"{ref} 不是有效的 git ref（打错了？）")
     res = subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True)
     if res.returncode != 0:
         return None
-    try:
-        return json.loads(res.stdout)
-    except json.JSONDecodeError:
-        return None
+    return json.loads(res.stdout)
 
 
 def _versions(index: dict | None, slug: str) -> list[dict]:
