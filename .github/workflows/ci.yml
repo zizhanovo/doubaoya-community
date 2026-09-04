@@ -1,0 +1,49 @@
+# ci —— PR 和 push 到 main 时跑全量测试。
+#
+# 为什么放 CI 而不是 pre-push：.githooks/pre-push 只放了一条 0.1 秒、零假阳性的闸，
+# 理由是「阻塞式闸一旦慢或吵，第二次就有人 --no-verify」。那个论证只支持「别塞进 hook」，
+# 不支持「哪都不跑」——慢检查正该待在 CI 里，它不占开发者敲键盘的时间。
+# 在此之前这 452 个测试在服务端一次都没跑过，且 hook 只对设了 core.hooksPath 的克隆生效。
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 有测试要读 git 历史/tag
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      - name: pytest tools/tests
+        run: python3 -m pytest tools/tests -q
+
+  node:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20" # 对齐 cli/package.json 的 engines.node >=20
+          cache: npm
+          cache-dependency-path: cli/package-lock.json
+      - run: npm ci
+      - name: node --test
+        run: npm test
