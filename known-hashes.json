@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T04:58:43.722587+00:00",
+  "generatedAt": "2026-09-04T04:58:59.143220+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -86,6 +86,7 @@
       "c820f9aa0c6d",
       "d5cfe53c21dd",
       "dd507e5dc624",
+      "dfcfb6b9154e",
       "e0ef82da64ee",
       "e562a7c121c6",
       "eeb802ec9c70",
@@ -2746,6 +2747,12 @@
         "version": "1.2.3",
         "date": "2026-08-31",
         "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+      },
+      {
+        "hash": "daab02fbd05e",
+        "version": "1.2.4",
+        "date": "2026-09-03",
+        "subject": "fix(dby-charter): 删掉会 404 的 npx 兜底指令"
       }
     ],
     "dby-deai": [

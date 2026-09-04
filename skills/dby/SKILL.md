@@ -7,8 +7,8 @@ description: >-
   「刚发完一篇接下来呢」「刚写完了然后呢」「这一步做完了下一步干嘛」「排完版了还要做什么」。
   本包管选路与衔接：**任何「刚做完某一步、接下来该干嘛」都归它**（哪怕刚做完的是写作或发布）；本包自己不取数、不写作、不排版。已经点名了要用哪个包时直接用那个，不必绕本包。
   Trigger words: /dby, what's next, where do I start, which dby skill.
-version: 1.7.2
-changelog: 飞轮与公众号路由表补上审稿回路指针（用户在审稿台裁决/评论后，由 dby-write 按审稿意见改一版）
+version: 1.7.3
+changelog: SKILL.md 说清 references/wechat-routing.json 只覆盖「写作→交付主链」与「云端公开数据」两条有歧义的路由，其余包的路由依据是模式 A 表格与 navigation.md（原文写成「路由以此为准」，与该文件的实际覆盖面不符）
 compatibility: >-
   纯路由与导航，不跑脚本、不发网络请求、不需要任何密钥。被它路由到的包各自有自己的前置条件
   （多数需要环境变量 DOUBAOYA_API_KEY；dby-rewrite 纯本地不需要）。
@@ -75,7 +75,11 @@ compatibility: >-
 ## 模式 B：任务后导航
 
 每次只选当前最该走的**一步**，依据是上一个 skill 的具体结论、用户新反馈和当前目标；用户已明确下一步时按他的目标走。
-路由优先级、终态门、禁止误路由以 `references/wechat-routing.json` 为准。
+`references/wechat-routing.json` **只覆盖两条有优先级冲突 / 终态歧义的路由**——写作→交付主链
+（`dby-write` → `dby-api`/`dby-banned-words`/`dby-theme` → `dby-publish`，终点写进用户自己的公众号后台）
+与云端公开数据路由（`dby-api`）——这两条的路由优先级、终态门、禁止误路由以它为准。
+`dby-charter`/`dby-deai`/`dby-feedback`/`dby-gateway`/`dby-rewrite`/`dby-update`/`dby` 自身这些
+不存在该判据要处理的优先级冲突或终态歧义，路由依据是本文上面模式 A 那张表和下面的 `references/navigation.md`。
 
 1. **认上下文**：识别上一个 skill 是什么，提取核心结论 / 关键信号。
 2. **查导航图**：读 `references/navigation.md`（来源 skill × 结论信号 → 下一步，含「我这个号今天该做什么选题」的正确三步），选当前最该走的一步。
