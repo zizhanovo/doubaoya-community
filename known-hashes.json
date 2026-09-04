@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T04:58:28.829717+00:00",
+  "generatedAt": "2026-09-04T04:58:43.722587+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -150,7 +150,8 @@
       "b478b3935700",
       "c3738aab09a9",
       "d4483ee94803",
-      "d9423fc38116"
+      "d9423fc38116",
+      "daab02fbd05e"
     ],
     "dby-deai": [
       "1e19b29c4f68",
@@ -2561,6 +2562,12 @@
         "version": "2.2.0",
         "date": "2026-09-02",
         "subject": "feat(dby-api,dby-rewrite,dby-write): 接主仓稿件面 API（建稿/审稿包/改动清单/评论）"
+      },
+      {
+        "hash": "bb0e6ad5cb98",
+        "version": "3.0.0",
+        "date": "2026-09-03",
+        "subject": "feat(dby-api)!: description 1021 → 957，删掉自伤的触发词「写作」"
       }
     ],
     "dby-banned-words": [

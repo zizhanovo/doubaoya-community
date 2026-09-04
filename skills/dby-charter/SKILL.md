@@ -2,8 +2,8 @@
 name: dby-charter
 description: >-
   号章程 · 创作 DNA（都爆鸭）——一份 IP 档案管两件事：①**定位问诊**帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），产出结构化「号章程」，之后选题、写作、复盘都按它走（三个入口：L0 三问 5 分钟、L1 十五问完整问诊、老号反推）；②**文风蒸馏**从你的范文里蒸出「创作 DNA」（人设 / 赛道 / 个人产品 / 文风），之后写这个号的文章全程读它，让 AI 写得更像你本人。问诊与蒸馏都在你自己的 agent 侧用你自己的模型跑，doubaoya 只做存储与读写接口，不调 LLM、免费不扣点。触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现、IP 档案、公众号人设、文风 DNA、文风蒸馏、重新蒸馏、写得像我、模仿我的文风、我的写作风格、更新人设、个人产品、带货话术、IP 头像。
-version: 1.2.3
-changelog: 新增触发层盲测用例 evals/triggers.jsonl（10 正 / 8 负）；包行为零变化
+version: 1.2.4
+changelog: 「优先 dby charter…，没装用 npx -y @doubaoya/cli 兜底」改为如实表述：@doubaoya/cli 尚未发布到 npm，npx 会 404，本机 dby 在才优先用它（照原文做会先撞一次 404）
 compatibility: >-
   需要 Node ≥18（读写章程的 scripts/charter.mjs 用全局 fetch，零依赖不装 npm 包）；
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
@@ -28,7 +28,7 @@ compatibility: >-
 章程的 GET / PUT 由 `scripts/charter.mjs` 代发；档案本身的 POST / PUT（建档、存范文、存 DNA）
 要手写 curl，那时才读 `dby-gateway/references/protocol.md`。
 
-**优先 `dby charter profiles|get|put`**（CLI ≥0.1：`npm i -g @doubaoya/cli`，没装用 `npx -y @doubaoya/cli` 兜底；非 TTY 输出 `{ok,data,error}` JSON）。没装 CLI 时用旧 `scripts/charter.mjs`（下方示例）。章程路由有两个**每次都会踩**的坑，CLI 与脚本里都做掉了：
+章程读写走 `scripts/charter.mjs`（下方示例）。`@doubaoya/cli`（`dby charter profiles|get|put`，非 TTY 输出 `{ok,data,error}` JSON）**尚未发布到 npm**，`npx -y @doubaoya/cli` 会 404；本机 `dby` 在才优先用它。章程路由有两个**每次都会踩**的坑，CLI 与脚本里都做掉了：
 GET 回来的 `products` 是只读投影、原样 PUT 必 400；PUT 是全量替换不是增量 patch。
 
 ```bash
