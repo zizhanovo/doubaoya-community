@@ -59,6 +59,11 @@ def _sandbox_ok(monkeypatch):
 # 2026-08-31 真实采样的 `claude -p --verbose --output-format stream-json` 事件流
 # （prompt「用 dby-banned-words 检查这段文案：…」，经 codex sandbox 真跑一次采得）。
 # D9 的提取器全部拿它钉住，不再反复真跑。
+#
+# ⚠️ 已脱敏，别按「采样就该原样保留」把这些补回来：原始采样的 init 事件是采样机的
+#    环境全量转储（家目录路径、socket、已装 skill 全表、各 MCP 授权态），hook 事件带
+#    绝对路径 —— 这是个公开仓库。提取器只认 init 的形状，所以 init 压成最小形状、
+#    hook 事件删除、沙箱工作目录换成 /tmp/stream-sample。工具调用与 result 原样未动。
 STREAM_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "claude_stream_dby_banned_words.jsonl"
 
 
