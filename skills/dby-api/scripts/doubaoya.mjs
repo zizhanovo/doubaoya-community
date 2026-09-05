@@ -155,7 +155,7 @@ export function matchApisBySlug(items, slug) {
   return (items ?? []).filter((item) => item.slug === slug);
 }
 
-async function request(method, path, body, { auth = "required" } = {}) {
+async function request(method, path, body, { auth = "required", unauthorizedHint = "" } = {}) {
   const key = getKey({ required: auth === "required" });
   const headers = {};
   if (key) headers.Authorization = `Bearer ${key}`;
@@ -184,6 +184,9 @@ async function request(method, path, body, { auth = "required" } = {}) {
     const code = env?.error?.code ?? `HTTP_${res.status}`;
     const msg = env?.error?.message ?? "未知错误";
     if (code === "MISSING_API_KEY" || code === "UNAUTHORIZED") {
+      // key 明明设了却 401：多半是这条路由在服务端还没升级到认 API key 的版本（灵感库读取 2026-09 才开放）。
+      // 调用方能给出比「重新生成密钥」更对症的一句时，用它——让用户去换 key 是最贵的误导。
+      if (unauthorizedHint && process.env.DOUBAOYA_API_KEY) fail(`${msg}。${unauthorizedHint}`, code);
       fail(
         `${msg}（DOUBAOYA_API_KEY ${keyPresence()}）。请在 doubaoya.com 密钥中心撤销并重新生成，再更新 DOUBAOYA_API_KEY。`,
         code
@@ -478,6 +481,54 @@ function draftJsonArg(args, positionalIndex) {
   return args.includes("--stdin") ? readStdin() : Promise.resolve(args[positionalIndex]);
 }
 
+/**
+ * 灵感库读取（inspiration-draft-lineage）：dby-write 第 4 步第 2 层。免费、同一把 key。
+ * 输出裁成写作用得上的几样（id / type / 一行摘要 / 记录时间 / 去向），媒体字段不吐。
+ *   node doubaoya.mjs inspirations [--since N] [--ids a,b] [--json]
+ */
+async function inspirationsCommand(args) {
+  const opt = (name) => {
+    const i = args.indexOf(name);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
+  const since = opt("--since");
+  const ids = opt("--ids");
+  if (since !== undefined && !/^\d+$/.test(since)) fail("用法: node doubaoya.mjs inspirations [--since <天数 1-365>] [--ids a,b] [--json]");
+  const q = new URLSearchParams();
+  if (since) q.set("since", since);
+  if (ids) q.set("ids", ids);
+  q.set("limit", "100");
+  const data = await request("GET", `/api/inspirations?${q.toString()}`, undefined, {
+    unauthorizedHint: "DOUBAOYA_API_KEY 已设置但这条路由仍拒绝——服务端可能还没升级到开放灵感库读取的版本，先跳过这一层照常写，别去换 key"
+  });
+  const items = (data.items ?? []).map((it) => ({
+    id: it.id,
+    type: it.type,
+    summary: String(it.content || it.title || it.url || "").replace(/\s+/g, " ").trim().slice(0, 120),
+    url: it.url ?? null,
+    createdAt: it.createdAt,
+    usedInDrafts: (it.usedInDrafts ?? []).map((u) => ({ draftId: u.draftId, title: u.title }))
+  }));
+  const out = { requested: data.requested ?? null, returned: data.returned ?? items.length, items };
+  if (args.includes("--json")) {
+    console.log(JSON.stringify(out, null, 2));
+    return;
+  }
+  if (out.requested !== null && out.returned < out.requested) {
+    console.error(`⚠️ 点名 ${out.requested} 条，只拿到 ${out.returned} 条：其余不是你的或已归档，如实告诉用户，别猜。`);
+  }
+  if (items.length === 0) {
+    console.log(since ? `# 近 ${since} 天没有记录` : "# 没有记录");
+    return;
+  }
+  console.log(`# 记录 ${items.length} 条（入素材单出处写「记录 · <id> · M/D」，建稿时这些 id 作 sourceItemIds）`);
+  for (const it of items) {
+    const d = new Date(it.createdAt);
+    const used = it.usedInDrafts.length ? `  → 已进《${it.usedInDrafts[0].title}》${it.usedInDrafts.length > 1 ? ` 等 ${it.usedInDrafts.length} 篇` : ""}` : "";
+    console.log(`${it.id}  ${d.getMonth() + 1}/${d.getDate()}  [${it.type.replace("feed_", "")}]  ${it.summary}${it.url ? `  ${it.url}` : ""}${used}`);
+  }
+}
+
 async function draftCommand(sub, args) {
   switch (sub) {
     case "create": {
@@ -588,6 +639,9 @@ const USAGE = [
   "  node doubaoya.mjs draft precheck '<json>' | --stdin       离线预检 changes[]（不联网、不需要 key），字段 bodyMd/changes",
   "  node doubaoya.mjs draft submit <id> '<json>' | --stdin    交新版，changes[] 会先本地预检再发；字段见调用方包的 api-contract.md",
   "  node doubaoya.mjs draft comment <id> '<json>' | --stdin   划词评论 / 回复，字段 body/author?/parentId? 或 version?+anchor?",
+  "",
+  "灵感库（inspiration-draft-lineage，免费）:",
+  "  node doubaoya.mjs inspirations [--since N] [--ids a,b] [--json]   读用户记下的东西；写作时入素材单，建稿带 sourceItemIds",
   "",
   "钥匙: export DOUBAOYA_API_KEY=dyh_...  (doubaoya.com → 密钥中心 → 生成密钥)"
 ].join("\n");
@@ -754,6 +808,9 @@ async function main() {
       await draftCommand(sub, args);
       break;
     }
+    case "inspirations":
+      await inspirationsCommand(rest);
+      break;
     case "selfcheck":
       selfcheck();
       break;

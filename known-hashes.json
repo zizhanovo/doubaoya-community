@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T05:00:15.668859+00:00",
+  "generatedAt": "2026-09-05T13:47:29.462951+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -89,6 +89,7 @@
       "dfcfb6b9154e",
       "e0ef82da64ee",
       "e562a7c121c6",
+      "e89c8dfec832",
       "eeb802ec9c70",
       "f3a12fbfb260",
       "fccf378e28ef"
@@ -96,6 +97,7 @@
     "dby-api": [
       "156c3151a72a",
       "1f85fe64a731",
+      "3fca623fc119",
       "50cdd6a062be",
       "53d2c3fb1e80",
       "596f05f4d505",
@@ -323,6 +325,7 @@
       "388503b769d1",
       "3cf369dcb74d",
       "563e4254655a",
+      "63ccc456a8dc",
       "69a7b400b468",
       "7091f1189cf1",
       "78f1efdf04ad",
@@ -3776,6 +3779,12 @@
         "version": "1.11.0",
         "date": "2026-09-02",
         "subject": "feat(dby-api,dby-rewrite,dby-write): 接主仓稿件面 API（建稿/审稿包/改动清单/评论）"
+      },
+      {
+        "hash": "ef4f177d9b41",
+        "version": "1.12.0",
+        "date": "2026-09-03",
+        "subject": "feat(dby-write): 补上调研落地的三处断口，新增执行层判据"
       }
     ],
     "doubao-websearch": [

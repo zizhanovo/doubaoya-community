@@ -26,17 +26,19 @@
 
 | 子命令 | 干什么 |
 |---|---|
-| `create '<json>'` | 建稿：`{title, bodyMd, author?, projectId?, summary?}` |
+| `create '<json>'` | 建稿：`{title, bodyMd, author?, projectId?, summary?, sourceItemIds?}` —— `sourceItemIds` = 素材单里出现过的记录 id（≤50，须是调用者自己的、未归档；含他人 / 已归档的整包 422「有记录不是你的或已归档」，稿件不落） |
 | `get <id>` | 稿件 + 版本清单（不含正文）+ 待处理评论数 |
 | `version <id> <v>` | 读某版：正文 + `changes[]` + `decisions[]` |
 | `review-packet <id>` | 模式 C 唯一要读的入口：最新版正文 + 待处理评论 + 新拒绝 + 星标 |
 | `precheck '<json>'` | 离线预检 `{bodyMd, changes}`，不联网不需要 key |
-| `submit <id> '<json>'` | 交新版：`{baseVersion, author?, summary?, addresses?, changes}` 或兜底 `{baseVersion, bodyMd}` |
+| `submit <id> '<json>'` | 交新版：`{baseVersion, author?, summary?, addresses?, changes, sourceItemIds?}` 或兜底 `{baseVersion, bodyMd, sourceItemIds?}`；`sourceItemIds` 语义同 create，随版本累加不删 |
 | `comment <id> '<json>'` | 新评论 `{body, author?, version?, anchor:{exact,prefix?,suffix?}}` 或回复 `{body, author?, parentId}` |
 
 `changes[]` 每条：`{anchor:{exact, prefix?, suffix?}, replacement, reason, tag?}`；`anchor.exact` 必须在
 `baseVersion` 正文里恰好命中一处（命中多处用 `prefix`/`suffix` 消歧），两条改动范围不能重叠，`reason` 必填。
 `submit` 收到 `changes[]` 时会先本地预检（拉 `baseVersion` 正文、逐条判定位/重叠/理由），干净才真的发写请求。
+
+读取灵感库走 `doubaoya.mjs inspirations [--since N] [--ids a,b]`（免费、同一把 key），返回 `items[]{id,type,summary,createdAt,usedInDrafts[]}` 与 `requested/returned`；`get <id>` 的返回多带 `sourceItems[]`（这篇用过的记录，含 `archived`）。
 
 错误处置：409 `VERSION_CONFLICT`（`extra.headVersion` 是当前最新版，重拉 `get`/`version` 再交，别盲目重试原请求）；
 422 `CHANGES_INVALID`（`extra.errors` 是 `[{index, code, message}]`，按 `index` 定位第几条改动、按 `code` 判问题类型：

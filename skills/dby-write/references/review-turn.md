@@ -56,12 +56,12 @@ node "$D" draft review-packet <稿件id>
 ### 3. 提交新版
 
 ```bash
-node "$D" draft submit <稿件id> '{"baseVersion":<head.version>,"author":"dby-write","addresses":["<已回应的评论id>",...],"changes":[...]}'
+node "$D" draft submit <稿件id> '{"baseVersion":<head.version>,"author":"dby-write","addresses":["<已回应的评论id>",...],"changes":[...]},"sourceItemIds":["<这一版新用到的记录id>",...]}'
 ```
 
 `baseVersion` 用第 1 步 `head.version`（审稿包读的就是当前最新版，两次调用之间没有人抢先提交的话
 基准版本就是它；`submit` 若报 409 `VERSION_CONFLICT` 说明确实有人抢先了，按 `api-contract.md` 的处置
-重拉 `review-packet` 再来一轮）。`changes[]` 为空但 `addresses` 非空（全部意见都是"不能改"的回复处理）
+重拉 `review-packet` 再来一轮）。这一版若从灵感库新取了素材，`sourceItemIds` 只带新用到的即可——血缘随版本累加，之前声明过的不必重复。`changes[]` 为空但 `addresses` 非空（全部意见都是"不能改"的回复处理）
 时不提交新版，只发评论回复——正文没变，提交空 `changes[]` 只会撞 422 `NO_DIFF`。
 
 ### 4. 回报

@@ -315,7 +315,9 @@ def test_素材库层在素材表且提议句在主体() -> None:
     assert "确认才写" in s and "一次即止" in s and "连拒两次" in s, (
         "提议存卡的约束句不在主体 —— 约束要在 agent 不觉得自己需要指导时生效，住 references 等于不存在"
     )
-    assert "七层" in s, "A 组停下判据没跟着素材表从六层改成七层 —— 层数漂了"
+    # inspiration-draft-lineage：灵感库插为第 2 层，六层→七层→八层，停下判据必须跟着层数走
+    assert "八层" in s, "A 组停下判据没跟着素材表从七层改成八层 —— 层数漂了"
+    assert "灵感库" in s, "第 4 步素材表没有灵感库层 —— 记录只进不出（存了没人读）"
 
 
 def test_素材卡文档示例字段与服务端契约一致() -> None:
