@@ -54,6 +54,10 @@ const CLIENT_TIMEOUT_MS = 450_000;
 
 function getKey({ required = true } = {}) {
   const key = process.env.DOUBAOYA_API_KEY;
+  // 占位符被原样粘进来（「你的key」「<key>」）时 fetch 会抛一句看不懂的 ByteString 错；这里先用人话拦下。
+  if (key && /[^\x21-\x7e]/.test(key)) {
+    fail("DOUBAOYA_API_KEY 里有非 ASCII 或空白字符——像是把占位符原样粘进来了。真密钥形如 dyh_...，在 doubaoya.com → 密钥中心复制。");
+  }
   if (!key && required) {
     fail(
       "缺少 DOUBAOYA_API_KEY。去 https://doubaoya.com → 登录 → 密钥中心 → 生成密钥，" +

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T13:47:29.462951+00:00",
+  "generatedAt": "2026-09-05T15:16:43.879172+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -118,6 +118,7 @@
       "bb0e6ad5cb98",
       "bcf26b4eca1f",
       "ce8326e3dbd2",
+      "d6ce3852f9e1",
       "d7e863f5577a",
       "e603a50797a0",
       "ed6a2f86bffc"
@@ -2429,6 +2430,12 @@
         "version": "1.7.3",
         "date": "2026-09-03",
         "subject": "fix(dby): 路由表的承诺收窄到它真正覆盖的两条路由"
+      },
+      {
+        "hash": "e89c8dfec832",
+        "version": "1.7.4",
+        "date": "2026-09-05",
+        "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
       }
     ],
     "dby-api": [
@@ -2581,6 +2588,12 @@
         "version": "3.0.0",
         "date": "2026-09-03",
         "subject": "feat(dby-api)!: description 1021 → 957，删掉自伤的触发词「写作」"
+      },
+      {
+        "hash": "3fca623fc119",
+        "version": "3.1.0",
+        "date": "2026-09-05",
+        "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
       }
     ],
     "dby-banned-words": [
@@ -3785,6 +3798,12 @@
         "version": "1.12.0",
         "date": "2026-09-03",
         "subject": "feat(dby-write): 补上调研落地的三处断口，新增执行层判据"
+      },
+      {
+        "hash": "63ccc456a8dc",
+        "version": "1.13.0",
+        "date": "2026-09-05",
+        "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
       }
     ],
     "doubao-websearch": [
