@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-05T15:16:43.879172+00:00",
+  "generatedAt": "2026-09-06T06:26:05.541603+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.4.0",
+  "productVersion": "1.5.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -531,9 +531,9 @@
       "versions": [
         {
           "version": "1.7.4",
-          "hash": "e89c8dfec832",
+          "hash": "43bd30a6c002",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-05T13:47:27.676012+00:00",
+          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
           "changelog": "任务前路由表加一行：「用我记的东西写 / 把我灵感库里的整理成选题」→ dby-write（第 4 步第 2 层读灵感库，成稿带记录血缘，不因记了东西自动起稿）",
           "changelogSource": "user"
         },
@@ -803,6 +803,7 @@
         "596f05f4d505",
         "5b22bb800679",
         "5f6a8c8b5a66",
+        "67323ef8ec64",
         "6c0cb11d4b3b",
         "7515a4eb8849",
         "842bc271ca8d",
@@ -826,9 +827,9 @@
       "versions": [
         {
           "version": "3.1.0",
-          "hash": "d6ce3852f9e1",
+          "hash": "2e02904d7d96",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-05T15:16:41.744084+00:00",
+          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
           "changelog": "doubaoya.mjs 新增 inspirations [--since N] [--ids a,b] [--json] 子命令（读用户灵感库，免费，供 dby-write 第 4 步取材）；request 401 时若 key 已设可给出「服务端尚未升级」提示而非误导用户换 key；USAGE 补灵感库一节",
           "changelogSource": "user"
         },
@@ -1037,6 +1038,12 @@
           "version": "3.1.0",
           "date": "2026-09-05",
           "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
+        },
+        {
+          "hash": "d6ce3852f9e1",
+          "version": "3.1.0",
+          "date": "2026-09-05",
+          "subject": "fix(dby-api): DOUBAOYA_API_KEY 含非 ASCII 时说人话，别抛 ByteString"
         }
       ]
     },
@@ -1067,9 +1074,9 @@
       "versions": [
         {
           "version": "1.4.5",
-          "hash": "1cce17094948",
+          "hash": "28ec4031a23e",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T12:45:42.044708+00:00",
+          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
           "changelog": "删掉语境豁免用例里一条冗余且不稳的断言（兄弟用例已覆盖同一件事）；包行为零变化",
           "changelogSource": "user"
         },
@@ -1217,9 +1224,9 @@
       "versions": [
         {
           "version": "1.2.4",
-          "hash": "daab02fbd05e",
+          "hash": "976a765c9520",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-04T03:46:11.065440+00:00",
+          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
           "changelog": "「优先 dby charter…，没装用 npx -y @doubaoya/cli 兜底」改为如实表述：@doubaoya/cli 尚未发布到 npm，npx 会 404，本机 dby 在才优先用它（照原文做会先撞一次 404）",
           "changelogSource": "user"
         },
@@ -1916,9 +1923,9 @@
       "versions": [
         {
           "version": "4.1.0",
-          "hash": "e48ecdf5cfa5",
+          "hash": "3b0d4d986952",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-03T02:34:43.740392+00:00",
+          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
           "changelog": "pipeline.mjs 新增 --draft/--draft-version，正文来自稿件面时透传稿件 id，服务端存草稿箱成功后自动关联到发布记录",
           "changelogSource": "user"
         },
@@ -2916,9 +2923,9 @@
       "versions": [
         {
           "version": "1.13.0",
-          "hash": "63ccc456a8dc",
+          "hash": "7786fe202c29",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-05T13:47:27.676012+00:00",
+          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
           "changelog": "取材表插第 2 层「用户记下的（灵感库）」，原 2–7 顺延；记录 id 随建稿 / 提交新版作 sourceItemIds（血缘）；两条红线（空则如实、记了不自动起稿）；触发词与评测同步",
           "changelogSource": "user"
         },

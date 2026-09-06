@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T15:16:43.879172+00:00",
+  "generatedAt": "2026-09-06T06:26:05.541603+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -103,6 +103,7 @@
       "596f05f4d505",
       "5b22bb800679",
       "5f6a8c8b5a66",
+      "67323ef8ec64",
       "6c0cb11d4b3b",
       "7515a4eb8849",
       "842bc271ca8d",
@@ -2594,6 +2595,12 @@
         "version": "3.1.0",
         "date": "2026-09-05",
         "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
+      },
+      {
+        "hash": "d6ce3852f9e1",
+        "version": "3.1.0",
+        "date": "2026-09-05",
+        "subject": "fix(dby-api): DOUBAOYA_API_KEY 含非 ASCII 时说人话，别抛 ByteString"
       }
     ],
     "dby-banned-words": [
