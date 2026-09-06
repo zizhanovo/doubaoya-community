@@ -1425,6 +1425,242 @@ def validate_runtime_declaration(root: Path = ROOT) -> None:
             )
 
 
+# ── CLI 唯一请求层闸 ──────────────────────────────────────────────────────────
+# 🔴 **仓内对 doubaoya.com 的直接 HTTP 调用只许有一份。** `dby.mjs`（`skills/dby-api/scripts/`）
+# 是唯一的请求层：`.mjs` 脚本进程内 `import` 它的 `lib/http.mjs`，其余（`.py`）只能 spawn `dby`
+# 子进程。任何包在自己的脚本里重新拼一份 `fetch`/`urllib.request` 打 doubaoya.com，都是同一份
+# 鉴权/超时/错误处理逻辑长了第二个副本——两份会各自漂移（本仓吃过这个亏：三处密钥截断日志
+# 各自长了一遍，见 KEY_LITERAL/SECRET_TRUNCATION 那道闸）。
+#
+# 判据：同一文件里出现调用点（`fetch(` / `urllib.request` / `http.request(` / `https.request(` /
+# `curl `）**且**同文件出现打向都爆鸭的目标特征（`doubaoya.com` 字面量 / `/api/` 路径字面量 /
+# 引用 `DOUBAOYA_BASE_URL`）——两者都命中才判定为"重新拼了一份请求层"，只有调用点没有目标
+# 特征（比如 dby-feedback 打自己的独立反馈端点、fetch-article.mjs 抓公众号公开页）不算。
+#
+# 白名单**不是"这个文件不用查"**，是"这个文件命中了判据，但有正当理由"——所以白名单每条都
+# 要求文件仍然存在、且文件里确实有调用点（判据的前一半），防止清单跟着代码搬家却没人删，
+# 长成一本没人读的免检许可证。
+#
+# ponytail: 天花板 = 只扫 skills/*/scripts/**，不扫 skills/*/references/*.md 里的示例代码
+# （文档里的 fetch 示例不产生真实的第二请求层，纯属举例）。升级路径是接 AST/import 图分析，
+# 而不是继续靠正则堆判据。
+CLI_SCRIPT_SUFFIXES = {".mjs", ".js", ".cjs", ".py", ".sh"}
+HTTP_CALL_SITE = re.compile(r"\bfetch\s*\(|\burllib\.request\b|\bhttp\.request\s*\(|\bhttps\.request\s*\(|\bcurl\s")
+DOUBAOYA_HTTP_TARGET = re.compile(r"doubaoya\.com|/api/|DOUBAOYA_BASE_URL")
+
+# 每条 {path, reason}：path 相对 skills/，reason 写清楚"为什么这份直接调用允许存在"。
+SINGLE_REQUEST_LAYER_WHITELIST: tuple[dict[str, str], ...] = (
+    {
+        "path": "dby-api/scripts/lib/http.mjs",
+        "reason": "这就是那一份请求层本身——其余脚本改走 import 它，不是再抄一份。",
+    },
+    {
+        "path": "dby-update/scripts/reconcile.mjs",
+        "reason": "GitHub/Gitee 拉取技能包内容 + 一处 /api/health 健康探测，不是业务请求层。",
+    },
+    {
+        "path": "dby-feedback/scripts/submit_feedback.py",
+        "reason": "打的是独立反馈端点，不是 doubaoya API（端点地址来自本地配置，不硬编码 doubaoya.com）。",
+    },
+    {
+        "path": "dby-publish/scripts/fetch-article.mjs",
+        "reason": "抓的是用户自己公众号文章的公开页，不是 doubaoya API。",
+    },
+)
+
+
+def validate_single_request_layer(root: Path = ROOT) -> None:
+    """🔴 仓内对 doubaoya.com 的直接 HTTP 调用只许有一份。判据、白名单与理由见上面那段注释。"""
+    whitelist = {entry["path"]: entry["reason"] for entry in SINGLE_REQUEST_LAYER_WHITELIST}
+    for skill_dir in discover_skill_dirs(root):
+        scripts_dir = skill_dir / "scripts"
+        if not scripts_dir.is_dir():
+            continue
+        for path in sorted(scripts_dir.rglob("*")):
+            if not path.is_file() or path.suffix not in CLI_SCRIPT_SUFFIXES:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            call_lineno = None
+            for lineno, line in enumerate(text.split("\n"), start=1):
+                if HTTP_CALL_SITE.search(line):
+                    call_lineno = lineno
+                    break
+            if call_lineno is None or not DOUBAOYA_HTTP_TARGET.search(text):
+                continue  # 没有调用点，或有调用点但不是打向 doubaoya——不是本闸要管的第二份请求层
+            relative = path.relative_to(root / "skills").as_posix()
+            require(
+                relative in whitelist,
+                f"{display_path(path)}:{call_lineno} 出现对 doubaoya.com 的直接 HTTP 调用，"
+                "且不在唯一请求层白名单里。仓内只许 dby-api/scripts/lib/http.mjs 一份请求层："
+                "`.mjs` 脚本改成进程内 import 它，其余脚本改走 spawn `dby`。",
+            )
+    # 元断言：白名单每条都必须命中一个仍存在、且确实有调用点的文件——防清单跟着代码搬家却没人删。
+    for rel_path, reason in whitelist.items():
+        file_path = root / "skills" / rel_path
+        require(
+            file_path.is_file(),
+            f"唯一请求层白名单里的 {rel_path} 已经不存在（登记理由：{reason}）——"
+            "清单腐烂了，把这条删掉或改指新路径。",
+        )
+        require(
+            HTTP_CALL_SITE.search(file_path.read_text(encoding="utf-8")) is not None,
+            f"唯一请求层白名单里的 {rel_path} 现在已经没有直接 HTTP 调用点了——"
+            "白名单必须命中真实存在的调用，不是留着不删的空转许可证。",
+        )
+
+
+# ── CLI 命令名在场闸 ──────────────────────────────────────────────────────────
+# 🔴 **SKILL.md 用到 CLI 就必须把子命令名写出来，不能只说"看 --help"。** `dby routes --json`
+# 是子命令是否存在的唯一真相（`{ok:true,data:{commands:[{name:"draft get",…}]}}`），本闸真跑一次
+# 这条命令去核对——不许把它当"已知列表"抄一份进本文件，抄的那份会跟 CLI 实际改动脱钩。
+#
+# 判据只在**代码语境**里找引用（fenced 代码块整行、行内代码片段），不扫纯 prose：
+# 早期草稿扫全文时，`dby/SKILL.md` 里 trigger words 的 "which dby skill" 会被误判成
+# 引用了一个不存在的子命令 `skill`——那是英文提示词列表，不是命令示例。只信代码语境，
+# 从源头把这类误报关在外面。
+#
+# 认的四种写法：裸词 `dby <组> <命令>`、`"$D" <组> <命令>`（前面加不加 `node ` 都算）、
+# `dby.mjs <组> <命令>`（前面加不加 `node .../` 都算）。命令名允许是两段式（组+命令，
+# 如 `draft get`）或单段式（如 `doctor`）——两段都对不上已知命令名时，退回去只认第一段，
+# 单段命令（`doctor`/`routes`/`whoami`/`retro`/`upload`）就是这么认出来的。
+#
+# ponytail: 天花板 = 只认这四种字面写法，`doubaoya.mjs`（转发壳的旧文件名）不在此列——
+# 那是过渡期的旧引用，等下一个 major 删壳时它自然跟着消失，不需要本闸现在就管。
+LOCATE_DBY_IMPORT = re.compile(r"locate-dby\.mjs")
+CLI_REF_PREFIX = re.compile(r'(?<![\w.-])dby(?!\.mjs)\b|"\$D"|dby\.mjs')
+CLI_REF_TOKENS = re.compile(r"\s+([a-z][a-z0-9-]*)(?:\s+([a-z][a-z0-9-]*))?")
+FENCE_LINE = re.compile(r"^\s*(```|~~~)")
+INLINE_CODE = re.compile(r"`([^`\n]+)`")
+
+
+def _dby_command_names(root: Path = ROOT) -> set[str]:
+    """跑一次 `node dby.mjs routes --json`，取子命令名集合——这是子命令是否存在的唯一真相。
+    找不到 Node、脚本跑不通、输出解析不出来，都必须让闸失败并说明，不许静默跳过（那等于
+    本闸从没真的跑过，跟仓库真解决了 76 号那次"闸在跑却判错东西"是同一种坏法）。
+    """
+    entry = root / "skills" / "dby-api" / "scripts" / "dby.mjs"
+    require(entry.is_file(), f"{display_path(entry)} 不存在，命令名在场闸没有唯一真相可对，无法跑。")
+    try:
+        proc = subprocess.run(
+            ["node", str(entry), "routes", "--json"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise ValidationError(
+            f"跑不起 `node {display_path(entry)} routes --json`（{exc}）——本机没有 Node 或不在 "
+            "PATH 里。命令名在场闸依赖它拿子命令真相，不能静默跳过、更不能假装通过。"
+        ) from exc
+    require(
+        proc.returncode == 0,
+        f"`node {display_path(entry)} routes --json` 退出码 {proc.returncode}，"
+        f"stderr: {proc.stderr.strip()!r}",
+    )
+    try:
+        payload = json.loads(proc.stdout)
+        names = {command["name"] for command in payload["data"]["commands"]}
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise ValidationError(
+            f"`node {display_path(entry)} routes --json` 的输出解析不出命令名集合（{exc}）：{proc.stdout!r}"
+        ) from exc
+    require(
+        len(names) >= 30,
+        f"`routes --json` 只解析出 {len(names)} 条命令——本闸拿它当唯一真相，"
+        "数量反常小多半是输出格式变了或解析在空跑，不是命令真的只剩这么几条。",
+    )
+    return names
+
+
+def _cli_references(text: str) -> list[tuple[int, str, str | None]]:
+    """在代码语境（fenced 代码块整行 / 行内代码片段）里找 CLI 引用，返回 `(行号, tok1, tok2)`。
+    只在代码语境找是有意的：纯 prose 里的英文提示词（"which dby skill"）会被误判成命令引用。
+    """
+    results: list[tuple[int, str, str | None]] = []
+    fenced = False
+    for index, line in enumerate(text.split("\n")):
+        lineno = index + 1
+        if FENCE_LINE.match(line):
+            fenced = not fenced
+            continue
+        segments = [line] if fenced else INLINE_CODE.findall(line)
+        for segment in segments:
+            for match in CLI_REF_PREFIX.finditer(segment):
+                token_match = CLI_REF_TOKENS.match(segment, match.end())
+                if not token_match:
+                    continue
+                results.append((lineno, token_match.group(1), token_match.group(2)))
+    return results
+
+
+def _cli_doc_files(root: Path) -> list[Path]:
+    """每个包的 SKILL.md + references/*.md——命令名引用允许出现在这两处。"""
+    out: list[Path] = []
+    for skill_dir in discover_skill_dirs(root):
+        skill_md = skill_dir / "SKILL.md"
+        if skill_md.is_file():
+            out.append(skill_md)
+        references = skill_dir / "references"
+        if references.is_dir():
+            out.extend(sorted(references.glob("*.md")))
+    return out
+
+
+def validate_cli_commands_present(root: Path = ROOT) -> None:
+    """🔴 SKILL.md 引用的子命令必须真实存在；用到 CLI 的包至少写出一条命令名。判据见上面注释。"""
+    valid_names = _dby_command_names(root)
+    hits_in_dby_api_skill = 0
+    has_valid_hit: dict[str, bool] = {}
+    for doc_path in _cli_doc_files(root):
+        skill_name = doc_path.relative_to(root / "skills").parts[0]
+        text = doc_path.read_text(encoding="utf-8")
+        for lineno, tok1, tok2 in _cli_references(text):
+            combined = f"{tok1} {tok2}" if tok2 else None
+            if combined and combined in valid_names:
+                candidate, ok = combined, True
+            elif tok1 in valid_names:
+                candidate, ok = tok1, True
+            else:
+                candidate, ok = (combined or tok1), False
+            if skill_name == "dby-api" and doc_path.name == "SKILL.md":
+                hits_in_dby_api_skill += 1
+            has_valid_hit[skill_name] = has_valid_hit.get(skill_name, False) or ok
+            require(
+                ok,
+                f"{display_path(doc_path)}:{lineno} 引用了不存在的子命令 `{candidate}`——"
+                "对照 `node skills/dby-api/scripts/dby.mjs routes --json` 的命令名集合核对，"
+                "改成真实存在的子命令（或按 --help 补全成两段式组+命令）。",
+            )
+    # 元断言：正则必须在 dby-api/SKILL.md 上至少命中一条，防止正则失配导致整道闸空跑。
+    require(
+        hits_in_dby_api_skill >= 1,
+        "命令名在场闸的正则在 dby-api/SKILL.md 上一条引用都没抓到——多半是正则失配，闸在空跑。",
+    )
+    # 「只写看 --help」闸：脚本 import 了 lib/locate.mjs、或 SKILL.md 本身引用了 dby.mjs 的包，
+    # 其 SKILL.md 至少要写出一条真实存在的子命令名——参数细节可以交给 --help，命令名本身不行。
+    for skill_dir in discover_skill_dirs(root):
+        scripts_dir = skill_dir / "scripts"
+        imports_locate = False
+        if scripts_dir.is_dir():
+            for script in scripts_dir.rglob("*.mjs"):
+                if LOCATE_DBY_IMPORT.search(script.read_text(encoding="utf-8")):
+                    imports_locate = True
+                    break
+        skill_md = skill_dir / "SKILL.md"
+        references_dby_mjs = "dby.mjs" in skill_md.read_text(encoding="utf-8") if skill_md.is_file() else False
+        if not imports_locate and not references_dby_mjs:
+            continue
+        reason = "脚本 import 了 lib/locate.mjs" if imports_locate else "正文引用了 dby.mjs"
+        require(
+            has_valid_hit.get(skill_dir.name, False),
+            f"{display_path(skill_md)} 用到了 CLI（{reason}），却一条真实存在的子命令名都没写出来——"
+            "「参数细节看 --help」不能替代「命令名本身要写出来」。",
+        )
+
+
 def frontmatter_compatibility(path: Path) -> str:
     """取 frontmatter 的 compatibility 原文；没有该字段时返回空串（交给调用方判红）。"""
     text = path.read_text(encoding="utf-8")
@@ -2174,6 +2410,8 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_untrusted_upstream_rule(root)
     validate_runtime_declaration(root)
     validate_entry_guards_resolve_symlinks(root)
+    validate_single_request_layer(root)
+    validate_cli_commands_present(root)
     validate_no_price_literals(root)
     validate_no_agent_fanout(root)
     validate_user_agent_from_version(root)

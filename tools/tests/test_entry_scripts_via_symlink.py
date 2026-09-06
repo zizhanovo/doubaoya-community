@@ -23,13 +23,15 @@ ROOT = Path(__file__).resolve().parents[2]
 SKILLS = ROOT / "skills"
 
 # 每个入口脚本用哪个**只读**旗标去探。不是所有脚本都有 --help，逐个注明：
-#   · doubaoya.mjs           —— 无参即打印 USAGE 并 exit 0（`--help` 会被当成未知命令）
+#   · doubaoya.mjs / dby.mjs —— 裸调用（无参）即打印非空 USAGE 并 exit 2（resolveCommand
+#                                 「缺少命令」→ DbyError USAGE）；`--help` 会被当成未知命令。
 #   · preprocess-and-publish —— 没有 --help；无参时 die("缺少 --html …") 走 stderr + exit 1，
 #                                 这本身就是好判据：修之前经软链跑是 rc=0 且 stderr 空。
 #   · 其余                    —— 支持 --help，打印用法后 exit 0
 ENTRY_FLAGS: dict[str, list[str]] = {
     "dby-update/scripts/reconcile.mjs": ["--help"],
     "dby-api/scripts/doubaoya.mjs": [],
+    "dby-api/scripts/dby.mjs": [],
     "dby-publish/scripts/account-verify.mjs": ["--help"],
     "dby-publish/scripts/extract-theme.mjs": ["--help"],
     "dby-publish/scripts/fetch-article.mjs": ["--help"],
