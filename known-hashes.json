@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T06:26:10.059654+00:00",
+  "generatedAt": "2026-09-06T06:27:13.486969+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -229,6 +229,7 @@
       "14ab4254e81a",
       "31299f27be57",
       "351676ef5646",
+      "3b0d4d986952",
       "487cb9172be9",
       "4d2cafc48bca",
       "5351f7c56f8f",
@@ -2443,6 +2444,12 @@
         "subject": "fix(dby): 路由表的承诺收窄到它真正覆盖的两条路由"
       },
       {
+        "hash": "43bd30a6c002",
+        "version": "1.7.4",
+        "date": "2026-09-05",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
         "hash": "e89c8dfec832",
         "version": "1.7.4",
         "date": "2026-09-05",
@@ -2601,6 +2608,12 @@
         "subject": "feat(dby-api)!: description 1021 → 957，删掉自伤的触发词「写作」"
       },
       {
+        "hash": "2e02904d7d96",
+        "version": "3.1.0",
+        "date": "2026-09-05",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
         "hash": "3fca623fc119",
         "version": "3.1.0",
         "date": "2026-09-05",
@@ -2697,6 +2710,12 @@
         "version": "1.4.4",
         "date": "2026-08-31",
         "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+      },
+      {
+        "hash": "28ec4031a23e",
+        "version": "1.4.5",
+        "date": "2026-09-05",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       },
       {
         "hash": "45c2d9fb4356",
@@ -2813,6 +2832,12 @@
         "version": "1.2.4",
         "date": "2026-09-05",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
+      },
+      {
+        "hash": "976a765c9520",
+        "version": "1.2.4",
+        "date": "2026-09-05",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       }
     ],
     "dby-deai": [
@@ -3333,6 +3358,12 @@
         "version": "4.1.0",
         "date": "2026-09-05",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
+      },
+      {
+        "hash": "db6580c0f7f9",
+        "version": "4.1.0",
+        "date": "2026-09-05",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       }
     ],
     "dby-rewrite": [
@@ -3845,6 +3876,12 @@
         "version": "1.13.0",
         "date": "2026-09-05",
         "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
+      },
+      {
+        "hash": "7786fe202c29",
+        "version": "1.13.0",
+        "date": "2026-09-05",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       },
       {
         "hash": "c2fc81af9a24",

@@ -120,7 +120,8 @@ PolyForm Noncommercial 1.0.0（随仓库整体）— 见根目录 LICENSE；本�
 - **合并原「公众号草稿发布」包（已下架）**：`unify-dby-naming` 改名车把本包的老目录名
   改成 `dby-publish` 的同时吸收了它——原包的 Python 入口 `publish_draft.py` 与「存公众号草稿 /
   公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add」触发词并入本包，见
-  `SKILL.md` 的「只想存草稿、不要排版」一节。
+  `SKILL.md` 的「只想存草稿、不要排版」一节。（该 Python 入口已随 `dby-cli-unification` 退役，
+  这条路现在是 `dby wechat publish`，Python 文件不再存在。）
 - **调用知识改成网关委托形态**：本 Skill 用到的三条能力现在 operationKey 与详情端点一起点名，
   调用协议逐字内联（照 `dby-gateway` §2 的模板；硬规则 6 要求内联而不是写一句「详见网关」），
   **入参规格一律调用前从详情端点现拉**——原来烤在正文里的返回字段表与计价数字已整段删掉
