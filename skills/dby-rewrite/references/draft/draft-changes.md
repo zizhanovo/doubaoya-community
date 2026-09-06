@@ -42,8 +42,11 @@
   且只问这一次）。
 - 用户确认 → 才调 `dby-api` 的脚本，**写入前必须有这次确认**，不能因为"反正用户大概率想存"就替他决定。
 
+`$SKILL_DIR` 是本包目录（宿主加载本 SKILL.md 时给出的目录）；`dby-api` 与本包同级，
+不假设 skills 根的绝对位置：
+
 ```bash
-D=~/.claude/skills/dby-api/scripts/doubaoya.mjs
+D="$(dirname "$SKILL_DIR")/dby-api/scripts/dby.mjs"
 
 # 没有稿件 id：先建稿（bodyMd 用原文，author 标明来源）
 node "$D" draft create '{"title":"<标题>","bodyMd":"<原文>","author":"dby-rewrite"}'

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T08:15:48.526737+00:00",
+  "generatedAt": "2026-09-06T08:15:50.616759+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -121,6 +121,7 @@
       "b04393f2476c",
       "bb0e6ad5cb98",
       "bcf26b4eca1f",
+      "c9e472325e63",
       "ce8326e3dbd2",
       "d6ce3852f9e1",
       "d7e863f5577a",
@@ -139,6 +140,7 @@
       "8aad0978346f",
       "9875773c9a77",
       "b3b6c7500194",
+      "cb71ee176054",
       "d1634c678daa",
       "e05d7674b9aa",
       "edadb15db5ad",
@@ -165,7 +167,8 @@
       "c3738aab09a9",
       "d4483ee94803",
       "d9423fc38116",
-      "daab02fbd05e"
+      "daab02fbd05e",
+      "f9a880fe14ca"
     ],
     "dby-deai": [
       "1e19b29c4f68",
@@ -174,7 +177,8 @@
       "48c04d2ad062",
       "7f432da65f47",
       "bcbbab0055cd",
-      "dc1aa44b50b6"
+      "dc1aa44b50b6",
+      "fc0aa01cc498"
     ],
     "dby-feedback": [
       "7b5a56fdd05a"
@@ -223,6 +227,7 @@
     ],
     "dby-publish": [
       "00fc7c578914",
+      "01cede2f7a8d",
       "032593ba063c",
       "082d8a4b68b1",
       "11426702a7e8",
@@ -266,6 +271,7 @@
       "fdf279bc684e"
     ],
     "dby-rewrite": [
+      "049562a1d1aa",
       "0ec795bc6772",
       "27129afe12be",
       "61ba5adaec10",
@@ -350,6 +356,7 @@
       "8d7070871b20",
       "acc07fe1a5e9",
       "b40023ac688b",
+      "b76d9a964f23",
       "c2fc81af9a24",
       "cadb7e558fce",
       "cfa6a357b46d",
@@ -2635,6 +2642,12 @@
         "version": "3.1.0",
         "date": "2026-09-05",
         "subject": "fix(dby-api): DOUBAOYA_API_KEY 含非 ASCII 时说人话，别抛 ByteString"
+      },
+      {
+        "hash": "ad67b00ff2ee",
+        "version": "3.1.0",
+        "date": "2026-09-06",
+        "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
       }
     ],
     "dby-banned-words": [
@@ -2727,6 +2740,12 @@
         "version": "1.4.5",
         "date": "2026-09-05",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
+      },
+      {
+        "hash": "8aad0978346f",
+        "version": "1.4.5",
+        "date": "2026-09-06",
+        "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
       }
     ],
     "dby-charter": [
@@ -2843,6 +2862,12 @@
         "version": "1.2.4",
         "date": "2026-09-05",
         "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
+        "hash": "50583c0c0518",
+        "version": "1.2.4",
+        "date": "2026-09-06",
+        "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
       }
     ],
     "dby-deai": [
@@ -3375,6 +3400,12 @@
         "version": "4.1.0",
         "date": "2026-09-05",
         "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
+        "hash": "ee8e7d7602f1",
+        "version": "4.1.0",
+        "date": "2026-09-06",
+        "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
       }
     ],
     "dby-rewrite": [
@@ -3899,6 +3930,12 @@
         "version": "1.13.0",
         "date": "2026-09-05",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
+      },
+      {
+        "hash": "1862f8679714",
+        "version": "1.13.0",
+        "date": "2026-09-06",
+        "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
       }
     ],
     "doubao-websearch": [

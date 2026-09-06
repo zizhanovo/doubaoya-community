@@ -1,7 +1,7 @@
 # API 契约（章程 + 档案）
 
 > 要手写请求、查某条路由的方法/路径/返回，或排 `CHARTER_INVALID` 一类错时读它。
-> 正常走 `scripts/charter.mjs` 的话不必读。
+> 正常走 CLI（`charter get`/`charter put`）的话不必读。
 
 🔑 **章程和档案是同一个资源**：章程只是 IP 档案上的一个字段。所以契约只有这一张表，
 两半都在这儿——上半是章程，下半是档案本身（人设 / 产品 / 文风 DNA / 头像）。
@@ -38,7 +38,7 @@
 三条注意，一条都别漏：
 
 - **`products` 是只读投影**：GET 回来的 charter 附带一个合成的 `products`（来自档案 `productsJson`），
-  原样 PUT 回去必 400。`scripts/charter.mjs` 已经替你剥了；**只有手写请求时才需要自己剥**。
+  原样 PUT 回去必 400。CLI 的 `charter get --for-edit`/`charter put` 已经替你剥了；**只有手写请求时才需要自己剥**。
   改产品走档案那半边（[`references/writing-dna.md`](references/writing-dna.md) 的「六、个人产品」），不走 charter 路由。
 - **PUT 是全量替换**：只改一个字段，也要先拿全量、改完把**整份**传回去。少传的键判「缺失」而 400。
 - **无默认档案时 `GET /api/ip-profile/charter` 返回 404**。先建档
@@ -69,6 +69,6 @@
 
 ### 手写请求（一般不用）
 
-正常走 `scripts/charter.mjs`（见上面「怎么读写章程」）。
+正常走 CLI（见 SKILL.md「怎么读写章程」）。
 只有在没有 Node、或要把这条路嵌进别的程序时才手写——那时**自己记得剥 `products`**、
 并且 PUT **整份**而不是增量。

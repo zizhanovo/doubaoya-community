@@ -2,10 +2,10 @@
 name: dby-charter
 description: >-
   号章程 · 创作 DNA（都爆鸭）——一份 IP 档案管两件事：①**定位问诊**帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），产出结构化「号章程」，之后选题、写作、复盘都按它走（三个入口：L0 三问 5 分钟、L1 十五问完整问诊、老号反推）；②**文风蒸馏**从你的范文里蒸出「创作 DNA」（人设 / 赛道 / 个人产品 / 文风），之后写这个号的文章全程读它，让 AI 写得更像你本人。问诊与蒸馏都在你自己的 agent 侧用你自己的模型跑，doubaoya 只做存储与读写接口，不调 LLM、免费不扣点。触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现、IP 档案、公众号人设、文风 DNA、文风蒸馏、重新蒸馏、写得像我、模仿我的文风、我的写作风格、更新人设、个人产品、带货话术、IP 头像。
-version: 1.2.4
-changelog: 「优先 dby charter…，没装用 npx -y @doubaoya/cli 兜底」改为如实表述：@doubaoya/cli 尚未发布到 npm，npx 会 404，本机 dby 在才优先用它（照原文做会先撞一次 404）
+version: 1.3.0
+changelog: 规格 dby-cli-coverage「装好即可达」：scripts/charter.mjs 标弃用（启动打 stderr 提示，逻辑不动），SKILL.md 与 references/api-contract.md 改指统一 CLI（`charter get`/`charter put`），删掉「两条路都对」的表述；新增 scripts/dby.mjs 引导壳
 compatibility: >-
-  需要 Node ≥18（读写章程的 scripts/charter.mjs 用全局 fetch，零依赖不装 npm 包）；
+  需要 Node ≥18（读写章程走 scripts/dby.mjs，零依赖不装 npm 包）；
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。章程与档案路由**全部免费**，不调 LLM、不扣点。
 ---
@@ -25,18 +25,18 @@ compatibility: >-
 
 ## 怎么读写章程
 
-章程的 GET / PUT 由 `scripts/charter.mjs` 代发；档案本身的 POST / PUT（建档、存范文、存 DNA）
+章程的 GET / PUT 由 CLI 代发（`charter get`/`charter put`，见下方）；档案本身的 POST / PUT（建档、存范文、存 DNA）
 要手写 curl，那时才读 `dby-gateway/references/protocol.md`。
 
-章程读写两条路都对：本包 `scripts/charter.mjs`（下方示例），或 `dby charter profiles|get|put`（非 TTY 输出 `{ok,data|error}` JSON，退出码契约同 `dby-api`）。章程路由有两个**每次都会踩**的坑，CLI 与脚本里都做掉了：
+`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录），走 `node "$SKILL_DIR/scripts/dby.mjs" charter profiles|get|put`
+（非 TTY 输出 `{ok,data|error}` JSON，退出码契约同 `dby-api`）。章程路由有两个**每次都会踩**的坑，CLI 里都做掉了：
 GET 回来的 `products` 是只读投影、原样 PUT 必 400；PUT 是全量替换不是增量 patch。
 
 ```bash
-node scripts/charter.mjs profiles                  # 列出我的档案（id / 是否默认 / 名字）
-node scripts/charter.mjs get                       # 读默认档案的章程（原样）
-node scripts/charter.mjs get --for-edit > c.json   # 读成「可直接改再 PUT」的形态（已剥 products）
-node scripts/charter.mjs put c.json                # 全量替换（无论如何都会再剥一次 products）
-node scripts/charter.mjs selfcheck                 # 离线自检，不联网不需要 key
+node "$SKILL_DIR/scripts/dby.mjs" charter profiles                  # 列出我的档案（id / 是否默认 / 名字）
+node "$SKILL_DIR/scripts/dby.mjs" charter get                       # 读默认档案的章程（原样）
+node "$SKILL_DIR/scripts/dby.mjs" charter get --for-edit > c.json   # 读成「可直接改再 PUT」的形态（已剥 products）
+node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替换（无论如何都会再剥一次 products）
 ```
 
 改一份现有章程的正确姿势就是这三步：`get --for-edit` → 改 `c.json` → `put c.json`。
@@ -62,7 +62,7 @@ node scripts/charter.mjs selfcheck                 # 离线自检，不联网不
 ## 七条红线（教练纪律，逐条照办）
 
 1. **会话开场先读基线**。每次教练会话——含 L0→L1 深化、老号反推、章程回顾——开场先
-   `node scripts/charter.mjs get`（非默认档案加 `--profile <id>`）读取已有章程。
+   `node "$SKILL_DIR/scripts/dby.mjs" charter get`（非默认档案加 `--profile <id>`）读取已有章程。
    **已填字段不重复问**，只问空字段、以及字段文本尾部标注「（待深化）」的字段。
    **进度以服务端章程为准**，不臆测、不谎报「我们上次聊过 X」。
 2. **一次只问一个问题**。用户一口气倒出多维信息时，把信息拆解归位到对应字段再继续，
@@ -100,7 +100,7 @@ node scripts/charter.mjs selfcheck                 # 离线自检，不联网不
 开场读基线：三个字段**已非空 → 逐条念给用户确认，确认后直接转 L1 只补空字段**，不重问。
 
 **其余字段填空串**（`practicalPaths` 填 `[]`），`version` 填 `1`，五个顶层节的键**必须齐全**——
-**空串 = 未定，允许存**。逐节确认后 `scripts/charter.mjs put c.json` 落库（手写见 `references/api-contract.md`）。
+**空串 = 未定，允许存**。逐节确认后 `node "$SKILL_DIR/scripts/dby.mjs" charter put c.json` 落库（手写见 `references/api-contract.md`）。
 
 结束语预告 L1，原话可用：
 
@@ -127,7 +127,7 @@ node scripts/charter.mjs selfcheck                 # 离线自检，不联网不
 
 1. **空串 / 空数组 = 未定，允许存**；五个顶层节的键必须齐全，少传的键判「缺失」而 400。
    完整结构与四张枚举白名单 → `references/charter-schema.md`。
-2. `scripts/charter.mjs` 已替你做掉的两个坑：**`products` 是只读投影**（原样 PUT 必 400）、
+2. CLI 已替你做掉的两个坑：**`products` 是只读投影**（原样 PUT 必 400）、
    **PUT 是全量替换不是增量**。手写请求时自己记得。
 3. **无默认档案时 `GET /api/ip-profile/charter` 返回 404**，先建档（见 `references/writing-dna.md`）。
 

@@ -1,8 +1,8 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、公众号违禁词、跨平台合规、合规检测、过审、违禁词检测、敏感词、违规词、极限词、绝对化用语、限流自查、审核不过、广告法。不做：改文风或换平台调性走 dby-rewrite；从零写正文走 dby-write。
-version: 1.4.5
-changelog: 删掉语境豁免用例里一条冗余且不稳的断言（兄弟用例已覆盖同一件事）；包行为零变化
+version: 2.0.0
+changelog: BREAKING：删除 scripts/check_multi.py，改用 `dby banned check <文案> --platforms …`（逐平台各计费一次，默认停在确认态、--confirm 放行）；新增 scripts/dby.mjs 引导壳；compatibility 由 Python 改 Node ≥18
 compatibility: >-
   需要 Node ≥18（`dby banned check` 走 dby-api 的 CLI，零依赖不装 npm 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
@@ -28,18 +28,19 @@ compatibility: >-
 
 ## 运行脚本
 
-请求由 CLI 代发：`D=~/.claude/skills/dby-api/scripts/dby.mjs; node "$D" banned check <文案> [--platforms a,b]`；
+`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录）。请求由 CLI 代发：
+`node "$SKILL_DIR/scripts/dby.mjs" banned check <文案> [--platforms a,b]`；
 只有绕开它自己拼请求时才读 `dby-gateway/references/protocol.md`。
 
 ```bash
 # 默认三平台全查——不带 --confirm 先停在确认态，逐平台各列一次计费，不产生任何请求
-node "$D" banned check "这款美白神器三天见效，全网最低价，无效退款"
+node "$SKILL_DIR/scripts/dby.mjs" banned check "这款美白神器三天见效，全网最低价，无效退款"
 
 # 核对无误后原样加 --confirm 才真打（逐平台各计费一次）
-node "$D" banned check "这款美白神器三天见效，全网最低价，无效退款" --confirm
+node "$SKILL_DIR/scripts/dby.mjs" banned check "这款美白神器三天见效，全网最低价，无效退款" --confirm
 
 # 只查指定平台（逗号分隔，省额度）
-node "$D" banned check "你的文案" --platforms xiaohongshu,douyin --confirm
+node "$SKILL_DIR/scripts/dby.mjs" banned check "你的文案" --platforms xiaohongshu,douyin --confirm
 ```
 
 - **默认停在确认态**：回执列出将要发生的逐平台计费，核对后原样加 `--confirm` 才放行；

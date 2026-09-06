@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 4.1.0
-changelog: pipeline.mjs 新增 --draft/--draft-version，正文来自稿件面时透传稿件 id，服务端存草稿箱成功后自动关联到发布记录
+version: 5.0.0
+changelog: BREAKING：删除 scripts/publish_draft.py（改用 `dby wechat publish`，默认停在确认态）；pipeline/preprocess-and-publish/account-verify 的 HTTP 全部改走 dby-api 共享请求层（lib/locate-dby.mjs 定位，缺 dby-api 退出码 3）；新增 scripts/dby.mjs 引导壳；文档路径改写 `$SKILL_DIR`；compatibility 不再需要 Python
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   接口调用经由 `dby-api` 包的共享 CLI（`scripts/lib/locate-dby.mjs` 定位），需与 dby-api 一起安装。
@@ -31,15 +31,15 @@ compatibility: >-
 
 ## 只想存草稿、不要排版
 
-正文**已是公众号风格 HTML、无本地图也无本地封面**时直接打 CLI，不必走 `pipeline.mjs`：
+正文**已是公众号风格 HTML、无本地图也无本地封面**时直接打 CLI，不必走 `pipeline.mjs`。
+`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录）：
 
 ```bash
-D=~/.claude/skills/dby-api/scripts/dby.mjs
-node "$D" wechat publish --appid <authorizerAppid> --title "标题" --html article.html --confirm
+node "$SKILL_DIR/scripts/dby.mjs" wechat publish --appid <authorizerAppid> --title "标题" --html article.html --confirm
 ```
 
 `--confirm` 前必须已有用户明确要发这一条的确认（见下面「防误发红线」）；不带 `--confirm`
-会停在 confirmation_required，退出码 6，什么都不发生。参数细节见 `node "$D" wechat publish --help`。
+会停在 confirmation_required，退出码 6，什么都不发生。参数细节见 `node "$SKILL_DIR/scripts/dby.mjs" wechat publish --help`。
 带本地图 / 本地封面时改用 `scripts/preprocess-and-publish.mjs`，见 `references/draft-only.md`。
 
 ---

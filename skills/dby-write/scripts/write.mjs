@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // write.mjs — 都爆鸭 · 写作主干的取数与复盘算术
-// ponytail: prep / topics / review 三个子命令与仓内 cli/src/commands/write.mjs（`dby write …`）重复，
-//   天花板 = 两份实现要同步改、同一个坑要修两次（对拍测试 cli/test/write-parity.test.mjs 只保证当下一致）。
-//   升级路径 = @doubaoya/cli 发布到 npm 且 SKILL.md 改为只走 CLI 后，删掉这三个子命令，本脚本只留
-//   articles / material / selfcheck；在那之前本脚本是唯一能跑的取数路径（CLI 尚未发布，npx 会 404）。
+// 🔴 已弃用（design: dby-cli-unification「装好即可达」）：唯一实现已搬进 skills/dby-api/scripts/
+//   lib/commands/write.mjs，统一走 `scripts/dby.mjs write prep|topics|review|articles`。
+//   本文件下一个大版本删除，在那之前保留是为了不打断仍在直接调用它的旧用法；对拍测试
+//   cli/test/write-parity.test.mjs 保证两边当下行为一致。新代码一律走 `dby write …`，别再往这
+//   份重复实现里加东西。
 // -----------------------------------------------------------------------------
 // 这个脚本只做**机械**的那两段，判断仍归你：
 //
@@ -586,6 +587,9 @@ function selfcheck() {
 }
 
 const [cmd, ...rest] = process.argv.slice(2);
+// 规格 dby-cli-coverage「装好即可达」：本脚本已弃用，唯一实现搬进了 dby-api 的统一 CLI；
+// 弃用提示走 stderr（对拍测试 cli/test/write-parity.test.mjs 只比 stdout，不受影响）。
+console.error("本脚本已弃用，请改用 scripts/dby.mjs（`dby write …`），下一个大版本删除。");
 if (cmd === "selfcheck") { selfcheck(); process.exit(0); }
 const KEY = process.env.DOUBAOYA_API_KEY;
 if (!KEY) die("缺 DOUBAOYA_API_KEY。doubaoya.com → 登录 → 密钥中心 → 生成，export 后再跑。");

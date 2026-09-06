@@ -3,7 +3,7 @@
 面向要把 `dby` 的命令串成自己的取材 / 写作 / 发布链路、或造自己专属 skill 的人。
 只写事实：每步对应哪几条命令、每种失败怎么处置、该在哪一档停手、哪里真花钱。
 命令名逐字对过 `node skills/dby-api/scripts/dby.mjs routes --json`，参数细节一律看
-`node "$D" <组> <命令> --help`，这里不重复。
+`node "$SKILL_DIR/scripts/dby.mjs" <组> <命令> --help`（`$SKILL_DIR` = 本包目录），这里不重复。
 
 ---
 

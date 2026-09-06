@@ -8,8 +8,8 @@ description: >-
   用我记的东西写、把灵感库里记的整理成选题、
   这篇为什么没人看、复盘、复盘一下、数据怎么样、上次那篇效果、阅读量为什么低、文章表现、发出去没人看、
   按审稿意见改一版、按我的评论再改一遍、读一下稿件的意见、按拒绝重新改一版。
-version: 1.13.0
-changelog: 取材表插第 2 层「用户记下的（灵感库）」，原 2–7 顺延；记录 id 随建稿 / 提交新版作 sourceItemIds（血缘）；两条红线（空则如实、记了不自动起稿）；触发词与评测同步
+version: 1.14.0
+changelog: 规格 dby-cli-coverage「装好即可达」：write.mjs 标弃用（stderr 提示，逻辑不动），SKILL.md 与 references 改指统一 CLI，删「两条路都对」与所有 `$W`/硬编码 skills 路径；新增 dby.mjs 引导壳
 compatibility: >-
   需要 Node ≥18（零依赖，不装 npm 包）、环境变量 DOUBAOYA_API_KEY（dyh_…，见 doubaoya.com 密钥中心）
   及 https://doubaoya.com 的 HTTPS 访问。档案/选题/往期文章/复盘全免费；
@@ -51,13 +51,12 @@ compatibility: >-
 
 **九步一口气走完，别逐步征求同意。** 只停两处：第 3 步让用户选标题、第 9 步后问终态。
 
-取数两条路都对：本包 `scripts/write.mjs prep|topics|review|articles`，或 `dby write prep|topics|review|articles`。绕开两者自拼请求才读 `dby-gateway/references/protocol.md`。
+取数走 `dby write prep|topics|review|articles`（`$SKILL_DIR` = 本包目录）。绕开它自拼请求才读 `dby-gateway/references/protocol.md`。
 
 ### 第 1 步 · 读档案 + 拉写作规范（必须早于任何生成动作）
 
 ```bash
-W=~/.claude/skills/dby-write/scripts/write.mjs   # 按实际安装位置改；cwd 是用户项目目录
-node "$W" prep          # 五样一次拉齐；--json 另带章程全文与 samples[].content
+node "$SKILL_DIR/scripts/dby.mjs" write prep          # 五样一次拉齐；--json 另带章程全文与 samples[].content
 ```
 
 五样：**号章程**、**创作 DNA**、**范文样本**、**写作规范**（平台硬约束）、**素材卡索引**。
@@ -69,7 +68,7 @@ node "$W" prep          # 五样一次拉齐；--json 另带章程全文与 samp
 ### 第 2 步 · 确定选题
 
 🔴 **用户已经说了写什么 → 直接用，不要再问，也不要再调接口。**
-没说时才取候选：`node "$W" topics [赛道]`（不传赛道用档案里的）。
+没说时才取候选：`node "$SKILL_DIR/scripts/dby.mjs" write topics [赛道]`（不传赛道用档案里的）。
 候选过两道筛（号章程 / 有用性）；筛法、**每月一篇复利文**与常青回看读 `references/topic.md`。
 
 ### 第 3 步 · 定目标，再定标题（🔴 唯一的中途停顿点）
@@ -162,7 +161,7 @@ A 组且用户这轮口述了新经历 → 展示拟存卡面提议存进素材�
 
 ## 模式 B：复盘一篇
 
-→ 读 `references/review-mode.md`（`write.mjs review` 归四象限，**只给一处修复动作**）。
+→ 读 `references/review-mode.md`（`write review` 归四象限，**只给一处修复动作**）。
 🔴 三条不许简化掉：**写明用的是哪一档指标**（代理档绝不能说成「打开率 × 分享率」）、**基准只能是这个号自己的历史中位数**、**样本少于 5 篇要把「仅供参考」带给用户**。
 
 → 用户想练写作 / 问「怎么提高」读 `references/practice.md`。

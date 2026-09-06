@@ -41,8 +41,11 @@ SKILL.md 模式 B 第 4 条要求的「改了什么」（`第 7 句：删「值�
 
 用户没给稿件 id、说不用、或不回应 → 到此为止，不主动再提第二次。用户确认了才调脚本：
 
+`$SKILL_DIR` 是本包目录（宿主加载本 SKILL.md 时给出的目录）；`dby-api` 与本包同级，
+不假设 skills 根的绝对位置：
+
 ```bash
-D=~/.claude/skills/dby-api/scripts/doubaoya.mjs
+D="$(dirname "$SKILL_DIR")/dby-api/scripts/dby.mjs"
 
 # 没有稿件 id：先建稿（bodyMd 用原文，author 标明来源）
 node "$D" draft create '{"title":"<标题或首句>","bodyMd":"<原文>","author":"dby-deai"}'
@@ -57,5 +60,5 @@ node "$D" draft submit <id> '{"baseVersion":<原文版本号>,"author":"dby-deai
 `REASON_MISSING` / `OVERLAP` / `DUPLICATE`），按提示改锚点或理由，不改清单就重交没有意义。
 提交冲突（409 `VERSION_CONFLICT`）说明有人抢先改过，重新 `draft get <id>` 拿最新版本号再交。
 
-`draft` 完整子命令与字段见 `dby-api` 自己的 `scripts/doubaoya.mjs`（不带子命令跑一次能看到 USAGE）；
+`draft` 完整子命令与字段见 `dby-api` 自己的 `scripts/dby.mjs`（不带子命令跑一次能看到 USAGE）；
 本包不复述鉴权与信封，那些在 `dby-gateway/references/protocol.md`。

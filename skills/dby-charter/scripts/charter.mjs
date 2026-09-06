@@ -75,6 +75,9 @@ async function api(path, { method = "GET", body, key } = {}) {
 
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
+  // 规格 dby-cli-coverage「装好即可达」：本脚本已弃用，唯一实现搬进了 dby-api 的统一 CLI；
+  // 弃用提示走 stderr（对拍测试 cli/test/charter-parity.test.mjs 只比 stdout，不受影响）。
+  console.error("本脚本已弃用，请改用 scripts/dby.mjs（`dby charter …`），下一个大版本删除。");
   if (cmd === "selfcheck") return selfcheck();
 
   const key = process.env.DOUBAOYA_API_KEY;

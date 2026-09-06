@@ -8,8 +8,8 @@ description: >-
   改得像人写的、说点人话、说人话、没有人味、没人味、太官方了、太套路了、全是套话、文章太干、
   改得自然点、降AI率、AI率太高、过AI检测。纯本地运行，不联网、不需要 key。
   不做规避 AI 标识、不做学术降重、不承诺过检测器。
-version: 1.2.0
-changelog: 新增 references/draft/draft-changes.md：改动清单可按 {anchor,replacement,reason,tag} 契约提交到稿件面，与 dby-write 模式 C、dby-rewrite 共用同一套 changes[]（用户确认才写，「改不改由用户定」的红线不变）；SKILL.md 补「下一步」指回稿件面/dby-rewrite/dby-publish；补 2 条 dby-charter 文风蒸馏类负例
+version: 1.3.0
+changelog: 规格 dby-cli-coverage「装好即可达」：references/draft/draft-changes.md 里硬编码的 dby-api 绝对安装路径改成相对本包目录解析（不假设 skills 根绝对位置），改走统一 CLI 而非已弃用的旧转发壳
 compatibility: >-
   需要 Python 3（`scripts/deai.py` 只用标准库，不装任何 pip 包）。
   纯本地运行：不联网、不调用任何外部接口、不需要 key、不计费。

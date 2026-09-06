@@ -1,6 +1,6 @@
 # API 契约（本包用到的免费路由）
 
-> 要绕开 `scripts/write.mjs` 自己发请求、或想确认某条路由计不计费时读它。
+> 要绕开 `scripts/dby.mjs` 自己发请求、或想确认某条路由计不计费时读它。
 
 | 方法 | 路径 | 干什么 | 计费 |
 |---|---|---|---|
@@ -22,7 +22,7 @@
 > `dby-api` 是选路层 Skill，正文不许带任何一条能力的入参字段（防止随目录漂移的快照契约）；
 > 稿件面是**专用路由**、不进那套目录，字段形状记在这里、随本包一起演进。
 
-命令都走 `dby-api` 的 `scripts/doubaoya.mjs draft <子命令>`（同一把 `DOUBAOYA_API_KEY`，免费、不进 catalog）：
+命令都经 `"$SKILL_DIR/scripts/dby.mjs"` 转发、组名是 `draft`（同一把 `DOUBAOYA_API_KEY`，免费、不进 catalog），子命令见下表：
 
 | 子命令 | 干什么 |
 |---|---|
@@ -38,7 +38,7 @@
 `baseVersion` 正文里恰好命中一处（命中多处用 `prefix`/`suffix` 消歧），两条改动范围不能重叠，`reason` 必填。
 `submit` 收到 `changes[]` 时会先本地预检（拉 `baseVersion` 正文、逐条判定位/重叠/理由），干净才真的发写请求。
 
-读取灵感库走 `doubaoya.mjs inspirations [--since N] [--ids a,b]`（免费、同一把 key），返回 `items[]{id,type,summary,createdAt,usedInDrafts[]}` 与 `requested/returned`；`get <id>` 的返回多带 `sourceItems[]`（这篇用过的记录，含 `archived`）。
+读取灵感库走 `"$SKILL_DIR/scripts/dby.mjs" insp list [--since N] [--ids a,b]`（免费、同一把 key），返回 `items[]{id,type,summary,createdAt,usedInDrafts[]}` 与 `requested/returned`；`get <id>` 的返回多带 `sourceItems[]`（这篇用过的记录，含 `archived`）。
 
 错误处置：409 `VERSION_CONFLICT`（`extra.headVersion` 是当前最新版，重拉 `get`/`version` 再交，别盲目重试原请求）；
 422 `CHANGES_INVALID`（`extra.errors` 是 `[{index, code, message}]`，按 `index` 定位第几条改动、按 `code` 判问题类型：
