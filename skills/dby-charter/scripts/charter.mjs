@@ -24,6 +24,7 @@
 
 import { readFile } from "node:fs/promises";
 import process from "node:process";
+import { importDbyLib } from "./lib/locate-dby.mjs";
 
 const BASE = process.env.DOUBAOYA_BASE_URL || "https://doubaoya.com";
 
@@ -39,41 +40,37 @@ export function stripReadOnlyProjection(charter) {
   return rest;
 }
 
+// 规格「仓内只有一份请求层」：本包不再自己拼 fetch，改进程内 import dby-api 的公共请求层。
+// 🔴 惰性 import：selfcheck 是离线自检、不需要装 dby-api，不能在模块顶层钉死这个依赖。
+let _requestPromise = null;
+function getRequest() {
+  if (!_requestPromise) _requestPromise = importDbyLib(import.meta.url, "http.mjs").then((m) => m.request);
+  return _requestPromise;
+}
+
+// CHARTER_INVALID 的 message 是所有校验问题用「；」拼成的完整清单 ——
+// 原样透传，逐条改完一次性重 PUT，别一条一条试。这张表现在原样交给 request() 的 hints，
+// 由它负责拼进 remediation（红线本体不变，只是搬了地方）。
+const HINTS = {
+  UNAUTHORIZED: "检查 DOUBAOYA_API_KEY，或去密钥中心重新生成。",
+  NOT_FOUND: "档案不存在 / 不属于你 / 没有默认档案。先跑 `profiles` 确认 id，或先建档。",
+  CHARTER_INVALID: "上面是完整清单，逐条改完**一次性**重 PUT，不要一条一条试。",
+  DNA_TOO_LARGE: "writingDnaJson 超 32KB，精简后重试。"
+};
+
 async function api(path, { method = "GET", body, key } = {}) {
-  const headers = { Authorization: `Bearer ${key}` };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  let res;
+  const request = await getRequest();
   try {
-    res = await fetch(`${BASE}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000)
-    });
+    // 🔴「你安装的 skill 有更新」与业务错误的 remediation 都由 request() 统一处理
+    // （信封成功时读 notice、失败时按 hints 拼 remediation）——判据与老实现一致，只是搬了地方。
+    return await request({ baseUrl: BASE, key, timeoutOverride: null }, method, path, { body, hints: HINTS });
   } catch (e) {
-    die(`请求失败：${e.message}`);
+    // 退出码对齐 dby-cli 契约（401→EXIT.AUTH=4，5xx→EXIT.GENERAL=1，其余业务态→EXIT.BUSINESS=3）——
+    // 旧脚本这里统统 die() 默认码 1，charter-parity.test.mjs 从没跑到过这条失败分支
+    // （唯二两处退出码断言 NO_CHARTER=3 与 CHARTER_INVALID=3 都来自 main() 自己的显式判断/新 CLI，
+    // 不经过这里），直接对齐规格值。
+    die(`[${e?.code ?? "ERROR"}] ${e?.message ?? "未知错误"}${e?.remediation ? `\n${e.remediation}` : ""}`, e?.exit ?? 1);
   }
-  const env = await res.json().catch(() => null);
-  if (!env) die(`${res.status} 返回不是 JSON`);
-  if (!env.success) {
-    const { code, message } = env.error || {};
-    // CHARTER_INVALID 的 message 是所有校验问题用「；」拼成的完整清单 ——
-    // 原样透传，逐条改完一次性重 PUT，别一条一条试。
-    const hint = {
-      UNAUTHORIZED: "检查 DOUBAOYA_API_KEY，或去密钥中心重新生成。",
-      NOT_FOUND: "档案不存在 / 不属于你 / 没有默认档案。先跑 `profiles` 确认 id，或先建档。",
-      CHARTER_INVALID: "上面是完整清单，逐条改完**一次性**重 PUT，不要一条一条试。",
-      DNA_TOO_LARGE: "writingDnaJson 超 32KB，精简后重试。"
-    }[code];
-    die(`[${res.status} ${code}] ${message}${hint ? `\n${hint}` : ""}`);
-  }
-  // 🔴「你安装的 skill 有更新」。服务端按 User-Agent 判，挂在**成功**信封上。
-  // 读它不是可选的：SKILL.md 承诺「原样转达给用户」，而这条链断过两次 ——
-  // 2026-08-21 实测服务端三条专用路由压根没挂（主仓 0563fa5 改成钩子统一注入），
-  // 下游 dby-publish 17 个脚本读它 0 次（社区仓 3537e22 补上）。
-  // 挂了没人读 == 没挂。走 stderr，免得污染 stdout 的 JSON（样板：dby-api/scripts/doubaoya.mjs）。
-  if (env.notice) console.error(`[notice] ${env.notice}`);
-  return env.data;
 }
 
 async function main() {

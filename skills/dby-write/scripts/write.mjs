@@ -37,6 +37,7 @@
 // -----------------------------------------------------------------------------
 
 import process from "node:process";
+import { importDbyLib } from "./lib/locate-dby.mjs";
 
 const BASE = process.env.DOUBAOYA_BASE_URL || "https://doubaoya.com";
 const MIN_SAMPLES = 3;   // 少于这个数，成稿像不像要如实说
@@ -44,38 +45,38 @@ const MIN_BASELINE = 5;  // 少于这个数，中位数同样不稳，基准不�
 
 function die(msg, code = 1) { console.error(msg); process.exit(code); }
 
+// 规格「仓内只有一份请求层」：本包不再自己拼 fetch，改进程内 import dby-api 的公共请求层
+// （skills/dby-api/scripts/lib/http.mjs 的 request()）。
+// 🔴 定位放在函数体内、惰性 import —— selfcheck 是离线自检、不联网不需要 key也不需要装
+//    dby-api，不能在模块顶层就把这个依赖钉死，否则会破坏「不联网不需要 key」的承诺。
+// 🔴 用 let 缓存而不是每次都重新 import：prep() 的 Promise.all 会并发调 4 次 api()，
+//    重新定位 4 次既浪费也可能在 dby-api 缺失时打印 4 遍 MISSING_DBY_API。
+let _requestPromise = null;
+function getRequest() {
+  if (!_requestPromise) _requestPromise = importDbyLib(import.meta.url, "http.mjs").then((m) => m.request);
+  return _requestPromise;
+}
+
 /**
- * 一次调用。**不给无 body 的请求加 Content-Type** ——
- * 服务端对带该头却空 body 的请求直接 BAD_REQUEST 拒收，而它看起来很像「没权限」。
+ * 一次调用，薄封装 dby-api 的 request()。**不给无 body 的请求加 Content-Type** ——
+ * 服务端对带该头却空 body 的请求直接 BAD_REQUEST 拒收，而它看起来很像「没权限」
+ * （这条红线现在由 request() 自己守，这里只是保留同一句话别丢）。
+ * 对调用方的返回约定不变：soft 时失败返回 { __soft: 原因 }（401 除外，401 永远抛/die）。
  */
 async function api(path, key, { soft = false } = {}) {
-  let res;
+  const request = await getRequest();
   try {
-    res = await fetch(`${BASE}${path}`, {
-      headers: { Authorization: `Bearer ${key}` },
-      signal: AbortSignal.timeout(60_000)
-    });
+    return await request({ baseUrl: BASE, key, timeoutOverride: null }, "GET", path, { soft });
   } catch (e) {
-    if (soft) return { __soft: `网络错误：${e.message}` };
-    die(`请求失败：${e.message}`);
-  }
-  const env = await res.json().catch(() => null);
-  if (!env) {
-    if (soft) return { __soft: `${res.status} 返回不是 JSON` };
-    die(`${res.status} 返回不是 JSON`);
-  }
-  // 🔴 信封层的 notice = 「你安装的 skill 有更新」，与 data 里的业务 notice **不是一回事**。
-  //    走 stderr，别污染 stdout 的 JSON。
-  if (env.notice) console.error(`[notice] ${env.notice}`);
-  if (!env.success) {
-    const { code, message } = env.error || {};
-    if (res.status === 401) {
-      die(`[401 ${code}] ${message}\n🔴 密钥无效或缺失。让用户去密钥中心检查——**别跳过这一步**，跳过等于蒙着写。`);
+    // request() 对 401 即便 soft=true 也照样抛（红线：鉴权失败不许被降级吞掉），这里接住它。
+    // 退出码对齐 dby-cli 契约的 EXIT.AUTH=4——旧脚本这里是 die() 的默认码 1，没有任何
+    // parity 测试钉住这个值（cli/test/write-parity.test.mjs 从没断言过 401 的退出码），
+    // 所以直接对齐规格值，不留 ponytail 例外。
+    if (e?.code === "UNAUTHORIZED" || e?.exit === 4) {
+      die(`[401 ${e.code}] ${e.message}\n🔴 密钥无效或缺失。让用户去密钥中心检查——**别跳过这一步**，跳过等于蒙着写。`, 4);
     }
-    if (soft) return { __soft: `[${res.status} ${code}] ${message}` };
-    die(`[${res.status} ${code}] ${message}`);
+    die(`[${e?.code ?? "ERROR"}] ${e?.message ?? "未知错误"}`, e?.exit ?? 1);
   }
-  return env.data;
 }
 
 /**
@@ -85,29 +86,17 @@ async function api(path, key, { soft = false } = {}) {
  * 越活跃的号被坑得越狠。中位数对单个异常值免疫，这正是这里要的性质。
  * 偶数个取中间两个的平均，与统计学定义一致。
  */
-/** 带 body 的写请求（POST/DELETE）。与 api() 同一信封纪律。 */
+/** 带 body 的写请求（POST/DELETE），薄封装 dby-api 的 request()。与 api() 同一信封纪律。 */
 async function apiWrite(path, key, { method = "POST", body = undefined, soft = false } = {}) {
-  let res;
+  const request = await getRequest();
   try {
-    res = await fetch(`${BASE}${path}`, {
-      method,
-      headers: { Authorization: `Bearer ${key}`, ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(60_000)
-    });
+    return await request({ baseUrl: BASE, key, timeoutOverride: null }, method, path, { body, soft });
   } catch (e) {
-    if (soft) return { __soft: `网络错误：${e.message}` };
-    die(`请求失败：${e.message}`);
+    const msg = `${e?.code ?? "ERROR"}：${e?.message ?? "未知错误"}`;
+    // 退出码同 api()：401 对齐 EXIT.AUTH=4（旧脚本这里是 2），未被 parity 测试钉住，直接对齐。
+    const exit = (e?.code === "UNAUTHORIZED" || e?.exit === 4) ? 4 : (e?.exit ?? 1);
+    die(msg, exit);
   }
-  const env = await res.json().catch(() => null);
-  if (!env) { if (soft) return { __soft: `${res.status} 返回不是 JSON` }; die(`${res.status} 返回不是 JSON`); }
-  if (env.notice) console.error(`\n⚠️ ${env.notice}\n`);
-  if (!env.success) {
-    const msg = `${env.error?.code ?? res.status}：${env.error?.message ?? "未知错误"}`;
-    if (soft) return { __soft: msg };
-    die(msg, res.status === 401 ? 2 : 1);
-  }
-  return env.data;
 }
 
 function median(nums) {

@@ -41,11 +41,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import fs, { realpathSync } from "node:fs";
 import { checkDraftLimits } from "./lib/draft-limits.mjs";
-
-const BASE_URL = (process.env.DOUBAOYA_BASE_URL || "https://doubaoya.com").replace(/\/+$/, "");
-const STATUS_ENDPOINT = BASE_URL + "/api/wechat/status";
-const UPLOAD_ENDPOINT = BASE_URL + "/api/wechat/media/upload";
-const PUBLISH_ENDPOINT = BASE_URL + "/api/wechat/publish";
+import { importDbyLib } from "./lib/locate-dby.mjs";
 
 const ONE_MB = 1024 * 1024;
 
@@ -207,67 +203,32 @@ function compressWithSips(buf, srcPath) {
 }
 
 // ---------------------------------------------------------------------------
-// HTTP 封套：统一鉴权头 + 结构化信封解析
-// ---------------------------------------------------------------------------
-/**
- * 发布时 tools/stamp_versions.py 会往包根写 `.version`，内容形如
- * `doubaoya-skill/<包名>@<内容哈希>`。UA 必须读它。
- *
- * 🔴 别写死 `doubaoya-skill/1.0`：服务端就是靠 UA 里的包名+哈希判断「这个包有没有新版本」，
- *    写死等于每次都报「我是个没有版本的旧客户端」，于是**该包的更新提示永远不会触发**——
- *    而且这个失效是完全静默的：不报错、不降级、用户和我们都不会收到任何信号，
- *    只会一直用着旧包。与 Python 侧 `_skill_user_agent()` 同语义，两边必须一致。
- */
-function skillUserAgent() {
+// HTTP：转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」）。
+// 鉴权头 / 超时 / 信封解析 / notice 转达全部收在 skills/dby-api/scripts/lib/http.mjs，
+// 本文件不再自己拼 fetch、不再自己解析信封。
+//
+// ponytail：原先这里会带一条 skillUserAgent() 头（服务端凭包名+哈希判断「有没有新版本」），
+// 共享请求层目前不发 User-Agent —— 经它转发的请求暂时失去这条更新提醒信号。
+// 升级路径 = dby-api 的 lib/http.mjs 补发 UA（那份文件不在本次改动范围内，见
+// openspec/changes/dby-cli-unification 任务 4.2 的包边界）。
+async function apiRequest(ctx, method, apiPath, payload, { billable = false } = {}) {
+  const { request } = await importDbyLib(import.meta.url, "http.mjs");
   try {
-    const versionPath = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".version");
-    return fs.readFileSync(versionPath, "utf-8").trim() || "doubaoya-skill/1.0";
-  } catch {
-    return "doubaoya-skill/1.0";
-  }
-}
-
-async function apiRequest(url, apiKey, method, payload) {
-  const headers = {
-    Authorization: "Bearer " + apiKey,
-    "User-Agent": skillUserAgent(),
-  };
-  const init = { method, headers };
-  if (payload !== undefined) {
-    headers["Content-Type"] = "application/json";
-    init.body = JSON.stringify(payload);
-  }
-
-  let res;
-  try {
-    res = await fetch(url, init);
+    const opts = { billable };
+    if (payload !== undefined) opts.body = payload;
+    const data = await request(ctx, method, apiPath, opts);
+    return { ok: true, data: data || {} };
   } catch (e) {
-    return { ok: false, code: "NETWORK_ERROR", message: `无法连接 ${BASE_URL}（${e.message}）` };
+    // DbyError 的 code/message 已经涵盖旧格式（含鉴权失败时「缺 key / key 无效」的措辞），
+    // 调用点原样按 `${r.code}: ${r.message}` 拼接；本文件的退出码统一走 die()（固定 1），不变。
+    return { ok: false, code: e.code || "ERROR", message: e.message || String(e) };
   }
-
-  let text = "";
-  try { text = await res.text(); } catch {}
-
-  let env;
-  try { env = JSON.parse(text); } catch {
-    return { ok: false, code: `HTTP_${res.status}`, message: text || res.statusText || "服务端返回非 JSON 内容" };
-  }
-
-  if (env.success !== true) {
-    const err = env.error || {};
-    return { ok: false, code: err.code || `HTTP_${res.status}`, message: err.message || "请求未成功" };
-  }
-  // 🔴「你安装的 skill 有更新」原样转达（SKILL.md 的承诺）。走 stderr，stdout 留给 JSON。
-  //    这条链 2026-08-21 断过三处，每处都是静默的 —— 挂了没人读 == 没挂。
-  //    闸：tools/tests/test_notice_is_consumed.py；样板：dby-api/scripts/doubaoya.mjs
-  if (env.notice) console.error(`[notice] ${env.notice}`);
-  return { ok: true, data: env.data || {} };
 }
 
 // ---------------------------------------------------------------------------
 // 上传一个本地文件到公众号图床
 // ---------------------------------------------------------------------------
-async function uploadLocal(apiKey, appid, filePath, purpose) {
+async function uploadLocal(ctx, appid, filePath, purpose) {
   let raw;
   try {
     raw = await readFile(filePath);
@@ -281,7 +242,7 @@ async function uploadLocal(apiKey, appid, filePath, purpose) {
     filename,
     purpose,
   };
-  const r = await apiRequest(UPLOAD_ENDPOINT, apiKey, "POST", payload);
+  const r = await apiRequest(ctx, "POST", "/api/wechat/media/upload", payload, { billable: true });
   if (!r.ok) {
     die(`上传失败（${purpose}）${path.basename(filePath)} → ${r.code}: ${r.message}`);
   }
@@ -291,8 +252,8 @@ async function uploadLocal(apiKey, appid, filePath, purpose) {
 // ---------------------------------------------------------------------------
 // 解析 appid（复用 status 接口）
 // ---------------------------------------------------------------------------
-async function resolveAppid(apiKey, wanted) {
-  const r = await apiRequest(STATUS_ENDPOINT, apiKey, "GET");
+async function resolveAppid(ctx, wanted) {
+  const r = await apiRequest(ctx, "GET", "/api/wechat/status");
   if (!r.ok) die(`${r.code}: ${r.message}`);
   const accounts = r.data.accounts || [];
 
@@ -376,8 +337,9 @@ async function main() {
     }
   }
 
-  const apiKey = process.env.DOUBAOYA_API_KEY;
-  if (!apiKey) {
+  const { makeContext } = await importDbyLib(import.meta.url, "context.mjs");
+  const ctx = makeContext({ env: process.env });
+  if (!ctx.key) {
     die(
       "缺少环境变量 DOUBAOYA_API_KEY。\n" +
         "请前往 doubaoya.com → 登录 → 密钥中心 → 生成密钥，然后:\n" +
@@ -385,7 +347,7 @@ async function main() {
     );
   }
 
-  const { appid, nickname } = await resolveAppid(apiKey, args.appid && args.appid !== true ? args.appid : undefined);
+  const { appid, nickname } = await resolveAppid(ctx, args.appid && args.appid !== true ? args.appid : undefined);
 
   // 逐张预上传本地正文图片，改写 HTML
   let rewritten = html;
@@ -395,7 +357,7 @@ async function main() {
       die(`FILE_ERROR: 正文里引用的本地图片不存在：${src} → ${filePath}`);
     }
     process.stderr.write(`[info] 上传正文图片：${src}\n`);
-    const { url } = await uploadLocal(apiKey, appid, filePath, "image");
+    const { url } = await uploadLocal(ctx, appid, filePath, "image");
     if (!url) die(`上传返回缺少 url：${src}`);
     rewritten = rewritten.split(src).join(url); // 替换该 src 的所有出现
     process.stderr.write(`[info]   → ${url}\n`);
@@ -409,7 +371,7 @@ async function main() {
       const coverPath = resolveLocalPath(coverArg, process.cwd());
       if (!fs.existsSync(coverPath)) die(`FILE_ERROR: 封面文件不存在：${coverArg}`);
       process.stderr.write(`[info] 上传封面（thumb）：${coverArg}\n`);
-      const data = await uploadLocal(apiKey, appid, coverPath, "thumb");
+      const data = await uploadLocal(ctx, appid, coverPath, "thumb");
       thumbMediaId = data.mediaId;
       if (!thumbMediaId) die("封面上传返回缺少 mediaId");
       process.stderr.write(`[info]   → thumbMediaId=${thumbMediaId}\n`);
@@ -425,7 +387,7 @@ async function main() {
   if (draftId) payload.draftId = draftId;
   if (draftVersion) payload.draftVersion = draftVersion;
 
-  const r = await apiRequest(PUBLISH_ENDPOINT, apiKey, "POST", payload);
+  const r = await apiRequest(ctx, "POST", "/api/wechat/publish", payload, { billable: true });
   if (!r.ok) die(`${r.code}: ${r.message}`);
 
   const mediaId = r.data.mediaId || "";

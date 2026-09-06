@@ -114,6 +114,8 @@ async function main() {
   }
 
   // ---- 1. 成功 → 四个字段都拿到；未显式指定主题时不送任何主题字段 ----------
+  // renderViaPlatform 改走 dby-api 共享请求层的 request() 后，detailUrl 靠
+  // `withEnvelope: true` 拿（见 lib/http.mjs 该选项注释），不是自己再 fetch 一遍。
   {
     let seenBody = null;
     const stub = await bodyReadingStub((req, res) => {
@@ -251,6 +253,12 @@ async function main() {
   // 而**本包 17 个脚本里 notice 出现次数是 0** —— 转手就丢，用户永远不知道有更新。
   // SKILL.md 明写「原样转达给用户」，文档承诺过、代码没实现。
   // 同一条链上的另一半（服务端三条专用路由传 null）同日已修；只修一半等于没修。
+  //
+  // 🔴 后来 renderViaPlatform 改走 dby-api 共享请求层的 request() 之后，
+  // request() 自己也会在收到 notice 时统一 warn() 到 stderr（真闸见 lib/http.mjs
+  // 那一行，与 cli/test 里 http.mjs 自己的单测）——这是**追加**的一道转达，
+  // 不是把 renderViaPlatform 原来这份原样透传换掉：两条链路谁也不覆盖谁，
+  // 下面既验行为（stderr 确实写到了）也仍验数据（返回值原样带出），两者缺一都不算数。
   {
     const NOTICE = "你安装的「dby-publish」skill 有更新，运行 /dby-update 获取最新版本。";
     const stub = await bodyReadingStub((_req, res) => {
@@ -266,9 +274,22 @@ async function main() {
         })
       );
     });
-    const out = await renderViaPlatform({ baseUrl: stub.baseUrl, apiKey: "dyh_test", markdown: "x" });
+    const origWrite = process.stderr.write;
+    let captured = "";
+    process.stderr.write = (chunk, ...rest) => {
+      captured += String(chunk);
+      return origWrite.call(process.stderr, chunk, ...rest);
+    };
+    let out;
+    try {
+      out = await renderViaPlatform({ baseUrl: stub.baseUrl, apiKey: "dyh_test", markdown: "x" });
+    } finally {
+      process.stderr.write = origWrite;
+    }
     stub.close();
     assert.equal(out.notice, NOTICE, "notice 必须被接住并**逐字**带出（原样转达，一个字不改）");
+    // 🔴 行为判据：共享请求层自己也要把它打到 stderr（不是只靠 renderViaPlatform 这条链）。
+    assert.ok(captured.includes(NOTICE), `notice 必须经共享请求层原样打到 stderr，实际捕获: ${JSON.stringify(captured)}`);
 
     // 反面：信封里没有 notice 时不许凭空造一个。
     const stub2 = await bodyReadingStub((_req, res) => {
@@ -292,7 +313,7 @@ async function main() {
       /skillNotice\s*=\s*rendered\.notice\s*;/.test(src),
       "回报里的那句必须**原样**来自 rendered.notice，不许改写、不许自己编一句"
     );
-    ok("notice 被接住、逐字带出、并出现在两处回报里");
+    ok("notice 被接住、逐字带出、出现在两处回报里，且经共享请求层同样转达到 stderr");
   }
 
   // ---- 4b. 没有密钥 → 抛错，并指路本机渲染器（且写明它没有在线链接）--------

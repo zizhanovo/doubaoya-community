@@ -38,6 +38,7 @@ import { resolveAccountKey } from "./account-verify.mjs";
 import { validateTheme } from "./validate-theme.mjs";
 import { printArchivedConfigHint } from "./lib/archived-config-hint.mjs";
 import { checkDraftLimits } from "./lib/draft-limits.mjs";
+import { importDbyLib } from "./lib/locate-dby.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -277,6 +278,11 @@ export function hasExplicitLocalTheme({ cliTheme, configuredTheme, configHasThem
 //    那四级同构 —— 所以本机不再做第二遍决策，主题从此只有一个事实源。
 //
 // 不传 title：公众号后台单独承载标题，正文里不要第二个 H1（与 normalizeDraftMarkdown 同一意图）。
+//
+// 已改走 dby-api 共享请求层的 request()（规格 dby-cli-coverage「仓内只有一份请求层」，
+//    真闸见 tools/validate_community.py 的 validate_single_request_layer）——本函数不再
+//    自己 fetch。detailUrl 靠 `withEnvelope: true` 拿（见 lib/http.mjs 该选项注释）；
+//    notice 由 request() 统一 warn() 到 stderr，这里再把原文透传进下面的格式化回报。
 export async function renderViaPlatform({
   baseUrl,
   apiKey,
@@ -296,43 +302,24 @@ export async function renderViaPlatform({
   if (themeJson) body.themeJson = themeJson;
   else if (themeId) body.themeId = themeId;
 
-  let res;
+  const { request } = await importDbyLib(import.meta.url, "http.mjs");
+  const { EXIT } = await importDbyLib(import.meta.url, "errors.mjs");
+  // 与 write.mjs/charter.mjs 同一种最小 ctx 写法：request() 只用得到 baseUrl/key/
+  // timeoutOverride，不需要 makeContext() 的 json/color 那一套 CLI 输出判定。
+  const ctx = { baseUrl, key: apiKey, timeoutOverride: null };
+  let env;
   try {
-    res = await fetch(`${baseUrl}/api/wechat/render`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    env = await request(ctx, "POST", "/api/wechat/render", { body, timeoutMs, withEnvelope: true });
   } catch (e) {
-    const why =
-      e && (e.name === "TimeoutError" || e.name === "AbortError")
-        ? `超时（${timeoutMs}ms）`
-        : `网络错误（${e && e.message}）`;
-    throw new Error(`平台渲染请求失败：${why}`);
-  }
-
-  let env = null;
-  let text = "";
-  try {
-    text = await res.text();
-  } catch {}
-  try {
-    env = JSON.parse(text);
-  } catch {}
-
-  if (res.status === 401) {
-    throw new Error("平台渲染被拒（401）：DOUBAOYA_API_KEY 无效或缺失，请检查密钥配置。");
-  }
-  if (!res.ok || !env || env.success !== true) {
-    const err = (env && env.error) || null;
-    const code = (err && err.code) || `HTTP ${res.status}`;
-    const msg = (err && err.message) || "响应无法解析";
-    throw new Error(`平台渲染失败（${code}）：${msg}`);
+    // DbyError 的 code/message 已经不是旧格式了，这里按 exit 分类拼回旧文案
+    // （selfcheck-remote-theme.mjs 按这几句的措辞断言，改字不改判据）。
+    if (e && e.name === "DbyError" && e.exit === EXIT.AUTH) {
+      throw new Error("平台渲染被拒（401）：DOUBAOYA_API_KEY 无效或缺失，请检查密钥配置。");
+    }
+    if (e && e.name === "DbyError" && e.exit === EXIT.NETWORK) {
+      throw new Error(`平台渲染请求失败：${e.message}`);
+    }
+    throw new Error(`平台渲染失败（${(e && e.code) || "ERROR"}）：${(e && e.message) || String(e)}`);
   }
   const data = env.data || {};
   if (typeof data.html !== "string" || data.html.trim() === "") {
@@ -346,10 +333,8 @@ export async function renderViaPlatform({
     // 流水线存在的意义之一就是把它交到用户手里。
     detailUrl: typeof env.detailUrl === "string" ? env.detailUrl : null,
     // 🔴「你安装的 skill 有更新」。服务端按 User-Agent 判，挂在成功信封上。
-    // 读它不是可选的：SKILL.md 明写「原样转达给用户」，而 2026-08-21 之前
-    // **本包 17 个脚本里 notice 出现次数是 0** —— 服务端老实挂上、流水线转手丢掉，
-    // 于是用户永远不知道有更新。同一条链上的另一半（服务端三条专用路由传 null）
-    // 同日已修；只修一半等于没修。
+    // request() 已经统一 warn() 到 stderr 一份；这里再原样透传给调用方，
+    // 好让 pipeline.mjs 的格式化「回报」区块里也能看见（SKILL.md 明写「原样转达给用户」）。
     notice: typeof env.notice === "string" && env.notice ? env.notice : null,
   };
 }
@@ -395,31 +380,17 @@ export function normalizeDraftMarkdown(markdown) {
 }
 
 // GET 一个 doubaoya API（带 key），返回 { ok, data, code, message }。key 绝不打印。
-async function apiGet(url, key) {
-  let res;
+// 转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」）——
+// 这两处调用（/api/skills、/api/wechat/status）只读账号侧信息，不关心信封顶层的
+// detailUrl/notice，全量委托给 request() 没有信息损失。
+async function apiGet(ctx, apiPath) {
+  const { request } = await importDbyLib(import.meta.url, "http.mjs");
   try {
-    res = await fetch(url, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${key}`, Accept: "application/json" },
-    });
+    const data = await request(ctx, "GET", apiPath, {});
+    return { ok: true, data: data || {} };
   } catch (e) {
-    return { ok: false, code: "NETWORK_ERROR", message: `无法连接 ${url}（${e.message}）` };
+    return { ok: false, code: e.code || "ERROR", message: e.message || String(e) };
   }
-  let text = "";
-  try {
-    text = await res.text();
-  } catch {}
-  let env;
-  try {
-    env = JSON.parse(text);
-  } catch {
-    return { ok: false, code: `HTTP_${res.status}`, message: text || res.statusText };
-  }
-  if (env.success !== true) {
-    const err = env.error || {};
-    return { ok: false, code: err.code || `HTTP_${res.status}`, message: err.message || "请求未成功" };
-  }
-  return { ok: true, data: env.data || {} };
 }
 
 // 从各种可能的 /api/skills 响应形状里找 slug 列表。
@@ -563,6 +534,8 @@ async function main() {
   info(`已解析账号: ${resolved.account.email}（ID ${resolved.account.id}）`);
   info(`来源: ${resolved.source}   authVia: ${JSON.stringify(resolved.authVia)}`);
   info("（API key 已解析，仅在内存中传给子进程，不打印。）");
+  const { makeContext } = await importDbyLib(import.meta.url, "context.mjs");
+  const ctx = makeContext({ env: { DOUBAOYA_BASE_URL: baseUrl, DOUBAOYA_API_KEY: apiKey } });
   const whoamiOk = true; // 硬门：到这里说明第 2 步成功，才允许后续保存草稿
 
   // ===== 步骤 3：草稿前置检查（skills + status）===========================
@@ -577,7 +550,7 @@ async function main() {
   } else {
   step(3, "草稿前置检查 (skills + status)");
   // 3a. /api/skills → 断言 wechat-draft-publish 存在
-  const skillsRes = await apiGet(`${baseUrl}/api/skills`, apiKey);
+  const skillsRes = await apiGet(ctx, "/api/skills");
   if (skillsRes.ok) {
     const slugs = extractSkillSlugs(skillsRes.data);
     if (slugs.includes("wechat-draft-publish")) {
@@ -590,7 +563,7 @@ async function main() {
   }
 
   // 3b. /api/wechat/status → 确认目标账号拥有公众号 + 解析 appid + 昵称
-  const statusRes = await apiGet(`${baseUrl}/api/wechat/status`, apiKey);
+  const statusRes = await apiGet(ctx, "/api/wechat/status");
   if (!statusRes.ok) {
     fail(`公众号状态查询失败（${statusRes.code}: ${statusRes.message}）。请先在 doubaoya.com 绑定公众号。`);
   }

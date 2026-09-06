@@ -8,7 +8,10 @@
  *   account. A single machine may hold several keys (env / files / Keychain);
  *   this module asks the server who each key is and picks the right one.
  *
- * Zero external deps: Node >= 18 builtins + global fetch only.
+ * Zero external deps: Node >= 18 builtins only. The actual HTTP call is
+ * delegated in-process to the dby-api package's shared request layer
+ * (skills/dby-api/scripts/lib/http.mjs — see ./lib/locate-dby.mjs for how
+ * it's located; spec dby-cli-coverage「仓内只有一份请求层」).
  * SECURITY: the resolved key is returned in memory ONLY. It is never written
  *           to stdout/stderr/logs. Error and debug output redact key values.
  *
@@ -23,9 +26,25 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { importDbyLib } from "./lib/locate-dby.mjs";
 
 const DEFAULT_BASE_URL = "https://doubaoya.com";
 const WHOAMI_PATH = "/api/agent/whoami";
+
+// 转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」），
+// 惰性 + 记忆化：只有真的存在候选 key 时才去定位 dby-api 包，零 key 时（NO_KEY_MSG
+// 分支）连这一步探测都不需要发生。
+let _dbyLibPromise = null;
+function getDbyLib() {
+  if (!_dbyLibPromise) {
+    _dbyLibPromise = Promise.all([
+      importDbyLib(import.meta.url, "http.mjs"),
+      importDbyLib(import.meta.url, "errors.mjs"),
+      importDbyLib(import.meta.url, "context.mjs"),
+    ]);
+  }
+  return _dbyLibPromise;
+}
 
 /**
  * Redact a key for display.
@@ -178,33 +197,26 @@ async function collectCandidates({ account } = {}) {
  *   Resolved account, or null if the key is invalid / rejected / unparseable.
  */
 async function whoami(baseUrl, key) {
-  const url = baseUrl.replace(/\/+$/, "") + WHOAMI_PATH;
-  let res;
+  // 转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」）——
+  // 本函数不再自己 fetch/解析信封。鉴权失败（exit===4，含 401/缺 key）视为「这把 key
+  // 对这个 baseUrl 无效」，与旧行为一致地静默丢弃、让调用方去试下一个候选；其余错误
+  // （网络/超时/服务端 5xx）不再被当成"key 无效"吞掉——它们不是关于这把 key 的判断，
+  // 照旧上抛，交给 resolveInternal/main() 的调用方决定怎么办。
+  const [{ request }, { EXIT }, { makeContext }] = await getDbyLib();
+  const ctx = makeContext({ env: { DOUBAOYA_BASE_URL: baseUrl, DOUBAOYA_API_KEY: key } });
+  let data;
   try {
-    res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        Accept: "application/json",
-      },
-    });
-  } catch {
-    // network error — treat as unresolvable (do not leak key)
-    return null;
+    data = await request(ctx, "GET", WHOAMI_PATH, {});
+  } catch (e) {
+    if (e && e.name === "DbyError" && e.exit === EXIT.AUTH) return null;
+    throw e;
   }
-  if (!res.ok) return null; // 401/403/etc -> invalid key, dropped
-  let body;
-  try {
-    body = await res.json();
-  } catch {
-    return null;
-  }
-  const user = body && body.data && body.data.user;
+  const user = data && data.user;
   if (!user || typeof user.email !== "string") return null;
   return {
     id: user.id,
     email: user.email,
-    authVia: body.data.authVia,
+    authVia: data.authVia,
   };
 }
 
@@ -362,10 +374,23 @@ async function main() {
     return 0;
   }
 
-  const res = await resolveInternal({
-    account: args.account,
-    baseUrl: args.baseUrl,
-  });
+  let res;
+  try {
+    res = await resolveInternal({
+      account: args.account,
+      baseUrl: args.baseUrl,
+    });
+  } catch (e) {
+    // whoami() 只把"鉴权失败"当作候选 key 无效静默丢弃；网络错误/服务端 5xx 这类
+    // 与"这把 key 是否有效"无关的错误会照旧上抛到这里——不是崩溃，走同一套人话/JSON 输出。
+    const msg = `whoami 请求异常：${e && e.message ? e.message : String(e)}`;
+    if (args.json) {
+      process.stdout.write(JSON.stringify({ success: false, error: msg }, null, 2) + "\n");
+    } else {
+      process.stderr.write(`❌ ${msg}\n`);
+    }
+    return 1;
+  }
 
   // candidate -> account map (redacted; no key values, only source + resolved email)
   const candidateMap = res.valid.map((v) => ({
