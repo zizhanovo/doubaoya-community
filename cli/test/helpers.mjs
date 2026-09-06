@@ -6,7 +6,7 @@ import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-export const CLI_BIN = fileURLToPath(new URL("../bin/dby.mjs", import.meta.url));
+export const CLI_BIN = fileURLToPath(new URL("../../skills/dby-api/scripts/dby.mjs", import.meta.url));
 export const REPO_ROOT = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 export const OLD_WRITE = path.join(REPO_ROOT, "skills/dby-write/scripts/write.mjs");
 export const OLD_CHARTER = path.join(REPO_ROOT, "skills/dby-charter/scripts/charter.mjs");

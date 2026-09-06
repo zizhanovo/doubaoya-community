@@ -5,7 +5,7 @@
 import { EXIT, DbyError } from "../errors.mjs";
 import { request } from "../http.mjs";
 import { warn } from "../output.mjs";
-import { classify, readVoice, extractHardConstraints, MIN_SAMPLES, MIN_BASELINE } from "../lib/write-core.mjs";
+import { classify, readVoice, extractHardConstraints, filterArticles, MIN_SAMPLES, MIN_BASELINE } from "../write-core.mjs";
 
 /** 章程关键字段一行一个；空串照打「(空)」，让 agent 看见哪里没填而不是猜。纯函数。 */
 export function charterLines(c) {
@@ -180,3 +180,97 @@ export async function writeReview(ctx) {
   warn(ctx, "升级路径：让用户去公众号后台「内容分析 → 单篇文章」拿真实打开率与分享率贴回来，按真值档重跑。");
   return { data, human: reviewHuman(data) };
 }
+
+/**
+ * 第 4 步收素材 · 自己的往期文章（迁移自 skills/dby-write/scripts/write.mjs 的 articles）。
+ * 🔴 走 /api/ip-profile/wechat-history（密钥可用、免费），**不走 /api/articles** ——
+ *    那条只认登录态，拿密钥调必回 UNAUTHORIZED（2026-08-24 实测）。appid 从 /api/wechat/review 现拉。
+ * ponytail: 天花板 = 上游一次最多 20 篇，--q 只在最近 20 篇里筛；升级路径 = 服务端给 /api/articles
+ *   开密钥鉴权后换过去（design 遗留问题：与 article list|get 的语义是否合并留到下一 major）。
+ */
+export async function writeArticles(ctx, { q, id } = {}) {
+  const review = await request(ctx, "GET", "/api/wechat/review", {});
+  const appid = review?.account?.appid;
+  if (review?.state === "no_account" || !appid) {
+    throw new DbyError("NO_ACCOUNT", "这个账号还没绑公众号，拉不到往期文章 —— 素材阶梯里这一层跳过，别停下来问。", {
+      exit: EXIT.BUSINESS
+    });
+  }
+  const hist = await request(
+    ctx, "GET",
+    `/api/ip-profile/wechat-history?authorizerAppid=${encodeURIComponent(appid)}&count=20`,
+    {}
+  );
+  // 取单篇时不按关键词筛（先拿全量再按序号/id 定位），与旧脚本同一条件分支。
+  const items = filterArticles(hist?.articles, id ? "" : q);
+
+  if (id) {
+    const a = items.find((x) => x.id === id || String(x.idx) === String(id));
+    if (!a) {
+      throw new DbyError("ARTICLE_NOT_FOUND", `最近 20 篇里没有序号 / id 为 ${id} 的文章。`, { exit: EXIT.BUSINESS });
+    }
+    const human = `# ${a.title}\n出处：${a.url ?? "(无链接)"}  发布：${a.publishedAt ?? "?"}\n\n${a.text}`;
+    return { data: { article: a }, human };
+  }
+
+  const lines = [];
+  if (!items.length) {
+    lines.push(q ? `最近 20 篇里没有命中「${q}」的。` : `公众号「${review.account?.nickname ?? "?"}」还没有已发文章。`);
+  } else {
+    for (const a of items) lines.push(`${a.idx}. ${a.title}  ${String(a.publishedAt ?? "?").slice(0, 10)}  ${a.url ?? ""}`);
+  }
+  warn(ctx, "取正文：dby write articles --id <序号>。写进素材单时出处写「往期文章《标题》+ 链接」。");
+  return { data: { account: review.account ?? null, items }, human: lines.join("\n") };
+}
+
+// ── 命令表 ─────────────────────────────────────────────────────────────────
+// 四条都是「已存在且有对拍测试的组合命令」（design D5 冻结名单），保留为 ponytail 例外，
+// 不因命令化而拆成更细的原子命令；prep 一次并发拉五条路由，articles 先打 review 拿 appid 再打
+// wechat-history，标 composite。
+export const commands = [
+  {
+    group: "write", name: "prep",
+    summary: "写前几样一次拉齐（档案/章程/范文/规范/素材索引）；warnings 走 stderr",
+    args: [], flags: {},
+    routes: [
+      { method: "GET", path: "/api/ip-profile" },
+      { method: "GET", path: "/api/ip-profile/:id/charter" },
+      { method: "GET", path: "/api/ip-profile/:id/samples" },
+      { method: "GET", path: "/api/wechat/writing-spec" },
+      { method: "GET", path: "/api/materials" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx) => writePrep(ctx)
+  },
+  {
+    group: "write", name: "topics",
+    summary: "选题候选（用户已经说了写什么就别调）",
+    args: [{ name: "niche", required: false }], flags: {},
+    routes: [{ method: "GET", path: "/api/wechat/topics" }],
+    billable: false, destructive: false, composite: false,
+    run: (ctx, { args }) => writeTopics(ctx, args.niche)
+  },
+  {
+    group: "write", name: "review",
+    summary: "复盘取数 + 四象限（基准=本号历史中位数；no_account/no_articles → 退出码 3）",
+    args: [], flags: {},
+    routes: [{ method: "GET", path: "/api/wechat/review" }],
+    billable: false, destructive: false, composite: false,
+    run: (ctx) => writeReview(ctx)
+  },
+  {
+    group: "write", name: "articles",
+    summary: "第 4 步收素材：自己往期已发文章（授权公众号最近 20 篇，免费）；--q 按关键词筛，--id 取单篇正文",
+    args: [],
+    flags: {
+      q: { value: true, summary: "按关键词筛标题/正文（大小写不敏感）" },
+      id: { value: true, summary: "取第 N 篇（序号）或指定 articleId 的正文" }
+    },
+    routes: [
+      { method: "GET", path: "/api/wechat/review" },
+      { method: "GET", path: "/api/ip-profile/wechat-history" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx, { flags }) => writeArticles(ctx, { q: flags.q, id: flags.id })
+  }
+];

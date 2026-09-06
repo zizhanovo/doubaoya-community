@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { startMock, runCli, catalogRoutes, envFor, FIXTURE_INVOKE_RESULT } from "./helpers.mjs";
-import { shellQuote, buildConfirmCommand } from "../src/confirm.mjs";
+import { shellQuote, buildConfirmCommand } from "../../skills/dby-api/scripts/lib/confirm.mjs";
 
 test("Scenario: 不带 --confirm 调计费命令 —— 退出码 6、无服务端副作用、confirmCommand 可原样重放", async () => {
   const mock = await startMock(catalogRoutes());

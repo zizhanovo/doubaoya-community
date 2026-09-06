@@ -85,3 +85,24 @@ export function extractHardConstraints(specText) {
   }
   return lines.slice(start, end).join("\n").trim();
 }
+
+/**
+ * 往期文章按关键词筛（标题或正文命中即算，大小写不敏感；不传关键词则全给）。**纯函数**。
+ * 逐函数移植自 skills/dby-write/scripts/write.mjs（同上，迁移期两边并存，parity 测试钉住一致）。
+ * 服务端已给 `text`（去标签正文）；老返回体只有 `content` 时就地去一次标签。
+ */
+export function filterArticles(list, q) {
+  const kw = String(q ?? "").trim().toLowerCase();
+  const items = (Array.isArray(list) ? list : []).map((a, i) => ({
+    idx: i + 1,
+    id: a?.articleId ?? null,
+    title: a?.title ?? "",
+    url: a?.url ?? null,
+    publishedAt: a?.publishedAt ?? null,
+    text: typeof a?.text === "string" && a.text
+      ? a.text
+      : String(a?.content ?? "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim()
+  }));
+  if (!kw) return items;
+  return items.filter((a) => a.title.toLowerCase().includes(kw) || a.text.toLowerCase().includes(kw));
+}

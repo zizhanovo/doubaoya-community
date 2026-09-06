@@ -3,8 +3,11 @@
 // 端到端：固定 fixture 打 mock，断言 CLI 的 data 字段与旧脚本纯函数推出的关键字段一致。
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import * as legacy from "../../skills/dby-api/scripts/doubaoya.mjs";
-import * as ours from "../src/lib/capability.mjs";
+// doubaoya.mjs 已退成转发壳，纯函数搬进了 lib/capability.mjs（唯一实现）；两个 import
+// 其实指向同一份代码——这条「对拍」测试因此从「钉住两套实现一致」退化成「钉住这份实现的
+// 行为不漂」，仍然值得留着（选 legacy 的名字只是保留历史阅读脉络，不代表还有第二套实现）。
+import * as legacy from "../../skills/dby-api/scripts/lib/capability.mjs";
+import * as ours from "../../skills/dby-api/scripts/lib/capability.mjs";
 import {
   startMock, runCli, catalogRoutes, envFor,
   FIXTURE_SKILL_ITEMS, FIXTURE_API_ITEMS, FIXTURE_INVOKE_RESULT

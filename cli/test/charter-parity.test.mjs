@@ -9,7 +9,7 @@ import {
   startMock, runCli, runNode, charterRoutes, envFor, ok,
   OLD_CHARTER, FIXTURE_CHARTER
 } from "./helpers.mjs";
-import { stripReadOnlyProjection } from "../src/commands/charter.mjs";
+import { stripReadOnlyProjection } from "../../skills/dby-api/scripts/lib/commands/charter.mjs";
 
 test("charter profiles 对拍：data.profiles 与旧脚本打出的行一致", async () => {
   const mock = await startMock(charterRoutes());

@@ -41,9 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20" # 对齐 cli/package.json 的 engines.node >=20
-          cache: npm
-          cache-dependency-path: cli/package-lock.json
-      - run: npm ci
+          node-version: "20" # 对齐 cli/package.json 的 engines.node >=18；用 20 与其余 job 对齐
+      # cli/ 已退成开发夹具（design D3）：零依赖，测试直接跑，不装依赖、不需要 lockfile 缓存。
       - name: node --test
         run: npm test

@@ -79,3 +79,41 @@ export async function charterPut(ctx, file, opts) {
     human: JSON.stringify(d.charter, null, 2)
   };
 }
+
+// ── 命令表 ─────────────────────────────────────────────────────────────────
+export const commands = [
+  {
+    group: "charter", name: "profiles",
+    summary: "列出我的档案（id / 是否默认 / 名字）",
+    args: [], flags: {},
+    routes: [{ method: "GET", path: "/api/ip-profiles" }],
+    billable: false, destructive: false, composite: false,
+    run: (ctx) => charterProfiles(ctx)
+  },
+  {
+    group: "charter", name: "get",
+    summary: "读章程；--for-edit 输出已剥 products、可直接改再 put 的形态",
+    args: [],
+    flags: {
+      profile: { value: true, summary: "指定档案（默认用默认档案）" },
+      "for-edit": { summary: "剥掉只读投影键 products" }
+    },
+    // 不带 --profile 时打 /api/ip-profile/charter（默认档案的快捷路由），
+    // 带 --profile 时打 /api/ip-profile/:id/charter —— 两条路由都可能被打到，标 composite。
+    routes: [
+      { method: "GET", path: "/api/ip-profile/charter" },
+      { method: "GET", path: "/api/ip-profile/:id/charter" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx, { flags }) => charterGet(ctx, { profile: flags.profile, forEdit: flags.forEdit })
+  },
+  {
+    group: "charter", name: "put",
+    summary: "全量替换章程（无论如何都会再剥一次 products）",
+    args: [{ name: "file", required: true }],
+    flags: { profile: { value: true, summary: "指定档案（默认用默认档案）" } },
+    routes: [{ method: "PUT", path: "/api/ip-profile/:id/charter" }],
+    billable: false, destructive: false, composite: false,
+    run: (ctx, { args, flags }) => charterPut(ctx, args.file, { profile: flags.profile })
+  }
+];

@@ -2,9 +2,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { startMock, runCli, catalogRoutes, writeRoutes, envFor, ok } from "./helpers.mjs";
-import { makeContext } from "../src/context.mjs";
-import { renderJson, failureEnvelope, confirmationEnvelope } from "../src/output.mjs";
-import { DbyError, EXIT } from "../src/errors.mjs";
+import { makeContext } from "../../skills/dby-api/scripts/lib/context.mjs";
+import { renderJson, failureEnvelope, confirmationEnvelope } from "../../skills/dby-api/scripts/lib/output.mjs";
+import { DbyError, EXIT } from "../../skills/dby-api/scripts/lib/errors.mjs";
 
 // ── Requirement: 输出通道分工与 JSON 契约 ────────────────────────────────────
 

@@ -1,24 +1,16 @@
 {
   "name": "@doubaoya/cli",
-  "version": "0.1.0",
-  "description": "都爆鸭 dby CLI —— 统一鉴权、输出契约、退出码契约与计费确认协议",
+  "private": true,
+  "description": "dby CLI 的开发夹具（design D3）：真正实现已搬到 skills/dby-api/scripts/，本目录只剩测试与本地 npm link 用的 bin 壳，不发 npm。",
   "type": "module",
   "bin": {
     "dby": "bin/dby.mjs"
   },
-  "files": [
-    "bin",
-    "src",
-    "README.md"
-  ],
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "scripts": {
     "test": "node --test"
-  },
-  "dependencies": {
-    "commander": "^14.0.0"
   },
   "license": "MIT"
 }

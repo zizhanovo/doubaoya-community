@@ -41,6 +41,9 @@ export function classifyFetchError(err, { billable = false, timeoutMs = DEFAULT_
  *   notFoundNull: 404 时返回 null 而不是抛（ref 在两个集合之间试探用）
  *   billable: 只影响超时 remediation 的措辞与红线提示
  *   hints: 上游错误码 → remediation 的补充表（调用点最了解自己的错误码）
+ *   withEnvelope: 为 true 时返回 { data, detailUrl, notice, noResult } 而不是裸 data——
+ *     信封顶层的 detailUrl（如公众号渲染的在线预览页）只有这样才拿得到；notice/noResult
+ *     仍照样 warn 到 stderr，这里只是多给调用方一份原文。
  * 🔴 无 body 的请求不加 Content-Type —— 服务端对带该头却空 body 的请求直接 BAD_REQUEST，
  *    而它看起来很像「没权限」（write.mjs 踩过）。
  */
@@ -51,7 +54,8 @@ export async function request(ctx, method, path, {
   billable = false,
   soft = false,
   notFoundNull = false,
-  hints = {}
+  hints = {},
+  withEnvelope = false
 } = {}) {
   const key = getKey(ctx, { required: auth === "required" });
   const headers = {};
@@ -97,6 +101,9 @@ export async function request(ctx, method, path, {
   // notice =「你安装的 skill 有更新」类提示，SKILL.md 承诺原样转达 —— 这条链断过，别再断。
   if (env.notice) warn(ctx, `[notice] ${env.notice}`);
   if (env.noResult) warn(ctx, `[${env.noResult.code}] ${env.noResult.message}`);
+  if (withEnvelope) {
+    return { data: env.data, detailUrl: env.detailUrl ?? null, notice: env.notice ?? null, noResult: env.noResult ?? null };
+  }
   return env.data;
 }
 

@@ -3,6 +3,7 @@
 
 import { request } from "../http.mjs";
 import { EXIT, DbyError } from "../errors.mjs";
+import { readVersion } from "../version.mjs";
 
 export async function doctor(ctx, version) {
   const checks = [];
@@ -61,3 +62,17 @@ export async function doctor(ctx, version) {
   }
   return { data, human };
 }
+
+// ── 命令表 ─────────────────────────────────────────────────────────────────
+// routes 留空数组：doctor 实打的是 /api/skills（连通性）与 /api/ip-profile（鉴权），
+// 这两条本身各有自己的子命令覆盖；doctor 只是复用它们做诊断，不该被对账闸当成
+// 「doctor 独占了这两条路由」——composite=true 但 routes=[] 是刻意的（design D6）。
+export const commands = [
+  {
+    group: null, name: "doctor",
+    summary: "自诊断：key 在不在、服务通不通、key 能不能用。全过 0，有项不过 3",
+    args: [], flags: {},
+    routes: [], billable: false, destructive: false, composite: true,
+    run: (ctx) => doctor(ctx, readVersion())
+  }
+];

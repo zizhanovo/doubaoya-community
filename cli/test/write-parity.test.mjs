@@ -6,8 +6,8 @@ import {
   startMock, runCli, runNode, writeRoutes, envFor, ok,
   OLD_WRITE, FIXTURE_REVIEW_ARTICLES
 } from "./helpers.mjs";
-import { prepHuman, reviewHuman } from "../src/commands/write.mjs";
-import { classify } from "../src/lib/write-core.mjs";
+import { prepHuman, reviewHuman } from "../../skills/dby-api/scripts/lib/commands/write.mjs";
+import { classify } from "../../skills/dby-api/scripts/lib/write-core.mjs";
 
 test("write prep 对拍：CLI 的 data 与旧脚本 `prep --json` 的输出逐字段一致", async () => {
   const mock = await startMock(writeRoutes());
@@ -148,4 +148,97 @@ test("reviewHuman：指标档声明永远在第一行（代理档不许被说成
   const text = reviewHuman({ metricTier: "proxy", reliable: false, baseline: { medianRead: 1, medianRatePct: 1, n: 1 }, items: [] , reason: "没数"});
   assert.match(text.split("\n")[0], /代理档/);
   assert.ok(!text.includes("打开率 × 分享率"));
+});
+
+// ── articles 对拍（任务 3.6）：appid 从 /api/wechat/review 现拉，正文从 wechat-history 取 ──────
+const HIST_ARTICLES = [
+  { articleId: "a1", title: "打开率复盘", url: "https://mp.weixin.qq.com/s/a1", publishedAt: "2026-08-01T00:00:00.000Z", text: "关于打开率的思考" },
+  { articleId: "a2", title: "降权应对", url: "https://mp.weixin.qq.com/s/a2", publishedAt: "2026-08-02T00:00:00.000Z", content: "<p>关于降权的经验</p>" }
+];
+
+test("write articles 对拍：往期文章清单与旧脚本一致，appid 取自 review 再打 wechat-history", async () => {
+  const mock = await startMock(writeRoutes({
+    "GET /api/ip-profile/wechat-history": ok({ articles: HIST_ARTICLES })
+  }));
+  try {
+    const old = await runNode(OLD_WRITE, ["articles"], { env: envFor(mock) });
+    assert.equal(old.code, 0, old.stderr);
+    assert.match(old.stdout, /打开率复盘/);
+    assert.match(old.stdout, /降权应对/);
+
+    const now = await runCli(["write", "articles"], { env: envFor(mock) });
+    assert.equal(now.code, 0, now.stderr);
+    const { data } = JSON.parse(now.stdout);
+    assert.equal(data.items.length, 2);
+    assert.equal(data.items[0].title, "打开率复盘");
+    assert.equal(data.items[1].title, "降权应对");
+    // 正文里的 HTML 标签要被去掉（老脚本同一份 filterArticles 逻辑）
+    assert.equal(data.items[1].text, "关于降权的经验");
+
+    // 两边都先打 review 拿 appid=wx1，再打 wechat-history?authorizerAppid=wx1&count=20
+    const hist = mock.hits.filter((h) => h.path === "/api/ip-profile/wechat-history");
+    assert.equal(hist.length, 2, "新旧各打一次");
+    for (const h of hist) assert.equal(h.query, "?authorizerAppid=wx1&count=20");
+  } finally {
+    await mock.close();
+  }
+});
+
+test("write articles --q 按关键词筛：标题/正文命中，两边一致", async () => {
+  const mock = await startMock(writeRoutes({
+    "GET /api/ip-profile/wechat-history": ok({ articles: HIST_ARTICLES })
+  }));
+  try {
+    const old = await runNode(OLD_WRITE, ["articles", "--q", "降权"], { env: envFor(mock) });
+    assert.equal(old.code, 0, old.stderr);
+    assert.match(old.stdout, /降权应对/);
+    assert.ok(!old.stdout.includes("打开率复盘"));
+
+    const now = await runCli(["write", "articles", "--q", "降权"], { env: envFor(mock) });
+    assert.equal(now.code, 0, now.stderr);
+    const { data } = JSON.parse(now.stdout);
+    assert.equal(data.items.length, 1);
+    assert.equal(data.items[0].title, "降权应对");
+  } finally {
+    await mock.close();
+  }
+});
+
+test("write articles --id 取单篇正文：两边一致；序号越界 → 退出码 3（与旧脚本一致）", async () => {
+  const mock = await startMock(writeRoutes({
+    "GET /api/ip-profile/wechat-history": ok({ articles: HIST_ARTICLES })
+  }));
+  try {
+    const old = await runNode(OLD_WRITE, ["articles", "--id", "1"], { env: envFor(mock) });
+    assert.equal(old.code, 0, old.stderr);
+    assert.match(old.stdout, /打开率复盘/);
+    assert.match(old.stdout, /关于打开率的思考/);
+
+    const now = await runCli(["write", "articles", "--id", "1"], { env: envFor(mock) });
+    assert.equal(now.code, 0, now.stderr);
+    const { data } = JSON.parse(now.stdout);
+    assert.equal(data.article.title, "打开率复盘");
+    assert.equal(data.article.text, "关于打开率的思考");
+
+    const oldMiss = await runNode(OLD_WRITE, ["articles", "--id", "99"], { env: envFor(mock) });
+    assert.equal(oldMiss.code, 3, "旧脚本基线：序号越界退出码 3");
+    const nowMiss = await runCli(["write", "articles", "--id", "99"], { env: envFor(mock) });
+    assert.equal(nowMiss.code, 3);
+    assert.equal(JSON.parse(nowMiss.stdout).error.code, "ARTICLE_NOT_FOUND");
+  } finally {
+    await mock.close();
+  }
+});
+
+test("write articles：账号未绑定 → 退出码 3（与旧脚本一致）", async () => {
+  const mock = await startMock({ "GET /api/wechat/review": ok({ state: "no_account" }) });
+  try {
+    const old = await runNode(OLD_WRITE, ["articles"], { env: envFor(mock) });
+    assert.equal(old.code, 3, old.stderr);
+    const now = await runCli(["write", "articles"], { env: envFor(mock) });
+    assert.equal(now.code, 3);
+    assert.equal(JSON.parse(now.stdout).error.code, "NO_ACCOUNT");
+  } finally {
+    await mock.close();
+  }
 });

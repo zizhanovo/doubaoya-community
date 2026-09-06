@@ -9,7 +9,7 @@ import { warn } from "../output.mjs";
 import {
   resolveTarget, isOperationKey, matchByOperationKey, stripRaw,
   priceLabel, parseRef, matchApisBySlug, matchesQuery, callPath
-} from "../lib/capability.mjs";
+} from "../capability.mjs";
 
 /** list/search 的人类行：ref、调用路径、计费、标题（与旧脚本同款）。 */
 function rows(items) {
@@ -177,3 +177,134 @@ export async function apiInvoke(ctx, ref, bodyRaw, opts) {
   const out = opts.raw ? data : stripRaw(data);
   return { data: out, human: JSON.stringify(out, null, 2) };
 }
+
+// ── 命令表 ─────────────────────────────────────────────────────────────────
+// invoke 打哪条路由取决于目标能力落在两个集合的哪一边（generic Skill 走
+// /api/skills/:slug/invoke，平台数据能力走 /api/apis/:platform/:slug/call），
+// describe/invoke 解析 ref 时也可能先打 /api/skills、/api/apis 两份清单或
+// /api/skills/:slug、/api/apis/:platform/:slug 两条详情 —— 四条命令天然 composite。
+
+/** `api validate <ref> [body]`：免费预检入参（POST /api/capabilities/:operationKey/validate）。
+ *  服务端只对在 schemas 包里有真 zod schema 的能力放行，没有的返回 422 CAPABILITY_VALIDATION_UNSUPPORTED——
+ *  那不是「入参错」，是「这条能力没法预检」，映射成业务态 3 并在 remediation 里说清。 */
+export async function apiValidate(ctx, ref, bodyRaw) {
+  const capability = await resolveCapability(ctx, ref);
+  const operationKey = capability?.operationKey;
+  if (!operationKey) {
+    throw new DbyError("NO_OPERATION_KEY", `「${ref}」的详情里没有 operationKey，无法预检。`, { exit: EXIT.BUSINESS });
+  }
+  let input = {};
+  if (bodyRaw !== undefined) {
+    try { input = JSON.parse(bodyRaw); } catch {
+      throw new DbyError("USAGE", "body 不是合法 JSON。", { exit: EXIT.USAGE });
+    }
+  }
+  const data = await request(ctx, "POST", `/api/capabilities/${encodeURIComponent(operationKey)}/validate`, {
+    body: { input },
+    hints: { CAPABILITY_VALIDATION_UNSUPPORTED: "这条能力没有可预检的入参规格；直接 `dby api describe` 照示例填，然后 invoke。" }
+  });
+  const lines = [data.valid ? "✅ 入参通过预检" : "❌ 入参未通过预检"];
+  for (const issue of data.issues ?? []) lines.push(`  · ${issue.path ?? ""} ${issue.message ?? JSON.stringify(issue)}`.trimEnd());
+  return { data, human: lines.join("\n") };
+}
+
+/** `api recommend <query...>`：让服务端按意图推荐能力（POST /api/skills/recommend，免费免 key）。 */
+export async function apiRecommend(ctx, query, { category, limit } = {}) {
+  const body = { query };
+  if (category) body.category = category;
+  if (limit) body.limit = Number(limit);
+  const data = await request(ctx, "POST", "/api/skills/recommend", { body, auth: "optional" });
+  const lines = [];
+  if (data.primary) lines.push(`首选：${data.primary.slug ?? ""}  ${data.primary.title ?? ""}`.trimEnd());
+  for (const c of data.candidates ?? []) lines.push(`  候选：${c.slug ?? ""}  ${c.title ?? ""}`.trimEnd());
+  if (data.decisionSummary) lines.push(String(data.decisionSummary));
+  return { data, human: lines.join("\n") || "（无推荐）" };
+}
+
+export const commands = [
+  {
+    group: "api", name: "list",
+    summary: "拉能力清单（默认两个集合都拉）",
+    args: [],
+    flags: {
+      skills: { summary: "只拉产品化 Skill 集合" },
+      apis: { summary: "只拉平台数据能力集合" }
+    },
+    routes: [
+      { method: "GET", path: "/api/skills" },
+      { method: "GET", path: "/api/apis" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx, { flags }) => apiList(ctx, { skills: flags.skills, apis: flags.apis })
+  },
+  {
+    group: "api", name: "search",
+    summary: "按关键词搜（两个集合都搜）",
+    args: [{ name: "query", required: true, variadic: true }],
+    flags: {},
+    routes: [
+      { method: "GET", path: "/api/skills/search" },
+      { method: "GET", path: "/api/apis" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx, { args }) => apiSearch(ctx, args.query.join(" "))
+  },
+  {
+    group: "api", name: "describe",
+    summary: "看单条能力的入参/出参/调用路径（入参一律现拉，别照记忆拼）",
+    args: [{ name: "ref", required: true }],
+    flags: {},
+    routes: [
+      { method: "GET", path: "/api/skills" },
+      { method: "GET", path: "/api/apis" },
+      { method: "GET", path: "/api/skills/:slug" },
+      { method: "GET", path: "/api/apis/:platform/:slug" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx, { args }) => apiDescribe(ctx, args.ref)
+  },
+  {
+    group: "api", name: "invoke",
+    summary: "调一条能力。计费能力默认停在 confirmation_required（退出码 6），--confirm 放行",
+    args: [{ name: "ref", required: true }, { name: "body", required: false }],
+    flags: { raw: { summary: "保留响应里与 items/content 重复的 raw" } },
+    routes: [
+      { method: "GET", path: "/api/skills" },
+      { method: "GET", path: "/api/apis" },
+      { method: "GET", path: "/api/skills/:slug" },
+      { method: "GET", path: "/api/apis/:platform/:slug" },
+      { method: "POST", path: "/api/skills/:slug/invoke" },
+      { method: "POST", path: "/api/apis/:platform/:slug/call" }
+    ],
+    // 🔴 unitPrice 因能力而异，不能静态判「这条命令免费」——保守标 billable，闸与文档按「可能计费」处理。
+    billable: true, destructive: false, composite: true,
+    run: (ctx, { args, flags }) => apiInvoke(ctx, args.ref, args.body, { raw: flags.raw })
+  }
+  ,{
+    group: "api", name: "validate",
+    summary: "免费预检入参（只对有真 schema 的能力可用；422 不是入参错，是不可预检）",
+    args: [{ name: "ref", required: true }, { name: "body", required: false }],
+    flags: {},
+    routes: [
+      { method: "GET", path: "/api/skills" },
+      { method: "GET", path: "/api/apis" },
+      { method: "GET", path: "/api/skills/:slug" },
+      { method: "GET", path: "/api/apis/:platform/:slug" },
+      { method: "POST", path: "/api/capabilities/:operationKey/validate" }
+    ],
+    billable: false, destructive: false, composite: true,
+    run: (ctx, { args }) => apiValidate(ctx, args.ref, args.body)
+  },
+  {
+    group: "api", name: "recommend",
+    summary: "按一句意图让服务端推荐能力（免费、免 key）",
+    args: [{ name: "query", required: true, variadic: true }],
+    flags: {
+      category: { value: true, summary: "限定分类" },
+      limit: { value: true, summary: "候选条数" }
+    },
+    routes: [{ method: "POST", path: "/api/skills/recommend" }],
+    billable: false, destructive: false, composite: false,
+    run: (ctx, { args, flags }) => apiRecommend(ctx, Array.isArray(args.query) ? args.query.join(" ") : args.query, flags)
+  }
+];

@@ -1,17 +1,31 @@
-# @doubaoya/cli
+# @doubaoya/cli — 开发夹具（design D3）
 
-都爆鸭工具箱的统一命令入口 `dby`。主要给 AI agent 消费（非 TTY 默认 JSON 信封、退出码分流、计费命令协议化确认），人也能直接用。
+`dby` 的真正实现已经搬到 [`skills/dby-api/scripts/`](../skills/dby-api/scripts/)（入口 `dby.mjs` +
+`lib/`）——那才是随 skill 一起装进用户机器、随时可达的那份代码。
 
-- 需 Node ≥20（commander 14 的下限）；各 skill 的旧 `scripts/` 仍支持 Node ≥18，未装 CLI 时作兜底。
-- 鉴权：环境变量 `DOUBAOYA_API_KEY`（doubaoya.com 密钥中心生成）。
-- 契约：stdout 只放数据；`{ok, data?, error?{code,message,remediation}}`；退出码 0 成功 / 1 一般 / 2 用法 / 3 业务态 / 4 鉴权 / 5 网络超时 / 6 需确认。已发布字段与退出码只增不改，破坏性变更走 major。
-- 计费命令默认不执行：返回 `status: "confirmation_required"` + `changes` + 可原样重放的 `confirmCommand`，加 `--confirm` 才真跑。超时不自动重试计费请求——先核实是否已扣点。
+**本目录不发 npm、不是安装单元**，只剩两样东西：
 
-## 开发与发布（维护者）
+- `test/` —— 针对 `../skills/dby-api/scripts/lib/**` 的测试（`node --test`）；import 路径
+  直接指向 skill 目录，不指本目录（本目录已经没有 `src/` 了）。
+- `bin/dby.mjs` —— 一层薄转发，`npm link` 后本地得到 `dby` 命令，方便不装 skill 也能手测；
+  它转发到 `../skills/dby-api/scripts/lib/cli.mjs` 的 `runCli`，不经过 `dby.mjs` 自己的入口
+  守卫（那道守卫是为了防软链误判，本文件的调用路径不涉及软链，用不上）。
+
+## 跑测试
 
 ```bash
-cd cli && npm install && node --test   # 全绿才许发布
-npm version <patch|minor|major>        # 契约破坏必须 major
-npm publish --access public            # 手动发布，不进 CI
+cd cli && node --test   # 零依赖，不需要 npm install
 ```
-发布后在 skills/dby-api|dby-write|dby-charter 的 SKILL.md 里核对"CLI ≥ x.y"的最低版本声明。
+
+## 改代码去哪
+
+命令实现、参数解析、命令表都在 `../skills/dby-api/scripts/lib/`：
+
+- `argv.mjs` —— 手写参数解析器（无 commander 依赖）
+- `registry.mjs` —— 命令表汇总，同一份表驱动解析 / `--help` / `dby routes --json`
+- `commands/*.mjs` —— 按资源分组的命令实现，新增命令去对应组的文件里加一条即可
+- `context.mjs` / `errors.mjs` / `http.mjs` / `output.mjs` / `confirm.mjs` —— 输出信封 /
+  退出码 / 请求层 / 确认协议这几条契约的唯一实现
+
+`skills/dby-api/scripts/doubaoya.mjs` 是上一代入口的转发壳（弃用中，下一个 major 删除），
+不要在那里加新逻辑。
