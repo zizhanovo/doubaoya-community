@@ -1523,14 +1523,17 @@ def validate_single_request_layer(root: Path = ROOT) -> None:
 # 从源头把这类误报关在外面。
 #
 # 认的四种写法：裸词 `dby <组> <命令>`、`"$D" <组> <命令>`（前面加不加 `node ` 都算）、
-# `dby.mjs <组> <命令>`（前面加不加 `node .../` 都算）。命令名允许是两段式（组+命令，
-# 如 `draft get`）或单段式（如 `doctor`）——两段都对不上已知命令名时，退回去只认第一段，
-# 单段命令（`doctor`/`routes`/`whoami`/`retro`/`upload`）就是这么认出来的。
+# `dby.mjs <组> <命令>`（前面加不加 `node .../` 都算，`"$SKILL_DIR/scripts/dby.mjs" <组> <命令>`
+# 这种紧跟一个收尾引号再空格的写法也算——`dby\.mjs"?` 里那个可选的 `"` 就是为了吃掉它，
+# 不然 `"` 卡在 `dby.mjs` 与后面的空格之间，`CLI_REF_TOKENS` 的 `\s+` 接不上，整条引用会被
+# 判定「没写命令名」而空跑）。命令名允许是两段式（组+命令，如 `draft get`）或单段式
+# （如 `doctor`）——两段都对不上已知命令名时，退回去只认第一段，单段命令
+# （`doctor`/`routes`/`whoami`/`retro`/`upload`）就是这么认出来的。
 #
 # ponytail: 天花板 = 只认这四种字面写法，`doubaoya.mjs`（转发壳的旧文件名）不在此列——
 # 那是过渡期的旧引用，等下一个 major 删壳时它自然跟着消失，不需要本闸现在就管。
 LOCATE_DBY_IMPORT = re.compile(r"locate-dby\.mjs")
-CLI_REF_PREFIX = re.compile(r'(?<![\w.-])dby(?!\.mjs)\b|"\$D"|dby\.mjs')
+CLI_REF_PREFIX = re.compile(r'(?<![\w.-])dby(?!\.mjs)\b|"\$D"|dby\.mjs"?')
 CLI_REF_TOKENS = re.compile(r"\s+([a-z][a-z0-9-]*)(?:\s+([a-z][a-z0-9-]*))?")
 FENCE_LINE = re.compile(r"^\s*(```|~~~)")
 INLINE_CODE = re.compile(r"`([^`\n]+)`")
@@ -1659,6 +1662,61 @@ def validate_cli_commands_present(root: Path = ROOT) -> None:
             f"{display_path(skill_md)} 用到了 CLI（{reason}），却一条真实存在的子命令名都没写出来——"
             "「参数细节看 --help」不能替代「命令名本身要写出来」。",
         )
+
+
+# ── CLI 引导壳字节相同闸 ───────────────────────────────────────────────────────
+# 🔴 **「实现只有一份，入口每包一份」的前提是这些「每包一份」的入口逐字节相同。**
+# `dby.mjs` 引导壳（四个用到 CLI 的包）与 `locate-dby.mjs`（三个内部 import 请求层的包）
+# 都是「找到 dby-api 之前不能跨包 import」的自举代码，只能各自留一份拷贝——一旦某份漂移，
+# 装了那个包的用户会静默吃到另一套定位逻辑（同族真实事故见 `doubaoya-cli-unification`
+# 设计与 `cli/test/locate.test.mjs` 的既有对拍）。
+# 元断言：清单本身列的每条路径都必须存在，防止清单跟着代码搬家却没人更新，闸退化成空跑。
+CLI_SHIM_GROUPS: list[tuple[str, list[str]]] = [
+    (
+        "scripts/dby.mjs 引导壳",
+        [
+            "skills/dby-write/scripts/dby.mjs",
+            "skills/dby-charter/scripts/dby.mjs",
+            "skills/dby-publish/scripts/dby.mjs",
+            "skills/dby-banned-words/scripts/dby.mjs",
+            # 用户专属 skill 模板的附录抄的是同一份壳（见 user-skill-template.md 的「附录」），
+            # 落在 references/ 而不是 scripts/ 是为了不撞见 validate_gateway_contract_freedom
+            # 的驼峰扫描（那道闸只扫 dby-api 下的 *.md，一份真实的 .mjs 文件不受影响，用户还能
+            # 直接 cp 它）——但既然贴的是同一份壳，就该跟其余四份一样钉住不漂移。
+            "skills/dby-api/references/dby-shim.mjs",
+        ],
+    ),
+    (
+        "scripts/lib/locate-dby.mjs",
+        [
+            "skills/dby-write/scripts/lib/locate-dby.mjs",
+            "skills/dby-charter/scripts/lib/locate-dby.mjs",
+            "skills/dby-publish/scripts/lib/locate-dby.mjs",
+        ],
+    ),
+]
+
+
+def validate_cli_shims_identical(root: Path = ROOT) -> None:
+    """🔴 CLI_SHIM_GROUPS 里每组文件必须存在且逐字节相同，判据见上面那段注释。"""
+    for label, relative_paths in CLI_SHIM_GROUPS:
+        require(len(relative_paths) >= 2, f"{label} 的清单少于两条，闸没有对比对象，等于没跑。")
+        contents: list[tuple[str, bytes]] = []
+        for relative_path in relative_paths:
+            file_path = root / relative_path
+            require(
+                file_path.is_file(),
+                f"{label} 清单里的 {relative_path} 不存在——清单跟着代码搬家却没人删/改，闸在核对空气。",
+            )
+            contents.append((relative_path, file_path.read_bytes()))
+        first_path, first_bytes = contents[0]
+        for relative_path, data in contents[1:]:
+            require(
+                data == first_bytes,
+                f"{label} 漂移了：{relative_path} 与 {first_path} 不再逐字节相同。"
+                "四个用到 CLI 的包各自内联一份自举代码是有意的设计（找到 dby-api 之前不能跨包 "
+                "import），但这意味着改一处必须全改——把改动同步到清单里的每一份拷贝。",
+            )
 
 
 def frontmatter_compatibility(path: Path) -> str:
@@ -2412,6 +2470,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_entry_guards_resolve_symlinks(root)
     validate_single_request_layer(root)
     validate_cli_commands_present(root)
+    validate_cli_shims_identical(root)
     validate_no_price_literals(root)
     validate_no_agent_fanout(root)
     validate_user_agent_from_version(root)

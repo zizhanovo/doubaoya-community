@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T06:27:13.486969+00:00",
+  "generatedAt": "2026-09-06T08:15:48.526737+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -116,6 +116,7 @@
       "a39a83239eaa",
       "a59d7a4e7157",
       "acae0014e410",
+      "ad67b00ff2ee",
       "afae2f05a5ed",
       "b04393f2476c",
       "bb0e6ad5cb98",
@@ -135,6 +136,7 @@
       "57a5bff134c0",
       "5de93933d77a",
       "8967a5bf1cbe",
+      "8aad0978346f",
       "9875773c9a77",
       "b3b6c7500194",
       "d1634c678daa",
@@ -149,6 +151,7 @@
       "16456393e483",
       "1ef3638615ce",
       "289a7e8efa11",
+      "50583c0c0518",
       "5c113e2fefe3",
       "7d8ce219936b",
       "7e6fcee331f4",
@@ -257,6 +260,7 @@
       "e7a976940e02",
       "e88557062157",
       "ec58027fccdc",
+      "ee8e7d7602f1",
       "eff5ef724697",
       "f3c94f436a09",
       "fdf279bc684e"
@@ -328,6 +332,7 @@
     ],
     "dby-write": [
       "0e0354e9f8ca",
+      "1862f8679714",
       "18aff256cafd",
       "274536af5420",
       "376c6d363adc",
@@ -3358,6 +3363,12 @@
         "version": "4.1.0",
         "date": "2026-09-05",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
+      },
+      {
+        "hash": "3b0d4d986952",
+        "version": "4.1.0",
+        "date": "2026-09-05",
+        "subject": "docs(dby-publish): README 里的 Python 入口说明标注已退役"
       },
       {
         "hash": "db6580c0f7f9",

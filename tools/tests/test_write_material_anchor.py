@@ -321,20 +321,25 @@ def test_素材库层在素材表且提议句在主体() -> None:
 
 
 def test_素材卡文档示例字段与服务端契约一致() -> None:
-    """materials.md / review-mode.md 里的 save 示例 JSON 不许发明服务端不认识的字段。"""
+    """materials.md / review-mode.md 里的存卡示例 JSON 不许发明服务端不认识的字段。
+
+    规格 dby-cli-coverage「装好即可达」落地后，两份文档已经从旧脚本的
+    `material save '<json>'` 改成统一 CLI 的 `material add --body '<json>'`
+    （旧脚本 `save`/新 CLI `add` 只是动词换了，字段形状不变，正则跟着改一次）。
+    """
     import json as _json
 
     refs = _refs()
     found = 0
     for name in ("materials.md", "review-mode.md"):
-        for m in re.finditer(r"material save '(\{.*?\})'", refs[name], re.S):
+        for m in re.finditer(r"material add --body '(\{.*?\})'", refs[name], re.S):
             found += 1
             card = _json.loads(m.group(1))
             extra = set(card) - CARD_FIELDS
-            assert not extra, f"{name} 的 save 示例含服务端不认识的字段 {extra} —— 服务端会 400"
+            assert not extra, f"{name} 的存卡示例含服务端不认识的字段 {extra} —— 服务端会 400"
             assert set(card["event"]) == EVENT_FIELDS, f"{name} 示例的 event 三要素漂了：{set(card['event'])}"
             assert "proof" in card and "evidence" in card and "forms" in card, f"{name} 示例缺必填字段"
-    assert found >= 2, f"只解析到 {found} 个 save 示例 —— 正则多半退化了（元断言防空跑）"
+    assert found >= 2, f"只解析到 {found} 个存卡示例 —— 正则多半退化了（元断言防空跑）"
 
 
 def test_素材单与阶梯接上了素材卡() -> None:
