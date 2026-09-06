@@ -28,7 +28,7 @@ compatibility: >-
 章程的 GET / PUT 由 `scripts/charter.mjs` 代发；档案本身的 POST / PUT（建档、存范文、存 DNA）
 要手写 curl，那时才读 `dby-gateway/references/protocol.md`。
 
-章程读写走 `scripts/charter.mjs`（下方示例）。`@doubaoya/cli`（`dby charter profiles|get|put`，非 TTY 输出 `{ok,data,error}` JSON）**尚未发布到 npm**，`npx -y @doubaoya/cli` 会 404；本机 `dby` 在才优先用它。章程路由有两个**每次都会踩**的坑，CLI 与脚本里都做掉了：
+章程读写两条路都对：本包 `scripts/charter.mjs`（下方示例），或 `dby charter profiles|get|put`（非 TTY 输出 `{ok,data|error}` JSON，退出码契约同 `dby-api`）。章程路由有两个**每次都会踩**的坑，CLI 与脚本里都做掉了：
 GET 回来的 `products` 是只读投影、原样 PUT 必 400；PUT 是全量替换不是增量 patch。
 
 ```bash

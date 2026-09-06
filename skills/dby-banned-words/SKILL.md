@@ -4,7 +4,7 @@ description: 多平台违禁词检测——一段文案，一次性比对小红�
 version: 1.4.5
 changelog: 删掉语境豁免用例里一条冗余且不稳的断言（兄弟用例已覆盖同一件事）；包行为零变化
 compatibility: >-
-  需要 Python 3（`scripts/check_multi.py` 只用标准库，不装任何 pip 包）。
+  需要 Node ≥18（`dby banned check` 走 dby-api 的 CLI，零依赖不装 npm 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
 ---
 
@@ -28,17 +28,23 @@ compatibility: >-
 
 ## 运行脚本
 
-请求由 `scripts/check_multi.py` 代发；只有绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`。
+请求由 CLI 代发：`D=~/.claude/skills/dby-api/scripts/dby.mjs; node "$D" banned check <文案> [--platforms a,b]`；
+只有绕开它自己拼请求时才读 `dby-gateway/references/protocol.md`。
 
 ```bash
-# 默认三平台全查
-python3 scripts/check_multi.py "这款美白神器三天见效，全网最低价，无效退款"
+# 默认三平台全查——不带 --confirm 先停在确认态，逐平台各列一次计费，不产生任何请求
+node "$D" banned check "这款美白神器三天见效，全网最低价，无效退款"
+
+# 核对无误后原样加 --confirm 才真打（逐平台各计费一次）
+node "$D" banned check "这款美白神器三天见效，全网最低价，无效退款" --confirm
 
 # 只查指定平台（逗号分隔，省额度）
-python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
+node "$D" banned check "你的文案" --platforms xiaohongshu,douyin --confirm
 ```
 
-- 脚本对每个平台 `POST` 一次，把所有平台结果汇成一个 map 后以 JSON（`ensure_ascii=False`，缩进 2）打印。
+- **默认停在确认态**：回执列出将要发生的逐平台计费，核对后原样加 `--confirm` 才放行；
+  `--confirm` 之前零请求、零扣费。
+- 确认后对每个平台 `POST` 一次，把所有平台结果汇成一个 map 装进 `{ok,data|error}` 信封的 `data` 里。
   `raw` 里与 `content` / `originalContent` 重复的两键默认剥掉，加 `--raw` 保留。
 - **单个平台失败不影响其它平台**：失败的平台在 map 里记 `error`，其余照常返回。
 
@@ -117,7 +123,7 @@ python3 scripts/check_multi.py "你的文案" --platforms xiaohongshu,douyin
 
 ## 错误处理
 
-脚本逐平台处理 `HTTPError` / `URLError`，把错误写进对应平台条目并继续其它平台：
+CLI 逐平台捕获网络 / HTTP 错误，把错误写进对应平台条目并继续其它平台：
 **单平台失败不影响其余平台**，报错码怎么办照 `dby-gateway/references/protocol.md` 第 6 条。
 问题绕不过去、或想吐槽 → 可提一句用 `dby-feedback` 当场写成反馈（可忽略，不再重复提）。
 

@@ -14,7 +14,7 @@
 | 用你在 doubaoya.com 设置的**默认排版**渲染 | 一条 **`DOUBAOYA_API_KEY`** | 跑 `pipeline.mjs` 时**不写 `--theme`** 即可（渲染在平台做，主题也在平台套；失败中止不回退） |
 | **只渲染拿在线预览链接**（`--render-only`，**不绑号也行**） | 一条 **`DOUBAOYA_API_KEY`**（渲染免费） | `node scripts/pipeline.mjs --md a.md --title "标题" --render-only` |
 | **跑 `pipeline.mjs`（含 `--dry-run`）** | **密钥 + 已在 doubaoya.com 绑定公众号** | `node scripts/pipeline.mjs --md a.md --title "标题" --dry-run` |
-| 本地图预上传 / 存草稿 | 同上（**存草稿花钱**，失败自动退回） | `pipeline.mjs`、`scripts/publish_draft.py` |
+| 本地图预上传 / 存草稿 | 同上（**存草稿花钱**，失败自动退回） | `pipeline.mjs`、`dby wechat publish` |
 
 > ⚠️ **`--dry-run` 不是免密钥预览，也不是免绑号预览**。它虽然什么都不发，但 whoami 校验账号
 > 与草稿前置检查（`GET /api/wechat/status`）都排在它**前面**：没有密钥会停在「本地没有可用的

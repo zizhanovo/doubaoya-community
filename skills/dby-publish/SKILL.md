@@ -12,7 +12,7 @@ version: 4.1.0
 changelog: pipeline.mjs 新增 --draft/--draft-version，正文来自稿件面时透传稿件 id，服务端存草稿箱成功后自动关联到发布记录
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
-  另有 Python 3 的等价入口 `scripts/publish_draft.py`（只用标准库，不装任何 pip 包，无本地图/无本地封面场景可用它替代 Node 入口）。
+  接口调用经由 `dby-api` 包的共享 CLI（`scripts/lib/locate-dby.mjs` 定位），需与 dby-api 一起安装。
   存草稿这条路还需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求，并且用户已在 doubaoya.com 绑定自己的公众号；
   只做本地排版渲染 / 换主题时不需要密钥也不需要绑号。
   ⚠️ 正文里的本地图片若超过 1MB 需要压缩，靠可选的 sharp，缺它则回退 macOS 专有的 sips——
@@ -31,8 +31,16 @@ compatibility: >-
 
 ## 只想存草稿、不要排版
 
-→ 正文**已是公众号风格 HTML、无本地图也无本地封面**时读 `references/draft-only.md`
-（零依赖 Python 入口 `scripts/publish_draft.py`），不需要就别读。
+正文**已是公众号风格 HTML、无本地图也无本地封面**时直接打 CLI，不必走 `pipeline.mjs`：
+
+```bash
+D=~/.claude/skills/dby-api/scripts/dby.mjs
+node "$D" wechat publish --appid <authorizerAppid> --title "标题" --html article.html --confirm
+```
+
+`--confirm` 前必须已有用户明确要发这一条的确认（见下面「防误发红线」）；不带 `--confirm`
+会停在 confirmation_required，退出码 6，什么都不发生。参数细节见 `node "$D" wechat publish --help`。
+带本地图 / 本地封面时改用 `scripts/preprocess-and-publish.mjs`，见 `references/draft-only.md`。
 
 ---
 

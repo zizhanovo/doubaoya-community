@@ -11,10 +11,9 @@ description: >-
 version: 1.13.0
 changelog: 取材表插第 2 层「用户记下的（灵感库）」，原 2–7 顺延；记录 id 随建稿 / 提交新版作 sourceItemIds（血缘）；两条红线（空则如实、记了不自动起稿）；触发词与评测同步
 compatibility: >-
-  需要 Node ≥18（取数与复盘算术走 scripts/write.mjs，零依赖不装 npm 包）；
-  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
-  需要能对 https://doubaoya.com 发 HTTPS 请求。
-  档案读取、选题卡、往期文章、复盘取数均为免费路由，不扣点；违禁词检测按平台计费（走 dby-banned-words）。
+  需要 Node ≥18（零依赖，不装 npm 包）、环境变量 DOUBAOYA_API_KEY（dyh_…，见 doubaoya.com 密钥中心）
+  及 https://doubaoya.com 的 HTTPS 访问。档案/选题/往期文章/复盘全免费；
+  违禁词检测按平台计费（dby-banned-words）。
 ---
 
 # 公众号文章写作主干 · dby-write
@@ -52,7 +51,7 @@ compatibility: >-
 
 **九步一口气走完，别逐步征求同意。** 只停两处：第 3 步让用户选标题、第 9 步后问终态。
 
-取数走 `scripts/write.mjs`。`@doubaoya/cli`（`dby write prep|topics|review`）**尚未发布到 npm**，`npx -y @doubaoya/cli` 会 404；本机 `dby` 在才优先用它。绕开脚本自己拼请求才读 `dby-gateway/references/protocol.md`。
+取数两条路都对：本包 `scripts/write.mjs prep|topics|review|articles`，或 `dby write prep|topics|review|articles`。绕开两者自拼请求才读 `dby-gateway/references/protocol.md`。
 
 ### 第 1 步 · 读档案 + 拉写作规范（必须早于任何生成动作）
 
@@ -100,16 +99,16 @@ node "$W" prep          # 五样一次拉齐；--json 另带章程全文与 samp
 | 层 | 来源 | 何时用 |
 |---|---|---|
 | 1 | 用户当轮给的（含留言 / 私信原话） | 有就先用 |
-| 2 | 用户记下的（灵感库） | 点名「用我记的」必取；否则默认扫近 30 天，无相关就过 |
+| 2 | 用户记下的（灵感库；`insp list|add`） | 点名「用我记的」必取；否则默认扫近 30 天，无相关就过 |
 | 3 | 号档案 + 范文 | 总是（第 1 步已拉到，不再取） |
 | 4 | 自己往期文章 | 写过相近题 |
-| 5 | 素材库（prep 已带索引） | A 组缺锚点先查这里 |
+| 5 | 素材库（`material list|get|add|rm`，prep 已带索引） | A 组缺锚点先查这里 |
 | 6 | 用户知识库（ima / `$DBY_WIKI_DIR`） | 配了才用，没配跳过不问（**A 组例外**） |
 | 7 | 平台取数 | 用户点名或前六层不够 —— 🔴 **这一层计费** |
 | 8 | 联网查证 | 只核实前面拿到的事实，不引入新数据 |
 
 → 各层取法与素材单格式读 `references/materials.md`。
-第 2 层的条目带记录 id，建稿 / 提交新版时作 `sourceItemIds`（血缘）；灵感库为空如实说、不虚构。
+第 2 层的条目带记录 id，建稿/提交新版（`draft create`/`draft submit`）时作 `sourceItemIds`（血缘）；灵感库为空如实说、不虚构。
 🔴 **A 组八层取完仍拿不到锚点 → 停下，不许开始写正文。** 处置阶梯读 `references/materials.md` 的「锚点收不到时」。
 
 ### 第 5 步 · 列提纲
@@ -167,7 +166,7 @@ A 组且用户这轮口述了新经历 → 展示拟存卡面提议存进素材�
 🔴 三条不许简化掉：**写明用的是哪一档指标**（代理档绝不能说成「打开率 × 分享率」）、**基准只能是这个号自己的历史中位数**、**样本少于 5 篇要把「仅供参考」带给用户**。
 
 → 用户想练写作 / 问「怎么提高」读 `references/practice.md`。
-模式 C（按审稿意见改一版）→ `references/review-turn.md`（拉审稿包 → 逐条回应 → 提交新版）。
+模式 C（按审稿意见改一版）→ `references/review-turn.md`（`draft review-packet`→逐条回应→提交新版）。
 
 ---
 

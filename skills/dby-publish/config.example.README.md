@@ -38,7 +38,7 @@ cp config.example.json config.json
 SKILL.md 的引导式设计）全部退场，同理摘掉。
 
 🔴 **加配置项之前先想清楚谁读它。** 本包有**两类读者**：
-- **脚本**（`scripts/*.mjs`、`publish_draft.py`）——grep 得到；
+- **脚本**（`scripts/*.mjs`）——grep 得到；
 - **agent**（SKILL.md 教它去读的，例如 `defaultStyleId` 那条逃生舱）——grep 脚本**搜不到**。
 
 ⇒ 判一个键死没死，**两边都要查**。只查脚本会把 agent 读的键误判成死键

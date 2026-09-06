@@ -54,7 +54,7 @@ compatibility: >-
 | 这篇 AI 味太重 / 读着像机器写的 / 说人话 / 没人味 / 去 AI 味 | `dby-deai`（默认只出体检报告，改不改由用户定；纯本地不需要 key） |
 | 想改 / 定制公众号排版样式（换配色 / 标题条 / 引用卡） | `dby-theme` |
 | 文章写好了要排版 + 封面 + 存进自己公众号草稿箱 | `dby-publish`（md→HTML→封面→草稿；只存草稿、不群发） |
-| 已有排好版的图文，只想推进草稿箱 | `dby-publish`（`publish_draft.py`，需先绑定公众号） |
+| 已有排好版的图文，只想推进草稿箱 | `dby-publish`（`dby wechat publish`，需先绑定公众号） |
 | 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `dby-api`（`skill.wechat.accountAnalyzer`） |
 | 想追更某个号 / 复盘竞品最近发了啥 | `dby-api`（先 `api.gzh.searchUser` 拿 ID，再 `api.gzh.workList`；上游只认 ID 不认昵称） |
 | 想找对标账号 / 起号参考 / 搭竞品矩阵 | `dby-api`（`skill.wechat.similarAccount`） |

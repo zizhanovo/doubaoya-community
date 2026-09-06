@@ -15,40 +15,34 @@ compatibility: >-
 新媒体取数能力包：一条 `DOUBAOYA_API_KEY` 通到平台全部在架数据。
 你（agent）的活是**听懂用户想干嘛 → 选对能力 → 调 → 把结果讲成人话**。
 
-调用走 **`scripts/doubaoya.mjs`**，别自己拼路径（硬拼必 404；脚本先拉详情拿 `execution.target` 再打）。
+调用走 **`scripts/dby.mjs`**，别自己拼路径（硬拼必 404；`api describe` 先拉详情拿 `execution.target` 再打）。
 
 ---
 
 ## 怎么调
 
-**优先 `dby api list|search|describe|invoke`**（CLI ≥0.1：`npm i -g @doubaoya/cli`，没装用 `npx -y @doubaoya/cli` 兜底）。非 TTY 输出单个 `{ok,data,error}` JSON；计费的 `invoke` 默认停在 confirmation_required（退出码 6）并给一条可原样重放的确认命令，带 `--confirm` 才真执行。没装 CLI 时用旧 `scripts/doubaoya.mjs`（下方示例）；绕开两者自己拼请求才读 `dby-gateway/references/protocol.md`。
+统一走 CLI：`D=~/.claude/skills/dby-api/scripts/dby.mjs; node "$D" <组> <命令> [参数] [flags]`。非 TTY stdout 是单个 `{ok,data|error}` JSON；退出码 0 成功 / 1 一般错误 / 2 用法错 / 3 业务态 / 4 鉴权 / 5 网络超时（**计费请求绝不自动重试**）/ 6 需确认（`--confirm` 放行，回执给的确认命令可原样重放）。参数看 `node "$D" <组> <命令> --help`。
 
-```bash
-export DOUBAOYA_API_KEY="dyh_你的密钥"    # 绝不打印、不写文件、不回显给用户
-D=~/.claude/skills/dby-api/scripts/doubaoya.mjs   # 按实际安装位置改
+按组命令名（本文件是全量参考；各包 SKILL.md 只列自己用到的那几条）：
 
-# 发现：两个集合一起拉／搜（免 key、免费）；每行末尾带计费（免费 / N点）
-node "$D" list
-node "$D" search 小红书 爆款
+- api：list search describe invoke validate recommend
+- write：prep topics review articles
+- charter：profiles get put
+- draft：create get version review-packet precheck submit comment list versions decide merge comments star link
+- article：list get
+- profile：list get create update delete wechat-history sample-add sample-list sample-rm
+- doc：list get patch put revisions revision restore
+- material：list get add rm
+- insp：list add
+- wechat：status render writing-spec topics review publish media-upload theme-list theme-get theme-add theme-update theme-rm
+- task：list
+- usage：summary balance logs log log-rm analytics
+- banned：check
+- 单命令：doctor retro upload whoami routes
 
-# 🔴 先 describe 再 invoke —— 入参规格现拉，一个字段名都别照记忆拼；<ref> 也可以直接给 operationKey
-node "$D" describe trend/trending-hub-keyword
-node "$D" describe api.trend.hotSpotKeyword
+🔴 先 `dby api describe` 再 `dby api invoke`——入参一律现拉，`requestSchema`/`inputSchema` 是示例值不是 JSON Schema，照键名和值的形状填；上游对错入参一律静默返空或给误导性报错，拿不到数据先回 `describe` 核一遍别急着判「接口挂了」。
 
-# 调用（计费）。<ref> = <slug> 或 <platform>/<slug>
-node "$D" invoke trend/trending-hub-keyword '<照 describe 拉到的入参规格填>'
-node "$D" invoke xiaohongshu-viral-notes '<照 describe 拉到的入参规格填>'
-
-# 离线自检（不联网、不需要 key）
-node "$D" selfcheck
-```
-
-结果打 stdout（默认剥掉与 `items` / `content` 重复的 `raw`，加 `--raw` 保留），`notice` / `noResult` 打 stderr，失败以 `code: message` 非零退出。
-起止时间类入参必须带时分秒（`YYYY-MM-DD HH:mm:ss`），只给日期过不了校验。
-
-🔴 **入参一律现拉。** `describe` 返回里的 `requestSchema` / `inputSchema` 是**示例值不是 JSON Schema**，
-照它的键名和值的形状填。上游对错入参**一律静默返空或给误导性报错**——
-拿不到数据时先回 `describe` 核一遍入参，别急着判「接口挂了」。
+→ 要把命令串成自己的流程时读 `references/compose.md`；要照抄骨架写自己的 SKILL.md 时读 `references/user-skill-template.md`。
 
 ---
 
