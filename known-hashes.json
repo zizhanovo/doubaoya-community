@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-06T08:15:50.616759+00:00",
+  "generatedAt": "2026-09-09T04:06:48.791040+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -109,6 +109,7 @@
       "6c0cb11d4b3b",
       "7515a4eb8849",
       "842bc271ca8d",
+      "91af3690c5ca",
       "94592136ac90",
       "96330502a048",
       "9b545f2f647a",
@@ -122,6 +123,7 @@
       "bb0e6ad5cb98",
       "bcf26b4eca1f",
       "c9e472325e63",
+      "cc30a05cdb0b",
       "ce8326e3dbd2",
       "d6ce3852f9e1",
       "d7e863f5577a",
@@ -188,6 +190,7 @@
       "0a3b3433cbe5",
       "18b04d9d8613",
       "1d294368f7d7",
+      "28d9570a0672",
       "3a88323fc388",
       "4c71eb312624",
       "64220c7bed79",
@@ -2456,16 +2459,16 @@
         "subject": "fix(dby): 路由表的承诺收窄到它真正覆盖的两条路由"
       },
       {
-        "hash": "43bd30a6c002",
-        "version": "1.7.4",
-        "date": "2026-09-05",
-        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
-      },
-      {
         "hash": "e89c8dfec832",
         "version": "1.7.4",
         "date": "2026-09-05",
         "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
+      },
+      {
+        "hash": "43bd30a6c002",
+        "version": "1.7.4",
+        "date": "2026-09-06",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       }
     ],
     "dby-api": [
@@ -2620,22 +2623,10 @@
         "subject": "feat(dby-api)!: description 1021 → 957，删掉自伤的触发词「写作」"
       },
       {
-        "hash": "2e02904d7d96",
-        "version": "3.1.0",
-        "date": "2026-09-05",
-        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
-      },
-      {
         "hash": "3fca623fc119",
         "version": "3.1.0",
         "date": "2026-09-05",
         "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
-      },
-      {
-        "hash": "67323ef8ec64",
-        "version": "3.1.0",
-        "date": "2026-09-05",
-        "subject": "feat(dby-api): dby CLI 搬进包内 —— 去 commander、命令表数据化、76 条子命令与路由 1:1"
       },
       {
         "hash": "d6ce3852f9e1",
@@ -2644,10 +2635,34 @@
         "subject": "fix(dby-api): DOUBAOYA_API_KEY 含非 ASCII 时说人话，别抛 ByteString"
       },
       {
+        "hash": "2e02904d7d96",
+        "version": "3.1.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
+        "hash": "67323ef8ec64",
+        "version": "3.1.0",
+        "date": "2026-09-06",
+        "subject": "feat(dby-api): 补齐 article/retro/profile/doc/material/wechat/task/usage/upload/whoami/banned 各组 —— 76 条子命令与路由 1:1"
+      },
+      {
+        "hash": "91af3690c5ca",
+        "version": "3.1.0",
+        "date": "2026-09-06",
+        "subject": "refactor(dby-api): cli/src 搬进包内、去 commander、命令表数据化；cli/ 退成夹具"
+      },
+      {
         "hash": "ad67b00ff2ee",
         "version": "3.1.0",
         "date": "2026-09-06",
         "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
+      },
+      {
+        "hash": "c9e472325e63",
+        "version": "4.0.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
       }
     ],
     "dby-banned-words": [
@@ -2732,13 +2747,13 @@
       {
         "hash": "28ec4031a23e",
         "version": "1.4.5",
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       },
       {
         "hash": "45c2d9fb4356",
         "version": "1.4.5",
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
       },
       {
@@ -2746,6 +2761,12 @@
         "version": "1.4.5",
         "date": "2026-09-06",
         "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
+      },
+      {
+        "hash": "cb71ee176054",
+        "version": "2.0.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
       }
     ],
     "dby-charter": [
@@ -2854,20 +2875,26 @@
       {
         "hash": "16456393e483",
         "version": "1.2.4",
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
-      },
-      {
-        "hash": "976a765c9520",
-        "version": "1.2.4",
-        "date": "2026-09-05",
-        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       },
       {
         "hash": "50583c0c0518",
         "version": "1.2.4",
         "date": "2026-09-06",
         "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
+      },
+      {
+        "hash": "976a765c9520",
+        "version": "1.2.4",
+        "date": "2026-09-06",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
+        "hash": "f9a880fe14ca",
+        "version": "1.3.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
       }
     ],
     "dby-deai": [
@@ -2912,6 +2939,12 @@
         "version": "1.2.0",
         "date": "2026-09-03",
         "subject": "feat(dby-deai): 改动清单接入稿件面，与 write/rewrite 共用同一套 changes[]"
+      },
+      {
+        "hash": "fc0aa01cc498",
+        "version": "1.3.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
       }
     ],
     "dby-feedback": [
@@ -3384,21 +3417,27 @@
         "subject": "feat(dby-publish): pipeline.mjs 新增 --draft/--draft-version，透传稿件 id 给存草稿接口"
       },
       {
+        "hash": "01cede2f7a8d",
+        "version": "5.0.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
         "hash": "31299f27be57",
         "version": "4.1.0",
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
       },
       {
         "hash": "3b0d4d986952",
         "version": "4.1.0",
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "subject": "docs(dby-publish): README 里的 Python 入口说明标注已退役"
       },
       {
         "hash": "db6580c0f7f9",
         "version": "4.1.0",
-        "date": "2026-09-05",
+        "date": "2026-09-06",
         "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
       },
       {
@@ -3468,6 +3507,12 @@
         "version": "1.3.1",
         "date": "2026-09-03",
         "subject": "fix(dby-rewrite): 标题字数与极限词两处口径统一为单一来源"
+      },
+      {
+        "hash": "049562a1d1aa",
+        "version": "1.4.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
       }
     ],
     "dby-theme": [
@@ -3920,22 +3965,28 @@
         "subject": "feat(dby-write,dby-api,dby): 灵感库进写作取材第 2 层，建稿带记录血缘"
       },
       {
-        "hash": "7786fe202c29",
-        "version": "1.13.0",
-        "date": "2026-09-05",
-        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
-      },
-      {
-        "hash": "c2fc81af9a24",
-        "version": "1.13.0",
-        "date": "2026-09-05",
-        "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
-      },
-      {
         "hash": "1862f8679714",
         "version": "1.13.0",
         "date": "2026-09-06",
         "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
+      },
+      {
+        "hash": "7786fe202c29",
+        "version": "1.13.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
+        "hash": "b76d9a964f23",
+        "version": "1.14.0",
+        "date": "2026-09-06",
+        "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
+        "hash": "c2fc81af9a24",
+        "version": "1.13.0",
+        "date": "2026-09-06",
+        "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
       }
     ],
     "doubao-websearch": [

@@ -14,9 +14,9 @@
 |---|---|---|---|
 | "最近全网在火什么？给我点选题" —— 🔴 **不带关键词、但要收窄时间窗口**，通用选题的正确起手 | `api.trend.hotSpotKeyword` | 全网热点聚合直取，通用选题首选。⚠️ 不收窄时间窗口时返的是近 30 天池子、中位 15 天前（实测），要「今天」必须按详情端点里的起止时间字段收窄 | `/api/apis/trend/trending-hub-keyword` |
 | "全网热搜 / 热搜关键词 / 热榜TOP10 / 出一批热词当选题种子" | `api.trend.hotKeywords` | 全网热搜关键词 | `/api/apis/trend/hot-keywords` |
-| "**我已经有一个话题了**，看它在各平台分别热成什么样 / 跨平台分析 / 出一份运营日报"（**带关键词**才用它；不带关键词的通用选题走本表首行） | `skill.trend.radar` | 跨平台趋势雷达：一次请求聚合多平台热点，产出选题方向与运营日报 | `/api/skills/trend-radar` |
+| "**我已经有一个话题了**，看它在各平台分别热成什么样 / 跨平台分析 / 出一份运营日报"（**带关键词**才用它；不带关键词的通用选题走本表首行） | `skill.trend.radar` | 跨平台趋势雷达：给一个关键词，到抖音 / 小红书 / 公众号各搜一次近期文章，按平台归并成对照清单。**不是榜**，也不产日报——日报得你自己拿这批原文去写。keyword 必填 | `/api/skills/trend-radar` |
 | "某个词近 30 天在各平台被讨论成什么样 / 近30天作品 / 社媒舆情 / 舆情监测" | `api.multi.workSearch` | 全平台近30天作品聚合 | `/api/apis/multi/cn30-multi-search` |
-| "这个词的跨平台讨论量趋势"（CN 版近 30 天，与上一条是两条能力） | `skill.social.last30Days` | Last 30 Days—CN版 | `/api/skills/cn-last30days` |
+| "这个词在各平台分别被怎么写"（CN 版，与上一条是两条能力） | `skill.social.last30Days` | Last 30 Days—CN版：与 `skill.trend.radar` **同一个底座**，三平台各搜一次文章。⚠️ **没有任何讨论量/情感/趋势指标**（上游不返回），`days` 参数只回显不过滤。keyword 必填 | `/api/skills/cn-last30days` |
 | "内容出海 / 出海爆款 / 出海日报 / 出海选题 / 出海流量风口 / 全平台爆款" | `api.multi.contentExportTop` | 全平台内容出海Top榜 | `/api/apis/multi/multi-content-export-top` |
 
 **小红书**

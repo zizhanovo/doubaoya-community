@@ -63,7 +63,6 @@
 
 | operationKey | 用途 | 详情端点 |
 |---|---|---|
-| `api.trend.hotTopics` | 全网热榜聚合查询 | `/api/apis/trend/hot-topics` |
 | `api.trend.hotKeywords` | 全网热搜关键词 | `/api/apis/trend/hot-keywords` |
 | `api.trend.hotSpotPlatform` | 抖音实时热榜 | `/api/apis/trend/douyin-hot-trend` |
 | `api.trend.hotSpotKeyword` | 全网热点(关键词)聚合 | `/api/apis/trend/trending-hub-keyword` |
