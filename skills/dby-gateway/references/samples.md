@@ -24,6 +24,14 @@
 { "success": false, "requestId": "5cf9584d-…", "data": null,
   "error": { "code": "CSRF_FORBIDDEN", "message": "Origin not allowed" } }
 
+// POST /api/wechat/publish 带合法 Bearer —— 同样是 HTTP 403，但这是**套餐权益到顶**，不是鉴权/CSRF：
+// 认 code 不认状态码。extra 四件套原样念给用户，同一入参不重试，指向 helpUrl 升级套餐。
+{ "success": false, "requestId": "9b1d2f30-…", "data": null,
+  "error": { "code": "PLAN_LIMIT_EXCEEDED",
+             "message": "本月存草稿次数已达免费档上限。已有内容不受影响，可以照常查看与删除；要放开这一项请在账户页升级套餐：https://doubaoya.com/dashboard/billing#plan",
+             "extra": { "dimension": "draftPublishPerMonth", "plan": "free", "used": 5, "limit": 5,
+                        "helpUrl": "https://doubaoya.com/dashboard/billing#plan" } } }
+
 // POST /api/skills/wechat-render/invoke —— 专用路由能力打到通用代理（2026-08-24 实拉）
 // HTTP 400
 { "success": false, "requestId": "831a9765-…", "data": null,

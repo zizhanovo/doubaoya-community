@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-09T04:06:48.791040+00:00",
+  "generatedAt": "2026-09-09T09:02:51.518982+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.7.0",
+  "productVersion": "1.8.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -824,6 +824,7 @@
         "a59d7a4e7157",
         "acae0014e410",
         "ad67b00ff2ee",
+        "af3258dd5209",
         "afae2f05a5ed",
         "b04393f2476c",
         "bb0e6ad5cb98",
@@ -839,9 +840,9 @@
       "versions": [
         {
           "version": "4.0.1",
-          "hash": "cc30a05cdb0b",
+          "hash": "af3258dd5209",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-09T04:06:46.295066+00:00",
+          "releasedAt": "2026-09-09T09:02:48.979441+00:00",
           "changelog": "趋势雷达说明改诚实：它按关键词搜三平台的文章、不是热榜，keyword 现在必填（此前不传会退化成搜「热点」二字并照常扣点）；全网热榜聚合 api.trend.hotTopics 已下架，通用选题一律走 api.trend.hotSpotKeyword",
           "changelogSource": "user"
         },
@@ -1086,6 +1087,12 @@
           "version": "4.0.0",
           "date": "2026-09-06",
           "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+        },
+        {
+          "hash": "cc30a05cdb0b",
+          "version": "4.0.1",
+          "date": "2026-09-08",
+          "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
         }
       ]
     },
@@ -1583,6 +1590,7 @@
         "64220c7bed79",
         "7e9c0e95aa56",
         "7e9d8e2c7fa6",
+        "83905537e90d",
         "9818d9fd10e5",
         "b798cca6be87",
         "e19a51009f8d",
@@ -1592,9 +1600,9 @@
       "versions": [
         {
           "version": "1.3.7",
-          "hash": "28d9570a0672",
+          "hash": "83905537e90d",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-09T04:06:46.295066+00:00",
+          "releasedAt": "2026-09-09T09:02:48.979441+00:00",
           "changelog": "能力索引移除已下架的 api.trend.hotTopics（名不副实：标题写「全网热榜聚合查询」，实现是按关键词搜三个平台的文章）；真热榜请用 api.trend.hotSpotKeyword",
           "changelogSource": "user"
         },
@@ -1715,6 +1723,12 @@
           "version": "1.3.6",
           "date": "2026-08-31",
           "subject": "fix(skills): 将出图能力标记为暂时下架"
+        },
+        {
+          "hash": "28d9570a0672",
+          "version": "1.3.7",
+          "date": "2026-09-08",
+          "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
         }
       ]
     },

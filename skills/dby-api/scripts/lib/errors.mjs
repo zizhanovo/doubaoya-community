@@ -47,7 +47,15 @@ export function upstreamError(status, code, message, { keySet = false, hints = {
         `${keySet ? "撤销并重新生成，再更新环境变量" : "生成密钥，然后 export DOUBAOYA_API_KEY=dyh_..."}。`
     });
   }
-  const remediation = hints[c] ?? null;
+  // 403 PLAN_LIMIT_EXCEEDED 是「账号套餐权益到顶」，与钥匙、余额都无关（2026-09-09 补）：
+  // 不登记的话它会落进 BUSINESS 且 remediation 为空，agent 最可能的两条歧路是「换钥匙重试」
+  // 或套 402 的余额话术——两条都是错的引导。同一入参不重试，指向套餐区块。
+  const planLimit =
+    c === "PLAN_LIMIT_EXCEEDED"
+      ? "账号套餐的权益上限到了（不是点数、不是钥匙）：把 error.extra 里的 dimension / plan / used / limit 原样告诉用户，" +
+        "已有内容不受影响；要放开这一项到 extra.helpUrl（账户页套餐区块）升级套餐。同一入参不要重试。"
+      : null;
+  const remediation = hints[c] ?? planLimit;
   if (status >= 500) return new DbyError(c, message ?? "服务端错误", { exit: EXIT.GENERAL, remediation });
   return new DbyError(c, message ?? "未知错误", { exit: EXIT.BUSINESS, remediation });
 }
