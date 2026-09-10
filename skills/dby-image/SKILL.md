@@ -8,8 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 2.0.0
-changelog: "BREAKING：请求改走 dby-api 的共享请求层（scripts/lib/locate-dby.mjs 定位），本包不再自己发 fetch，需与 dby-api 一起安装；客户端超时随之从 300s 变为共享层的 450s。服务端换供应商并换代到 gpt-image-2.5，据此更新三条实测结论：文生图与改图现在都返回 PNG（此前文生图是 JPEG）、参考图超上限由服务端明确报错而不再静默丢弃、上游会改写提示词并自动追加“不包含文字/水印/标志”。补齐 README/LICENSE 与引导壳。"
+version: 2.1.0
+changelog: 新增 --model：出图模型改由**调用方按需求选**（flare 快 / sunburst 保真 / gpt-image-2 退路），不传仍走默认；modelName 此前在契约里声明着却从没被服务端读过（旧文档列为死参数），现已真正接通。api-contract 三态表同步纠正 quality/background/outputFormat 三个已停发
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。
@@ -45,11 +45,14 @@ node "$GEN" "只把围巾换成蓝色，其余全部保持不变：鸭子造型�
 node "$GEN" --describe
 ```
 
-> `--describe` 是 `gen.mjs` 内置的对账捷径。想直接看这条能力的完整详情（价格、入参契约、
-> 输出样例），也可以走共享 CLI：`node "$SKILL_DIR/scripts/dby.mjs" api describe gpt-image-gen`
-> ——同一份生产数据，只是不做「与本包认知比对」这一步。
+> 只想看详情（价格 / 入参契约 / 输出样例）不做比对：
+> `node "$SKILL_DIR/scripts/dby.mjs" api describe gpt-image-gen`。
 
 `--out` 相对当前工作目录；不给就写成当前目录的 `doubaoya-image.<ext>`。
+
+**`--model` 不传就用默认，多数请求不必传**；要挑（快 / 保真 / 退回上一代）看
+[`api-contract.md` 的「选哪个模型」](references/api-contract.md)——那里也写明了
+为什么不能向用户承诺「换了就一定更保真」。
 
 **stdout 只有文件路径**（可直接管道／取变量），进度和实测宽高走 stderr：
 

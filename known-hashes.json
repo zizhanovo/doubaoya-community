@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T04:01:55.466122+00:00",
+  "generatedAt": "2026-09-10T04:42:55.988234+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -215,6 +215,7 @@
       "25fcd0d0d1ba",
       "2a3ffb3fc5b2",
       "2a70b5288a44",
+      "2de49fbf6254",
       "329fe617871a",
       "47bee0597b99",
       "542ea41d2b75",
@@ -2661,6 +2662,12 @@
         "version": "4.0.1",
         "date": "2026-09-09",
         "subject": "docs(gateway)+fix(api): 协议表补 403 PLAN_LIMIT_EXCEEDED——套餐权益到顶不是钥匙也不是余额"
+      },
+      {
+        "hash": "f0871dc722f5",
+        "version": "4.1.0",
+        "date": "2026-09-09",
+        "subject": "fix(dby-api): 能力表补回出图口径 —— wechat-cover 借它的正文，正文里却没有它"
       }
     ],
     "dby-banned-words": [

@@ -9,7 +9,9 @@
 //   · 返回是内联 base64，不是图片 URL     → 内置解码落盘
 //   · 扩展名要按 mime 定，不能写死        → 按信封里的 mime 落（现在两条路径都是 png）
 //   · `n` 按份数计费却只回一张            → 不暴露该参数，传不进去
-//   · `size`/`background`/`outputFormat`/`modelName` 是死参数 → 同上，不发送
+//   · `size`/`background`/`outputFormat` 是死参数 → 同上，不发送
+//   · 但 `modelName` **不是**死参数（2026-09 起服务端真读它）→ 暴露成 --model，
+//     并在本地就用白名单挡住拼错的名字（省一趟往返）
 //   · 参考图上限 3 张                     → 超限直接报错，让用户自己挑
 //   · 本地图片要转 data: URI 才能当参考图  → 自动识别路径并读盘编码
 //   · 比例只能靠 prompt，且必须核实        → 出图后从字节里量真实宽高并打印
@@ -47,6 +49,11 @@ const SLUG = "gpt-image-gen";
 // ——那种情况下用户被扣了点、拿不到图、也看不出退没退。共享请求层的 INVOKE_TIMEOUT_MS
 // 是 450s（对 240s 有 210s 余量，且小于生产 nginx 的 480s），直接用它，别在这里另写一个数。
 const MAX_REFS = 3;
+
+// 可选模型。**这是调用方的选择，不是脚本替你定的**——不传就用服务端默认（当前
+// gpt-image-2.5-flare）。选择指引见 references/api-contract.md「选哪个模型」。
+// 本地也挡一道：服务端同样有白名单，但在这里先拒能省掉一次往返与一次等待。
+const MODELS = ["gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "gpt-image-2"];
 
 // 本包认为在架的入参字段。--describe 拿它跟生产实时契约对账；对不上就是本包过期了。
 const EXPECTED_FIELDS = [
@@ -136,14 +143,19 @@ async function main() {
 
   const refs = [];
   let out = null;
+  let model = null;
   const words = [];
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--ref") refs.push(argv[++i]);
     else if (argv[i] === "--out") out = argv[++i];
+    else if (argv[i] === "--model") model = argv[++i];
     else words.push(argv[i]);
   }
   const prompt = words.join(" ").trim();
-  if (!prompt) die('用法：node scripts/gen.mjs "画面描述" [--ref 图] [--out 文件]');
+  if (!prompt) die('用法：node scripts/gen.mjs "画面描述" [--ref 图] [--out 文件] [--model 模型]');
+  if (model && !MODELS.includes(model))
+    die(`不支持的模型 ${model}。可选：${MODELS.join(" / ")}\n` +
+        `不确定就别传——默认那档适合大多数请求。选择指引见 references/api-contract.md。`);
 
   if (refs.length > MAX_REFS)
     die(`参考图 ${refs.length} 张，超过上限 ${MAX_REFS} 张。\n` +
@@ -152,13 +164,17 @@ async function main() {
   // 只发这两个字段。其余入参要么无效（size）、要么是死参数
   // （background/outputFormat/modelName）、要么会按份数计费却只回一张（n）。
   const body = { prompt };
+  if (model) body.modelName = model;
   if (refs.length === 1) body.referenceImage = await resolveRef(refs[0]);
   else if (refs.length > 1) body.images = await Promise.all(refs.map(resolveRef));
 
   const { request, INVOKE_TIMEOUT_MS } = await importDbyLib(import.meta.url, "http.mjs");
   const ctx = { baseUrl: BASE, key: KEY, timeoutOverride: null };
 
-  console.error(`出图中…（通常 1–2 分钟，最长 4 分钟，别打断）${refs.length ? ` 参考图 ${refs.length} 张` : ""}`);
+  console.error(
+    `出图中…（通常 1–2 分钟，最长 4 分钟，别打断）` +
+      `${refs.length ? ` 参考图 ${refs.length} 张` : ""}${model ? ` 模型 ${model}` : ""}`
+  );
   const t0 = Date.now();
   let env;
   try {
