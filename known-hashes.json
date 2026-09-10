@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T05:58:37.284446+00:00",
+  "generatedAt": "2026-09-10T07:29:54.423311+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -229,6 +229,7 @@
       "6a04472552de",
       "73f91dda7bd6",
       "8586a713b673",
+      "86a6b6dcfaee",
       "9a144098dc88",
       "a807c7cef9be",
       "c1227d1f5988",
@@ -2675,6 +2676,12 @@
         "subject": "fix(dby-api): 8 个图像类触发词交还 dby-image，并修掉三处「出图已下架」的假信息"
       },
       {
+        "hash": "a1ef96fb16f6",
+        "version": "4.3.1",
+        "date": "2026-09-09",
+        "subject": "fix(tools,dby-gateway): 修好卡住整条校验的那处，并给发布链补上会红的闸"
+      },
+      {
         "hash": "af3258dd5209",
         "version": "4.0.1",
         "date": "2026-09-09",
@@ -3073,6 +3080,12 @@
         "version": "1.3.7",
         "date": "2026-09-09",
         "subject": "docs(gateway)+fix(api): 协议表补 403 PLAN_LIMIT_EXCEEDED——套餐权益到顶不是钥匙也不是余额"
+      },
+      {
+        "hash": "edfe4b0ead8c",
+        "version": "1.3.8",
+        "date": "2026-09-09",
+        "subject": "fix(tools,dby-gateway): 修好卡住整条校验的那处，并给发布链补上会红的闸"
       }
     ],
     "dby-image": [

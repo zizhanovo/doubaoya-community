@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-10T05:58:37.284446+00:00",
-  "ref": "release-20260910-0554",
+  "generatedAt": "2026-09-10T07:29:54.423311+00:00",
+  "ref": "release-20260910-0724",
   "skills": {
     "dby": "doubaoya-skill/dby@2e9a12d54070",
     "dby-api": "doubaoya-skill/dby-api@a1ef96fb16f6",
@@ -9,7 +9,7 @@
     "dby-deai": "doubaoya-skill/dby-deai@fc0aa01cc498",
     "dby-feedback": "doubaoya-skill/dby-feedback@7b5a56fdd05a",
     "dby-gateway": "doubaoya-skill/dby-gateway@edfe4b0ead8c",
-    "dby-image": "doubaoya-skill/dby-image@8586a713b673",
+    "dby-image": "doubaoya-skill/dby-image@86a6b6dcfaee",
     "dby-publish": "doubaoya-skill/dby-publish@4aa74d5cfde5",
     "dby-rewrite": "doubaoya-skill/dby-rewrite@049562a1d1aa",
     "dby-theme": "doubaoya-skill/dby-theme@a48c0f8f0e5f",

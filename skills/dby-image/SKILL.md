@@ -8,8 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 2.2.0
-changelog: 出图成功后把「本内容由人工智能生成」这句法定标识打到 stderr 并要求交付时转达给用户（此前这条链在共享请求层就断了）；visual-review 补「交付时必须带上的一句」
+version: 2.3.0
+changelog: 出图改按模型分档计价（三档，具体点数看 --describe 实时价，本包不写死数字）；--model 选择表补上价档定性；清掉作废的 quality 段（已停发）
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。
@@ -50,7 +50,7 @@ node "$GEN" --describe
 
 `--out` 相对当前工作目录；不给就写成当前目录的 `doubaoya-image.<ext>`。
 
-**`--model` 不传就用默认，多数请求不必传**；要挑（快 / 保真 / 退回上一代）看
+**`--model` 不传走默认档**；三档价钱不同（`--describe` 看实时价），要挑就看
 [`api-contract.md` 的「选哪个模型」](references/api-contract.md)——那里也写明了
 为什么不能向用户承诺「换了就一定更保真」。
 
