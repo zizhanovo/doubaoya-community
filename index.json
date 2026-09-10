@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T08:05:46.625554+00:00",
+  "generatedAt": "2026-09-10T08:16:08.632439+00:00",
   "ref": "release-20260910-0803",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.16.13",
+  "productVersion": "1.16.14",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -830,6 +830,7 @@
         "96330502a048",
         "9b545f2f647a",
         "9b9682a7a602",
+        "9e7dfac2a9a1",
         "a1ef96fb16f6",
         "a39a83239eaa",
         "a59d7a4e7157",
@@ -852,9 +853,9 @@
       "versions": [
         {
           "version": "4.4.0",
-          "hash": "0cad2a8a39b0",
+          "hash": "9e7dfac2a9a1",
           "ref": "release-20260910-0803",
-          "releasedAt": "2026-09-10T08:04:48.650623+00:00",
+          "releasedAt": "2026-09-10T08:15:55.892812+00:00",
           "changelog": "共享请求层把「连不上」与「连上后断」拆成两个码：连接从未建立回 CONNECT_FAILED，明说请求没发出去、没扣点、重试安全；连上后才断的留在 NETWORK_ERROR，按可能已计费保守处置。混成一个码时调用方一律套「计费失败不重试」卡死，还会把本机连不上说成「都爆鸭返回了错误」",
           "changelogSource": "user"
         },
@@ -1151,6 +1152,12 @@
           "version": "4.1.0",
           "date": "2026-09-09",
           "subject": "fix(dby-api): 能力表补回出图口径 —— wechat-cover 借它的正文，正文里却没有它"
+        },
+        {
+          "hash": "0cad2a8a39b0",
+          "version": "4.4.0",
+          "date": "2026-09-10",
+          "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
         }
       ]
     },
@@ -1655,14 +1662,15 @@
         "e19a51009f8d",
         "e1dc9e3d282e",
         "ea70e80e9a05",
-        "edfe4b0ead8c"
+        "edfe4b0ead8c",
+        "fddd63a12a29"
       ],
       "versions": [
         {
           "version": "1.4.0",
-          "hash": "2eae00c82c53",
+          "hash": "fddd63a12a29",
           "ref": "release-20260910-0803",
-          "releasedAt": "2026-09-10T08:04:19.786669+00:00",
+          "releasedAt": "2026-09-10T08:15:55.892812+00:00",
           "changelog": "协议里补上两个客户端侧错误码的处置：CONNECT_FAILED（连接从未建立，请求没发出去，没扣点，重试安全，但要先确认本机能出网）与 NETWORK_ERROR（连上后才断，可能已送达并计费，先核实再说）。并写死一条转述纪律：别把本机连不上说成「都爆鸭返回了错误」",
           "changelogSource": "user"
         },
@@ -1817,6 +1825,12 @@
           "version": "1.3.8",
           "date": "2026-09-09",
           "subject": "fix(tools,dby-gateway): 修好卡住整条校验的那处，并给发布链补上会红的闸"
+        },
+        {
+          "hash": "2eae00c82c53",
+          "version": "1.4.0",
+          "date": "2026-09-10",
+          "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
         }
       ]
     },

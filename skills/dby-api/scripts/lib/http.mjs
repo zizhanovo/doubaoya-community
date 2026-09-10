@@ -19,6 +19,12 @@ export const INVOKE_TIMEOUT_MS = 450_000;   // 计费 invoke（doubaoya.mjs 同�
 // 🔴 只收**能证明请求字节一个都没发出去**的原因。有歧义的一律不收：ECONNRESET / EPIPE /
 //    UND_ERR_SOCKET / ETIMEDOUT 都可能发生在请求已经送达服务端之后，那种情况必须按
 //    「可能已执行、已计费」保守处理（与超时同一条红线）。宁可少认，不可错认。
+// DNS 解析失败单列：它是这里**最容易被误判成服务端故障**的一种，因为同一台机器上
+// `curl` 往往还是通的——curl 读 HTTP_PROXY / HTTPS_PROXY 环境变量、由代理替它解析域名，
+// 而 Node 的 fetch 默认**不读**那两个变量（Node 24+ 才有 NODE_USE_ENV_PROXY），于是自己去
+// 做 getaddrinfo 并 ENOTFOUND。"curl 200 但脚本连不上"几乎总是这一条，得在报错里直接说破。
+const DNS_FAILURE_CODES = new Set(["ENOTFOUND", "EAI_AGAIN"]);
+
 const CONNECT_FAILED_CODES = new Set([
   "ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "EHOSTUNREACH", "ENETUNREACH", "ENETDOWN",
   "ERR_PROXY_CONNECTION_FAILED",
@@ -71,9 +77,14 @@ export function classifyFetchError(err, { billable = false, timeoutMs = DEFAULT_
         exit: EXIT.NETWORK,
         remediation:
           "服务端没收到这次调用，**没有执行、没有扣点**，重试不会重复计费。" +
-          "先确认本机能出网到 doubaoya.com：`curl -sS -o /dev/null -w '%{http_code}' https://doubaoya.com/api/health` 应回 200；" +
+          "先确认本机能出网到 doubaoya.com：`curl -s -o /dev/null -w '%{http_code}' https://doubaoya.com/api/health` 应回 200；" +
           "容器 / 沙箱运行时常见出站域名白名单限制，那种情况重试多少次都一样，要放行域名或换个能出网的环境。" +
-          "能通之后直接重跑原命令即可。"
+          (DNS_FAILURE_CODES.has(connectReason)
+            ? " 🔴 这次是**域名解析**失败。如果同一台机器上 `curl` 反而是通的，那就不是网络断了，是代理："
+              + "curl 读 HTTP_PROXY / HTTPS_PROXY 环境变量，Node 的 fetch 默认不读（Node 24+ 才有 `NODE_USE_ENV_PROXY=1`），"
+              + "于是 Node 自己解析域名并失败。三条出路：给 Node 打开读代理、换一个不靠代理就能解析 doubaoya.com 的网络、"
+              + "或让运维在 DNS 上放行这个域名。先用 `node -e \"require('dns').lookup('doubaoya.com',(e,a)=>console.log(e?.code||a))\"` 确认。"
+            : " 能通之后直接重跑原命令即可。")
       }
     );
   }

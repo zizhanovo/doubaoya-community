@@ -31,6 +31,16 @@ for (const code of ["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "CERT_HAS_EXPIRED"
   assert.match(e.remediation, /没有扣点/);
 }
 
+// ②b DNS 失败要多说一句代理——「curl 通、脚本不通」几乎总是它，不说破就得让人自己查一小时。
+//     反过来，非 DNS 的连接失败不许夹带这段（那会把人引去改根本没问题的代理配置）。
+{
+  const dns = classifyFetchError(fetchFailed(Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" })), {});
+  assert.match(dns.remediation, /HTTPS_PROXY/);
+  assert.match(dns.remediation, /curl/);
+  const refused = classifyFetchError(fetchFailed(Object.assign(new Error("ECONNREFUSED"), { code: "ECONNREFUSED" })), {});
+  assert.doesNotMatch(refused.remediation, /HTTPS_PROXY/, "非 DNS 的连接失败不该扯代理");
+}
+
 // ③ undici 的连接超时藏在 cause 链第二层，且 name 不是 TimeoutError —— 以前正是它被
 //    混进 NETWORK_ERROR 的。链要走得下去，也要认得出。
 {
@@ -55,4 +65,4 @@ for (const code of ["ECONNRESET", "EPIPE", "UND_ERR_SOCKET", "ETIMEDOUT"]) {
   assert.equal(e.code, "NETWORK_ERROR");
 }
 
-console.log("ok http.selfcheck: 5 组分流断言全过");
+console.log("ok http.selfcheck: 6 组分流断言全过");

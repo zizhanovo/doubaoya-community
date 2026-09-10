@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T08:05:46.625554+00:00",
+  "generatedAt": "2026-09-10T08:16:08.632439+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -118,6 +118,7 @@
       "96330502a048",
       "9b545f2f647a",
       "9b9682a7a602",
+      "9e7dfac2a9a1",
       "a1ef96fb16f6",
       "a39a83239eaa",
       "a59d7a4e7157",
@@ -210,7 +211,8 @@
       "e19a51009f8d",
       "e1dc9e3d282e",
       "ea70e80e9a05",
-      "edfe4b0ead8c"
+      "edfe4b0ead8c",
+      "fddd63a12a29"
     ],
     "dby-image": [
       "000e1d567391",
@@ -2694,6 +2696,12 @@
         "version": "4.1.0",
         "date": "2026-09-09",
         "subject": "fix(dby-api): 能力表补回出图口径 —— wechat-cover 借它的正文，正文里却没有它"
+      },
+      {
+        "hash": "0cad2a8a39b0",
+        "version": "4.4.0",
+        "date": "2026-09-10",
+        "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
       }
     ],
     "dby-banned-words": [
@@ -3088,6 +3096,12 @@
         "version": "1.3.8",
         "date": "2026-09-09",
         "subject": "fix(tools,dby-gateway): 修好卡住整条校验的那处，并给发布链补上会红的闸"
+      },
+      {
+        "hash": "2eae00c82c53",
+        "version": "1.4.0",
+        "date": "2026-09-10",
+        "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
       }
     ],
     "dby-image": [
