@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T04:42:55.988234+00:00",
+  "generatedAt": "2026-09-10T05:04:13.240393+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.13.0",
+  "productVersion": "1.15.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -814,6 +814,7 @@
         "2e02904d7d96",
         "3fca623fc119",
         "50cdd6a062be",
+        "5356a8ef8e99",
         "53d2c3fb1e80",
         "596f05f4d505",
         "5b22bb800679",
@@ -847,11 +848,11 @@
       ],
       "versions": [
         {
-          "version": "4.1.0",
-          "hash": "f0871dc722f5",
+          "version": "4.2.0",
+          "hash": "5356a8ef8e99",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-10T04:00:51.185514+00:00",
-          "changelog": "能力表补回出图口径：新增 skill.wechat.coverDesign 一行（给标题出成品封面图，与给封面数据的 api.gzh.cozeData 是两条能力），出图话术改回指向 dby-image —— 服务端生图 2026-09 已恢复",
+          "releasedAt": "2026-09-10T05:02:38.976714+00:00",
+          "changelog": "8 个图像类触发词（AI出图/主视觉/图生图/改图/文生图/生成图片/配图/首图灵感）交还 dby-image——它们是 dby-image 退役期间由本包代管的，生图已恢复，代管到此为止；本包只留一句消歧指路。同批修掉正文三处仍在说「出图能力当前暂时下架」的假信息",
           "changelogSource": "user"
         },
         {
@@ -1989,6 +1990,12 @@
           "version": "1.7.3",
           "date": "2026-08-31",
           "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+        },
+        {
+          "hash": "2de49fbf6254",
+          "version": "2.1.0",
+          "date": "2026-09-09",
+          "subject": "feat(dby-image): 出图模型改由调用方按需求选 —— modelName 从「死参数」变成真参数"
         },
         {
           "hash": "ee929a10d3cb",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T04:42:55.988234+00:00",
+  "generatedAt": "2026-09-10T05:04:13.240393+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -102,6 +102,7 @@
       "2e02904d7d96",
       "3fca623fc119",
       "50cdd6a062be",
+      "5356a8ef8e99",
       "53d2c3fb1e80",
       "596f05f4d505",
       "5b22bb800679",
@@ -3202,6 +3203,12 @@
         "version": "1.7.3",
         "date": "2026-08-31",
         "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+      },
+      {
+        "hash": "2de49fbf6254",
+        "version": "2.1.0",
+        "date": "2026-09-09",
+        "subject": "feat(dby-image): 出图模型改由调用方按需求选 —— modelName 从「死参数」变成真参数"
       },
       {
         "hash": "ee929a10d3cb",
