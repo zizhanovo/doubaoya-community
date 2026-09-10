@@ -1679,6 +1679,7 @@ CLI_SHIM_GROUPS: list[tuple[str, list[str]]] = [
             "skills/dby-charter/scripts/dby.mjs",
             "skills/dby-publish/scripts/dby.mjs",
             "skills/dby-banned-words/scripts/dby.mjs",
+            "skills/dby-image/scripts/dby.mjs",
             # 用户专属 skill 模板的附录抄的是同一份壳（见 user-skill-template.md 的「附录」），
             # 落在 references/ 而不是 scripts/ 是为了不撞见 validate_gateway_contract_freedom
             # 的驼峰扫描（那道闸只扫 dby-api 下的 *.md，一份真实的 .mjs 文件不受影响，用户还能
@@ -1692,6 +1693,7 @@ CLI_SHIM_GROUPS: list[tuple[str, list[str]]] = [
             "skills/dby-write/scripts/lib/locate-dby.mjs",
             "skills/dby-charter/scripts/lib/locate-dby.mjs",
             "skills/dby-publish/scripts/lib/locate-dby.mjs",
+            "skills/dby-image/scripts/lib/locate-dby.mjs",
         ],
     ),
 ]
@@ -2155,10 +2157,8 @@ TRIGGER_REAL_DELETION = {
     # 「超过 1024 字符**将被截断**」——与本仓实证的结论（是校验拒绝 / 整条丢弃，**不是截断**）
     # 正相反。在一个把这条限额当核心纪律的仓里分发一份说反了的教材，是独立于本轮压缩的删除理由。
     "optimize-skill-md",
-    # 2026-08-31：服务端出图能力当前暂时下架，dby-image 也从本分发退役。未来是否恢复
-    # 需重新评估，当前不承诺恢复时间。现阶段本仓没有任何包能接住「画张图/出图/文生图」这类词，
-    # 迁进 dby-api 等于承诺一个当前不可用的能力，所以只能明确告知用户暂时下架，不能假装能路由过去。
-    "dby-image",
+    # 2026-08-31 dby-image 曾因服务端出图能力下架而退役；2026-09-09 该能力恢复（换供应商
+    # 到 flatrouter + gpt-image-2.5），包也随之重建 ⇒ 它**不再属于真删除**，词由它自己接住。
 }
 
 # 🔴 **历史欠账，不是豁免。** 2026-07「剪向公众号」砍掉的那批平台垂类（抖音 / B站 / TikTok /

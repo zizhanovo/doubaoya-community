@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 5.0.0
-changelog: BREAKING：删除 scripts/publish_draft.py（改用 `dby wechat publish`，默认停在确认态）；pipeline/preprocess-and-publish/account-verify 的 HTTP 全部改走 dby-api 共享请求层（lib/locate-dby.mjs 定位，缺 dby-api 退出码 3）；新增 scripts/dby.mjs 引导壳；文档路径改写 `$SKILL_DIR`；compatibility 不再需要 Python
+version: 5.1.0
+changelog: "封面 / 配图那一步改回指向 dby-image —— 服务端生图能力 2026-09 已恢复（换供应商 + gpt-image-2.5），此前那句「出图能力当前暂时下架」已成假信息；本包仍不出图，只消费落盘的本地文件。上一版（5.0.0）内容：BREAKING：删除 scripts/publish_draft.py（改用 `dby wechat publish`，默认停在确认态）；pipeline/preprocess-and-publish/account-verify 的 HTTP 全部改走 dby-api 共享请求层（lib/locate-dby.mjs 定位，缺 dby-api 退出码 3）；新增 scripts/dby.mjs 引导壳；文档路径改写 `$SKILL_DIR`；compatibility 不再需要 Python"
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   接口调用经由 `dby-api` 包的共享 CLI（`scripts/lib/locate-dby.mjs` 定位），需与 dby-api 一起安装。
@@ -96,8 +96,8 @@ node "$SKILL_DIR/scripts/dby.mjs" wechat publish --appid <authorizerAppid> --tit
 
 ## 封面与配图（可选，本包不出图）
 
-本包**不出图**，出图能力当前暂时下架；未来是否恢复需重新评估，当前不承诺恢复时间。
-需要封面 / 配图时，不调用已下架能力或旧包，图片只能来自**用户自备**或**你自己 agent 的生图工具**：
+本包**不出图**。需要新图时交给 `dby-image`（2026-09 随服务端生图能力恢复而重建）；
+图片也可以来自**用户自备**或**你自己 agent 的生图工具**：
 拿到**本地文件路径**后接回流水线——
 封面走 `--cover <路径>`；配图以 `<img src=本地路径>` 手工判断放进 Markdown 源对应 h2 小节末尾，
 入源后重跑渲染，配图才会获得主题图样式。上传与排布仍归本包（流水线原样保留每个 `<img src>`

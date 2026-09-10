@@ -37,6 +37,8 @@ ENTRY_FLAGS: dict[str, list[str]] = {
     "dby-charter/scripts/dby.mjs": [],
     "dby-publish/scripts/dby.mjs": [],
     "dby-banned-words/scripts/dby.mjs": [],
+    "dby-image/scripts/dby.mjs": [],
+    "dby-image/scripts/plan-figures.mjs": ["--help"],
     "dby-publish/scripts/account-verify.mjs": ["--help"],
     "dby-publish/scripts/extract-theme.mjs": ["--help"],
     "dby-publish/scripts/fetch-article.mjs": ["--help"],

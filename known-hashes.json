@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-09T09:02:51.518982+00:00",
+  "generatedAt": "2026-09-10T03:58:17.726458+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -68,6 +68,7 @@
       "1c068c859c03",
       "259fd3762f29",
       "2db0a55a86c2",
+      "2e9a12d54070",
       "3012327e9323",
       "3614ff73a0b8",
       "39e738fe2c0e",
@@ -228,6 +229,7 @@
       "c70826332715",
       "d096f50d3a79",
       "ee25802f9801",
+      "ee929a10d3cb",
       "f80e00b562e4"
     ],
     "dby-publish": [
@@ -244,6 +246,7 @@
       "351676ef5646",
       "3b0d4d986952",
       "487cb9172be9",
+      "4aa74d5cfde5",
       "4d2cafc48bca",
       "5351f7c56f8f",
       "53d58f1d50df",
@@ -997,7 +1000,6 @@
     "cultural-tourism-xiaohongshu-feed": [
       "/api/apis/xiaohongshu/xiaohongshu-playlet-feed"
     ],
-    "dby-image": [],
     "doubao-websearch": [
       "/api/skills/doubao-web-search"
     ],
@@ -1343,31 +1345,6 @@
       "扒文章",
       "解析链接",
       "链接解析"
-    ],
-    "dby-image": [
-      "AI 出图",
-      "P 一下",
-      "做张封面",
-      "做张视觉图",
-      "公众号封面",
-      "出图",
-      "图生图",
-      "封面",
-      "封面图",
-      "帮我画",
-      "按这个描述画",
-      "改一下这张图",
-      "改图",
-      "文生图",
-      "来张主视觉",
-      "生成一张图",
-      "生成图片",
-      "画张图",
-      "配一张插图",
-      "配图",
-      "配张图",
-      "配张封面图",
-      "首图灵感"
     ],
     "doubao-websearch": [
       "事实核查",
@@ -2671,6 +2648,12 @@
         "version": "4.0.1",
         "date": "2026-09-08",
         "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
+      },
+      {
+        "hash": "af3258dd5209",
+        "version": "4.0.1",
+        "date": "2026-09-09",
+        "subject": "docs(gateway)+fix(api): 协议表补 403 PLAN_LIMIT_EXCEEDED——套餐权益到顶不是钥匙也不是余额"
       }
     ],
     "dby-banned-words": [
@@ -3053,6 +3036,12 @@
         "version": "1.3.7",
         "date": "2026-09-08",
         "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
+      },
+      {
+        "hash": "83905537e90d",
+        "version": "1.3.7",
+        "date": "2026-09-09",
+        "subject": "docs(gateway)+fix(api): 协议表补 403 PLAN_LIMIT_EXCEEDED——套餐权益到顶不是钥匙也不是余额"
       }
     ],
     "dby-image": [

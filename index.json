@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-09T09:02:51.518982+00:00",
+  "generatedAt": "2026-09-10T03:58:17.726458+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.8.0",
+  "productVersion": "1.10.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -502,6 +502,7 @@
         "1c068c859c03",
         "259fd3762f29",
         "2db0a55a86c2",
+        "2e9a12d54070",
         "3012327e9323",
         "3614ff73a0b8",
         "39e738fe2c0e",
@@ -531,11 +532,11 @@
       ],
       "versions": [
         {
-          "version": "1.7.4",
-          "hash": "43bd30a6c002",
+          "version": "1.8.0",
+          "hash": "2e9a12d54070",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-06T06:26:03.200942+00:00",
-          "changelog": "任务前路由表加一行：「用我记的东西写 / 把我灵感库里的整理成选题」→ dby-write（第 4 步第 2 层读灵感库，成稿带记录血缘，不因记了东西自动起稿）",
+          "releasedAt": "2026-09-10T03:53:53.433963+00:00",
+          "changelog": "出图话术改回指向 dby-image —— 服务端生图能力 2026-09 已恢复（换供应商 + gpt-image-2.5），此前那行「当前暂时下架」已成假信息；「封面灵感 / 爆款封面参考」仍归 dby-api（给数据不出图），但不再附带「成品图能力下架」的旧口径",
           "changelogSource": "user"
         },
         {
@@ -1093,6 +1094,12 @@
           "version": "4.0.1",
           "date": "2026-09-08",
           "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
+        },
+        {
+          "hash": "af3258dd5209",
+          "version": "4.0.1",
+          "date": "2026-09-09",
+          "subject": "docs(gateway)+fix(api): 协议表补 403 PLAN_LIMIT_EXCEEDED——套餐权益到顶不是钥匙也不是余额"
         }
       ]
     },
@@ -1729,6 +1736,12 @@
           "version": "1.3.7",
           "date": "2026-09-08",
           "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
+        },
+        {
+          "hash": "83905537e90d",
+          "version": "1.3.7",
+          "date": "2026-09-09",
+          "subject": "docs(gateway)+fix(api): 协议表补 403 PLAN_LIMIT_EXCEEDED——套餐权益到顶不是钥匙也不是余额"
         }
       ]
     },
@@ -1740,7 +1753,7 @@
         "AI绘图",
         "内容创作"
       ],
-      "status": "retired",
+      "status": "active",
       "knownHashes": [
         "000e1d567391",
         "06cc8d2245f3",
@@ -1765,15 +1778,16 @@
         "c70826332715",
         "d096f50d3a79",
         "ee25802f9801",
+        "ee929a10d3cb",
         "f80e00b562e4"
       ],
       "versions": [
         {
-          "version": "1.7.4",
-          "hash": "2a70b5288a44",
+          "version": "2.0.0",
+          "hash": "ee929a10d3cb",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-08-31T11:35:26.027449+00:00",
-          "changelog": "首版基线复查（D10）：image-no-injected-style 的否定式语义断言（grader 曾判 unclear，属用例缺陷）改写为带判定规则的正向陈述（描述文字须完全由画面内容构成，风格词须能在用户原话找到出处）；gen.mjs 不回显组装后的 prompt、tools.txt 只收工具结果，确定性 check 无处可打，故留 assert；脚本行为零变化",
+          "releasedAt": "2026-09-10T03:53:53.433963+00:00",
+          "changelog": "\"BREAKING：请求改走 dby-api 的共享请求层（scripts/lib/locate-dby.mjs 定位），本包不再自己发 fetch，需与 dby-api 一起安装；客户端超时随之从 300s 变为共享层的 450s。服务端换供应商并换代到 gpt-image-2.5，据此更新三条实测结论：文生图与改图现在都返回 PNG（此前文生图是 JPEG）、参考图超上限由服务端明确报错而不再静默丢弃、上游会改写提示词并自动追加“不包含文字/水印/标志”。补齐 README/LICENSE 与引导壳。\"",
           "changelogSource": "user"
         },
         {
@@ -1962,32 +1976,6 @@
           "date": "2026-08-31",
           "subject": "test(skills): 三个「错了有后果」的包补两层判据"
         }
-      ],
-      "retiredEndpoints": [],
-      "retiredTriggerWords": [
-        "AI 出图",
-        "P 一下",
-        "做张封面",
-        "做张视觉图",
-        "公众号封面",
-        "出图",
-        "图生图",
-        "封面",
-        "封面图",
-        "帮我画",
-        "按这个描述画",
-        "改一下这张图",
-        "改图",
-        "文生图",
-        "来张主视觉",
-        "生成一张图",
-        "生成图片",
-        "画张图",
-        "配一张插图",
-        "配图",
-        "配张图",
-        "配张封面图",
-        "首图灵感"
       ]
     },
     "dby-publish": {
@@ -2014,6 +2002,7 @@
         "351676ef5646",
         "3b0d4d986952",
         "487cb9172be9",
+        "4aa74d5cfde5",
         "4d2cafc48bca",
         "5351f7c56f8f",
         "53d58f1d50df",
@@ -2047,11 +2036,11 @@
       ],
       "versions": [
         {
-          "version": "5.0.0",
-          "hash": "01cede2f7a8d",
+          "version": "5.1.0",
+          "hash": "4aa74d5cfde5",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-06T08:15:46.283493+00:00",
-          "changelog": "BREAKING：删除 scripts/publish_draft.py（改用 `dby wechat publish`，默认停在确认态）；pipeline/preprocess-and-publish/account-verify 的 HTTP 全部改走 dby-api 共享请求层（lib/locate-dby.mjs 定位，缺 dby-api 退出码 3）；新增 scripts/dby.mjs 引导壳；文档路径改写 `$SKILL_DIR`；compatibility 不再需要 Python",
+          "releasedAt": "2026-09-10T03:53:53.433963+00:00",
+          "changelog": "\"封面 / 配图那一步改回指向 dby-image —— 服务端生图能力 2026-09 已恢复（换供应商 + gpt-image-2.5），此前那句「出图能力当前暂时下架」已成假信息；本包仍不出图，只消费落盘的本地文件。上一版（5.0.0）内容：BREAKING：删除 scripts/publish_draft.py（改用 `dby wechat publish`，默认停在确认态）；pipeline/preprocess-and-publish/account-verify 的 HTTP 全部改走 dby-api 共享请求层（lib/locate-dby.mjs 定位，缺 dby-api 退出码 3）；新增 scripts/dby.mjs 引导壳；文档路径改写 `$SKILL_DIR`；compatibility 不再需要 Python\"",
           "changelogSource": "user"
         },
         {
