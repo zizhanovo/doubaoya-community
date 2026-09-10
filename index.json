@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T08:16:08.632439+00:00",
+  "generatedAt": "2026-09-10T09:04:57.505483+00:00",
   "ref": "release-20260910-0803",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.16.14",
+  "productVersion": "1.16.15",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -831,6 +831,7 @@
         "9b545f2f647a",
         "9b9682a7a602",
         "9e7dfac2a9a1",
+        "9f1137a517a9",
         "a1ef96fb16f6",
         "a39a83239eaa",
         "a59d7a4e7157",
@@ -852,11 +853,11 @@
       ],
       "versions": [
         {
-          "version": "4.4.0",
-          "hash": "9e7dfac2a9a1",
+          "version": "4.5.0",
+          "hash": "9f1137a517a9",
           "ref": "release-20260910-0803",
-          "releasedAt": "2026-09-10T08:15:55.892812+00:00",
-          "changelog": "共享请求层把「连不上」与「连上后断」拆成两个码：连接从未建立回 CONNECT_FAILED，明说请求没发出去、没扣点、重试安全；连上后才断的留在 NETWORK_ERROR，按可能已计费保守处置。混成一个码时调用方一律套「计费失败不重试」卡死，还会把本机连不上说成「都爆鸭返回了错误」",
+          "releasedAt": "2026-09-10T09:04:19.761456+00:00",
+          "changelog": "只能走代理出网的机器（受管企业网、CI 容器、agent 沙箱）现在不用改环境就能用：请求层按 HTTP(S)_PROXY / ALL_PROXY 走代理、遵守 NO_PROXY，只认 http(s)，socks 显式报错不静默回落。没配代理时行为一字不变",
           "changelogSource": "user"
         },
         {
@@ -1158,6 +1159,12 @@
           "version": "4.4.0",
           "date": "2026-09-10",
           "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
+        },
+        {
+          "hash": "9e7dfac2a9a1",
+          "version": "4.4.0",
+          "date": "2026-09-10",
+          "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
         }
       ]
     },
@@ -1657,6 +1664,7 @@
         "7e9c0e95aa56",
         "7e9d8e2c7fa6",
         "83905537e90d",
+        "89f720d429f3",
         "9818d9fd10e5",
         "b798cca6be87",
         "e19a51009f8d",
@@ -1667,11 +1675,11 @@
       ],
       "versions": [
         {
-          "version": "1.4.0",
-          "hash": "fddd63a12a29",
+          "version": "1.5.0",
+          "hash": "89f720d429f3",
           "ref": "release-20260910-0803",
-          "releasedAt": "2026-09-10T08:15:55.892812+00:00",
-          "changelog": "协议里补上两个客户端侧错误码的处置：CONNECT_FAILED（连接从未建立，请求没发出去，没扣点，重试安全，但要先确认本机能出网）与 NETWORK_ERROR（连上后才断，可能已送达并计费，先核实再说）。并写死一条转述纪律：别把本机连不上说成「都爆鸭返回了错误」",
+          "releasedAt": "2026-09-10T09:04:19.761456+00:00",
+          "changelog": "协议里补上：本包现在会自己按 HTTP(S)_PROXY / ALL_PROXY 走代理，所以「curl 通、脚本不通」的处置从「Node 不读代理变量」改成「先看那几个变量有没有传进当前进程、有没有被 NO_PROXY 豁免」",
           "changelogSource": "user"
         },
         {
@@ -1831,6 +1839,12 @@
           "version": "1.4.0",
           "date": "2026-09-10",
           "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
+        },
+        {
+          "hash": "fddd63a12a29",
+          "version": "1.4.0",
+          "date": "2026-09-10",
+          "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
         }
       ]
     },

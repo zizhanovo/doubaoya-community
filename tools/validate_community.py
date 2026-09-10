@@ -1465,6 +1465,21 @@ SINGLE_REQUEST_LAYER_WHITELIST: tuple[dict[str, str], ...] = (
         "reason": "这就是那一份请求层本身——其余脚本改走 import 它，不是再抄一份。",
     },
     {
+        "path": "dby-api/scripts/lib/proxy.mjs",
+        "reason": (
+            "同一份请求层的实现细节，不是第二份：它只被 http.mjs 调用，自己不做鉴权、"
+            "不认识 baseUrl、没有任何调用点 import 它。命中判据是因为它必须自己发 "
+            "CONNECT 隧道请求（fetch 给不了这个能力），目标特征则来自注释里的说明文字。"
+        ),
+    },
+    {
+        "path": "dby-api/scripts/lib/proxy.selfcheck.mjs",
+        "reason": (
+            "proxy.mjs 的断言文件，一个真实请求都不发：它只连 127.0.0.1 上的假代理，"
+            "`doubaoya.com` 在这里是被断言的那个目标字符串，不是请求目的地。"
+        ),
+    },
+    {
         "path": "dby-update/scripts/reconcile.mjs",
         "reason": "GitHub/Gitee 拉取技能包内容 + 一处 /api/health 健康探测，不是业务请求层。",
     },

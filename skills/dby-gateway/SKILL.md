@@ -6,8 +6,8 @@ description: >-
   Trigger words: doubaoya 调用协议 / 调用网关 / DOUBAOYA_API_KEY / operationKey / execution.target /
   inputContract / 入参规格 / 统一信封 / SKILL_NOT_FOUND / ENDPOINT_NOT_FOUND / DEDICATED_ROUTE /
   NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由；以及调都爆鸭接口时「401 / 404 / 429 报错了」「调不通」「怎么鉴权」「requestId」。
-version: 1.4.0
-changelog: 协议里补上两个客户端侧错误码的处置：CONNECT_FAILED（连接从未建立，请求没发出去，没扣点，重试安全，但要先确认本机能出网）与 NETWORK_ERROR（连上后才断，可能已送达并计费，先核实再说）。并写死一条转述纪律：别把本机连不上说成「都爆鸭返回了错误」
+version: 1.5.0
+changelog: 协议里补上：本包现在会自己按 HTTP(S)_PROXY / ALL_PROXY 走代理，所以「curl 通、脚本不通」的处置从「Node 不读代理变量」改成「先看那几个变量有没有传进当前进程、有没有被 NO_PROXY 豁免」
 compatibility: >-
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对
   https://doubaoya.com 发 HTTPS 请求。发现与详情端点免鉴权且免费，调用端点必须带 Bearer 且计费。

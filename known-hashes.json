@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T08:16:08.632439+00:00",
+  "generatedAt": "2026-09-10T09:04:57.505483+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -119,6 +119,7 @@
       "9b545f2f647a",
       "9b9682a7a602",
       "9e7dfac2a9a1",
+      "9f1137a517a9",
       "a1ef96fb16f6",
       "a39a83239eaa",
       "a59d7a4e7157",
@@ -206,6 +207,7 @@
       "7e9c0e95aa56",
       "7e9d8e2c7fa6",
       "83905537e90d",
+      "89f720d429f3",
       "9818d9fd10e5",
       "b798cca6be87",
       "e19a51009f8d",
@@ -2702,6 +2704,12 @@
         "version": "4.4.0",
         "date": "2026-09-10",
         "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
+      },
+      {
+        "hash": "9e7dfac2a9a1",
+        "version": "4.4.0",
+        "date": "2026-09-10",
+        "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
       }
     ],
     "dby-banned-words": [
@@ -3102,6 +3110,12 @@
         "version": "1.4.0",
         "date": "2026-09-10",
         "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
+      },
+      {
+        "hash": "fddd63a12a29",
+        "version": "1.4.0",
+        "date": "2026-09-10",
+        "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
       }
     ],
     "dby-image": [

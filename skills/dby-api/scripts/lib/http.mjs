@@ -10,6 +10,7 @@
 import { getKey, keyPresence } from "./context.mjs";
 import { EXIT, DbyError, upstreamError } from "./errors.mjs";
 import { warn } from "./output.mjs";
+import { resolveProxy, requestViaProxy } from "./proxy.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 60_000;   // 免费读写路由（write/charter 旧脚本同值）
 export const INVOKE_TIMEOUT_MS = 450_000;   // 计费 invoke（doubaoya.mjs 同值，判据见上）
@@ -36,6 +37,9 @@ const CONNECT_FAILED_CODES = new Set([
 /** 顺 cause 链找连接层失败；深度设上限，防自引用的 cause 把这里转死。 */
 function connectFailureReason(err) {
   for (let e = err, depth = 0; e && depth < 8; e = e.cause, depth += 1) {
+    // 代理路径由 proxy.mjs 直接盖章说明失败发生在 TLS 握手完成之前——那一侧应用数据一个
+    // 字节都没发出去。判据表只有这一张，两条路径共用，所以这里认章而不是去猜底层 code。
+    if (e.dbyPhase === "connect") return e.dbyReason ?? e.code ?? "连接未建立";
     // undici 的连接超时（默认 10s，**不受本层 timeoutMs 管**），name 不是 TimeoutError，
     // 所以它落不到上面那条超时分支——这正是它以前被混进 NETWORK_ERROR 的原因。
     if (e.name === "ConnectTimeoutError") return "连接超时";
@@ -80,10 +84,12 @@ export function classifyFetchError(err, { billable = false, timeoutMs = DEFAULT_
           "先确认本机能出网到 doubaoya.com：`curl -s -o /dev/null -w '%{http_code}' https://doubaoya.com/api/health` 应回 200；" +
           "容器 / 沙箱运行时常见出站域名白名单限制，那种情况重试多少次都一样，要放行域名或换个能出网的环境。" +
           (DNS_FAILURE_CODES.has(connectReason)
-            ? " 🔴 这次是**域名解析**失败。如果同一台机器上 `curl` 反而是通的，那就不是网络断了，是代理："
-              + "curl 读 HTTP_PROXY / HTTPS_PROXY 环境变量，Node 的 fetch 默认不读（Node 24+ 才有 `NODE_USE_ENV_PROXY=1`），"
-              + "于是 Node 自己解析域名并失败。三条出路：给 Node 打开读代理、换一个不靠代理就能解析 doubaoya.com 的网络、"
-              + "或让运维在 DNS 上放行这个域名。先用 `node -e \"require('dns').lookup('doubaoya.com',(e,a)=>console.log(e?.code||a))\"` 确认。"
+            ? " 🔴 这次是**域名解析**失败，而且是**直连**时失败的——本包会读 HTTPS_PROXY / HTTP_PROXY / ALL_PROXY 自己走代理，"
+              + "所以走到这一步说明本次没有用上任何代理。如果同一台机器上 `curl` 反而是通的，那就不是网络断了："
+              + "多半是那几个变量没传进当前进程（agent / 容器拉起子进程时最容易丢环境变量），"
+              + "或者 NO_PROXY 把 doubaoya.com 豁免掉了。先 `echo $HTTPS_PROXY $ALL_PROXY $NO_PROXY` 看一眼；"
+              + "变量确实不在就 export 一个指向你 http 代理端口的 HTTPS_PROXY 再跑。"
+              + "变量在、NO_PROXY 也没豁免，那就是这台机器的 DNS 真的解析不了这个域名——换 DNS 或让运维放行。"
             : " 能通之后直接重跑原命令即可。")
       }
     );
@@ -127,14 +133,26 @@ export async function request(ctx, method, path, {
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   const t = ctx.timeoutOverride ?? timeoutMs;
+  const url = `${ctx.baseUrl}${path}`;
+  // 🔴 安全阀：没有代理变量时 resolveProxy 返回 null，下面走的就是原来那行 fetch，
+  //    一个字都没变。绝大多数用户根本不进代理路径，这也是回滚成本近似为零的原因。
+  //    （代理配的是 socks 这类用不了的协议时，resolveProxy 直接抛 —— 不许偷偷改走直连。）
+  const proxy = resolveProxy(url, process.env);
   let res;
   try {
-    res = await fetch(`${ctx.baseUrl}${path}`, {
-      method,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(t)
-    });
+    res = proxy
+      ? await requestViaProxy(proxy, url, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+          timeoutMs: t
+        })
+      : await fetch(url, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+          signal: AbortSignal.timeout(t)
+        });
   } catch (err) {
     const e = classifyFetchError(err, { billable, timeoutMs: t });
     if (soft) return { __soft: e.message };

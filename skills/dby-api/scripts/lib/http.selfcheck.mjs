@@ -57,6 +57,18 @@ for (const code of ["ECONNRESET", "EPIPE", "UND_ERR_SOCKET", "ETIMEDOUT"]) {
   assert.match(e.remediation, /核实有没有扣点/);
 }
 
+// ⑤ 代理路径盖的章要被认，而**没有章的直连错误行为一字不变**——这是「安全阀」在判据
+//    这一侧的体现：加了代理支持之后，没配代理的用户走到的仍是原来那张判据表。
+{
+  const marked = Object.assign(new Error("tls handshake failed"), { code: "ECONNRESET", dbyPhase: "connect" });
+  const e = classifyFetchError(fetchFailed(marked), { billable: true });
+  assert.equal(e.code, "CONNECT_FAILED", "盖了连接阶段章的错误必须判成连接从未建立");
+
+  // 同一个 ECONNRESET，没有章时仍归保守类（与本变更之前逐字一致）。
+  const bare = classifyFetchError(fetchFailed(Object.assign(new Error("x"), { code: "ECONNRESET" })), { billable: true });
+  assert.equal(bare.code, "NETWORK_ERROR", "没有章的直连错误行为不许被代理支持改掉");
+}
+
 // ⑤ cause 自引用不能把 for 循环转死（真实世界里被包装过的错误出现过环）。
 {
   const looped = new Error("loop");
@@ -65,4 +77,4 @@ for (const code of ["ECONNRESET", "EPIPE", "UND_ERR_SOCKET", "ETIMEDOUT"]) {
   assert.equal(e.code, "NETWORK_ERROR");
 }
 
-console.log("ok http.selfcheck: 6 组分流断言全过");
+console.log("ok http.selfcheck: 7 组分流断言全过");
