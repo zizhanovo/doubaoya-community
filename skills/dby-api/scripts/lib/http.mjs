@@ -14,7 +14,41 @@ import { warn } from "./output.mjs";
 export const DEFAULT_TIMEOUT_MS = 60_000;   // 免费读写路由（write/charter 旧脚本同值）
 export const INVOKE_TIMEOUT_MS = 450_000;   // 计费 invoke（doubaoya.mjs 同值，判据见上）
 
-/** fetch 层错误 → DbyError。TimeoutError 与普通网络错误必须分开措辞（红线）。 */
+// 「连接从未建立」的判据。fetch 自身只抛 `TypeError: fetch failed`，真正的原因挂在 err.cause
+// 上（可能再套一层），所以要顺着 cause 链找。
+// 🔴 只收**能证明请求字节一个都没发出去**的原因。有歧义的一律不收：ECONNRESET / EPIPE /
+//    UND_ERR_SOCKET / ETIMEDOUT 都可能发生在请求已经送达服务端之后，那种情况必须按
+//    「可能已执行、已计费」保守处理（与超时同一条红线）。宁可少认，不可错认。
+const CONNECT_FAILED_CODES = new Set([
+  "ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "EHOSTUNREACH", "ENETUNREACH", "ENETDOWN",
+  "ERR_PROXY_CONNECTION_FAILED",
+  // TLS 握手在应用数据之前：握手没过就一定没发出请求。
+  "CERT_HAS_EXPIRED", "DEPTH_ZERO_SELF_SIGNED_CERT", "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "ERR_TLS_CERT_ALTNAME_INVALID"
+]);
+
+/** 顺 cause 链找连接层失败；深度设上限，防自引用的 cause 把这里转死。 */
+function connectFailureReason(err) {
+  for (let e = err, depth = 0; e && depth < 8; e = e.cause, depth += 1) {
+    // undici 的连接超时（默认 10s，**不受本层 timeoutMs 管**），name 不是 TimeoutError，
+    // 所以它落不到上面那条超时分支——这正是它以前被混进 NETWORK_ERROR 的原因。
+    if (e.name === "ConnectTimeoutError") return "连接超时";
+    if (typeof e.code === "string" && CONNECT_FAILED_CODES.has(e.code)) return e.code;
+  }
+  return null;
+}
+
+/**
+ * fetch 层错误 → DbyError。三类必须分开措辞（红线）：
+ *   ① TimeoutError    本地等超时。请求早已发出，服务端可能仍在跑、甚至已计费 ⇒ 绝不自动重试。
+ *   ② 连接从未建立     字节没发出去 ⇒ 服务端必然没收到、没执行、没扣点，重试安全且免费。
+ *   ③ 其余（连上后断） 请求可能已经到达并被处理 ⇒ 与 ① 一样保守。
+ *
+ * ② 单独分出来的理由（2026-09-10 真实发生）：不分它，调用方只看得到一个 NETWORK_ERROR，
+ * 于是一律套用「计费类失败不重试」的红线停在原地，并把一次纯粹的本机连不上转述成
+ * 「都爆鸭返回了 NETWORK_ERROR」——用户跟着来问「是不是你们挂了、我是不是被扣了点」。
+ * 两个问题的答案都在客户端手里，只是从没说出口。
+ */
 export function classifyFetchError(err, { billable = false, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   if (err?.name === "TimeoutError") {
     return new DbyError(
@@ -28,9 +62,28 @@ export function classifyFetchError(err, { billable = false, timeoutMs = DEFAULT_
       }
     );
   }
-  return new DbyError("NETWORK_ERROR", `网络请求失败：${err.message}`, {
+  const connectReason = connectFailureReason(err);
+  if (connectReason) {
+    return new DbyError(
+      "CONNECT_FAILED",
+      `连不上都爆鸭服务器（${connectReason}）——**请求没有发出去**，这不是服务端返回的错误。`,
+      {
+        exit: EXIT.NETWORK,
+        remediation:
+          "服务端没收到这次调用，**没有执行、没有扣点**，重试不会重复计费。" +
+          "先确认本机能出网到 doubaoya.com：`curl -sS -o /dev/null -w '%{http_code}' https://doubaoya.com/api/health` 应回 200；" +
+          "容器 / 沙箱运行时常见出站域名白名单限制，那种情况重试多少次都一样，要放行域名或换个能出网的环境。" +
+          "能通之后直接重跑原命令即可。"
+      }
+    );
+  }
+  // 连上之后才断（ECONNRESET / EPIPE / socket 提前关闭…）：请求可能已经送达并被执行，
+  // 所以措辞与超时同级保守，不许暗示「重试是安全的」。
+  return new DbyError("NETWORK_ERROR", `网络请求中断：${err.message}`, {
     exit: EXIT.NETWORK,
-    remediation: "检查网络与 https://doubaoya.com 的可达性后重试。"
+    remediation: billable
+      ? "连接已经建立过，这次调用可能已经打到服务端并被执行/计费——别直接重试，先去 doubaoya.com 的调用记录核实有没有扣点。"
+      : "检查网络与 https://doubaoya.com 的可达性；免费只读路由可以重试，写操作先确认没生效。"
   });
 }
 

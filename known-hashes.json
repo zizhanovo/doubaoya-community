@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T07:29:54.423311+00:00",
+  "generatedAt": "2026-09-10T08:05:46.625554+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -97,6 +97,7 @@
       "fccf378e28ef"
     ],
     "dby-api": [
+      "0cad2a8a39b0",
       "136713c10810",
       "156c3151a72a",
       "1f85fe64a731",
@@ -197,6 +198,7 @@
       "18b04d9d8613",
       "1d294368f7d7",
       "28d9570a0672",
+      "2eae00c82c53",
       "3a88323fc388",
       "4c71eb312624",
       "64220c7bed79",
@@ -3250,6 +3252,12 @@
         "version": "2.0.0",
         "date": "2026-09-09",
         "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
+      },
+      {
+        "hash": "86a6b6dcfaee",
+        "version": "2.3.0",
+        "date": "2026-09-10",
+        "subject": "feat(dby-image): 出图按模型分档计价，且包内不写死点数"
       }
     ],
     "dby-publish": [

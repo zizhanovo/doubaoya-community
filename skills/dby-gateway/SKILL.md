@@ -6,8 +6,8 @@ description: >-
   Trigger words: doubaoya 调用协议 / 调用网关 / DOUBAOYA_API_KEY / operationKey / execution.target /
   inputContract / 入参规格 / 统一信封 / SKILL_NOT_FOUND / ENDPOINT_NOT_FOUND / DEDICATED_ROUTE /
   NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由；以及调都爆鸭接口时「401 / 404 / 429 报错了」「调不通」「怎么鉴权」「requestId」。
-version: 1.3.8
-changelog: PLAN_LIMIT_EXCEEDED 样例里的配额维度名改成占位——具体维度名是逐能力的东西，网关层只带协议不带能力字段（它此前让 validate_community 整条闸 fail-fast 红了十天，挡住了后面所有校验）；extra 的通用键 dimension/plan/used/limit 已进闸的协议词表
+version: 1.4.0
+changelog: 协议里补上两个客户端侧错误码的处置：CONNECT_FAILED（连接从未建立，请求没发出去，没扣点，重试安全，但要先确认本机能出网）与 NETWORK_ERROR（连上后才断，可能已送达并计费，先核实再说）。并写死一条转述纪律：别把本机连不上说成「都爆鸭返回了错误」
 compatibility: >-
   需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对
   https://doubaoya.com 发 HTTPS 请求。发现与详情端点免鉴权且免费，调用端点必须带 Bearer 且计费。
@@ -90,7 +90,9 @@ compatibility: >-
 2. **地址只能来自 `execution` 的 `target`**，永远不自己拼。
 3. **API Key 一个字符都不许回显**——前缀也是密钥内容，只许报「已设置 / 没设置」。
 4. **`noResult` 不是失败**，别重试；**`CAPABILITY_UNAVAILABLE` 不要重试**；
-   **`PROVIDER_FAILED` 可以重试**（额度已退）。重试有预算：同一条调用最多 3 次，
+   **`PROVIDER_FAILED` 可以重试**（额度已退）；**`CONNECT_FAILED` 是本机没连上、请求压根没发出去**，
+   没扣点，重试安全，但它不是服务端故障——别转述成「都爆鸭返回了错误」，先让用户确认能出网。
+   重试有预算：同一条调用最多 3 次，
    `VALIDATION_ERROR` 逐轮修正最多 2 轮，超了停下把 `requestId` 和原文交给用户。
 5. **别把本文里的条数、价格当事实**——以实拉为准。
 6. 业务 Skill 引用本 Skill 时，在第一次调 API 那一步上方写一句：自己拼请求的写「先读 `references/protocol.md`」；
