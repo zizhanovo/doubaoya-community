@@ -129,6 +129,16 @@ GATEWAY_PROTOCOL_VOCAB = frozenset({
     # 与能力无关——换一条能力撞上余额不足，还是叫这三个名字。balance/required 是小写词，
     # 不会被驼峰正则命中；helpUrl 会，显式列进来（2026-08-28 前叫 rechargeUrl）。
     "helpUrl",
+    # 403 PLAN_LIMIT_EXCEEDED 的 extra（2026-09 加的一档）。与上面 402 那组同理：
+    # **字段名本身与能力无关**——换一条能力撞上套餐上限，还是叫这几个名字。
+    # ⚠️ 允许的只是这几个**键**；`dimension` 的**值**是逐能力的配额维度名，仍然照扫不误
+    # （驼峰的维度名会被上面那条 CAMEL_CASE 判据拦下，这正是它该拦的东西）。
+    # 🔴 **`limit` 故意不在这里**：它同时是分页入参（`limit`/`page`/`offset` 那一族），
+    #    收进词表等于让闸对所有能力文档里的 `limit` 一起失效——词表越宽、闸越弱，
+    #    而这份词表正是这道闸的全部强度所在。test_protocol_vocabulary_holds_no_capability_field_name
+    #    把它钉成了绊线（2026-09-10 实测：加进去当场红）。extra 里那个上限值改在样例的
+    #    注释里交代，不作为 JSON 键出现。
+    "extra", "dimension", "plan", "used",
     # HTTP 请求头。跟能力无关，换一条能力还是这两个。
     "Authorization", "Content-Type",
     # 发现 / 详情 DTO

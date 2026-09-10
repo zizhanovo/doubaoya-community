@@ -24,6 +24,11 @@ tag 和 Release 是两码事：`git push` 只推 tag，Release 是 GitHub 自己
 
 退出码：0 = 无差异或已补齐；1 = 有缺失（--check 模式下）；2 = 环境问题（无 gh / 未登录）。
 
+--check 查两件事，顺序有讲究：
+  ① **版本表声明的 ref 在远端有没有 tag** —— 没有就是 dby-update 全线 clone 失败，
+     所有用户更新不了。这条最致命，所以排在最前面。
+  ② 已有的 tag 是否都有对应的 Release。
+
 依赖 `gh` CLI 且需已登录。只动 GitHub；Gitee 只作镜像，不建发行版（`dby-update` 回退
 镜像时读的是 tag，不读 Release）。
 """
@@ -260,13 +265,29 @@ def main() -> int:
     missing = [t for t in tags if t not in have]
 
     if args.check:
+        # 🔴 先查这条：**版本表声明的安装源 ref，远端到底有没有这个 tag。**
+        # 它比「tag 有没有 Release」更靠前，也更致命——dby-update 按
+        # `owner/repo#<ref>` 固定安装源，ref 不存在就是 clone 失败，**所有用户都更新不了**，
+        # 而本命令此前只查「已有的 tag 是否都有 Release」，看不见「声明了但没打的 tag」。
+        # 2026-08-31 至 09-10 整整十天就栽在这个盲区里：index.json 写着
+        # release-20260831-0756，本地与两个远端都没有这个 tag，期间每一次
+        # stamp_versions.py 都打印过「必须 git tag 并推」，每一次推送也都提示过
+        # 「别忘了同步 Release」——两句提醒都指着这件事，但没有任何一道闸会红。
+        declared = index.get("ref")
+        if isinstance(declared, str) and declared.startswith("release-") and declared not in tags:
+            print(f"🔴 版本表声明的安装源 ref **在远端没有对应 tag**：{declared}")
+            print("   后果不是「Release 页面不好看」，是 dby-update 直接 clone 失败 ⇒ 所有用户都更新不到新版。")
+            print(f"   补：git tag {declared} && git push origin {declared} && git push gitee {declared}")
+            print("   打完 tag 再跑一次本命令补 Release。")
+            return 1
+
         if missing:
             print(f"🔴 {len(missing)} 个 tag 没有对应的 Release：")
             for t in missing:
                 print(f"   {t}")
             print("\n   补齐：python3 tools/sync_releases.py --all")
             return 1
-        print(f"✅ {len(tags)} 个 tag 都有对应的 Release。")
+        print(f"✅ 版本表声明的 ref {index.get('ref')} 有 tag；{len(tags)} 个 tag 都有对应的 Release。")
         return 0
 
     targets = [args.tag] if args.tag else (missing if args.all else [])

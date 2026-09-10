@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T05:43:33.243634+00:00",
+  "generatedAt": "2026-09-10T05:58:37.284446+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -117,6 +117,7 @@
       "96330502a048",
       "9b545f2f647a",
       "9b9682a7a602",
+      "a1ef96fb16f6",
       "a39a83239eaa",
       "a59d7a4e7157",
       "acae0014e410",
@@ -206,7 +207,8 @@
       "b798cca6be87",
       "e19a51009f8d",
       "e1dc9e3d282e",
-      "ea70e80e9a05"
+      "ea70e80e9a05",
+      "edfe4b0ead8c"
     ],
     "dby-image": [
       "000e1d567391",
@@ -2661,6 +2663,12 @@
         "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
       },
       {
+        "hash": "136713c10810",
+        "version": "4.3.0",
+        "date": "2026-09-09",
+        "subject": "fix(dby-api,dby-image): AI 生成内容的法定标识在 agent 路径上一直是不可见的"
+      },
+      {
         "hash": "5356a8ef8e99",
         "version": "4.2.0",
         "date": "2026-09-09",
@@ -3217,6 +3225,12 @@
         "version": "2.1.0",
         "date": "2026-09-09",
         "subject": "feat(dby-image): 出图模型改由调用方按需求选 —— modelName 从「死参数」变成真参数"
+      },
+      {
+        "hash": "8586a713b673",
+        "version": "2.2.0",
+        "date": "2026-09-09",
+        "subject": "fix(dby-api,dby-image): AI 生成内容的法定标识在 agent 路径上一直是不可见的"
       },
       {
         "hash": "ee929a10d3cb",

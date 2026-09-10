@@ -29,8 +29,12 @@
 { "success": false, "requestId": "9b1d2f30-…", "data": null,
   "error": { "code": "PLAN_LIMIT_EXCEEDED",
              "message": "本月存草稿次数已达免费档上限。已有内容不受影响，可以照常查看与删除；要放开这一项请在账户页升级套餐：https://doubaoya.com/dashboard/billing#plan",
-             "extra": { "dimension": "draftPublishPerMonth", "plan": "free", "used": 5, "limit": 5,
+             "extra": { "dimension": "…（配额维度名，逐能力不同，原样念给用户别自己猜）",
+                        "plan": "free", "used": 5,
                         "helpUrl": "https://doubaoya.com/dashboard/billing#plan" } } }
+// ⚠️ 真实响应的 extra 里还有一个「上限」数值字段与 used 成对（用来念「已用 5 / 上限 5」）。
+// 这里刻意不写出那个键名：它与分页入参同名，写进本层会让协议词表不得不收下它，
+// 而那个词表一宽，整道「网关层不许出现能力字段」的闸就跟着松一格。以实时响应为准。
 
 // POST /api/skills/wechat-render/invoke —— 专用路由能力打到通用代理（2026-08-24 实拉）
 // HTTP 400
