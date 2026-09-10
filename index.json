@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T03:58:17.726458+00:00",
+  "generatedAt": "2026-09-10T04:01:55.466122+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.10.0",
+  "productVersion": "1.12.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -790,6 +790,12 @@
           "version": "1.7.4",
           "date": "2026-09-06",
           "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+        },
+        {
+          "hash": "2e9a12d54070",
+          "version": "1.8.0",
+          "date": "2026-09-09",
+          "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
         }
       ]
     },
@@ -836,15 +842,16 @@
         "d6ce3852f9e1",
         "d7e863f5577a",
         "e603a50797a0",
-        "ed6a2f86bffc"
+        "ed6a2f86bffc",
+        "f0871dc722f5"
       ],
       "versions": [
         {
-          "version": "4.0.1",
-          "hash": "af3258dd5209",
+          "version": "4.1.0",
+          "hash": "f0871dc722f5",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-09T09:02:48.979441+00:00",
-          "changelog": "趋势雷达说明改诚实：它按关键词搜三平台的文章、不是热榜，keyword 现在必填（此前不传会退化成搜「热点」二字并照常扣点）；全网热榜聚合 api.trend.hotTopics 已下架，通用选题一律走 api.trend.hotSpotKeyword",
+          "releasedAt": "2026-09-10T04:00:51.185514+00:00",
+          "changelog": "能力表补回出图口径：新增 skill.wechat.coverDesign 一行（给标题出成品封面图，与给封面数据的 api.gzh.cozeData 是两条能力），出图话术改回指向 dby-image —— 服务端生图 2026-09 已恢复",
           "changelogSource": "user"
         },
         {
@@ -1975,6 +1982,12 @@
           "version": "1.7.3",
           "date": "2026-08-31",
           "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+        },
+        {
+          "hash": "ee929a10d3cb",
+          "version": "2.0.0",
+          "date": "2026-09-09",
+          "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
         }
       ]
     },
@@ -2358,6 +2371,12 @@
           "version": "4.1.0",
           "date": "2026-09-06",
           "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
+        },
+        {
+          "hash": "4aa74d5cfde5",
+          "version": "5.1.0",
+          "date": "2026-09-09",
+          "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
         }
       ]
     },

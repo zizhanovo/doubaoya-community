@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T03:58:17.726458+00:00",
+  "generatedAt": "2026-09-10T04:01:55.466122+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -130,7 +130,8 @@
       "d6ce3852f9e1",
       "d7e863f5577a",
       "e603a50797a0",
-      "ed6a2f86bffc"
+      "ed6a2f86bffc",
+      "f0871dc722f5"
     ],
     "dby-banned-words": [
       "0ca3048ae86c",
@@ -2448,6 +2449,12 @@
         "version": "1.7.4",
         "date": "2026-09-06",
         "subject": "docs(skills): SKILL.md 改成「何时跑哪条命令」，新增 compose.md 指导层与用户自造 skill 模板"
+      },
+      {
+        "hash": "2e9a12d54070",
+        "version": "1.8.0",
+        "date": "2026-09-09",
+        "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
       }
     ],
     "dby-api": [
@@ -3188,6 +3195,12 @@
         "version": "1.7.3",
         "date": "2026-08-31",
         "subject": "test(skills): 三个「错了有后果」的包补两层判据"
+      },
+      {
+        "hash": "ee929a10d3cb",
+        "version": "2.0.0",
+        "date": "2026-09-09",
+        "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
       }
     ],
     "dby-publish": [
@@ -3448,6 +3461,12 @@
         "version": "4.1.0",
         "date": "2026-09-06",
         "subject": "feat(skills): 每包一份字节相同的 scripts/dby.mjs 引导壳 —— 实现只有一份，入口每包一份"
+      },
+      {
+        "hash": "4aa74d5cfde5",
+        "version": "5.1.0",
+        "date": "2026-09-09",
+        "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
       }
     ],
     "dby-rewrite": [
