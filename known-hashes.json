@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T05:04:13.240393+00:00",
+  "generatedAt": "2026-09-10T05:43:33.243634+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -97,6 +97,7 @@
       "fccf378e28ef"
     ],
     "dby-api": [
+      "136713c10810",
       "156c3151a72a",
       "1f85fe64a731",
       "2e02904d7d96",
@@ -225,6 +226,7 @@
       "63c13c5ffbeb",
       "6a04472552de",
       "73f91dda7bd6",
+      "8586a713b673",
       "9a144098dc88",
       "a807c7cef9be",
       "c1227d1f5988",
@@ -2657,6 +2659,12 @@
         "version": "4.0.1",
         "date": "2026-09-08",
         "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
+      },
+      {
+        "hash": "5356a8ef8e99",
+        "version": "4.2.0",
+        "date": "2026-09-09",
+        "subject": "fix(dby-api): 8 个图像类触发词交还 dby-image，并修掉三处「出图已下架」的假信息"
       },
       {
         "hash": "af3258dd5209",

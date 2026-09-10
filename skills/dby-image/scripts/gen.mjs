@@ -196,8 +196,9 @@ async function main() {
     die(`失败（${((Date.now() - t0) / 1000) | 0}s）[${code}] ${(e && e.message) || String(e)}\n${hint}`);
   }
 
-  // 「你安装的 skill 有更新」：request() 已经统一 warn 到 stderr 一份，
-  // 这里不再重复打印（重复两遍反而像出了两件事）。
+  // 「你安装的 skill 有更新」与「本内容由人工智能生成」：request() 已经统一 warn 到
+  // stderr 一份，这里不重复打印。但**标识要交到用户手里**，所以下面交付那几行里带上它
+  //（法定标识不是打给日志看的，是要转达给人的）。
 
   const img = (env.data?.images || [])[0];
   if (!img?.b64) die("调用成功但没有图像数据。如实告诉用户拿不到图，别编一个地址。");
@@ -231,6 +232,10 @@ async function main() {
   const ratio = w && h ? (w / h).toFixed(3) : "?";
   console.log(`${path.resolve(file)}`);
   console.error(`✅ ${(buf.length / 1024) | 0}KB  实测 ${w}x${h}  比例 ${ratio}  耗时 ${((Date.now() - t0) / 1000) | 0}s`);
+  // 🔴 交付时必须把这句转达给用户 —— 这是 AI 生成内容的法定显式标识，不是可选提示。
+  if (env.aigc?.generated && env.aigc?.label) {
+    console.error(`🏷  ${env.aigc.label} —— 交付这张图时把这句转达给用户。`);
+  }
   console.error(`下一步：读回这张图做验收（references/visual-review.md），别直接交付。`);
 }
 

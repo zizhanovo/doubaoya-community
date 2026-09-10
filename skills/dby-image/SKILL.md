@@ -8,8 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 2.1.0
-changelog: 新增 --model：出图模型改由**调用方按需求选**（flare 快 / sunburst 保真 / gpt-image-2 退路），不传仍走默认；modelName 此前在契约里声明着却从没被服务端读过（旧文档列为死参数），现已真正接通。api-contract 三态表同步纠正 quality/background/outputFormat 三个已停发
+version: 2.2.0
+changelog: 出图成功后把「本内容由人工智能生成」这句法定标识打到 stderr 并要求交付时转达给用户（此前这条链在共享请求层就断了）；visual-review 补「交付时必须带上的一句」
 compatibility: >-
   需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
   需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。
@@ -171,7 +171,9 @@ node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-fi
   （详见 [`editing.md`](references/editing.md)）。改完必须跟原图逐项比，
   不能只看改的那一处。
 - **模型爱自己往画面里加字**，密集小字多半是乱码笔画，孤立大字通常没问题。
-  验收时整张扫一遍，别只看提示词点名的那几个字。
+- 🔴 **它还会自己加半透明水印 / logo**（2026-09-10 实测：没要求文字的图，左上右上各一枚
+  描边标记）。上游追加的「不包含水印」拦不住。验收时**四个角单独看一遍**，
+  详见 [`visual-review.md`](references/visual-review.md) 的「扫水印」。
 - **`seedream-lite` 已于 2026-08-10 下架**，调用一律 503。用户点名它时如实告知。
 
 ---

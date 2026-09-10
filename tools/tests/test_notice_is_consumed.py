@@ -82,21 +82,37 @@ def test_notice_is_read_and_surfaced(rel: str) -> None:
 
 
 def test_reverse_removing_the_relay_line_from_http_mjs_makes_the_gate_red() -> None:
-    """🔴 破坏演练：闸不能只是「刚好绿」——证明它真的在盯着转达那一行，不是空转。
+    """🔴 破坏演练：闸不能只是「刚好绿」——证明它真的在盯着送出路径，不是空转。
 
-    只在内存里把 lib/http.mjs 那行 notice 转达删掉（不落盘、不碰真文件），
-    重新跑一遍 _is_notice_surfaced 判据，必须由绿转红；否则说明上面那条
-    parametrize 测试绑定的不是这一行，是「碰巧」通过的。
+    只在内存里把 lib/http.mjs 的送出路径拿掉（不落盘、不碰真文件），重新跑一遍
+    _is_notice_surfaced 判据，必须由绿转红；否则说明上面那条 parametrize 测试
+    绑定的不是这些路径，是「碰巧」通过的。
+
+    ⚠️ 2026-09-10 起要拿掉**两处**：判据认的合格送出有两条（打 stderr、或原样放进
+    返回值交给上层去打），而 http.mjs 现在两条都有——withEnvelope 的返回值改成多行之后
+    `notice:` 落到了行首，第二条判据随之命中。只删 warn 那一行的话闸照样绿，
+    那不是判据失灵，是这份源码真的还留着另一条合格路径。破坏演练要破坏的是
+    「所有送出路径」，不是某一行。
     """
     src = _read("skills/dby-api/scripts/lib/http.mjs")
     relay_line = "if (env.notice) warn(ctx, `[notice] ${env.notice}`);"
-    assert relay_line in src, (
-        "样板行文本对不上，先确认 lib/http.mjs 有没有改动过转达那一行，再同步这条破坏演练的字面量"
-    )
+    passthrough_line = "notice: env.notice ?? null,"
+    for line in (relay_line, passthrough_line):
+        assert line in src, (
+            f"样板行文本对不上（{line!r}）——先确认 lib/http.mjs 有没有改动过送出路径，"
+            "再同步这条破坏演练的字面量"
+        )
     assert _is_notice_surfaced(src), "破坏演练的前提都不成立：改动前这份源码本就没被判成 surfaced"
-    sabotaged = src.replace(relay_line, "// (notice 转达已被破坏演练拿掉)")
-    assert not _is_notice_surfaced(sabotaged), (
-        "破坏演练失效：拿掉转达行之后闸应该判不到 surfaced，若还判到说明判据没有真的锁定这一行"
+
+    # 逐条拿掉：每拿掉一条，只要还剩另一条，闸就**应该**仍是绿的（这本身是判据的正确行为）。
+    only_relay_gone = src.replace(relay_line, "// (转达已被破坏演练拿掉)")
+    assert _is_notice_surfaced(only_relay_gone), (
+        "只拿掉 stderr 那条时闸就红了 —— 说明判据没认「原样带给上层」这条合格路径"
+    )
+    both_gone = only_relay_gone.replace(passthrough_line, "")
+    assert not _is_notice_surfaced(both_gone), (
+        "破坏演练失效：两条送出路径都拿掉之后闸应该判不到 surfaced，"
+        "若还判到说明判据锁定的不是这些路径"
     )
 
 

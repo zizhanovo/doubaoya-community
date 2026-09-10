@@ -101,8 +101,22 @@ export async function request(ctx, method, path, {
   // notice =「你安装的 skill 有更新」类提示，SKILL.md 承诺原样转达 —— 这条链断过，别再断。
   if (env.notice) warn(ctx, `[notice] ${env.notice}`);
   if (env.noResult) warn(ctx, `[${env.noResult.code}] ${env.noResult.message}`);
+  // 🔴 **法定标识**：AI 生成内容的显式标识，服务端挂在信封顶层。
+  // 服务端当初把它从「只在网页写一行」改成挂信封，理由正是「98.6% 的调用来自 agent，
+  // 只在页面标等于对绝大多数路径没有标识」——而在 2026-09-10 之前，**本请求层在这里
+  // 把它丢了**（withEnvelope 只挑了 data/detailUrl/notice/noResult 四个字段），
+  // 全仓 grep `aigc` 命中 0 次 ⇒ 标识挂了没人读，等于还是只有网页有。
+  // 与 notice 同一句话：**挂了没人读 == 没挂**。放在这里统一转达，所有包自动生效。
+  if (env.aigc?.generated && env.aigc?.label) warn(ctx, `[aigc] ${env.aigc.label}`);
   if (withEnvelope) {
-    return { data: env.data, detailUrl: env.detailUrl ?? null, notice: env.notice ?? null, noResult: env.noResult ?? null };
+    return {
+      data: env.data,
+      detailUrl: env.detailUrl ?? null,
+      notice: env.notice ?? null,
+      noResult: env.noResult ?? null,
+      // 调用方要把标识转达给终端用户时读它（上面已经 warn 过一份到 stderr）。
+      aigc: env.aigc ?? null
+    };
   }
   return env.data;
 }

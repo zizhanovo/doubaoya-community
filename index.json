@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T05:04:13.240393+00:00",
+  "generatedAt": "2026-09-10T05:43:33.243634+00:00",
   "ref": "release-20260831-0756",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.15.0",
+  "productVersion": "1.16.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -809,6 +809,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "136713c10810",
         "156c3151a72a",
         "1f85fe64a731",
         "2e02904d7d96",
@@ -848,11 +849,11 @@
       ],
       "versions": [
         {
-          "version": "4.2.0",
-          "hash": "5356a8ef8e99",
+          "version": "4.3.0",
+          "hash": "136713c10810",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-10T05:02:38.976714+00:00",
-          "changelog": "8 个图像类触发词（AI出图/主视觉/图生图/改图/文生图/生成图片/配图/首图灵感）交还 dby-image——它们是 dby-image 退役期间由本包代管的，生图已恢复，代管到此为止；本包只留一句消歧指路。同批修掉正文三处仍在说「出图能力当前暂时下架」的假信息",
+          "releasedAt": "2026-09-10T05:38:30.751238+00:00",
+          "changelog": "共享请求层补上 AI 生成内容的法定标识转达：信封顶层的 aigc 此前在 withEnvelope 分支被丢掉，全仓 grep 命中 0 次——服务端挂了标识、agent 侧没人读，等于还是只有网页有。现与 notice 同样统一 warn 到 stderr，并进 withEnvelope 返回",
           "changelogSource": "user"
         },
         {
@@ -1102,6 +1103,12 @@
           "version": "4.0.1",
           "date": "2026-09-08",
           "subject": "docs(skills): 趋势雷达不是热榜，hotTopics 下架同步摘行"
+        },
+        {
+          "hash": "5356a8ef8e99",
+          "version": "4.2.0",
+          "date": "2026-09-09",
+          "subject": "fix(dby-api): 8 个图像类触发词交还 dby-image，并修掉三处「出图已下架」的假信息"
         },
         {
           "hash": "af3258dd5209",
@@ -1786,6 +1793,7 @@
         "63c13c5ffbeb",
         "6a04472552de",
         "73f91dda7bd6",
+        "8586a713b673",
         "9a144098dc88",
         "a807c7cef9be",
         "c1227d1f5988",
@@ -1798,11 +1806,11 @@
       ],
       "versions": [
         {
-          "version": "2.1.0",
-          "hash": "2de49fbf6254",
+          "version": "2.2.0",
+          "hash": "8586a713b673",
           "ref": "release-20260831-0756",
-          "releasedAt": "2026-09-10T04:41:46.946321+00:00",
-          "changelog": "新增 --model：出图模型改由**调用方按需求选**（flare 快 / sunburst 保真 / gpt-image-2 退路），不传仍走默认；modelName 此前在契约里声明着却从没被服务端读过（旧文档列为死参数），现已真正接通。api-contract 三态表同步纠正 quality/background/outputFormat 三个已停发",
+          "releasedAt": "2026-09-10T05:38:30.751238+00:00",
+          "changelog": "出图成功后把「本内容由人工智能生成」这句法定标识打到 stderr 并要求交付时转达给用户（此前这条链在共享请求层就断了）；visual-review 补「交付时必须带上的一句」",
           "changelogSource": "user"
         },
         {
