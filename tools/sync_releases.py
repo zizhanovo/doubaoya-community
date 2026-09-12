@@ -275,7 +275,7 @@ def remote_tags() -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="只报差异，不动远端")
-    ap.add_argument("--all", action="store_true", help="补齐所有缺的")
+    ap.add_argument("--all", action="store_true", help="补齐所有缺的；配 --overwrite 则重刷全部")
     ap.add_argument("--tag", help="只处理这一个 tag")
     ap.add_argument("--overwrite", action="store_true", help="已存在也重建（改文案用）")
     args = ap.parse_args()
@@ -316,7 +316,15 @@ def main() -> int:
         print(f"✅ 版本表声明的 ref {index.get('ref')} 有 tag；{len(tags)} 个 tag 都有对应的 Release。")
         return 0
 
-    targets = [args.tag] if args.tag else (missing if args.all else [])
+    # 🔴 `--all --overwrite` 得是「全部重刷」，不能还只盯 missing。改标题规则之后
+    #    必须整页刷一遍，否则新旧两套标题混在同一页上；而 missing 这时恰恰是空的，
+    #    命令会静静地什么都不做、再打印「没指定要做什么」，看着像参数打错了。
+    if args.tag:
+        targets = [args.tag]
+    elif args.all:
+        targets = tags if args.overwrite else missing
+    else:
+        targets = []
     if not targets:
         print("没指定要做什么。用 --check 看差异、--all 补齐、--tag <ref> 处理单个。")
         return 0
