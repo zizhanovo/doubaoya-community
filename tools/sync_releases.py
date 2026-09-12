@@ -99,11 +99,12 @@ def build_title(index: dict, ref: str, rows: list[tuple[str, dict]], suite: str 
     """标题规则（唯一实现，别在别处再写一份）：
 
     1. 有新包 → 「新增 <包名>：<它的 changelog 第一句>」——新包是这版最值得说的事
-    2. 否则挑一个主角包 → 「<displayName> <版本>：<changelog 第一句>」
+    2. 否则挑一个主角包 → 「<displayName>——<changelog 第一句>」
     3. 都没有 → 「更新 N 个 skill」
 
-    刻意不带 `v1.0.1` 这种整体版本号：本仓没有"仓库版本"这个概念，
-    每个包各有各的 semver，硬造一个整体号会让用户以为包之间要对齐。
+    🔴 主角句里**不写包自己的 semver**。前缀 `suite` 已经是整体版本号（v4.2.0），
+    再跟一个包版本就成了「v4.2.0：都爆鸭 · 新媒体数据总入口 4.5.0——…」——
+    一个标题里两个号，读的人要先分辨哪个才是这一版。包版本在正文每段标题里有。
     """
     new_pkgs = [s for s, _ in rows if is_new_package(index, s, ref)]
     # 🔴 只有"这一版里少数几个是新包"才配说「新增 X」。首发批（所有包都是第一次发）
@@ -119,7 +120,7 @@ def build_title(index: dict, ref: str, rows: list[tuple[str, dict]], suite: str 
         for slug, entry in rows:
             if slug == want:
                 name = index["skills"][slug].get("displayName") or slug
-                return f"{suite}：{name} {entry['version']}——{first_clause(entry.get('changelog', ''))}"
+                return f"{suite}：{name}——{first_clause(entry.get('changelog', ''))}"
 
     return f"{suite}：更新 {len(rows)} 个 skill"
 
@@ -129,23 +130,48 @@ def first_clause(text: str, limit: int = 40) -> str:
 
     标题要短，正文才展开——一条一百多字的技术腔标题会把 Releases 页整行撑爆。
 
-    🔴 两个坑都踩过：
+    🔴 三个坑都踩过：
     - 切出来的片段太短（「首版」两个字）不能直接采用，也不能因此回退到"截断整串"——
       要**跳过它继续往后找**下一段。实测 dby-feedback 的 changelog 是「首版——三类反馈…」，
       不跳过就会得到「新增 dby-feedback——首版——三类反馈…」这种双破折号标题。
+    - 片段**太长**则相反：只能截断它自己，**不能**跳到后面的碎片。后面的碎片是细节，
+      脱离上下文就没意义。实测 dby-api 4.5.0：主线「只能走代理出网的机器…不用改环境就能用」
+      42 字、刚过 limit，被跳过后取到了第三段「只认 http(s)」——一个协议校验细节冒充了标题。
     - 片段首尾可能挂着断点符号，拼接前要剥掉，否则和外层的连接符撞在一起。
+    - 切分和截断都可能把「（」和它的「）」劈开，留下「…（三档」这种半拉括号。
+      闭合的括号（`http(s)`）要原样留着，只剥末尾那个没合上的。
     """
     text = (text or "").strip()
     if not text:
         return ""
-    # 按所有断点切碎，取第一个长度合适的段；太短的（如「首版」）跳过继续找。
+    # 按所有断点切碎，取第一个**有信息量**的段：太短的（如「首版」）跳过继续找，
+    # 太长的就地截断——它已经是主线，越往后越碎。
     parts = re.split(r"——|—|；|;|。|，|：|,", text)
     for part in parts:
         part = part.strip().strip("—-：: ")
-        if 6 <= len(part) <= limit:
-            return part
-    # 没有合适长度的段就截断整串——这是最后手段，不是首选。
-    return text[:limit].strip().strip("—-：: ") + ("…" if len(text) > limit else "")
+        if len(part) < 6:
+            continue
+        if len(part) <= limit:
+            return _drop_dangling_paren(part)
+        # 放不下时先扔掉括号里的举例（正文完整保留），扔完往往就够了——
+        # 实测 dby-api 4.5.0 的主线 42 字里，「（受管企业网、CI 容器、agent 沙箱）」
+        # 一个人就占 22 字；剥掉是 20 字的完整句，比硬切在「就…」强。
+        short = re.sub(r"[（(][^）)]*[）)]", "", part).strip()
+        if 6 <= len(short) <= limit:
+            return short
+        return _drop_dangling_paren(part[:limit].strip().strip("—-：: ")) + "…"
+    # 全是太短的碎片才截断整串——这是最后手段，不是首选。
+    tail = "…" if len(text) > limit else ""
+    return _drop_dangling_paren(text[:limit].strip().strip("—-：: ")) + tail
+
+
+def _drop_dangling_paren(s: str) -> str:
+    """剥掉末尾那个没合上的左括号及其后面的残句；闭合的括号一个不动。"""
+    for lp, rp in (("（", "）"), ("(", ")")):
+        i = s.rfind(lp)
+        if i != -1 and s.find(rp, i) == -1:
+            s = s[:i]
+    return s.strip().strip("—-、，,：: ")
 
 
 def build_notes(index: dict, ref: str, rows: list[tuple[str, dict]]) -> str:
