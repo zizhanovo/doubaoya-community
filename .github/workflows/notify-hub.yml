@@ -13,6 +13,9 @@ name: notify-hub
 on:
   push:
     branches: [main]
+  # 手动入口：配完/换完 token 后不必造一笔假提交就能验通路
+  # （gh workflow run notify-hub.yml -R zizhanovo/doubaoya-community）。
+  workflow_dispatch:
 
 # 本 job 用的是 cnb 令牌（HUB_DISPATCH_TOKEN），GITHUB_TOKEN 一个权限都不需要。
 permissions: {}
