@@ -1,15 +1,20 @@
-# notify-hub —— push 到 main 时通知主仓（zizhanovo/doubaoyahub）立刻跑 sync-community。
+# notify-hub —— push 到 main 时通知主仓（cnb.cool/doubaoya/doubaoyahub）立刻跑 sync-community。
 #
-# 需要仓库 secret `HUB_DISPATCH_TOKEN`（一个对主仓有 repo 权限的 fine-grained PAT，
-# 权限只勾 Contents: read-write 即可）。**没配 secret 时本 job 静默跳过、恒绿**——
-# 主仓那边有每小时的兜底轮询，本钩子只是把延迟从「最多一小时」压成「秒级」。
+# 需要仓库 secret `HUB_DISPATCH_TOKEN`：一个 cnb 访问令牌（cnb.cool 个人设置 → 访问令牌），
+# 权限只需勾 `repo-cnb-trigger:rw`。**没配 secret 时本 job 静默跳过、恒绿**——
+# 主仓那边有每天一次的兜底轮询，本钩子只是把延迟从「最多一天」压成「秒级」。
+#
+# 🔴 2026-09-19 修：旧版打的是 github.com/zizhanovo/doubaoyahub 的 repository_dispatch，
+#    但主仓 CI 已整体搬到 cnb、GitHub 那边 .github/workflows 已删空 ⇒ 那个 dispatch
+#    没有任何接收方，即时通道事实上死了半个月，只剩轮询在扛。现在改打 cnb OPENAPI
+#    （POST /{repo}/-/build/start），事件名对应 .cnb.yml 里的 api_trigger_sync-community。
 name: notify-hub
 
 on:
   push:
     branches: [main]
 
-# 本 job 用的是 PAT（HUB_DISPATCH_TOKEN），GITHUB_TOKEN 一个权限都不需要。
+# 本 job 用的是 cnb 令牌（HUB_DISPATCH_TOKEN），GITHUB_TOKEN 一个权限都不需要。
 permissions: {}
 
 concurrency:
@@ -22,26 +27,32 @@ jobs:
     env:
       TOKEN: ${{ secrets.HUB_DISPATCH_TOKEN }}
     steps:
-      - name: repository_dispatch 到主仓
+      - name: 触发主仓 sync-community
         if: env.TOKEN != ''
         run: |
           set -uo pipefail
-          # 🔴 刻意不 fail：本钩子只压延迟，主仓有小时级轮询兜底，绝不该拦住 push。
-          #    但也不能像以前那样只打印状态码就完事——PAT 过期返回 401 时任务照样绿，
-          #    「配错的 token」和「没配 token」长得一模一样，你会毫不知情地退回小时级。
+          # 🔴 刻意不 fail：本钩子只压延迟，主仓有每日轮询兜底，绝不该拦住 push。
+          #    但也不能只打印状态码就完事——token 过期返回 401 时任务照样绿，
+          #    「配错的 token」和「没配 token」长得一模一样，你会毫不知情地退回轮询。
           #    所以这里判一下码，非 2xx 打 ::warning:: 让它在 Actions 页面上显形。
-          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+          body=$(printf '{"branch":"main","event":"api_trigger_sync-community","title":"社区仓 %s 推送触发同步"}' "${GITHUB_SHA:0:8}")
+          code=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
             -X POST \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/zizhanovo/doubaoyahub/dispatches \
-            -d '{"event_type":"community-push","client_payload":{"sha":"${{ github.sha }}"}}' || echo 000)
-          echo "dispatch http $code"
+            -H "Authorization: $TOKEN" \
+            -H "Accept: application/vnd.cnb.api+json" \
+            -H "Content-Type: application/json" \
+            https://api.cnb.cool/doubaoya/doubaoyahub/-/build/start \
+            -d "$body" || echo 000)
+          echo "start-build http $code"; cat /tmp/resp.json 2>/dev/null || true; echo
+          # 🔴 http 200 ≠ 真触发了：cnb 在「事件名没人接」这类情况下会 200 + success:false，
+          #    只看状态码就是又一个「绿着但什么都没发生」。
           case "$code" in
-            2*) echo "已通知主仓" ;;
-            401|403) echo "::warning::HUB_DISPATCH_TOKEN 被拒（http $code），多半是 PAT 过期或权限不足；已退回主仓小时级轮询。" ;;
-            *)  echo "::warning::dispatch 未成功（http $code）；已退回主仓小时级轮询。" ;;
+            2*) grep -q '"success":[[:space:]]*true' /tmp/resp.json \
+                  && echo "已通知主仓" \
+                  || echo "::warning::cnb 返回 200 但 success 不为 true（多半是 .cnb.yml 里没有 api_trigger_sync-community 事件）；已退回主仓每日轮询。" ;;
+            401|403) echo "::warning::HUB_DISPATCH_TOKEN 被拒（http $code），多半是 cnb 令牌过期或缺 repo-cnb-trigger:rw；已退回主仓每日轮询。" ;;
+            *)  echo "::warning::触发未成功（http $code）；已退回主仓每日轮询。" ;;
           esac
       - name: 未配 token 的说明
         if: env.TOKEN == ''
-        run: echo "HUB_DISPATCH_TOKEN 未配置——跳过即时通知，主仓靠小时级轮询兜底。"
+        run: echo "HUB_DISPATCH_TOKEN 未配置——跳过即时通知，主仓靠每日轮询兜底。"
