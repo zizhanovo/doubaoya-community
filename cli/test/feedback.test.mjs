@@ -318,7 +318,10 @@ test("keep：只落本地、零请求；同秒多份不覆盖；非载荷文件 
   const notPayload = path.join(tmp, "反馈.md");
   writeFileSync(notPayload, "# 只是一份报告\n");
   assert.throws(() => feedbackKeep({ file: notPayload, scopeRoot: r2 }), (e) => e.code === "PAYLOAD_INVALID" && e.exit === 2);
-  await assert.rejects(feedbackSubmit({}, { file: notPayload, scopeRoot: r2 }), (e) => e.code === "PAYLOAD_INVALID");
+  // submit 对 .md 走一步式（见文末三条），不再报 PAYLOAD_INVALID；非 .md 的非载荷文件仍报
+  const notPayloadTxt = path.join(tmp, "反馈.txt");
+  writeFileSync(notPayloadTxt, "# 只是一份报告\n");
+  await assert.rejects(feedbackSubmit({}, { file: notPayloadTxt, scopeRoot: r2 }), (e) => e.code === "PAYLOAD_INVALID");
   // 载荷里被改成路径穿越的 category 不许拼进文件名
   const evil = path.join(tmp, "evil.json");
   writeFileSync(evil, JSON.stringify({ ...JSON.parse(payloadText), category: "../../../pwn" }));
@@ -352,4 +355,72 @@ test("--command 可以给多次（与 1.x 的 submit_feedback.py 一致）", asy
   assert.equal(r.code, 0, r.stderr);
   const payload = readFileSync(out, "utf8");
   assert.ok(payload.includes("dby whoami") && payload.includes("dby draft list"), payload);
+});
+
+// ── 一步式：--file 直接给报告 .md（决策者 2026-09-27 裁决；spec skill-thin-layer「反馈端点未配置」的字面写法）──
+test("一步式 ①：端点未配置时 `dby feedback submit --file 反馈.md` 落本地、退出码 0、零出网，内部 prepare 的载荷落在旁边", async () => {
+  const { runCli } = await import("./helpers.mjs");
+  const dir = mkdtempSync(path.join(tmpdir(), "dby-fb-md-"));
+  const md = path.join(dir, "反馈.md");
+  writeFileSync(md, "# 反馈：一步式\n\n## 操作序列\n1. 跑了 dby preview，退出码 5\n");
+  const r = await runCli(["feedback", "submit", "--file", md, "--scope-root", dir, "--json"], { env: { HOME: dir } });
+  assert.equal(r.code, 0, r.stderr);
+  const data = JSON.parse(r.stdout).data;
+  assert.equal(data.delivered, false);
+  assert.equal(data.reason, "endpoint_not_configured");
+  assert.equal(data.preparedPayload, `${md}.payload.json`);
+  assert.ok(data.savedTo.endsWith(`-bug.md`), "未给 --category 时默认 bug");
+  const saved = readFileSync(data.savedTo, "utf8");
+  assert.ok(saved.includes("一步式") && saved.includes("机器事实"), saved);
+  // 零出网：绊线子进程再跑一遍（函数层入口，与 ① 同法）
+  const { out, net } = await submitInChild({ file: md, scopeRoot: dir, category: "idea" }, { tripwire: true });
+  assert.equal(net, "", `端点未配置时出网了：${net}`);
+  assert.equal(out.ok, true, JSON.stringify(out));
+  assert.ok(out.data.savedTo.endsWith("-idea.md"), "--category 在一步式里生效");
+});
+
+test("一步式 ②：端点已配置时仍要 --user-consented（未同意零请求、退出码 6、给出载荷路径）；同意后发的就是旁边那份载荷", async () => {
+  const received = [];
+  const server = createHttpServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      received.push(body);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true, requestId: "req_md", data: {}, error: null }));
+    });
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  process.env.DOUBAOYA_FEEDBACK_URL = `http://127.0.0.1:${server.address().port}/feedback`;
+  try {
+    const dir = mkdtempSync(path.join(tmpdir(), "dby-fb-md2-"));
+    const md = path.join(dir, "report.md");
+    writeFileSync(md, "# 反馈：一步式同意闸\n");
+    await assert.rejects(
+      feedbackSubmit({ confirm: true }, { file: md, scopeRoot: dir }),
+      (e) => e.code === "USER_CONSENT_REQUIRED" && e.exit === 6 && e.data.payload === `${md}.payload.json`
+    );
+    assert.deepEqual(received, [], "未同意时不该有任何请求发出");
+    const ok = await feedbackSubmit({}, { file: md, userConsented: true, scopeRoot: dir, category: "friction" });
+    assert.equal(ok.data.delivered, true);
+    assert.equal(ok.data.preparedPayload, `${md}.payload.json`);
+    assert.equal(received.length, 1);
+    assert.equal(received[0], readFileSync(`${md}.payload.json`, "utf8"), "发出的必须是落在旁边的那份载荷（逐字节）");
+    assert.ok(received[0].includes(`"friction"`), "--category 在一步式里生效");
+  } finally {
+    delete process.env.DOUBAOYA_FEEDBACK_URL;
+    await new Promise((r) => server.close(r));
+  }
+});
+
+test("一步式 ③：报告里带凭证 → 退出码 3、不落载荷、不落本地反馈；非 .md 非载荷 → PAYLOAD_INVALID 且提示一步式写法", async () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "dby-fb-md3-"));
+  const md = path.join(dir, "leak.md");
+  writeFileSync(md, `# 反馈\n密钥是 ${FAKE_DYH}\n`);
+  await assert.rejects(feedbackSubmit({}, { file: md, scopeRoot: dir }), (e) => e.code === "SECRET_DETECTED" && e.exit === 3);
+  assert.equal(existsSync(`${md}.payload.json`), false, "命中时载荷不落盘");
+  assert.deepEqual(savedFiles(dir), []);
+  const txt = path.join(dir, "notes.txt");
+  writeFileSync(txt, "随便写的");
+  await assert.rejects(feedbackSubmit({}, { file: txt, scopeRoot: dir }), (e) => e.code === "PAYLOAD_INVALID" && /\.md/.test(e.remediation));
 });

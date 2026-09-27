@@ -8,6 +8,7 @@
 //   2. submit：把 --file（prepare 的产物）**原样**发出去。发送前再扫一遍（双闸的机器侧）。
 //      端点未配置 → 落本地 markdown、告知路径、退出码 0（spec「反馈端点未配置」）；此时什么都不出本机，
 //      所以不需要同意。端点已配置 → 必须带 --user-consented 才发；发送失败同样落本地，内容绝不丢。
+//      一步式：--file 给报告 .md 时，submit 内部先走 1 再走 2（载荷落在 <报告>.payload.json）。
 //
 // kind=local：本命令从不发 doubaoya API 请求（不读 DOUBAOYA_BASE_URL、不带 key）。唯一的出网是
 // 端点**已配置且用户同意**时打那个独立的反馈端点；端点未配置（当前出厂状态）时零出网。
@@ -323,7 +324,9 @@ function readPayload(file, fields) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload) || !Object.hasOwn(payload, fields.report)) {
     throw new DbyError("PAYLOAD_INVALID", `${file} 不是 \`dby feedback prepare\` 产出的载荷。`, {
       exit: EXIT.USAGE,
-      remediation: "先 `dby feedback prepare --category bug|friction|idea --report <报告.md> --out <载荷.json>`，把载荷全文给用户过目，再 submit 那份载荷。"
+      remediation:
+        "直接给报告：`dby feedback submit --file <报告.md>`（扩展名 .md，内部先 prepare）；或者先 " +
+        "`dby feedback prepare --category bug|friction|idea --report <报告.md> --out <载荷.json>`，把载荷全文给用户过目，再 submit 那份载荷。"
     });
   }
   return { text, payload };
@@ -347,28 +350,45 @@ async function post(url, method, body) {
     : fetch(url, { method, headers, body, signal: AbortSignal.timeout(timeoutMs) });
 }
 
-export async function feedbackSubmit(ctx, { file, userConsented, scopeRoot } = {}) {
-  if (!file) throw new DbyError("USAGE", "缺少 --file（prepare 产出的载荷文件）。", { exit: EXIT.USAGE });
+/** --file 是报告 markdown（而不是 prepare 的载荷 JSON）：按扩展名判，不猜内容。 */
+export const isReportMarkdown = (file) => /\.(md|markdown)$/i.test(String(file));
+export const DEFAULT_MD_CATEGORY = "bug";
+
+export async function feedbackSubmit(ctx, { file, userConsented, scopeRoot, category, agent } = {}) {
+  if (!file) throw new DbyError("USAGE", "缺少 --file（报告 .md，或 prepare 产出的载荷文件）。", { exit: EXIT.USAGE });
   const root = scopeRoot || defaultScopeRoot();
   const config = loadEndpointConfig();
+  // 一步式入口（决策者 2026-09-27 裁决）：--file 给报告 .md 时，内部先走一遍 prepare（同一套白名单采集与
+  // 凭证/高熵检测），把载荷落在 <报告>.payload.json，再按原流程提交那一份。两步式（prepare → 过目 → submit
+  // 载荷）照旧可用，且仍是端点已配置时的推荐做法：用户过目的应当是**载荷全文**（含机器事实），不只是报告。
+  let prepared = null;
+  if (isReportMarkdown(file)) {
+    prepared = feedbackPrepare({ category: category ?? DEFAULT_MD_CATEGORY, report: file, out: `${file}.payload.json`, scopeRoot: root, agent }).data;
+    file = prepared.out;
+  }
   // 双闸的机器侧在发送前再跑一遍（readPayload 里先扫后解析）：prepare 之后文件若被改过，这里是最后一道扫描。
   const { text, payload } = readPayload(file, config.fields);
+  const preparedInfo = prepared ? { preparedPayload: prepared.out } : {};
 
   // 端点未配置：什么都不出本机 ⇒ 不需要同意，落本地、告知路径、退出码 0。
   if (!config.url) {
     const savedTo = writeLocalCopy(payload, config.fields, root);
     return {
-      data: { delivered: false, reason: "endpoint_not_configured", savedTo, manualDelivery: MANUAL_DELIVERY },
+      data: { delivered: false, reason: "endpoint_not_configured", savedTo, manualDelivery: MANUAL_DELIVERY, ...preparedInfo },
       human: `提交端点尚未配置，反馈已落本地文件（内容没丢）：\n${savedTo}\n${MANUAL_DELIVERY}`
     };
   }
 
   // 🔴 人工闸：没有用户的明确同意就不发送。全局 --confirm 不算——这个开关只在用户看过全文并明确说发之后传。
   if (!userConsented) {
-    throw new DbyError("USER_CONSENT_REQUIRED", "未取得用户明确同意（缺 --user-consented），不发送。", {
+    const err = new DbyError("USER_CONSENT_REQUIRED", "未取得用户明确同意（缺 --user-consented），不发送。", {
       exit: EXIT.CONFIRM,
-      remediation: "把载荷全文原样给用户过目；用户明确说发，再带 --user-consented 重跑。拒绝或没回应就别发（想留底用 `dby feedback keep`）。"
+      remediation:
+        `把载荷全文（${file}）原样给用户过目；用户明确说发，再 \`dby feedback submit --file ${file} --user-consented\`。` +
+        "拒绝或没回应就别发（想留底用 `dby feedback keep`）。"
     });
+    err.data = { delivered: false, payload: file, ...preparedInfo };
+    throw err;
   }
 
   let res;
@@ -390,7 +410,7 @@ export async function feedbackSubmit(ctx, { file, userConsented, scopeRoot } = {
   if (httpOk && envelope && typeof envelope === "object" && envelope.success) {
     const requestId = envelope.requestId ?? "";
     return {
-      data: { delivered: true, requestId, notice: envelope.notice ?? null },
+      data: { delivered: true, requestId, notice: envelope.notice ?? null, ...preparedInfo },
       human: `已提交。后续追问可引用标识：${requestId}`
     };
   }
@@ -436,10 +456,12 @@ export const commands = [
   },
   {
     group: "feedback", name: "submit",
-    summary: "发送 prepare 的载荷（需 --user-consented）；端点未配置则落本地文件、退出码 0",
+    summary: "提交反馈：--file 给报告 .md（内部先 prepare）或 prepare 的载荷；端点已配置时需 --user-consented，未配置则落本地、退出码 0",
     args: [],
     flags: {
-      file: { value: true, summary: "prepare 产出的载荷文件（必填）" },
+      file: { value: true, summary: "报告 markdown（.md，一步式）或 prepare 产出的载荷文件（必填）" },
+      category: { value: true, summary: `仅 .md 一步式用：bug | friction | idea（默认 ${DEFAULT_MD_CATEGORY}）` },
+      agent: { value: true, summary: "仅 .md 一步式用：agent 类型，如 claude-code" },
       "user-consented": { summary: "仅当用户看过全文并明确同意后才传；拒绝或无回应都不许带（--confirm 不算）" },
       "scope-root": SCOPE_FLAG
     },
