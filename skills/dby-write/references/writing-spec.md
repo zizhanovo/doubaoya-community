@@ -13,7 +13,7 @@
 | `article-structure` | 封面卡 / 导语 / 看点 / 章节副标题 / 结尾卡的 front matter 字段说明 | **用户明确要这些家具时**（"加个封面卡""配个导语"），拉完照字段写；不写就没有这几块 |
 | `theme-variants` | 这套排版给引用块、列表等元素配的形态清单 | 想按呈现效果挑结构时（决定 `**加粗**` / `*…*` 怎么用）；只在**真用这套排版渲染**时成立 |
 
-拉法：`GET /api/wechat/writing-spec?section=article-structure`（`themeName` 参数同样可带）。
+拉法：`dby wechat writing-spec --section article-structure`（`--theme-name` 同样可带）。
 🔴 **别猜段名**：写错会直接报 400 并列出可选值，**不会静默给你默认那份**——
 这是刻意的，静默回退会让你以为拿到了要的东西。
 
@@ -30,7 +30,7 @@
 
 ⚠️ 排版改过之后**重新拉一次**，别把这份内容当长期事实缓存。
 
-**档案是空的怎么办**：`GET /api/ip-profile` 回 `{"profile": null}` = 用户还没建档。
+**档案是空的怎么办**：`dby profile get` 回 `{"profile": null}` = 用户还没建档（`dby write prep` 会直接拦下）。
 **这时不要带着空档案硬写**——先去 `dby-charter` 用 L0 三问（5 分钟）把定位立起来。
 没有靶子写出来的东西「哪句都对但不知道给谁看」，那正是本包要根治的病。
 

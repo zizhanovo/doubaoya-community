@@ -5,7 +5,7 @@
 把最重的输入（从零回答 15 问）变成**校对**（对错勾选）：
 
 1. **拉素材**：
-   - `dby-api` 打 `POST /api/apis/gongzhonghao/gongzhonghao-work-list/call` 拉这个号的历史发文；
+   - `dby-api` 打公众号发文列表 `api.gzh.workList` 拉这个号的历史发文（🔴 先过 `api.gzh.searchUser` 拿账号 ID；计费能力照 `dby-api` 的规矩先告诉用户）；
    - `dby-api` 打账号诊断能力 `skill.wechat.accountAnalyzer`（若已有复盘数据，一并读进来）；
    - `dby-api` 打相似账号推荐 `skill.wechat.similarAccount` 拉同赛道对标账号——顺带完成
      `references/intake.md` 里的**「假定位体检」**
@@ -13,4 +13,4 @@
 2. **反推**：从素材里反推出整份章程草案——历史选题反推 `positioning`，评论区与打开场景反推 `audience`，
    已有产品 / 广告位 / 引流动作反推 `monetization`。
 3. **逐项校对**：把草案**逐字段念给用户核对**（「我从你过去 30 篇看出来的定位是 X，对吗？」），
-   改完再逐节确认（红线 7），确认后 PUT 落库。
+   改完再逐节确认（红线 7），确认后 `dby charter put` 落库。

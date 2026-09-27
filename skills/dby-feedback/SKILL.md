@@ -5,17 +5,24 @@ description: >-
   用户过目全文后提交给维护者；端点不通就落本地文件。触发词：报个bug、报bug、反馈、提个建议、提需求、提意见、
   吐槽、用不了、坏了吧、这里好烦、太难用、用着别扭、能不能改改、给作者/维护者/开发者说一声。
   不做：违禁词检测走 dby-banned-words；更新本鸭走 dby-update；改文案走 dby-rewrite。
-version: 2.0.0
-changelog: BREAKING：删除 scripts/submit_feedback.py 与 endpoint.json，改用 dby feedback prepare/submit/keep/reset-id，只需要 Node；端点未配置时落本地、退出码 0
+version: 2.1.0
+changelog: 加调用约定段；补一步式 dby feedback submit --file 报告.md 的适用场景，例子换成 dby 命令，cURL 项目改写法
 compatibility: >-
-  只需要 Node ≥22（经 `dby` 命令运行，零依赖）。
-  提交时需要对反馈端点的 HTTPS 出网；端点未配置或不通时纯本地落盘，不需要密钥。
+  只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）。
+  提交时需要对反馈端点的 HTTPS 出网；端点未配置或不通时纯本地落盘，不需要凭证。
 ---
 
 # dby-feedback：现场写好反馈，用户过目后提交
 
 用户遇到问题或想提改进建议时，你（agent）当场把经过写成完整反馈——你在现场，
 复现步骤、原始错误文本、实际 vs 期望这三样你天然拿得到，而它们恰恰是用户最难提供的。
+
+## 调用 dby
+
+1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
+2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
 
 ## 什么时候动
 
@@ -37,12 +44,12 @@ compatibility: >-
 
 报告存成一个临时 markdown 文件（如 `feedback-report.md`）。
 
-### 2. 拼载荷（机器事实由脚本按白名单采集）
+### 2. 拼载荷（机器事实由 `dby feedback prepare` 按白名单采集）
 
 ```bash
 dby feedback prepare --category bug \
   --report feedback-report.md --out feedback-payload.json \
-  --agent claude-code --command "1:node reconcile.mjs --dry-run"
+  --agent claude-code --command "3:dby write articles"
 ```
 
 `--command` 是本次会话里执行过的**本仓**命令与退出码（格式「退出码:命令」，可多次）。
@@ -64,6 +71,9 @@ DOUBAOYA_API_KEY 或任何凭证、appid、author、publicAccountName、targetAc
 - 用户明确说发 → `dby feedback submit --file feedback-payload.json --user-consented`
 - 用户拒绝或没回应 → **不发**。想留底就 `dby feedback keep --file feedback-payload.json`（只落本地，零请求）；
   不想留就删掉载荷与报告文件。`--user-consented` 只在用户明确同意后才许传。
+- 一步式 `dby feedback submit --file feedback-report.md [--category bug|friction|idea]`（内部先 prepare，载荷落在
+  `feedback-report.md.payload.json`）只适合**端点未配置、只想落本地**的场景；端点已配置时它同样要 `--user-consented`，
+  没带就报错并给出载荷路径——主流程仍是上面的两步式，让用户过目的永远是**载荷全文**。
 
 ### 5. 交代结果
 

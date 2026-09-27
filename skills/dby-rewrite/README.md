@@ -1,6 +1,6 @@
 # 多平台文案改写 / dby-rewrite
 
-> 都爆鸭社区出品 · 纯本地工具 · 零网络调用 · 不需要 API Key
+> 都爆鸭社区出品 · 改写纯本地 · 不需要凭证（只有违禁词自检与存进稿件时联网）
 
 ---
 
@@ -63,7 +63,7 @@ dby rewrite rules all                    # 全平台（一稿多发）
 dby-rewrite/
 ├── SKILL.md              # 给 agent 看的入口 + 按平台分流
 ├── README.md             # 本文件
-├── references/           # 平台规则，一平台一文件（脚本与 agent 读的是同一份）
+├── references/           # 平台规则，一平台一文件（`dby rewrite rules` 与 agent 读的是同一份）
 │   ├── 公众号.md   ├── 视频号.md   ├── 抖音.md   ├── 快手.md
 │   ├── B站.md      ├── 小红书.md   └── 知乎.md
 ```

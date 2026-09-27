@@ -6,8 +6,8 @@
 > **分工**：doubaoya = 存储 + 接口；**你（agent）= 脑子**。文风蒸馏用你自己的模型做——doubaoya 不调
 > LLM、不为蒸馏收费。蒸好后调接口把成品存回去。
 >
-> 本文的请求全是手写 curl，先读 `dby-gateway/references/protocol.md`（鉴权与统一信封）。
-> 接口清单与错误码见 `references/api-contract.md`——**档案和章程是同一个资源，契约只有那一张表**。
+> 本文的读写全走 `dby profile get|list|create|update|sample-add|sample-list` 与 `dby upload`（调用方式见 SKILL.md「调用 dby」）。
+> 命令清单与错误码见 `references/api-contract.md`——**档案和章程是同一个资源，契约只有那一张表**。
 
 ---
 
@@ -16,12 +16,10 @@
 | 场景 | 怎么用 | 拿到什么 |
 |------|--------|----------|
 | **第一次建档** | 问人设/赛道/产品 + 收集范文 → 蒸馏 → 存档 | 一份可复用的 IP 档案 |
-| **改人设/赛道/产品** | 直接 `PUT` 改对应字段 | 档案实时更新 |
-| **重新蒸馏文风** | 喂新范文 → 重跑蒸馏 → `PUT` 覆盖 `writingDnaJson` | 更准的文风 DNA（样本越多越准） |
-| **设 IP 人物头像** | 本地图转 base64 传 `POST /api/upload` 拿 URL 存 `avatarUrl`，或直接填公网图 URL | 头像可复用、还能当生图参考图 |
-| **查/切换档案** | `GET /api/ip-profiles` 列全部、挑一个当默认 | 支持一人多号多档案 |
-
----
+| **改人设/赛道/产品** | `dby profile update <id>` 改对应字段 | 档案实时更新 |
+| **重新蒸馏文风** | 喂新范文 → 重跑蒸馏 → `dby profile update` 覆盖 `writingDnaJson` | 更准的文风 DNA（样本越多越准） |
+| **设 IP 人物头像** | `dby upload 头像.png` 拿 URL 存 `avatarUrl`，或直接填公网图 URL | 头像可复用、还能当生图参考图 |
+| **查/切换档案** | `dby profile list` 列全部、挑一个当默认 | 支持一人多号多档案 |
 
 ---
 
@@ -29,23 +27,19 @@
 
 1. **看有没有默认档案**：
    ```bash
-   curl -s https://doubaoya.com/api/ip-profile \
-     -H "Authorization: Bearer $DOUBAOYA_API_KEY"
+   dby profile get
    ```
-   `data.profile` 为 `null` 说明还没建过，进第 2 步；不为 `null` 就是已有默认档案，想再建一个新档案（多号场景）也一样走第 2 步（`isDefault` 按需给 `false`）。
+   `profile` 为 `null` 说明还没建过，进第 2 步；不为 `null` 就是已有默认档案，想再建一个新档案（多号场景）也一样走第 2 步（`isDefault` 按需给 `false`）。
 
-2. **采集人设 / 赛道 / 产品**（对话问用户，起草后一起写进 `POST` body）：
+2. **采集人设 / 赛道 / 产品**（对话问用户，起草后一起写进建档的 `body.json`）：
    - 这个号是谁在写、什么身份、语气？→ `personaJson.identity` / `personaJson.tone`
    - 写给谁看？→ `personaJson.audience`；价值观？→ `personaJson.values[]`
    - 主打什么赛道、常写哪些选题？→ `niche` / `nicheTags[]`
    - 有没有要在文里自然带的个人产品？→ `productsJson[]`（见下方「个人产品」）
 
-3. **建档**：
-   ```bash
-   curl -s -X POST https://doubaoya.com/api/ip-profile \
-     -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{
+3. **建档**：先把下面这份写进 `body.json`，再 `dby profile create --file body.json`：
+   ```json
+   {
        "name": "我的公众号",
        "isDefault": true,
        "niche": "职场成长",
@@ -57,27 +51,24 @@
          "values": ["长期主义", "拒绝内耗"]
        },
        "productsJson": []
-     }'
+   }
    ```
-   返回 `data.profile`，记下它的 `id`，后面更新/重蒸都要用。
+   返回 `profile`，记下它的 `id`，后面更新/重蒸都要用。
 
 4. **收集范文**（二选一或并用，见下方「二、收集范文」），**蒸馏文风 DNA**（见「三、蒸馏文风 DNA」），
-   再 `PUT` 存回（见「四、更新档案」）。
+   再 `dby profile update` 存回（见「四、更新档案」）。
 
 ---
 
 ## 二、收集范文
 
 **范文来源 = 让用户直接粘贴/上传几篇满意的历史文章**（标题 + 正文），这是唯一入口——建议 **3~20 篇**，
-篇数越多蒸得越准：
+篇数越多蒸得越准。每篇正文存成一个 `范文.md`（纯文本，不是 JSON），一篇一条：
 
 ```bash
-curl -s -X POST https://doubaoya.com/api/ip-profile/<id>/samples \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{ "title": "范文标题", "sourceUrl": "https://...", "content": "范文正文……" }'
+dby profile sample-add <档案id> --file 范文.md --title "范文标题" --source-url "https://..."   # 后两项可选
 ```
-返回 `data.sample` + 最新 `data.dnaSampleCount`（该档案下已存范文篇数）。单篇内容超 50KB → 400
+返回 `sample` + 最新 `dnaSampleCount`（该档案下已存范文篇数）。单篇内容超 50KB → 400
 `SAMPLE_TOO_LARGE`。**样本 3 篇=预览级、8+=可靠、15+=高保真**——篇数越多蒸得越准。
 
 ---
@@ -144,84 +135,57 @@ curl -s -X POST https://doubaoya.com/api/ip-profile/<id>/samples \
 
 ## 四、更新档案（含重新蒸馏）
 
-**改字段**（人设 / 赛道 / 产品 / 文风 DNA，任意组合，只传要改的键）：
-```bash
-curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "personaJson": { "tone": "更犀利一点" },
-    "niche": "职场成长 + 副业",
-    "nicheTags": ["职场", "副业", "自我提升"]
-  }'
+**改字段**（人设 / 赛道 / 产品 / 文风 DNA，任意组合，只传要改的键）：把要改的键写进 `body.json`，再
+`dby profile update <id> --file body.json`：
+```json
+{
+  "personaJson": { "tone": "更犀利一点" },
+  "niche": "职场成长 + 副业",
+  "nicheTags": ["职场", "副业", "自我提升"]
+}
 ```
 
 **重新蒸馏文风 DNA**（用户觉得现在的文风 DNA 不准，或想用新文章更新它）：
 1. 收集新范文（同上「二、收集范文」，可只用新的，也可新旧混用）。已存的范文用
-   `GET /api/ip-profile/<id>/samples` 读回（`data.samples[]` 带 `content` 正文），不必让用户重贴。
+   `dby profile sample-list <id>` 读回（`samples[]` 带 `content` 正文），不必让用户重贴。
 2. 按「三、蒸馏文风 DNA」重跑一遍蒸馏，得到新的 `writingDnaJson`。
-3. `PUT` 覆盖：
-   ```bash
-   curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
-     -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "writingDnaJson": { "...蒸好的六层+禁忌层 JSON..." },
-       "dnaSampleCount": 12,
-       "dnaDistilledAt": "2026-07-13T10:00:00.000Z",
-       "dnaModel": "你用的模型名"
-     }'
+3. 写进 `body.json`，再 `dby profile update <id> --file body.json` 覆盖：
+   ```json
+   {
+     "writingDnaJson": { "...蒸好的六层+禁忌层 JSON..." },
+     "dnaSampleCount": 12,
+     "dnaDistilledAt": "2026-07-13T10:00:00.000Z",
+     "dnaModel": "你用的模型名"
+   }
    ```
    `dnaSampleCount` = 本次用于蒸馏的范文篇数；`dnaModel` = 你跑蒸馏用的模型名；`dnaDistilledAt` = 当前
    ISO 时间。`writingDnaJson` 超 32KB → 400 `DNA_TOO_LARGE`，精简后重试（例如缩短
    `voiceSystemPrompt`、精简 `taboos`/`coreClaims` 数组）。
 
-**列出我的全部档案**（多号场景，挑一个当默认）：
-```bash
-curl -s https://doubaoya.com/api/ip-profiles -H "Authorization: Bearer $DOUBAOYA_API_KEY"
-```
-把某个档案设为默认：`PUT` 该档案 `{ "isDefault": true }`（会自动把其他档案的 `isDefault` 摘掉）。
+**列出我的全部档案**（多号场景，挑一个当默认）：`dby profile list`。
+把某个档案设为默认：`dby profile update <id> --body '{"isDefault": true}'`（会自动把其他档案的 `isDefault` 摘掉）。
 
-**取我的默认档案**：`GET /api/ip-profile` → `data.profile`（无则 `null`）。
+**取我的默认档案**：`dby profile get` → `profile`（无则 `null`）。
 
-**删除档案**：
-```bash
-curl -s -X DELETE https://doubaoya.com/api/ip-profile/<id> \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY"
-```
+**删除档案**（不可逆，级联删范文与文档；先向用户确认）：`dby profile delete <id> --confirm`。
 
 ---
 
 ## 五、IP 人物头像
 
-推荐流程：本地图 → base64 data URI → 上传到正式图床 `POST /api/upload` → 拿到 `data.url` → 存进
-`avatarUrl`（`PUT /api/ip-profile/:id`）。
+推荐流程：本地图 → `dby upload` 上传到正式图床 → 拿到 `url` → 存进 `avatarUrl`：
 
 ```bash
-# 1. 本地头像转 base64 data URI（macOS/Linux 通用示例）
-base64_data=$(base64 -i avatar.png | tr -d '\n')
-
-# 2. 上传到图床
-upload_resp=$(curl -s -X POST https://doubaoya.com/api/upload \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{\"dataBase64\": \"data:image/png;base64,${base64_data}\"}")
-img_url=$(echo "$upload_resp" | jq -r '.data.url')
-
-# 3. 把拿到的 url 存进档案
-curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
-  -H "Authorization: Bearer $DOUBAOYA_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d "{\"avatarUrl\": \"${img_url}\"}"
+dby upload avatar.png                                             # 返回 { url, key, contentType, size }
+dby profile update <id> --body '{"avatarUrl": "<上一步的 url>"}'
 ```
 
-**`POST /api/upload` 契约**（鉴权同其它接口，`Authorization: Bearer $DOUBAOYA_API_KEY`）：
-- 请求体：`{ "dataBase64": "data:image/<png|jpeg|webp>;base64,<...>", "filename"?: "..." }`
-- 返回：`{ success: true, data: { url, key, contentType, size } }`；`url` 形如
-  `https://doubaoya.com/cdn/<key>`，**公开只读**，可直接当 `<img src>` 用
-- 限制：仅 **png / jpeg / webp**，体积 **≤ 2MB**（按内容 magic number 判定类型，不信文件名/Content-Type）
+`dby upload` 契约：
+- 本地文件由 CLI 读取并转 base64 上传；超 2MB 本地就拦下，不发请求
+- 返回 `url` 形如 `https://doubaoya.com/cdn/<key>`，**公开只读**，可直接当 `<img src>` 用
+- 限制：仅 **png / jpeg / webp**，体积 **≤ 2MB**（服务端按内容 magic number 判定类型，不信文件名）
 - 错误码：400 `IMAGE_TOO_LARGE`（超 2MB）、400 `UNSUPPORTED_TYPE`（非 png/jpeg/webp）、400
-  `INVALID_PARAMS`（缺 `dataBase64` 或解码为空）、401 `UNAUTHORIZED`（密钥/会话无效）
+  `INVALID_PARAMS`（文件为空）；没有凭证退出码 4 → `dby login`
 
 备选：也可以跳过上传，直接把一个已有的公网图片 URL 填进 `avatarUrl`。
 
@@ -237,9 +201,7 @@ curl -s -X PUT https://doubaoya.com/api/ip-profile/<id> \
 { "name": "产品名", "sellingPoints": ["卖点1", "卖点2"], "ctaScript": "结尾怎么引导（一句话话术）" }
 ```
 写文章时，把匹配当前选题的产品自然带出——用 `sellingPoints` 找切入角度，用 `ctaScript` 收尾，别硬广。
-更新产品清单同「四、更新档案」，`PUT` body 传 `productsJson` 整体覆盖。
-
----
+更新产品清单同「四、更新档案」，`dby profile update` 的 body 传 `productsJson` 整体覆盖。
 
 ---
 

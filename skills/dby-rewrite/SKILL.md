@@ -2,18 +2,26 @@
 name: dby-rewrite
 description: >-
   都爆鸭出品的**多平台文案改写**专家（公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎 七个平台，一份原文按各平台的真实调性分别改写）。给什么文案都能转成该平台的高互动表达——公众号奔着高阅读的爆款文案去（金句与钩子），小红书要 emoji 与种草口吻，知乎要论证感，各平台的规则不混用。触发词：公众号改写、公众号文案、公众号风格、微信改写、爆款改写、内容改写、小红书改写、小红书文案、小红书风格、笔记改写、种草文案、标题钩子、抖音文案、口播文案、视频号文案、知乎风格、B站文案、多平台改写、一稿多发、全平台改写、跨平台适配。本 Skill 包纯本地运行，不联网、不调用任何外部接口、不需要 key。
-version: 2.0.0
-changelog: BREAKING：删除 scripts/rewrite.py，取规则改用 dby rewrite rules，只需要 Node；认不出的平台名报用法错误，不再当成原文吞掉
+version: 2.1.0
+changelog: 加调用约定段；违禁词自检从已删除的 check_multi.py 改为 dby banned check，存稿件改走 dby draft
 compatibility: >-
-  只需要 Node ≥22（经 `dby` 命令运行，零依赖）。
-  纯本地运行：不联网、不调用任何外部接口、不需要 key。
+  只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）。
+  改写与取规则纯本地、不需要凭证；交付前违禁词自检（`dby banned check`，按平台计费）与存进稿件（`dby draft create|submit`）
+  才联网、需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY）。
 ---
 
 # 多平台文案改写 · dby-rewrite
 
 把一份原文改写成**某个平台读者习惯的样子**。七个平台，一次可以指定一个、几个或全部（一稿多发 = 各出一版，不是一版群发七处）。
 
-> ⚠️ 本包纯本地不计费，改写全在你自己的 agent 里完成；服务端曾有过的云端改写能力已于 2026-08-28 整条下线，不存在任何计费的改写接口。
+> ⚠️ 改写本身纯本地不计费，全在你自己的 agent 里完成；服务端曾有过的云端改写能力已于 2026-08-28 整条下线，不存在任何计费的改写接口（交付前的违禁词自检另按平台计费，见第 3 节）。
+
+## 调用 dby
+
+1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
+2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
 
 ---
 
@@ -77,7 +85,7 @@ dby rewrite rules all                    # 全平台（一稿多发）
 - **七平台通用 · 极限词与功效承诺不进标题 / 摘要 / 正文**：权威口径与词表在 `dby-banned-words`，
   本包不自建一份，过一遍就行：
   ```bash
-  python3 <dby-banned-words>/scripts/check_multi.py "<标题+正文>" --platforms xiaohongshu,douyin,gongzhonghao   # 只留本次涉及的平台
+  dby banned check "<标题+正文>" --platforms xiaohongshu,douyin,gongzhonghao --confirm   # 只留本次涉及的平台；逐平台各计费一次
   ```
   命中即改；其余四平台不在检测口径里，但《广告法》第九条一样管，极限词照删。
 - **事实核对**：产品参数 / 价格 / 时间地点逐项对回原文（第 2 节「只改风格，不改事实」的执行面）。

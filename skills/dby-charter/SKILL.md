@@ -2,12 +2,11 @@
 name: dby-charter
 description: >-
   号章程 · 创作 DNA（都爆鸭）——一份 IP 档案管两件事：①**定位问诊**帮你想清楚三层定位（写什么 / 给谁看 / 怎么赚钱），产出结构化「号章程」，之后选题、写作、复盘都按它走（三个入口：L0 三问 5 分钟、L1 十五问完整问诊、老号反推）；②**文风蒸馏**从你的范文里蒸出「创作 DNA」（人设 / 赛道 / 个人产品 / 文风），之后写这个号的文章全程读它，让 AI 写得更像你本人。问诊与蒸馏都在你自己的 agent 侧用你自己的模型跑，doubaoya 只做存储与读写接口，不调 LLM、免费不扣点。触发词：定位、号定位、变现路径、号章程、想清楚写什么号、定位教练、我该做什么号、怎么变现、IP 档案、公众号人设、文风 DNA、文风蒸馏、重新蒸馏、写得像我、模仿我的文风、我的写作风格、更新人设、个人产品、带货话术、IP 头像。
-version: 1.3.0
-changelog: 规格 dby-cli-coverage「装好即可达」：scripts/charter.mjs 标弃用（启动打 stderr 提示，逻辑不动），SKILL.md 与 references/api-contract.md 改指统一 CLI（`charter get`/`charter put`），删掉「两条路都对」的表述；新增 scripts/dby.mjs 引导壳
+version: 2.0.0
+changelog: 调用换成 dby CLI（BREAKING）：加调用约定段，章程走 dby charter、档案走 dby profile / dby upload，契约表改命令表，删全部手写 curl
 compatibility: >-
-  需要 Node ≥18（读写章程走 scripts/dby.mjs，零依赖不装 npm 包）；
-  需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
-  需要能对 https://doubaoya.com 发 HTTPS 请求。章程与档案路由**全部免费**，不调 LLM、不扣点。
+  只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
+  需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY）。章程与档案命令**全部免费**，不调 LLM、不扣点。
 ---
 
 # 号章程 · 创作 DNA（都爆鸭）
@@ -23,28 +22,33 @@ compatibility: >-
 
 ---
 
+## 调用 dby
+
+1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
+2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
+
+---
+
 ## 怎么读写章程
 
-章程的 GET / PUT 由 CLI 代发（`charter get`/`charter put`，见下方）；档案本身的 POST / PUT（建档、存范文、存 DNA）
-要手写 curl，那时才读 `dby-gateway/references/protocol.md`。
-
-`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录），走 `node "$SKILL_DIR/scripts/dby.mjs" charter profiles|get|put`
-（非 TTY 输出 `{ok,data|error}` JSON，退出码契约同 `dby-api`）。章程路由有两个**每次都会踩**的坑，CLI 里都做掉了：
-GET 回来的 `products` 是只读投影、原样 PUT 必 400；PUT 是全量替换不是增量 patch。
+章程命令有两个**每次都会踩**的坑，CLI 里都做掉了：`charter get` 回来的 `products` 是只读投影、原样 put 必 400；
+put 是全量替换不是增量 patch。
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" charter profiles                  # 列出我的档案（id / 是否默认 / 名字）
-node "$SKILL_DIR/scripts/dby.mjs" charter get                       # 读默认档案的章程（原样）
-node "$SKILL_DIR/scripts/dby.mjs" charter get --for-edit > c.json   # 读成「可直接改再 PUT」的形态（已剥 products）
-node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替换（无论如何都会再剥一次 products）
+dby charter profiles                  # 列出我的档案（id / 是否默认 / 名字）
+dby charter get                       # 读默认档案的章程（原样）
+dby charter get --for-edit > c.json   # 读成「可直接改再 put」的形态（已剥 products）
+dby charter put c.json                # 全量替换（无论如何都会再剥一次 products）
 ```
 
-改一份现有章程的正确姿势就是这三步：`get --for-edit` → 改 `c.json` → `put c.json`。
-**别拿 `get`（不带 `--for-edit`）的输出直接 PUT**——那份带着 `products`。
+改一份现有章程的正确姿势就是这三步：`get --for-edit > c.json` → 改 `c.json` 里的 `data.charter` → `put c.json`
+（重定向下 stdout 是 `{ok, data}` 信封，`put` 认得它并只发 `data.charter`）。
+**别拿 `get`（不带 `--for-edit`）的输出直接 put**——那份带着 `products`。
+档案本身（建档 / 存范文 / 存 DNA / 头像）走 `dby profile create|update|sample-add`、`dby upload`，见 `references/writing-dna.md`。
 
-> 结果打 stdout，提示与更新时间打 stderr，失败以 `[HTTP CODE] message` 非零退出。
-> `CHARTER_INVALID` 的 message 是所有校验问题拼成的完整清单，**逐条改完一次性重 PUT**，
-> 不要一条一条试。
+> `CHARTER_INVALID` 的 message 是所有校验问题拼成的完整清单，**逐条改完一次性重 put**，不要一条一条试。
 
 ---
 
@@ -62,7 +66,7 @@ node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替�
 ## 七条红线（教练纪律，逐条照办）
 
 1. **会话开场先读基线**。每次教练会话——含 L0→L1 深化、老号反推、章程回顾——开场先
-   `node "$SKILL_DIR/scripts/dby.mjs" charter get`（非默认档案加 `--profile <id>`）读取已有章程。
+   `dby charter get`（非默认档案加 `--profile <id>`）读取已有章程。
    **已填字段不重复问**，只问空字段、以及字段文本尾部标注「（待深化）」的字段。
    **进度以服务端章程为准**，不臆测、不谎报「我们上次聊过 X」。
 2. **一次只问一个问题**。用户一口气倒出多维信息时，把信息拆解归位到对应字段再继续，
@@ -74,7 +78,7 @@ node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替�
 6. **不承诺效果**（涨粉、收入一律不承诺），**不编造数据**。引用变现门槛数据时必须说明这是
    **2026-08 快照、会过时**。
 7. **产出前逐节确认**。章程草案按 `positioning` → `audience` → `monetization` → `northStar` **逐节念给
-   用户确认**，确认后才 PUT 存服务端。并且醒目明说：**「只有存回服务端才生效——存了，选题、写作、
+   用户确认**，确认后才 put 存服务端。并且醒目明说：**「只有存回服务端才生效——存了，选题、写作、
    复盘才会按这份章程走。」**
 
 ---
@@ -100,7 +104,7 @@ node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替�
 开场读基线：三个字段**已非空 → 逐条念给用户确认，确认后直接转 L1 只补空字段**，不重问。
 
 **其余字段填空串**（`practicalPaths` 填 `[]`），`version` 填 `1`，五个顶层节的键**必须齐全**——
-**空串 = 未定，允许存**。逐节确认后 `node "$SKILL_DIR/scripts/dby.mjs" charter put c.json` 落库（手写见 `references/api-contract.md`）。
+**空串 = 未定，允许存**。逐节确认后 `dby charter put c.json` 落库。
 
 结束语预告 L1，原话可用：
 
@@ -127,11 +131,10 @@ node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替�
 
 1. **空串 / 空数组 = 未定，允许存**；五个顶层节的键必须齐全，少传的键判「缺失」而 400。
    完整结构与四张枚举白名单 → `references/charter-schema.md`。
-2. CLI 已替你做掉的两个坑：**`products` 是只读投影**（原样 PUT 必 400）、
-   **PUT 是全量替换不是增量**。手写请求时自己记得。
-3. **无默认档案时 `GET /api/ip-profile/charter` 返回 404**，先建档（见 `references/writing-dna.md`）。
+2. **`products` 是只读投影**、**put 是全量替换**——`charter get --for-edit` / `charter put` 已替你处理（见上）。
+3. **无默认档案时 `dby charter get` 回 404**，先建档（`dby profile create`，见 `references/writing-dna.md`）。
 
-→ 路由的方法 / 路径 / 返回、以及 `CHARTER_INVALID` 一类报错，读 `references/api-contract.md`。
+→ 每条命令的返回、以及 `CHARTER_INVALID` 一类报错，读 `references/api-contract.md`。
 这些路由**在 catalog 里没有条目**，那份表是它们唯一的真相源。
 
 ---
@@ -148,13 +151,13 @@ node "$SKILL_DIR/scripts/dby.mjs" charter put c.json                # 全量替�
 | `references/intake.md` | L1 问诊全程，逐题读（15 问清单、追问技巧库、假定位体检） |
 | `references/writing-dna.md` | 做**另一件事**时读：建档 / 收范文 / 蒸文风 DNA / 改人设产品 / 设头像 |
 | `references/legacy-account.md` | 老号反推（这个号已经有历史文章） |
-| `references/charter-schema.md` | 要 PUT 章程 / 核对枚举值 |
-| `references/api-contract.md` | 手写请求、查路由、排 `CHARTER_INVALID` |
+| `references/charter-schema.md` | 要 put 章程 / 核对枚举值 |
+| `references/api-contract.md` | 查命令与返回、排 `CHARTER_INVALID` |
 
 ---
 
 ## 边界
 
-- **charter 路由只写章程**。个人产品（`productsJson`）、人设、文风 DNA 走档案路由
-  （`PUT /api/ip-profile/:id`），别试图从 charter 写它们。
+- **charter 命令只写章程**。个人产品（`productsJson`）、人设、文风 DNA 走档案命令
+  （`dby profile update <id>`），别试图从 charter 写它们。
 - **铁律：密钥绝不打印、绝不写进文件、绝不回显给用户。** 所有请求只发往 **doubaoya.com**。

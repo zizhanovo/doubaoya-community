@@ -37,8 +37,8 @@ S11 [记录]     「……原句……」  记录 · ki_xxx · 9/1（灵感库�
 抓不到（公众号 / 小红书 / 抖音这类反爬页）再走 `dby-api` 的 `tool.content.parseDetail`：
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" api describe tool.content.parseDetail   # 先看入参与价格
-node "$SKILL_DIR/scripts/dby.mjs" api invoke tool.content.parseDetail '{"url":"<链接>"}'
+dby api describe tool.content.parseDetail   # 先看入参与价格
+dby api invoke tool.content.parseDetail '{"url":"<链接>"}'
 ```
 
 🔴 `parseDetail` **计费**（describe 显示 `unitPrice: 4`），不是免费路由；调用前照 `dby-api` 的计费规矩告诉用户。
@@ -50,9 +50,9 @@ node "$SKILL_DIR/scripts/dby.mjs" api invoke tool.content.parseDetail '{"url":"<
 取法与第 1 层同级——都是"用户给的"，只是给的时间不在当轮。
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" insp list --since 30          # 近 30 天（默认取法）
-node "$SKILL_DIR/scripts/dby.mjs" insp list --since 7           # 用户说「这周记的」
-node "$SKILL_DIR/scripts/dby.mjs" insp list --ids ki_a,ki_b     # 用户点名了哪几条
+dby insp list --since 30          # 近 30 天（默认取法）
+dby insp list --since 7           # 用户说「这周记的」
+dby insp list --ids ki_a,ki_b     # 用户点名了哪几条
 ```
 
 - 用户说「用我记的 / 我灵感库里的 / 我这周记的东西」→ **必取**，按用户说的时间窗或点名 id 拉。
@@ -71,15 +71,14 @@ node "$SKILL_DIR/scripts/dby.mjs" insp list --ids ki_a,ki_b     # 用户点名�
 ## 4. 自己的往期文章（免费）
 
 ```bash
-# $SKILL_DIR 见 SKILL.md 第 1 步
-node "$SKILL_DIR/scripts/dby.mjs" write articles                 # 最近 20 篇：序号 标题 日期 链接
-node "$SKILL_DIR/scripts/dby.mjs" write articles --q 关键词       # 标题或正文命中的
-node "$SKILL_DIR/scripts/dby.mjs" write articles --id 3           # 第 3 篇正文（去标签纯文本）
+dby write articles                 # 最近 20 篇：序号 标题 日期 链接
+dby write articles --q 关键词       # 标题或正文命中的
+dby write articles --id 3           # 第 3 篇正文（去标签纯文本）
 ```
 
-走 `GET /api/ip-profile/wechat-history`（授权公众号最近 20 篇，免费）。
-🔴 **不要自己去调 `GET /api/articles`**——那条只认登录态，拿密钥调必回 `UNAUTHORIZED`。
-没绑公众号时脚本退出码 3，这层跳过，别停下来问。出处写「往期文章《标题》+ 链接」。
+取的是授权公众号最近 20 篇（免费）。
+🔴 **往期文章只走 `dby write articles`**——`dby article list` 是文章中心清单、不带正文，别拿它顶替。
+没绑公众号时退出码 3，这层跳过，别停下来问。出处写「往期文章《标题》+ 链接」。
 
 ## 5. 素材库（免费，prep 已带索引）
 
@@ -87,8 +86,8 @@ node "$SKILL_DIR/scripts/dby.mjs" write articles --id 3           # 第 3 篇正
 全文按需取：
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" material list          # 索引：proof + 适用形态 + id
-node "$SKILL_DIR/scripts/dby.mjs" material get <id>      # 单卡全文（时间/地点/后果/出处）
+dby material list          # 索引：proof + 适用形态 + id
+dby material get <id>      # 单卡全文（时间/地点/后果/出处）
 ```
 
 🔴 **卡是存卡那一刻的快照** —— 用之前把卡面念给用户核实「这卡还作数吗」，
@@ -100,7 +99,7 @@ node "$SKILL_DIR/scripts/dby.mjs" material get <id>      # 单卡全文（时间
 交付后用户口述了新经历、或用户主动说「记住这件事」时，先蒸馏再展示卡面，确认后：
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" material add --body '{"proof":"…","event":{"time":"…","place":"…","outcome":"…"},"evidence":"亲历","forms":["带转折的真实经历"]}'
+dby material add --body '{"proof":"…","event":{"time":"…","place":"…","outcome":"…"},"evidence":"亲历","forms":["带转折的真实经历"]}'
 ```
 
 蒸馏三问（缺一样就不入库，如实告诉用户缺哪样）：
@@ -110,7 +109,7 @@ node "$SKILL_DIR/scripts/dby.mjs" material add --body '{"proof":"…","event":{"
 
 🔴 **不存原文**：服务端拒收长文（content 必须为空）。囤积对写作是负资产——
 低质语料全塞比不塞还差，素材库的价值在归因过的浓缩。
-删除：`material rm <id> --confirm`（硬删，索引即时不含，需 `--confirm`）。
+删除：`dby material rm <id> --confirm`（硬删，索引即时不含，需 `--confirm`）。
 📌 素材卡只用于给你自己的写作供上下文，**绝不用于任何模型训练或跨用户分析**（平台承诺，隐私政策同句）。
 
 ## 6. 用户自己的知识库（可选，配了才用，没配不追问）
@@ -125,7 +124,7 @@ node "$SKILL_DIR/scripts/dby.mjs" material add --body '{"proof":"…","event":{"
 官方给的是一个 **skill 包**（ima.qq.com/agent-interface 的「IMA Skills 官方接入包」，名为 `ima-skills`，含 `notes/` 与 `knowledge-base/` 两个子模块），凭证是 `IMA_OPENAPI_CLIENTID` + `IMA_OPENAPI_APIKEY`（或 `~/.config/ima/client_id` / `api_key`）。
 
 判定：宿主的 skill 列表里有 `ima-skills`，**或** `IMA_OPENAPI_APIKEY` 与 `IMA_OPENAPI_CLIENTID` 都非空且
-`$(dirname "$SKILL_DIR")/ima-skills/SKILL.md` 存在（`ima-skills` 与本包同级，不假设 skills 根的绝对位置）
+与本包同级的 `ima-skills/SKILL.md` 存在（不假设 skills 根的绝对位置）
 → 加载它，按它的 `knowledge-base` 子模块做「搜索知识库」；两者都没有 → 跳过，不问用户要不要装。
 检索到的条目出处写「ima 知识库「库名」/ 条目标题」。
 🔴 本包不写 ima 的 HTTP 调用方式——接口形状由那个 skill 维护；它在就用它，不在就没有这一层。

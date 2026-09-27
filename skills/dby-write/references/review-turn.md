@@ -8,8 +8,7 @@
 
 ## 四步
 
-`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录）；下面命令都经
-`"$SKILL_DIR/scripts/dby.mjs"` 转发、组名是 `draft`。
+下面命令都在 `draft` 组下（如 `dby draft review-packet`；调用方式见 SKILL.md「调用 dby」）。
 
 ### 0. 先拿到稿件 id（拿不到就问，不许猜）
 
@@ -18,14 +17,14 @@
 1. 用户消息里带了稿件 id 或审稿页链接 → 直接用（链接里的那段 id）。
 2. 本会话早些时候 `draft create` / `draft submit` 返回过 id、或交棒 `dby-publish --draft <id>` 用过 → 用它，
    并向用户复述一句「按稿件 <id>《标题》的意见改」，让他有机会纠正。
-3. 都没有 → 停下问：「要改哪一篇？把审稿页里的稿件 id 或链接发我。」
-   🔴 `draft` 系列**没有 list 子命令**，本包拿不到「待审稿件清单」——别编一个不存在的命令去列，
-   也别拿 `write articles`（已发文章）顶替，那是另一张表。
+3. 都没有 → `dby draft list` 列出本人稿件（head 版摘要），把候选念给用户挑；拿不准就停下问：
+   「要改哪一篇？把审稿页里的稿件 id 或链接发我。」
+   🔴 别拿 `write articles`（已发文章）顶替，那是另一张表。
 
 ### 1. 拉审稿包（唯一的读入口）
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" draft review-packet <稿件id>
+dby draft review-packet <稿件id>
 ```
 
 一次拿齐：`head`（最新版正文与版本号）、`comments[]`（全部待处理评论）、`rejections[]`（自上次
@@ -46,7 +45,7 @@ node "$SKILL_DIR/scripts/dby.mjs" draft review-packet <稿件id>
 - **不能改**（意见有道理但这版不适合改 / 意见有歧义 / 意见与红线冲突）→ **不强行造一条改动**，
   改成在评论下回复说明为什么这版没动它：
   ```bash
-  node "$SKILL_DIR/scripts/dby.mjs" draft comment <稿件id> '{"parentId":"<评论id>","body":"<为什么没改>","author":"dby-write"}'
+  dby draft comment <稿件id> '{"parentId":"<评论id>","body":"<为什么没改>","author":"dby-write"}'
   ```
   拒绝没有对话线程可回复——处置方式是在这版的摘要里带一句「关于第 x 处拒绝：<为什么坚持/或已按原文保留>」。
 
@@ -55,7 +54,7 @@ node "$SKILL_DIR/scripts/dby.mjs" draft review-packet <稿件id>
 ### 3. 提交新版
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" draft submit <稿件id> '{"baseVersion":<head.version>,"author":"dby-write","addresses":["<已回应的评论id>",...],"changes":[...]},"sourceItemIds":["<这一版新用到的记录id>",...]}'
+dby draft submit <稿件id> '{"baseVersion":<head.version>,"author":"dby-write","addresses":["<已回应的评论id>",...],"changes":[...]},"sourceItemIds":["<这一版新用到的记录id>",...]}'
 ```
 
 `baseVersion` 用第 1 步 `head.version`（审稿包读的就是当前最新版，两次调用之间没有人抢先提交的话

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T09:22:51.337088+00:00",
+  "generatedAt": "2026-09-27T09:23:01.695049+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -805,6 +805,12 @@
           "version": "1.8.0",
           "date": "2026-09-09",
           "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
+        },
+        {
+          "hash": "9adf935d1f62",
+          "version": "1.9.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-api,dby-gateway,dby)!: skills 薄层化——只经 dby CLI 调用，删掉 curl 与包内脚本调用"
         }
       ]
     },
@@ -1200,6 +1206,12 @@
           "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
         },
         {
+          "hash": "3ab9f013097a",
+          "version": "5.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-api,dby-gateway,dby)!: skills 薄层化——只经 dby CLI 调用，删掉 curl 与包内脚本调用"
+        },
+        {
           "hash": "4e763e9e71a5",
           "version": "4.9.1",
           "date": "2026-09-27",
@@ -1452,6 +1464,7 @@
         "16456393e483",
         "1ef3638615ce",
         "289a7e8efa11",
+        "35830b4190b7",
         "50583c0c0518",
         "5c113e2fefe3",
         "7d8ce219936b",
@@ -1650,6 +1663,7 @@
       ],
       "status": "active",
       "knownHashes": [
+        "164c512b42d3",
         "18727a7ed695",
         "1e19b29c4f68",
         "21756004f245",
@@ -1740,6 +1754,7 @@
       "topics": [],
       "status": "active",
       "knownHashes": [
+        "47e7e48e2d4d",
         "7b5a56fdd05a",
         "cb8b00794d7e"
       ],
@@ -1993,6 +2008,12 @@
           "version": "1.4.0",
           "date": "2026-09-10",
           "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
+        },
+        {
+          "hash": "a32212b0bfe0",
+          "version": "2.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-api,dby-gateway,dby)!: skills 薄层化——只经 dby CLI 调用，删掉 curl 与包内脚本调用"
         }
       ]
     },
@@ -2689,6 +2710,7 @@
         "049562a1d1aa",
         "0ec795bc6772",
         "27129afe12be",
+        "480cf943df39",
         "61ba5adaec10",
         "64eb94c6e436",
         "8a9e84e32795",
@@ -3403,6 +3425,7 @@
         "acc07fe1a5e9",
         "b40023ac688b",
         "b76d9a964f23",
+        "be547932a8f4",
         "c2fc81af9a24",
         "cadb7e558fce",
         "cfa6a357b46d",
