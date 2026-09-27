@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T10:18:34.323844+00:00",
+  "generatedAt": "2026-09-27T11:01:26.759471+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1252,6 +1252,12 @@
           "subject": "feat(cli): dby skills install|update|status|migrate——一方安装器把随包 skills 写进宿主目录（tasks 6.1 / 6.3）"
         },
         {
+          "hash": "865c4aa8059b",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "feat(cli,dby-image): 新增 dby image describe——恢复 1.x gen.mjs --describe 的入参自动对账"
+        },
+        {
           "hash": "9ac116b6f3d8",
           "version": "4.10.0",
           "date": "2026-09-27",
@@ -1722,14 +1728,15 @@
         "84ed6378362b",
         "bcbbab0055cd",
         "dc1aa44b50b6",
+        "e29315b2a06e",
         "fc0aa01cc498"
       ],
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "84ed6378362b",
+          "hash": "e29315b2a06e",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -2384,6 +2391,12 @@
           "subject": "feat(dby-image): 出图按模型分档计价，且包内不写死点数"
         },
         {
+          "hash": "136cc206931b",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "feat(cli,dby-image): 新增 dby image describe——恢复 1.x gen.mjs --describe 的入参自动对账"
+        },
+        {
           "hash": "47c3002567cb",
           "version": "2.0.0-next.0",
           "date": "2026-09-27",
@@ -2436,6 +2449,7 @@
         "915ea7bae745",
         "93bdab968731",
         "aa22e0e657ae",
+        "aab50768d7dc",
         "afeb6e003c90",
         "b3d4d48e9f81",
         "bede4b73e27b",
@@ -2459,9 +2473,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "e8f39fb996de",
+          "hash": "aab50768d7dc",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -2827,6 +2841,7 @@
       "knownHashes": [
         "049562a1d1aa",
         "0ec795bc6772",
+        "11a2ff5bcb44",
         "1a0a7a3b0752",
         "27129afe12be",
         "480cf943df39",
@@ -2843,9 +2858,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "1a0a7a3b0752",
+          "hash": "11a2ff5bcb44",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -2991,6 +3006,7 @@
         "12d510fb8dd3",
         "2023466e2e9f",
         "249c0edf2825",
+        "5551acfb55d3",
         "895210b408a4",
         "9c3df5a11c54",
         "a1b7ed58c9fe",
@@ -3006,9 +3022,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "249c0edf2825",
+          "hash": "5551acfb55d3",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },

@@ -29,7 +29,7 @@
         "references/病灶清单.md",
         "references/结构审读.md"
       ],
-      "limit": 8345
+      "limit": 8344
     },
     "dby-feedback": {
       "required": [
@@ -47,7 +47,7 @@
     },
     "dby-publish": {
       "required": [],
-      "limit": 2144
+      "limit": 2140
     },
     "dby-rewrite": {
       "required": [
@@ -57,7 +57,7 @@
     },
     "dby-theme": {
       "required": [],
-      "limit": 2035
+      "limit": 2034
     },
     "dby-update": {
       "required": [],
