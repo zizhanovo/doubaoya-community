@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T08:39:07.883731+00:00",
+  "generatedAt": "2026-09-27T08:51:25.359589+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.18.0",
+  "productVersion": "1.18.1",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -822,6 +822,7 @@
         "53d2c3fb1e80",
         "596f05f4d505",
         "5b22bb800679",
+        "5c596c95c435",
         "5f6a8c8b5a66",
         "67323ef8ec64",
         "6c0cb11d4b3b",
@@ -858,11 +859,11 @@
       ],
       "versions": [
         {
-          "version": "4.9.1",
-          "hash": "4e763e9e71a5",
+          "version": "4.9.2",
+          "hash": "566593494423",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:39:03.670159+00:00",
-          "changelog": "feedback prepare 的 --command 与 1.x 一样可以给多次；原 Python 脚本已删除，deai/rewrite/feedback 只经 dby 子命令提供",
+          "releasedAt": "2026-09-27T08:51:19.091721+00:00",
+          "changelog": "dby login/logout 按服务端实际应答对齐（invalid_grant 终止、slow_down 以服务端间隔为准）",
           "changelogSource": "user"
         },
         {
@@ -1184,6 +1185,12 @@
           "version": "4.5.0",
           "date": "2026-09-10",
           "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
+        },
+        {
+          "hash": "4e763e9e71a5",
+          "version": "4.9.1",
+          "date": "2026-09-27",
+          "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
         },
         {
           "hash": "52d8b49fac40",
@@ -1666,6 +1673,12 @@
           "version": "1.3.0",
           "date": "2026-09-06",
           "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+        },
+        {
+          "hash": "18727a7ed695",
+          "version": "2.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
         }
       ]
     },
@@ -1701,6 +1714,12 @@
           "version": "1.0.0",
           "date": "2026-08-30",
           "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+        },
+        {
+          "hash": "cb8b00794d7e",
+          "version": "2.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
         }
       ]
     },
@@ -2726,6 +2745,12 @@
           "version": "1.4.0",
           "date": "2026-09-06",
           "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+        },
+        {
+          "hash": "8a9e84e32795",
+          "version": "2.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
         }
       ]
     },

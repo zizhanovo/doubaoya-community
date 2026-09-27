@@ -39,8 +39,17 @@ async function deviceServer(initialScript, { verificationUri = "https://doubaoya
     "POST /api/cli/device/token": (req, url, body) => {
       polls.push({ at: Date.now(), deviceCode: body?.deviceCode });
       const step = script[Math.min(i++, script.length - 1)];
-      if (step === "grant") return { status: 200, json: ok({ apiKey: NEW_KEY, keyPrefix: NEW_KEY.slice(0, 8) }) };
-      return { status: 400, json: { error: step === "pending" ? "authorization_pending" : step } };
+      // 形状照主仓 apps/api/src/modules/cli/routes.ts：成功 {apiKey, key:{id,name,prefix}, user:{id,email}}；
+      // 失败是信封 error.code，slow_down 带 extra.interval（服务端的新间隔秒数）。
+      if (step === "grant") {
+        return {
+          status: 200,
+          json: ok({ apiKey: NEW_KEY, key: { id: "k1", name: "dby login", prefix: NEW_KEY.slice(0, 8) }, user: { id: "u1", email: "me@example.com" } })
+        };
+      }
+      const code = step === "pending" ? "authorization_pending" : typeof step === "object" ? step.code : step;
+      const extra = typeof step === "object" && step.interval ? { interval: step.interval } : undefined;
+      return { status: 400, json: { success: false, error: { code, message: code, ...(extra ? { extra } : {}) } } };
     },
     "GET /api/agent/whoami": (req) =>
       req.headers.authorization === `Bearer ${NEW_KEY}` && !state.revoked
@@ -50,7 +59,7 @@ async function deviceServer(initialScript, { verificationUri = "https://doubaoya
       state.logoutAuth.push(req.headers.authorization);
       state.logoutBodies.push(body);
       state.revoked = true;
-      return ok({ revoked: true });
+      return ok({ revoked: true, key: { id: "k1", prefix: NEW_KEY.slice(0, 8) } });
     }
   });
   return { mock, polls, state, setScript };
@@ -178,6 +187,36 @@ test("slow_down：之后的轮询间隔增加 5 秒（缩放后 +50ms）", async
     const after = Math.min(gaps[2], gaps[3]);
     assert.ok(after >= 95, `slow_down 之后间隔应 ≥100ms 量级，实际 ${gaps.join("/")}ms`);
     assert.ok(after > before + 25, `slow_down 前后间隔没有拉开：${gaps.join("/")}ms`);
+  } finally {
+    await mock.close();
+  }
+});
+
+test("slow_down 带 extra.interval：以服务端给的间隔为准（不是自己加 5 秒）", async () => {
+  const { mock, polls } = await deviceServer(["pending", { code: "slow_down", interval: 20 }, "pending", "grant"]);
+  try {
+    const r = await runCli(["login", "--json"], { env: env(mock, freshHome()) });
+    assert.equal(r.code, 0, r.stderr);
+    const gaps = polls.slice(1).map((p, i) => p.at - polls[i].at);
+    // gaps[0] 在 slow_down 之前（5s→50ms）；gaps[1]、gaps[2] 在之后：服务端说 20s → 200ms（自己加 5 秒只会是 100ms）
+    assert.ok(Math.min(gaps[1], gaps[2]) >= 190, `应按服务端的 20 秒（缩放后 200ms）轮询，实际 ${gaps.join("/")}ms`);
+  } finally {
+    await mock.close();
+  }
+});
+
+test("invalid_grant（码不存在或已兑换）：终止失败，退出码 4，提示重新 dby login，清掉轮询状态", async () => {
+  const { mock, polls } = await deviceServer(["pending", "invalid_grant", "grant"]);
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--json"], { env: env(mock, home) });
+    assert.equal(r.code, 4, r.stderr);
+    const e = JSON.parse(r.stdout).error;
+    assert.equal(e.code, "LOGIN_INVALID_GRANT");
+    assert.match(e.remediation, /dby login/);
+    assert.equal(polls.length, 2, "invalid_grant 之后不许再轮询");
+    assert.equal(existsSync(credFile(home)), false);
+    assert.equal(existsSync(pendingFile(home)), false);
   } finally {
     await mock.close();
   }

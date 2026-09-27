@@ -33,6 +33,7 @@ import {
   LOGOUT_PATH,
   POLL,
   SLOW_DOWN_STEP_SECONDS,
+  parseLogout,
   parseStart,
   parseToken,
   tokenRequestBody
@@ -107,7 +108,8 @@ async function poll(ctx, p, { maxWaitMs }) {
       if (r.error === POLL.PENDING) {
         // 继续等
       } else if (r.error === POLL.SLOW_DOWN) {
-        interval += SLOW_DOWN_STEP_SECONDS; // RFC 8628 §3.5：此后所有轮询都加 5 秒
+        // 以服务端给的新间隔为准（它按行记着 intervalSec）；没给才按 RFC 8628 §3.5 自己加 5 秒。
+        interval = r.interval ?? interval + SLOW_DOWN_STEP_SECONDS;
         writeJsonPrivate(pendingPath(), { ...p, interval });
       } else if (r.error === POLL.DENIED) {
         clearPending();
@@ -117,9 +119,16 @@ async function poll(ctx, p, { maxWaitMs }) {
         });
       } else if (r.error === POLL.EXPIRED) {
         clearPending();
-        throw new DbyError("LOGIN_EXPIRED", "设备码已过期或已被用过。", {
+        throw new DbyError("LOGIN_EXPIRED", "设备码已过期。", {
           exit: EXIT.AUTH,
           remediation: "重新运行 `dby login` 拿一个新码。"
+        });
+      } else if (r.error === POLL.INVALID_GRANT) {
+        // 码不存在或已经兑换过一次（例如另一个终端的 --continue 已经拿走了 key）：终止，不再轮询。
+        clearPending();
+        throw new DbyError("LOGIN_INVALID_GRANT", "这个设备码无效或已经兑换过。", {
+          exit: EXIT.AUTH,
+          remediation: "重新运行 `dby login` 拿一个新码；如果另一个终端刚登录成功，那边的凭证已经写好，不必再登。"
         });
       }
     } else {
@@ -137,12 +146,15 @@ async function finish(ctx, p, granted) {
   writeCredentials({ apiKey: granted.apiKey, keyPrefix: granted.keyPrefix, baseUrl: p.baseUrl });
   clearPending();
   const keyPrefix = granted.keyPrefix ?? keyPrefixOf(granted.apiKey);
-  let user = null;
-  try {
-    const who = await request({ ...ctx, baseUrl: p.baseUrl, key: granted.apiKey, keySource: "credentials" }, "GET", "/api/agent/whoami", {});
-    user = who?.user ?? null;
-  } catch {
-    // 账号标识只是回显；拿不到不影响已写入的凭证。
+  // 服务端 token 应答自带 user；老外形没有时再问一次 whoami。账号标识只是回显，拿不到不影响已写入的凭证。
+  let user = granted.user?.id || granted.user?.email ? granted.user : null;
+  if (!user) {
+    try {
+      const who = await request({ ...ctx, baseUrl: p.baseUrl, key: granted.apiKey, keySource: "credentials" }, "GET", "/api/agent/whoami", {});
+      user = who?.user ?? null;
+    } catch {
+      // 同上：只影响回显
+    }
   }
   if (process.env.DOUBAOYA_API_KEY) {
     warn(ctx, "注意：当前环境变量 DOUBAOYA_API_KEY 已设置，它优先于刚写入的凭证文件；要用新登录的 key 请先 unset 它。");
@@ -204,7 +216,9 @@ export async function logout(ctx) {
   let failure = null;
   let status = "revoked";
   try {
-    await request(fileCtx, "POST", LOGOUT_PATH, {});
+    const res = parseLogout(await request(fileCtx, "POST", LOGOUT_PATH, {}));
+    // revoked:false = 服务端找到了这把 key 但它已不是 active（并发吊销的窄窗口）；本地照删。
+    if (res.revoked === false) status = "already_invalid";
   } catch (e) {
     if (e instanceof DbyError && e.exit === EXIT.AUTH) status = "already_invalid"; // 网页上早吊销了：本地删掉即可
     else failure = e;
@@ -234,15 +248,17 @@ export const commands = [
     summary: "设备码登录：屏幕给出一个码，你在已登录的 doubaoya.com 确认页手动输入并批准，key 存到 ~/.doubaoya/credentials",
     args: [],
     flags: { continue: { summary: "继续上一次未完成的登录轮询（非交互环境两步走的第二步）" } },
-    // 🔴 routes 刻意留空：设备码端点（/api/cli/device/start、/token）只认免鉴权 + 设备码，主仓对账闸
-    //    把它们登记在排除清单（tasks 1.6），列进这里会被判 extraInCli。kind 仍标 composite——它确实联网，
-    //    不许被 local 不联网测试当成本地命令。实际打的路径见 ../device-contract.mjs。
-    routes: [],
+    // 设备码两条端点在主仓对账闸的排除清单里（免鉴权、凭设备码）；composite 只要求路径真实存在，
+    // 不要求在排除后的集合里，所以照实列出（主仓 COMPOSITE_COMMANDS 登记了 login）。
+    routes: [
+      { method: "POST", path: DEVICE_START_PATH },
+      { method: "POST", path: DEVICE_TOKEN_PATH }
+    ],
     billable: false, destructive: false, composite: true,
     run: (ctx, { flags }) => login(ctx, { continueLogin: !!flags.continue })
   },
   {
-    group: null, name: "logout",
+    group: null, name: "logout", kind: "route",
     summary: "登出：请服务端吊销本机凭证文件里的那把 key，再删除文件（不碰环境变量）",
     args: [], flags: {},
     routes: [{ method: "POST", path: LOGOUT_PATH }],
