@@ -1,0 +1,12 @@
+{
+  "_comment": "反馈接收端契约（dby feedback 的端点配置，原 skills/dby-feedback/scripts/endpoint.json 并入 CLI）。url 为 null = 未配置，submit 降级落本地文件（退出码 0）。后端上线后只改这里发新版，不动代码。环境变量 DOUBAOYA_FEEDBACK_URL 可临时覆盖 url（仅限 https，或本机回环 http://127.0.0.1 / localhost / [::1]）。",
+  "url": null,
+  "method": "POST",
+  "fields": {
+    "category": "category",
+    "report": "report",
+    "machineFacts": "machineFacts",
+    "installId": "installId",
+    "skillVersion": "skillVersion"
+  }
+}

@@ -15,6 +15,10 @@ import {
 const REPO_ROOT = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const PY = path.join(REPO_ROOT, "skills/dby-rewrite/scripts/rewrite.py");
 const REFS = path.join(REPO_ROOT, "skills/dby-rewrite/references");
+// 🔴 pack 测试（exports.test.mjs）跑 prepack 时会临时生成 cli/skills/（npm 包形态），与本文件并行时
+//    默认解析会合法地先命中它——两处内容同源，所以「默认解析」只断言落在这两处之一。
+const PACKED_REFS = path.join(REPO_ROOT, "cli/skills/dby-rewrite/references");
+const DEFAULT_REFS = [REFS, PACKED_REFS];
 
 function pythonUnavailable() {
   if (!existsSync(PY)) return `找不到 ${PY}（Python 已删，改由下面的冻结期望兜底）`;
@@ -88,10 +92,10 @@ test("全平台关键词不带文案也能跑；逗号与空格混用；去重�
 
 test("rules：JSON 只给路径与摘要，不回灌规则全文；人读形态打全文", () => {
   const r = rewriteRules(["小红书"]);
-  assert.equal(r.data.referencesDir, REFS);
+  assert.ok(DEFAULT_REFS.includes(r.data.referencesDir), r.data.referencesDir);
   assert.equal(r.data.platforms.length, 1);
   const e = r.data.platforms[0];
-  assert.equal(e.path, path.join(REFS, "小红书.md"));
+  assert.equal(e.path, path.join(r.data.referencesDir, "小红书.md"));
   assert.ok(e.role && e.bytes > 0);
   const full = readFileSync(e.path, "utf8");
   assert.ok(!JSON.stringify(r.data).includes(full.split("\n").slice(3, 6).join("\n")), "JSON 里回灌了规则正文");
@@ -130,8 +134,8 @@ test("references 路径适配三种运行形态（npm 包 / 社区仓开发 / 1.
     assert.ok(referencesCandidates(src).includes(refs));
     assert.equal(rewriteRules(["知乎"], { srcDir: src }).data.platforms[0].path, path.join(refs, "知乎.md"));
   }
-  // 真实仓库里默认解析到社区仓开发形态
-  assert.equal(resolveReferencesDir(), REFS);
+  // 真实仓库里默认解析到社区仓开发形态（pack 测试并行时可能是临时的 npm 包形态，见文件头）
+  assert.ok(DEFAULT_REFS.includes(resolveReferencesDir()));
   // 缺文件 → 一般错误（包装坏了），不是 USAGE
   const broken = path.join(root, "broken/cli/src");
   mkdirSync(broken, { recursive: true });
