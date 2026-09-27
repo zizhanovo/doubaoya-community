@@ -19,4 +19,5 @@ CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild d
 - dby-update 改薄：只指引装好确切版本的 dby 后跑 `dby skills status` 看清单，再 `dby skills migrate`（1.x 旧装法）或 `dby skills update`；不再调用包内对账脚本（1.x 的 reconcile.mjs 只服务最后一跳，随第 5 组删除）。
 - 发布走 `.github/workflows/publish-npm.yml`（只能手动触发，OIDC Trusted Publishing + provenance，参数为 dist-tag）：全量测试 → 发布前检查 → `npm publish` → 触发 npmmirror 同步并轮询到版本与 integrity 一致才算发布完成；`publishConfig.registry` 钉死 npmjs（本机 npmrc 指向 npmmirror 时也不会发错地方）。
 - ClawHub 上架改为从 npm 包内容生成（`tools/clawhub_publish.py` 默认先隔离 pack 再取包内 `skills/<slug>`，或 `--package` 指定解包目录）：每个 skill 的 `--version` 都等于包版本，包内 SKILL.md 版本漂移直接拒绝。
+- 新增 `dby image describe`（`api describe` 的 alias，同一组路由）：现拉生图能力的入参规格与单价，并把字段与可选模型跟 CLI 的认知对账，对不上退出码 3（`CONTRACT_DRIFT`），恢复 1.x `gen.mjs --describe` 的自动对账。
 

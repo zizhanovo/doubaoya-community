@@ -23,11 +23,19 @@ import { request, INVOKE_TIMEOUT_MS } from "../http.mjs";
 import { billable } from "../confirm.mjs";
 import { getKey } from "../context.mjs";
 import { planFigures } from "../plan-figures-core.mjs";
+import { apiDescribe, commands as apiCommands } from "./api.mjs";
 
 const SLUG = "gpt-image-gen";
 const MAX_REFS = 3;
 // 可选模型：调用方的选择，不传就用服务端默认。选择指引见 dby-image 的 references/api-contract.md。
 export const IMAGE_MODELS = ["gpt-image-2.5-flare", "gpt-image-2.5-sunburst", "gpt-image-2"];
+
+// 本 CLI 认为生图能力在架的入参字段（与 dby-image/references/api-contract.md 同一份认知）。
+// `dby image describe` 拿它跟生产实时契约对账：对不上 = CLI 与文档过期了（恢复 1.x `gen.mjs --describe`）。
+export const IMAGE_EXPECTED_FIELDS = [
+  "background", "imageUrl", "images", "modelName", "n",
+  "operation", "outputFormat", "prompt", "quality", "referenceImage", "size"
+];
 
 const usage = (msg) => new DbyError("USAGE", msg, { exit: EXIT.USAGE });
 
@@ -248,6 +256,59 @@ export async function imageCrops(ctx, { file }) {
   return { data, human: [out235, out1x1, outThumb].join("\n") };
 }
 
+/**
+ * `dby image describe`：现拉 gpt-image-gen 的详情（与 `dby api describe gpt-image-gen` 同一组路由，故登记为它的 alias），
+ * 把生产 inputContract 的字段集合、modelName 可选值与本 CLI 的认知逐项对账。一致 → 退出码 0；
+ * 对不上 → 退出码 3（CONTRACT_DRIFT），data 里给出生产多出 / 生产没有的字段——以生产为准，改 CLI 与 api-contract.md。
+ */
+export async function imageDescribe(ctx) {
+  const { data: capability } = await apiDescribe(ctx, SLUG);
+  const contract = capability?.inputContract;
+  const schema = contract?.kind === "json-schema" ? contract.jsonSchema : null;
+  if (!schema?.properties) {
+    throw new DbyError("NO_INPUT_CONTRACT", `生产详情里没有 ${SLUG} 的 json-schema 入参规格（inputContract.kind=${contract?.kind ?? "缺"}），无法对账。`, {
+      exit: EXIT.BUSINESS,
+      remediation: "改看 `dby api describe gpt-image-gen` 的 inputUiSchema / requestSchema，人工对照 references/api-contract.md。"
+    });
+  }
+  const live = Object.keys(schema.properties).sort();
+  const expected = [...IMAGE_EXPECTED_FIELDS].sort();
+  const liveModels = Array.isArray(schema.properties.modelName?.enum) ? [...schema.properties.modelName.enum].sort() : null;
+  const data = {
+    slug: SLUG,
+    operationKey: capability.operationKey ?? null,
+    unitPrice: capability.unitPrice ?? null,
+    required: schema.required ?? [],
+    liveFields: live,
+    expectedFields: expected,
+    added: live.filter((k) => !expected.includes(k)),
+    gone: expected.filter((k) => !live.includes(k)),
+    models: liveModels
+      ? { live: liveModels, expected: [...IMAGE_MODELS].sort(), added: liveModels.filter((m) => !IMAGE_MODELS.includes(m)), gone: IMAGE_MODELS.filter((m) => !liveModels.includes(m)) }
+      : null
+  };
+  data.consistent = !data.added.length && !data.gone.length && (!data.models || (!data.models.added.length && !data.models.gone.length));
+  const lines = [
+    `单价 ${data.unitPrice ?? "?"} 点／次   必填 ${JSON.stringify(data.required)}`,
+    `生产字段(${live.length})：${live.join(" ")}`,
+    ...(liveModels ? [`生产可选模型：${liveModels.join(" / ")}`] : [])
+  ];
+  if (data.consistent) return { data, human: [...lines, "✅ 与本 CLI 的认知一致"].join("\n") };
+  const detail = [
+    data.added.length ? `生产多出字段：${data.added.join(" ")}` : null,
+    data.gone.length ? `生产没有字段：${data.gone.join(" ")}` : null,
+    data.models?.added.length ? `生产多出模型：${data.models.added.join(" ")}` : null,
+    data.models?.gone.length ? `生产没有模型：${data.models.gone.join(" ")}` : null
+  ].filter(Boolean);
+  const err = new DbyError("CONTRACT_DRIFT", `生图入参与本 CLI 的认知对不上——${detail.join("；")}。以生产为准。`, {
+    exit: EXIT.BUSINESS,
+    remediation: "照生产契约拼参数（dby api describe gpt-image-gen 看完整规格）；并用 dby-feedback 报给维护者更新 CLI 与 dby-image/references/api-contract.md。"
+  });
+  err.data = data;
+  err.human = [...lines, `🔴 ${detail.join("；")}`].join("\n");
+  throw err;
+}
+
 const genFlags = {
   ref: { value: true, multiple: true, summary: "参考图（本地文件 / URL / data:），最多 3 张" },
   out: { value: true, summary: "输出文件（默认 doubaoya-image.<按 mime>）" },
@@ -275,6 +336,15 @@ export const commands = [
     billable: true, destructive: false, composite: true,
     run: (ctx, { args, flags }) =>
       imageGen(ctx, { words: args.prompt, refs: flags.ref ?? [], out: flags.out, model: flags.model, requireRef: true })
+  },
+  {
+    // 打的就是 `api describe gpt-image-gen` 那组路由（先查 skills 详情，查不到再看清单），只多一步本地对账 ⇒ alias。
+    group: "image", name: "describe", aliasOf: "api describe",
+    summary: "现拉生图能力的入参规格与单价，并与本 CLI 的认知对账（字段 / 模型对不上退出码 3）；免费、免 key",
+    args: [], flags: {},
+    routes: apiCommands.find((c) => c.name === "describe").routes,
+    billable: false, destructive: false, composite: true,
+    run: (ctx) => imageDescribe(ctx)
   },
   {
     group: "image", name: "plan", kind: "local",

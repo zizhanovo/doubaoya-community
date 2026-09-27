@@ -131,3 +131,60 @@ test("image plan：确定性规划，只读文件不改文件", async () => {
   assert.equal(data.figures[0].anchor.value, "长小节");
   assert.equal(readFileSync(md, "utf8"), text);
 });
+
+// ── image describe（恢复 1.x `gen.mjs --describe` 的参数对账）──────────────────
+import { IMAGE_EXPECTED_FIELDS, IMAGE_MODELS } from "../src/commands/image.mjs";
+
+function describeMock(properties) {
+  const detail = {
+    slug: "gpt-image-gen", operationKey: "skill.ai.imageGen", unitPrice: 15,
+    execution: { mode: "generic", target: { method: "POST", path: "/api/skills/gpt-image-gen/invoke" } },
+    inputContract: { kind: "json-schema", jsonSchema: { type: "object", required: ["prompt"], properties } }
+  };
+  return startMock({ "GET /api/skills/gpt-image-gen": ok(detail) });
+}
+const props = (fields, extra = {}) => ({ ...Object.fromEntries(fields.map((f) => [f, { type: "string" }])), ...extra });
+
+test("image describe：生产字段与认知一致 → 退出码 0，免 key，只打详情这一条", async () => {
+  const mock = await describeMock(props(IMAGE_EXPECTED_FIELDS, { modelName: { type: "string", enum: [...IMAGE_MODELS] } }));
+  try {
+    const r = await runCli(["image", "describe", "--json"], { env: { DOUBAOYA_BASE_URL: mock.url } });
+    assert.equal(r.code, 0, r.stderr);
+    const d = JSON.parse(r.stdout).data;
+    assert.equal(d.consistent, true);
+    assert.equal(d.unitPrice, 15);
+    assert.deepEqual(d.added, []);
+    assert.deepEqual(d.models.gone, []);
+    assert.deepEqual(mock.hits.map((h) => `${h.method} ${h.path}`), ["GET /api/skills/gpt-image-gen"]);
+  } finally {
+    await mock.close();
+  }
+});
+
+test("image describe：生产多出字段 / 少了字段 / 模型对不上 → 退出码 3 CONTRACT_DRIFT，data 列出差异", async () => {
+  const fields = IMAGE_EXPECTED_FIELDS.filter((f) => f !== "quality");
+  const mock = await describeMock(props([...fields, "aspectRatio"], { modelName: { type: "string", enum: ["gpt-image-2.5-flare", "gpt-image-3"] } }));
+  try {
+    const r = await runCli(["image", "describe", "--json"], { env: { DOUBAOYA_BASE_URL: mock.url } });
+    assert.equal(r.code, 3, r.stderr);
+    const env = JSON.parse(r.stdout);
+    assert.equal(env.error.code, "CONTRACT_DRIFT");
+    assert.deepEqual(env.data.added, ["aspectRatio"]);
+    assert.deepEqual(env.data.gone, ["quality"]);
+    assert.deepEqual(env.data.models.added, ["gpt-image-3"]);
+    assert.ok(env.data.models.gone.includes("gpt-image-2"));
+  } finally {
+    await mock.close();
+  }
+});
+
+test("image describe：生产没有 json-schema 规格 → 退出码 3 NO_INPUT_CONTRACT，不编一份", async () => {
+  const mock = await startMock({ "GET /api/skills/gpt-image-gen": ok({ slug: "gpt-image-gen", inputContract: { kind: "no-schema", route: "x" } }) });
+  try {
+    const r = await runCli(["image", "describe", "--json"], { env: { DOUBAOYA_BASE_URL: mock.url } });
+    assert.equal(r.code, 3, r.stderr);
+    assert.equal(JSON.parse(r.stdout).error.code, "NO_INPUT_CONTRACT");
+  } finally {
+    await mock.close();
+  }
+});

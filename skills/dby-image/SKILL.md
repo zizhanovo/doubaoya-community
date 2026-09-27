@@ -42,8 +42,8 @@ dby image gen "一只戴围巾的黄色小鸭子站在雪地里，卡通插画�
 dby image edit "只把围巾换成蓝色，其余全部保持不变：鸭子造型、姿势、雪地场景、构图都不要动。" \
   --ref ./duck.jpg --out duck2.png --confirm
 
-# 看实时价格 / 入参契约（免费，不出图）
-dby api describe gpt-image-gen
+# 看实时价格并对账入参（免费，不出图）
+dby image describe
 ```
 
 `--out` 相对当前目录；不给就是 `doubaoya-image.<ext>`。**`--model` 不传走默认档**；三档价钱不同，
@@ -171,7 +171,7 @@ dby api describe gpt-image-gen
 | `401` | 密钥问题，更新 skill 治不了 |
 | `503 CAPABILITY_UNAVAILABLE` | **不要重试**，如实告知 |
 | 请求未完成 / 超时 | **不要重试**（正文「失败之后不要重试」）。可能已扣费，交给用户决定 |
-| 怀疑参数认知过期 | `dby api describe gpt-image-gen` 对照 `references/api-contract.md`，以生产为准 |
+| 怀疑参数认知过期 | `dby image describe`，退出码 3 即过期，以生产为准 |
 
 照做仍绕不过去、或想吐槽 → 可提一句用 `dby-feedback` 当场写成反馈（可忽略，不再重复提）。
 
