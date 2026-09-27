@@ -47,27 +47,24 @@ agent 会读环境变量里的 `DOUBAOYA_API_KEY`，自己调接口、自己拼�
 
 ## 自己动手试一下（可选）
 
-仓库附了一个零依赖封装（Node 18+）：
+所有调用都走都爆鸭官方命令行 `dby`（npm 包 `@doubaoya/cli`，Node 22+，零依赖）：
 
 ```bash
-export DOUBAOYA_API_KEY=dyh_你的密钥
+dby login                                              # 一次登录，凭证存本机；也可以只设 DOUBAOYA_API_KEY
 
-node scripts/doubaoya.mjs list                              # 两个集合一起拉，不需要 key
-node scripts/doubaoya.mjs describe xiaohongshu-viral-notes  # 这一条的入参规格长什么样
-node scripts/doubaoya.mjs invoke xiaohongshu-viral-notes '<照 describe 拉到的入参规格填>'
+dby api list                                           # 两个集合一起拉，不需要 key
+dby api describe xiaohongshu-viral-notes               # 这一条的入参规格长什么样
+dby api invoke xiaohongshu-viral-notes '<照 describe 拉到的入参规格填>'
 ```
 
-> `describe` 先拉、`invoke` 再打，是有意的顺序：入参规格**以详情端点这一刻返回的为准**，
+> `describe` 先拉、`invoke` 再打，是有意的顺序：入参规格**以详情这一刻返回的为准**，
 > 本文档不抄任何一条能力的字段名（抄了就会漂，而漂了没有任何地方会报错）。
+> 没有全局装 `dby` 时，SKILL.md 开头的「调用 dby」一节写了用 npx 拉确切版本的办法。
 
 ## 怎么调（给好奇的人）
 
-所有能力挂在 `https://doubaoya.com/api/...`，统一信封返回：
-
-```
-POST https://doubaoya.com/api/skills/<slug>/invoke
-Authorization: Bearer $DOUBAOYA_API_KEY
-```
+所有能力统一信封返回，`dby api invoke` 会替你带上凭证、选对路由、处理计费确认
+（计费调用默认停在确认态，加 `--confirm` 才真打）。
 
 完整说明、能力清单、错误处理、端到端工作流见 [`SKILL.md`](./SKILL.md)。
 

@@ -2,8 +2,8 @@
 
 面向要把 `dby` 的命令串成自己的取材 / 写作 / 发布链路、或造自己专属 skill 的人。
 只写事实：每步对应哪几条命令、每种失败怎么处置、该在哪一档停手、哪里真花钱。
-命令名逐字对过 `node skills/dby-api/scripts/dby.mjs routes --json`，参数细节一律看
-`node "$SKILL_DIR/scripts/dby.mjs" <组> <命令> --help`（`$SKILL_DIR` = 本包目录），这里不重复。
+命令名逐字对过 `dby routes --json`，参数细节一律看 `dby <组> <命令> --help`，这里不重复。
+怎么拿到 `dby`（全局安装或 npx 拉确切版本）见 `dby-api/SKILL.md` 开头的「调用 dby」一节。
 
 ---
 
@@ -32,7 +32,7 @@
 | 1 | 一般错误（服务端 5xx、未预期异常） | 记下错误信息，可重试一次；再失败就上报用户，别悄悄吞掉 |
 | 2 | 用法 / 参数错 | 改参数、看 `--help`，别猜着重试 |
 | 3 | 业务态（`no_account`、查无此能力、`doctor` 有项不过…） | 按 `error.code` 分支处理。常见：`NOT_FOUND`（换 ref 或先 `api list`/`api search`）、`AMBIGUOUS_REF`（按提示点名 `platform/slug`）、`BANNED_CHECK_PARTIAL`（部分平台失败，看 `data` 里逐平台结果） |
-| 4 | 鉴权失败 | 先核 `DOUBAOYA_API_KEY` 是否已设；已设仍 4 时可能是**服务端还没升级到这条路由**，别急着换 key |
+| 4 | 鉴权失败 / 没有凭证 | 没登录过就请用户跑 `dby login`（或设 `DOUBAOYA_API_KEY`）；已设仍 4 时可能是**服务端还没升级到这条路由**，别急着换 key |
 | 5 | 网络超时 | 🔴 **计费类命令绝不自动重试**——先核实是否已经扣点（`usage logs` / `usage log <id>`），再决定要不要手动重放；免费只读命令可以直接重试 |
 | 6 | 需确认 | 停下，把回执里的 `changes` 转述给用户；得到同意后把回执给的确认命令原样重放（或手动加 `--confirm`） |
 

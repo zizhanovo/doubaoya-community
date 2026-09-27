@@ -26,15 +26,16 @@
 > 2026-08-18 从发现接口实拉生成，共 94 条（2026-08-22 复核：与生产**零漂移**）。
 > **准数与在架状态以你实拉的发现接口为准**——
 > 下架的条目会从发现接口里消失，本表不会自己知道。表里没有你要的能力时，
-> 先拉一遍 `GET /api/skills` 和 `GET /api/apis` 再下结论。
+> 先 `dby api list`（默认两个集合都拉）再下结论。
 >
 > 标记：⚠️专用 = `execution` 的 `mode` 是 `dedicated`，调用地址与详情端点无关，**必须读 `target`**；
 > ⛔ = 实拉时 `mode` 为 `unavailable`，当前不可调。
 >
-> 出图与封面生成能力当前暂时下架，不列入可选路能力；未来是否恢复需重新评估，当前不承诺恢复时间。
+> 出图 / 改图 / 封面成品图：服务端生图能力 2026-09 已恢复，业务入口是 `dby-image`（`dby image gen`）；
+> 本表生成于恢复之前，暂未收录生图那几条，要看它们的详情就 `dby api list` 现拉。
 
 <!-- 本表由发现接口生成，勿手改。重新生成：
-     curl -s https://doubaoya.com/api/apis 与 /api/skills，
+     dby api list（默认两个集合都拉），
      按 operationKey / title / (platform,slug) 三列铺开即可。 -->
 
 ### 产品化 Skill 集合 —— 详情端点 `GET /api/skills/<slug>`
@@ -193,20 +194,17 @@
 两条发现接口都免鉴权免费，比一遍就知道。**别只比条数**——条数相同也可能一进一出。
 
 ```bash
-# ① 生产在架的全部 slug（两个集合各拉一次，合并去重）
-{ curl -s https://doubaoya.com/api/skills | python3 -c "import json,sys;[print(i['slug']) for i in json.load(sys.stdin)['data']['items']]"
-  curl -s https://doubaoya.com/api/apis   | python3 -c "import json,sys;[print(i['slug']) for i in json.load(sys.stdin)['data']['items']]"
-} | sort -u > /tmp/live.txt
+# ① 生产在架的全部 operationKey（dby api list 默认两个集合都拉）
+dby api list | grep -o '"operationKey": *"[^"]*"' | sed -E 's/.*"([^"]+)"$/\1/' | sort -u > /tmp/live.txt
 
-# 本表里的 slug（详情端点路径的最后一段）
-grep -o -E '/api/(skills|apis)/[a-z0-9/-]+' capability-index.md | sed -E 's|.*/||' | sort -u > /tmp/idx.txt
+# ② 本表里的 operationKey（索引行首列）
+grep -o -E '^\| `(api|skill|tool)\.[A-Za-z0-9]+\.[A-Za-z0-9]+`' capability-index.md | tr -d '|` ' | sort -u > /tmp/idx.txt
 
 comm -13 /tmp/live.txt /tmp/idx.txt   # 表里有、生产没有 = 已下架却还在教
 comm -23 /tmp/live.txt /tmp/idx.txt   # 生产有、表里没有 = 新上但表没跟上
 ```
 
-⚠️ **两边格式必须先对齐再比。** 数据能力那半边发现接口给的是 `platform/slug`，
-本表存的是裸 slug —— 不去掉平台前缀直接 `comm`，会比出一份**全是假的**漂移清单
-（2026-08-22 实测：不对齐时报 77 条"漂移"，对齐后是 0 条）。
+⚠️ **按 operationKey 比，别按 slug 比。** 数据能力那半边不同平台下 slug 会重名（`search-user`
+在好几个平台都有），按裸 slug 去重会把重名的吞掉，比出一份假的「零漂移」。
 
 两个方向都空 = 索引与生产一致。**任一方向非空就回来改表**，别让它继续教已下架的能力。

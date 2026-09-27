@@ -16,17 +16,18 @@
 
 这一节是**只有踩过才知道**的东西，也是本 Skill 除协议外唯一值得读的部分。
 
-### 1 🔴 `operationKey` 有**唯一一处撞名**，点名时必须带上详情端点
+### 1 🔴 `operationKey` 有**唯一一处撞名**，点名时必须改用 slug
 
 `tool.contentSafety.checkWords` **同时存在于两个集合**，是 94 条里唯一的一处：
 
-| 集合 | 详情端点 | 说明 |
+| 集合 | 用 dby 点名的写法 | 说明 |
 |---|---|---|
-| 平台数据能力 | `/api/apis/tool/check-banned-words` | 通用违禁词检测 |
-| 产品化 Skill | `/api/skills/content-safety-check` | 多平台违禁词检测 |
+| 平台数据能力 | `dby api describe tool/check-banned-words` | 通用违禁词检测 |
+| 产品化 Skill | `dby api describe content-safety-check` | 多平台违禁词检测 |
 
 两条**同价、都在架、路由完全不同**。所以「用 `operationKey` 点名能力」这个约定，
-在这一条上**不足以定位**——业务 Skill 点名时必须**同时给出详情端点**（SKILL.md §2 的模板已经这么要求了）。
+在这一条上**不足以定位**——拿它去 `dby api describe` / `dby api invoke` 会得到 `AMBIGUOUS_REF`
+（退出码 3，提示里列出两种写法）；业务 Skill 点名时必须**同时给出上表的 slug 写法**。
 其余 92 条 `operationKey` 全局唯一，点名无歧义。
 
 ### 2 违禁词检测：空结果**照样收费**，而且**没有「风险等级」这种东西**
@@ -65,16 +66,18 @@
 
 ### 6 搜索 / 推荐接口只看得见一半
 
-`GET /api/skills/search` 和 `POST /api/skills/recommend` **只在产品化 Skill 那 17 条里排序**，
-**看不见另外 77 条平台数据能力**。所以：
+服务端的搜索与推荐接口**只在产品化 Skill 那 17 条里排序**，**看不见另外 77 条平台数据能力**。
+`dby api recommend` 就是那条推荐接口；`dby api search` 两边都搜，但数据能力那半边只是本地按
+slug / 标题 / 摘要 / 标签字面过滤，没有服务端打分。所以：
 
 - 用它们「找能力」，找不到**不等于**能力不存在。
-- 找数据类能力请直接拉 `GET /api/apis` 自己筛。
-- `recommend` 是 POST，**必须带 `Authorization` 头**，否则 403 `CSRF_FORBIDDEN`（SKILL.md §3.1）。
+- 找数据类能力请直接 `dby api list --apis` 自己筛。
+- `dby api recommend` 需要凭证（没有就退出码 4 → `dby login`）；绕开 dby 自己拼请求时，
+  这条 POST 不带 `Authorization` 头会被 403 `CSRF_FORBIDDEN` 拦下（`samples.md` §5）。
 
 ### 7 404 的正确破法
 
-1. **两个集合都拉一遍**：`GET /api/skills` 和 `GET /api/apis`。八成是能力在另一半。
+1. **两个集合都拉一遍**：`dby api list`（默认两个集合都拉）。八成是能力在另一半。
 2. 找到后**照它的 `execution` 的 `target` 打**，不要自己拼路径。
 3. 两个集合都没有 ⇒ 这个能力**不存在或已下架**。如实告诉用户，**别再猜别的 slug**。
 4. 🔴 尤其别把**技能包目录名**（`npx skills add` 装进来的那个文件夹名）当成调用 slug——
@@ -94,10 +97,10 @@
 `skill.wechat.accountAnalyzer`（账号诊断）与 `skill.wechat.similarAccount`（相似账号推荐）
 读的都是**库里现有的数据**。账号没收录、或数据太旧时，可以先触发一次入库同步：
 
-| 场景 | 同步端点 | 要给什么 |
+| 场景 | 同步能力 | 要给什么 |
 |---|---|---|
-| 诊断前刷新这个号的发文数据 | `POST /api/apis/gongzhonghao/gzh-sync-notes/call` | 账号名 |
-| 这个号还没收录，想让它进库 | `POST /api/apis/gongzhonghao/gzh-sync-account/call` ⛔ 实拉时 `mode=unavailable`，别调；先 `GET /api/apis/gongzhonghao/gzh-sync-account` 确认恢复了再用 | 账号名 **加微信号**（`gh_` 开头那个），少一个不行 |
+| 诊断前刷新这个号的发文数据 | `dby api invoke api.gzh.syncUserNotes` | 账号名 |
+| 这个号还没收录，想让它进库 | `dby api invoke api.gzh.syncAccount` ⛔ 实拉时 `mode=unavailable`，别调；先 `dby api describe api.gzh.syncAccount` 确认恢复了再用 | 账号名 **加微信号**（`gh_` 开头那个），少一个不行 |
 
 （**字段名照例现拉**：上面两列说的是「要给哪些信息」，不是入参规格——具体叫什么、放在哪，
 以这一刻详情端点返回的那份为准。）

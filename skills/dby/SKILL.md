@@ -7,11 +7,11 @@ description: >-
   「刚发完一篇接下来呢」「刚写完了然后呢」「这一步做完了下一步干嘛」「排完版了还要做什么」。
   本包管选路与衔接：**任何「刚做完某一步、接下来该干嘛」都归它**（哪怕刚做完的是写作或发布）；本包自己不取数、不写作、不排版。已经点名了要用哪个包时直接用那个，不必绕本包。
   Trigger words: /dby, what's next, where do I start, which dby skill.
-version: 1.8.0
-changelog: 出图话术改回指向 dby-image —— 服务端生图能力 2026-09 已恢复（换供应商 + gpt-image-2.5），此前那行「当前暂时下架」已成假信息；「封面灵感 / 爆款封面参考」仍归 dby-api（给数据不出图），但不再附带「成品图能力下架」的旧口径
+version: 1.9.0
+changelog: navigation / onboarding 里残留的「出图暂时下架」改成交给 dby-image；公众号头部榜 / 发文列表改用能力 operationKey 点名；路由表不再写 CLI 命令
 compatibility: >-
   纯路由与导航，不跑脚本、不发网络请求、不需要任何密钥。被它路由到的包各自有自己的前置条件
-  （多数需要环境变量 DOUBAOYA_API_KEY；dby-rewrite 纯本地不需要）。
+  （多数需要凭证：dby login 或环境变量 DOUBAOYA_API_KEY；dby-rewrite 纯本地不需要）。
 ---
 
 # dby：都爆鸭公众号工具箱
@@ -54,7 +54,7 @@ compatibility: >-
 | 这篇 AI 味太重 / 读着像机器写的 / 说人话 / 没人味 / 去 AI 味 | `dby-deai`（默认只出体检报告，改不改由用户定；纯本地不需要 key） |
 | 想改 / 定制公众号排版样式（换配色 / 标题条 / 引用卡） | `dby-theme` |
 | 文章写好了要排版 + 封面 + 存进自己公众号草稿箱 | `dby-publish`（md→HTML→封面→草稿；只存草稿、不群发） |
-| 已有排好版的图文，只想推进草稿箱 | `dby-publish`（`dby wechat publish`，需先绑定公众号） |
+| 已有排好版的图文，只想推进草稿箱 | `dby-publish`（只推草稿箱，需先绑定公众号） |
 | 想给公众号做体检 / 看发文表现 / 竞品账号对照 | `dby-api`（`skill.wechat.accountAnalyzer`） |
 | 想追更某个号 / 复盘竞品最近发了啥 | `dby-api`（先 `api.gzh.searchUser` 拿 ID，再 `api.gzh.workList`；上游只认 ID 不认昵称） |
 | 想找对标账号 / 起号参考 / 搭竞品矩阵 | `dby-api`（`skill.wechat.similarAccount`） |

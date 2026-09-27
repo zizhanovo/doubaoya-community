@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T09:22:39.810728+00:00",
+  "generatedAt": "2026-09-27T09:22:51.337088+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.19.0",
+  "productVersion": "1.20.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -514,6 +514,7 @@
         "75694e183386",
         "7ec123c4ccf5",
         "8a3dde169bfd",
+        "9adf935d1f62",
         "9c4f8edfa780",
         "9f20f18cca31",
         "a4d72b56310c",
@@ -822,6 +823,7 @@
         "156c3151a72a",
         "1f85fe64a731",
         "2e02904d7d96",
+        "3ab9f013097a",
         "3fca623fc119",
         "4e763e9e71a5",
         "50cdd6a062be",
@@ -870,11 +872,11 @@
       ],
       "versions": [
         {
-          "version": "4.10.1",
-          "hash": "d01e1ab7a87f",
+          "version": "5.0.0",
+          "hash": "3ab9f013097a",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "dby charter put 认得 dby charter get --for-edit 重定向进文件后的 {ok,data} 信封，只发章程本身",
+          "releasedAt": "2026-09-27T09:22:49.331338+00:00",
+          "changelog": "调用一律改走 dby CLI（@doubaoya/cli），SKILL.md 放统一调用约定段；能力表去掉详情端点列、改用 dby api describe 现拉",
           "changelogSource": "user"
         },
         {
@@ -1244,6 +1246,12 @@
           "version": "4.9.3",
           "date": "2026-09-27",
           "subject": "feat(cli): 同一路由的同义命令改为 alias，dby routes 满足「同一路由至多一条 route 命令」"
+        },
+        {
+          "hash": "d01e1ab7a87f",
+          "version": "4.10.1",
+          "date": "2026-09-27",
+          "subject": "fix(cli): dby charter put 认得 charter get --for-edit 重定向后的信封"
         }
       ]
     },
@@ -1791,6 +1799,7 @@
         "83905537e90d",
         "89f720d429f3",
         "9818d9fd10e5",
+        "a32212b0bfe0",
         "b798cca6be87",
         "e19a51009f8d",
         "e1dc9e3d282e",

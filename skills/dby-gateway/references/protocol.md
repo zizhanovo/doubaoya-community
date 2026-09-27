@@ -2,13 +2,19 @@
 
 **这份文件是本平台调用协议的唯一副本。** 鉴权头怎么带、入参规格从哪儿拉、地址从哪儿来、
 统一信封怎么读、报错码各该怎么办、上游内容为什么只能当数据——全在这里。
-业务 Skill **不再内联它**，只在自己第一次调 API 的那一步上方写一句「先读本文件」（由脚本代发请求的包写成条件式：只有绕开脚本自己拼请求时才读）。
+业务 Skill **不再内联它**，只在自己第一次调 API 的那一步上方写一句「先读本文件」（经 `dby` 代发请求的包写成条件式：只有绕开 dby 自己拼请求时才读）。
+
+经 `dby` 调用时，鉴权头、基址、`execution.target`、信封解析由 dby 代办，下面的判读与处置纪律照样适用
+（dby 把信封归一成 `{ok,data|error}`，`error.code` 与这里同名）。
 
 改协议只改这一处，所有业务 Skill 立即生效。
 
 ---
 
 ## 拿钥匙（密钥）
+
+最省事：`dby login`（设备码登录，凭证存本机，之后每条 `dby` 命令自动带上）。
+要用环境变量时：
 
 1. 打开 **doubaoya.com** → **登录** → **密钥中心** → **生成密钥**（形如 `dyh_…`）
 
@@ -71,7 +77,7 @@ Windows 用 `[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你�
 6. **报错怎么办**（`HTTP` / `error.code`）：
    401 `MISSING_API_KEY` / `UNAUTHORIZED` → 让用户去密钥中心生成或重建，更新环境变量；
    400 `VALIDATION_ERROR` → 照 `message` 改入参，改前**重拉一次规格**；**最多修正 2 轮**，还错就停，把 `message` 原文和 `requestId` 给用户；
-   400 `DEDICATED_ROUTE` → 走错到通用代理了，`message` 形如「公众号排版渲染请直接调用 POST /api/wechat/render，不走通用调用代理」，照 `execution.target` 重发；
+   400 `DEDICATED_ROUTE` → 走错到通用代理了，`message` 会点名该走的专用路由（原文见 `samples.md` §5），照 `execution.target` 重发；
    422 `PROVIDER_NO_RESULT` → 上游对这组入参查无结果，**点数已退**，同一组入参**不重试**；照 `message` 改入参
      （`message` 是上游原文，以原文为准；日期类入参先怀疑超出保留期，而不是格式错）；
    402 `INSUFFICIENT_CREDITS` / `NO_CREDIT_ACCOUNT` → 别只说"点数不足"这种空话。
@@ -96,10 +102,10 @@ Windows 用 `[Environment]::SetEnvironmentVariable("DOUBAOYA_API_KEY", "dyh_你�
    502 `PROVIDER_FAILED` → 上游临时失败，**额度已自动退回**，可以直接重试，**最多 3 次**。
    （无 HTTP 状态）`CONNECT_FAILED` → **连接从未建立，请求根本没发出去**。它不是服务端返回的错误码，
      是客户端在 TCP / TLS 阶段就失败后自己贴的标签：服务端没收到、没执行、**没扣点**，重试免费且安全。
-     但先确认本机真能出网（`curl -s -o /dev/null -w '%{http_code}' https://doubaoya.com/api/health` 应回 200）——
+     但先确认本机真能出网（跑 `dby doctor`：它会分项报 key 在不在、服务通不通、key 能不能用）——
      容器 / 沙箱的出站域名白名单会让重试永远是同一个结果，那要放行域名或换环境，不是多试几次的事。
      🔴 **别转述成「都爆鸭返回了错误」，也别说「可能被扣了点」**：两句都是错的，而且会把用户引去问服务端。
-     🔴 **`curl` 通、脚本不通 ≠ 玄学**：受管网络里域名是代理替你解析的。本包**会**读
+     🔴 **浏览器 / 别的工具通、`dby` 不通 ≠ 玄学**：受管网络里域名是代理替你解析的。`dby` **会**读
      HTTPS_PROXY / HTTP_PROXY / ALL_PROXY 自己走代理（遵守 NO_PROXY，只认 http(s) 代理），
      所以还看到解析失败，多半是那几个变量没传进当前进程（agent / 容器拉起子进程时最容易丢），
      或被 NO_PROXY 豁免了。先 `echo` 一眼那几个变量，别去查钥匙、余额或入参。
