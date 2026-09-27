@@ -58,6 +58,14 @@ export async function charterPut(ctx, file, opts) {
   } catch (e) {
     throw new DbyError("USAGE", `读不了 ${file}：${e.message}`, { exit: EXIT.USAGE });
   }
+  // `dby charter get --for-edit > c.json` 在管道/重定向下是非 TTY ⇒ stdout 是 {ok,data:{charter,…}} 信封，
+  // 不是裸章程。原样 put 回去会把信封当章程发出去（服务端 CHARTER_INVALID）。认出本 CLI 自己的信封就拆开。
+  if (doc && typeof doc === "object" && doc.ok === true && doc.data && typeof doc.data === "object" && "charter" in doc.data) {
+    doc = doc.data.charter;
+  }
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+    throw new DbyError("USAGE", `${file} 里不是一份章程 JSON 对象。`, { exit: EXIT.USAGE });
+  }
   let id = opts.profile;
   if (!id) {
     const { profileId } = await request(ctx, "GET", "/api/ip-profile/charter", { hints: CHARTER_HINTS });

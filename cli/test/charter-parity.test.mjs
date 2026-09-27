@@ -134,3 +134,22 @@ test("CHARTER_INVALID：message 原样透传、remediation 给「一次性重 PU
     await mock.close();
   }
 });
+
+test("charter get --for-edit 重定向进文件（非 TTY ⇒ 信封）后直接 charter put：拆开信封，发出去的是章程本身", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "dby-charter-env-"));
+  const file = path.join(dir, "c.json");
+  const mock = await startMock(charterRoutes());
+  try {
+    const got = await runCli(["charter", "get", "--for-edit"], { env: envFor(mock) }); // 管道 = 非 TTY
+    assert.equal(got.code, 0, got.stderr);
+    assert.equal(JSON.parse(got.stdout).ok, true, "前提：重定向下拿到的确实是信封");
+    await writeFile(file, got.stdout);
+    const put = await runCli(["charter", "put", file], { env: envFor(mock) });
+    assert.equal(put.code, 0, put.stderr);
+    const body = mock.hits.find((h) => h.method === "PUT").body;
+    assert.ok(!("ok" in body) && !("data" in body), "信封不许被当成章程发出去");
+    assert.deepEqual(body, stripReadOnlyProjection(FIXTURE_CHARTER));
+  } finally {
+    await mock.close();
+  }
+});

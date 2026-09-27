@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T09:01:40.710743+00:00",
+  "generatedAt": "2026-09-27T09:22:39.810728+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.18.3",
+  "productVersion": "1.19.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -532,6 +532,14 @@
       ],
       "versions": [
         {
+          "version": "1.9.0",
+          "hash": "9adf935d1f62",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "navigation / onboarding 里残留的「出图暂时下架」改成交给 dby-image；公众号头部榜 / 发文列表改用能力 operationKey 点名；路由表不再写 CLI 命令",
+          "changelogSource": "user"
+        },
+        {
           "version": "1.8.0",
           "hash": "2e9a12d54070",
           "ref": "release-20260831-0756",
@@ -853,6 +861,7 @@
         "cbc0c21c5d7a",
         "cc30a05cdb0b",
         "ce8326e3dbd2",
+        "d01e1ab7a87f",
         "d6ce3852f9e1",
         "d7e863f5577a",
         "e603a50797a0",
@@ -861,11 +870,11 @@
       ],
       "versions": [
         {
-          "version": "4.10.0",
-          "hash": "9ac116b6f3d8",
+          "version": "4.10.1",
+          "hash": "d01e1ab7a87f",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:01:38.097389+00:00",
-          "changelog": "dby feedback submit --file 直接接受报告 .md（内部先 prepare 再提交），载荷 JSON 入口保留",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "dby charter put 认得 dby charter get --for-edit 重定向进文件后的 {ok,data} 信封，只发章程本身",
           "changelogSource": "user"
         },
         {
@@ -1213,6 +1222,12 @@
           "subject": "feat(cli): 生图、流水线、抓参考文章迁成子命令，新增 render/preview"
         },
         {
+          "hash": "9ac116b6f3d8",
+          "version": "4.10.0",
+          "date": "2026-09-27",
+          "subject": "feat(cli): dby feedback submit --file 直接接受报告 .md"
+        },
+        {
           "hash": "9bf9100c685a",
           "version": "4.6.0",
           "date": "2026-09-27",
@@ -1261,6 +1276,14 @@
         "f2ae13c9d572"
       ],
       "versions": [
+        {
+          "version": "3.0.0",
+          "hash": "fc68e3a94b40",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "BREAKING：删除包内 scripts/dby.mjs 引导壳的用法，改走 `dby` CLI（`dby banned check …`，全局 dby 或 npx 拉确切版本 @doubaoya/cli）；compatibility 改 Node ≥22",
+          "changelogSource": "user"
+        },
         {
           "version": "2.0.0",
           "hash": "cb71ee176054",
@@ -1439,6 +1462,14 @@
         "f9a880fe14ca"
       ],
       "versions": [
+        {
+          "version": "2.0.0",
+          "hash": "35830b4190b7",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "调用换成 dby CLI（BREAKING）：加调用约定段，章程走 dby charter、档案走 dby profile / dby upload，契约表改命令表，删全部手写 curl",
+          "changelogSource": "user"
+        },
         {
           "version": "1.3.0",
           "hash": "f9a880fe14ca",
@@ -1623,11 +1654,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "18727a7ed695",
+          "version": "2.1.0",
+          "hash": "164c512b42d3",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:39:03.670159+00:00",
-          "changelog": "BREAKING：删除 scripts/deai.py，体检改用 dby deai scan（基线用 dby deai baseline），只需要 Node；输出与原脚本逐字段一致，仍不给任何分数",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "加调用约定段与「去 AI 味只作提示、不刻意制造碎句情绪口癖」约定句；清掉旧的 --make-baseline、包内脚本与 $SKILL_DIR 说法",
           "changelogSource": "user"
         },
         {
@@ -1706,11 +1737,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "cb8b00794d7e",
+          "version": "2.1.0",
+          "hash": "47e7e48e2d4d",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:39:03.670159+00:00",
-          "changelog": "BREAKING：删除 scripts/submit_feedback.py 与 endpoint.json，改用 dby feedback prepare/submit/keep/reset-id，只需要 Node；端点未配置时落本地、退出码 0",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "加调用约定段；补一步式 dby feedback submit --file 报告.md 的适用场景，例子换成 dby 命令，cURL 项目改写法",
           "changelogSource": "user"
         },
         {
@@ -1768,6 +1799,14 @@
         "fddd63a12a29"
       ],
       "versions": [
+        {
+          "version": "2.0.0",
+          "hash": "a32212b0bfe0",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "调用示例一律改走 dby CLI（@doubaoya/cli）并放统一调用约定段；不再给原始 HTTP 请求示例，健康探测改 dby doctor，规格现拉改 dby api describe",
+          "changelogSource": "user"
+        },
         {
           "version": "1.5.0",
           "hash": "89f720d429f3",
@@ -1988,6 +2027,14 @@
         "f80e00b562e4"
       ],
       "versions": [
+        {
+          "version": "3.0.0",
+          "hash": "fe0b7a0571fc",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "BREAKING：出图 / 规划 / 裁切从包内脚本换成 `dby image gen|edit|plan|crops`（gen/edit 须带 --confirm 才真出图，否则退出码 6 什么都不发）；看价格与入参改 `dby api describe gpt-image-gen`；新增「未经用户明确要求，不生图」红线",
+          "changelogSource": "user"
+        },
         {
           "version": "2.3.0",
           "hash": "86a6b6dcfaee",
@@ -2275,11 +2322,11 @@
       ],
       "versions": [
         {
-          "version": "6.0.0",
-          "hash": "90a86b766ece",
+          "version": "7.0.0",
+          "hash": "3e252ef52890",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:26:32.169897+00:00",
-          "changelog": "\"BREAKING：account-verify 只从两处取 key——环境变量 DOUBAOYA_API_KEY，其次 dby login 写的 ~/.doubaoya/credentials；不再读 ~/.doubaoya/key、~/.doubaoya/env 与 macOS 钥匙串（仓内只许一套 key 解析顺序，validate_single_key_discovery 钉住）。把 key 放在旧位置的用户改用 export 或 dby login\"",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "\"BREAKING：流水线、直存草稿、带本地图 HTML 发布、渲染预览、抓参考文章全部从包内脚本换成 `dby wechat pipeline|publish|fetch-article` 与 `dby render|preview`（真发布须 --confirm）；新增契约句「未经用户明确要求，不发布」；清掉「出图能力下架」旧说法（生图走 dby-image）\"",
           "changelogSource": "user"
         },
         {
@@ -2645,11 +2692,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "8a9e84e32795",
+          "version": "2.1.0",
+          "hash": "480cf943df39",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:39:03.670159+00:00",
-          "changelog": "BREAKING：删除 scripts/rewrite.py，取规则改用 dby rewrite rules，只需要 Node；认不出的平台名报用法错误，不再当成原文吞掉",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "加调用约定段；违禁词自检从已删除的 check_multi.py 改为 dby banned check，存稿件改走 dby draft",
           "changelogSource": "user"
         },
         {
@@ -2793,6 +2840,14 @@
         "ffbf27bdc3ec"
       ],
       "versions": [
+        {
+          "version": "2.0.0",
+          "hash": "12d510fb8dd3",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "BREAKING：手拼 HTTP 请求与本机校验脚本全部换成 `dby wechat theme-get|theme-list|theme-add|theme-update|theme-rm` 与 `dby preview --theme-file`（服务端渲染预览，主题由服务端校验）",
+          "changelogSource": "user"
+        },
         {
           "version": "1.4.4",
           "hash": "a48c0f8f0e5f",
@@ -3350,6 +3405,14 @@
         "fc92fb4bf92f"
       ],
       "versions": [
+        {
+          "version": "2.0.0",
+          "hash": "be547932a8f4",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
+          "changelog": "调用换成 dby CLI（BREAKING）：加调用约定段，契约表改命令表，补两条约定句",
+          "changelogSource": "user"
+        },
         {
           "version": "1.14.0",
           "hash": "b76d9a964f23",

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T09:01:40.710743+00:00",
+  "generatedAt": "2026-09-27T09:22:39.810728+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -141,6 +141,7 @@
       "cbc0c21c5d7a",
       "cc30a05cdb0b",
       "ce8326e3dbd2",
+      "d01e1ab7a87f",
       "d6ce3852f9e1",
       "d7e863f5577a",
       "e603a50797a0",
@@ -2752,6 +2753,12 @@
         "version": "4.8.0",
         "date": "2026-09-27",
         "subject": "feat(cli): 生图、流水线、抓参考文章迁成子命令，新增 render/preview"
+      },
+      {
+        "hash": "9ac116b6f3d8",
+        "version": "4.10.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): dby feedback submit --file 直接接受报告 .md"
       },
       {
         "hash": "9bf9100c685a",
