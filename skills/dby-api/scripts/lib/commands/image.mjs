@@ -266,7 +266,8 @@ export const commands = [
     run: (ctx, { args, flags }) => imageGen(ctx, { words: args.prompt, refs: flags.ref ?? [], out: flags.out, model: flags.model })
   },
   {
-    group: "image", name: "edit", kind: "composite",
+    group: "image", name: "edit", aliasOf: "image gen", // = gen 且至少一张 --ref；同一条路由
+
     summary: "改图：在参考图基础上改（至少一张 --ref）。慢操作、计费，--confirm 放行",
     args: [{ name: "prompt", required: true, variadic: true }],
     flags: genFlags,

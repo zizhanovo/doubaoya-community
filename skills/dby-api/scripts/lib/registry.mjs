@@ -38,8 +38,14 @@ import { commands as feedbackCommands } from "./commands/feedback.mjs";
  *   composite 打多条路由（或像 doctor/login 那样联网但路由另有归属，见各自注释），必须显式登记；
  *   local     不发出任何 doubaoya 请求（cli/test/local-no-network.test.mjs 用「收到请求即记一笔」的桩钉住）。
  * 命令可以显式写 `kind`；没写时按旧字段推导：composite:true → composite，有路由 → route，没有 → local。
+ *
+ * 第四种 `alias`（写 `aliasOf: "<主命令全名>"` 即是）：同一条（组）服务端路由的另一种调用面——参数形状或
+ * 本地输出加工不同，但打的路由与主命令**完全相同**（cli/test/routes-contract.test.mjs 钉住）。
+ * 对账闸要求「同一路由至多一条 route 命令」，所以 alias 不作为独立条目进 `dby routes --json`，
+ * 而是挂在主命令的 `aliases` 里（见 commands/routes.mjs）。
  */
 export function commandKind(c) {
+  if (c.aliasOf) return "alias";
   if (c.kind) return c.kind;
   if (c.composite) return "composite";
   return (c.routes ?? []).length > 0 ? "route" : "local";

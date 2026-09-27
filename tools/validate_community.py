@@ -1673,7 +1673,10 @@ def _dby_command_names(root: Path = ROOT) -> set[str]:
     )
     try:
         payload = json.loads(proc.stdout)
-        names = {command["name"] for command in payload["data"]["commands"]}
+        # alias（同一路由的另一种调用面）不单列，挂在主命令的 `aliases` 上——它们同样是真实可用的子命令。
+        names = {command["name"] for command in payload["data"]["commands"]} | {
+            alias for command in payload["data"]["commands"] for alias in command.get("aliases", [])
+        }
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         raise ValidationError(
             f"`node {display_path(entry)} routes --json` 的输出解析不出命令名集合（{exc}）：{proc.stdout!r}"

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T08:51:25.359589+00:00",
+  "generatedAt": "2026-09-27T08:51:40.711222+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.18.1",
+  "productVersion": "1.18.2",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -849,6 +849,7 @@
         "bcf26b4eca1f",
         "c9e472325e63",
         "ca6860097edf",
+        "cbc0c21c5d7a",
         "cc30a05cdb0b",
         "ce8326e3dbd2",
         "d6ce3852f9e1",
@@ -859,11 +860,11 @@
       ],
       "versions": [
         {
-          "version": "4.9.2",
-          "hash": "566593494423",
+          "version": "4.9.3",
+          "hash": "cbc0c21c5d7a",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:51:19.091721+00:00",
-          "changelog": "dby login/logout 按服务端实际应答对齐（invalid_grant 终止、slow_down 以服务端间隔为准）",
+          "releasedAt": "2026-09-27T08:51:37.099302+00:00",
+          "changelog": "同一路由的同义命令（write topics/review、charter profiles、image edit、render/preview）改为 alias，挂在主命令下，命令照常可用",
           "changelogSource": "user"
         },
         {
@@ -1197,6 +1198,12 @@
           "version": "4.9.0",
           "date": "2026-09-27",
           "subject": "feat(cli): 注册 deai/rewrite/feedback 三组命令并同步 skill 镜像"
+        },
+        {
+          "hash": "5c596c95c435",
+          "version": "4.9.2",
+          "date": "2026-09-27",
+          "subject": "fix(cli): dby login/logout 按主仓设备码端点的实际应答对齐"
         },
         {
           "hash": "7cf0c6f667e3",

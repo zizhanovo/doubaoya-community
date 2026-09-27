@@ -243,7 +243,7 @@ export const commands = [
     run: (ctx) => writePrep(ctx)
   },
   {
-    group: "write", name: "topics",
+    group: "write", name: "topics", aliasOf: "wechat topics",
     summary: "选题候选（用户已经说了写什么就别调）",
     args: [{ name: "niche", required: false }], flags: {},
     routes: [{ method: "GET", path: "/api/wechat/topics" }],
@@ -251,7 +251,7 @@ export const commands = [
     run: (ctx, { args }) => writeTopics(ctx, args.niche)
   },
   {
-    group: "write", name: "review",
+    group: "write", name: "review", aliasOf: "wechat review",
     summary: "复盘取数 + 四象限（基准=本号历史中位数；no_account/no_articles → 退出码 3）",
     args: [], flags: {},
     routes: [{ method: "GET", path: "/api/wechat/review" }],

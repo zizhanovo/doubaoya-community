@@ -12,14 +12,20 @@ function commandName(cmd) {
 }
 
 /** `dby routes --json` 的 stdout 契约：字段名不能变，主仓对账闸按字面读。 */
+// alias 不单列（对账闸：同一路由至多一条 route 命令），挂到主命令的 aliases 上，审计时仍看得见。
 function toCommandsOutput() {
-  return ALL_COMMANDS.map((c) => ({
+  const aliasesOf = new Map();
+  for (const c of ALL_COMMANDS) {
+    if (c.kind === "alias") aliasesOf.set(c.aliasOf, [...(aliasesOf.get(c.aliasOf) ?? []), commandName(c)]);
+  }
+  return ALL_COMMANDS.filter((c) => c.kind !== "alias").map((c) => ({
     name: commandName(c),
     routes: c.routes ?? [],
     kind: c.kind, // route | composite | local（dby-cli-rebuild D8；新增字段，旧字段一个不动）
     billable: !!c.billable,
     destructive: !!c.destructive,
-    composite: !!c.composite
+    composite: !!c.composite,
+    ...(aliasesOf.has(commandName(c)) ? { aliases: aliasesOf.get(commandName(c)) } : {})
   }));
 }
 
@@ -35,7 +41,7 @@ export async function routesCommand() {
 export const commands = [
   {
     group: null, name: "routes", kind: "local",
-    summary: "导出命令表（供主仓路由对账闸消费）：{ commands: [{ name, routes, kind, billable, destructive, composite }] }",
+    summary: "导出命令表（供主仓路由对账闸消费）：{ commands: [{ name, routes, kind, billable, destructive, composite, aliases? }] }",
     args: [], flags: {},
     routes: [], billable: false, destructive: false, composite: false,
     run: () => routesCommand()

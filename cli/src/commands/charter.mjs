@@ -83,7 +83,7 @@ export async function charterPut(ctx, file, opts) {
 // ── 命令表 ─────────────────────────────────────────────────────────────────
 export const commands = [
   {
-    group: "charter", name: "profiles",
+    group: "charter", name: "profiles", aliasOf: "profile list",
     summary: "列出我的档案（id / 是否默认 / 名字）",
     args: [], flags: {},
     routes: [{ method: "GET", path: "/api/ip-profiles" }],

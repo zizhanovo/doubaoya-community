@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T08:51:25.359589+00:00",
+  "generatedAt": "2026-09-27T08:51:40.711222+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -137,6 +137,7 @@
       "bcf26b4eca1f",
       "c9e472325e63",
       "ca6860097edf",
+      "cbc0c21c5d7a",
       "cc30a05cdb0b",
       "ce8326e3dbd2",
       "d6ce3852f9e1",
@@ -2738,6 +2739,12 @@
         "version": "4.9.0",
         "date": "2026-09-27",
         "subject": "feat(cli): 注册 deai/rewrite/feedback 三组命令并同步 skill 镜像"
+      },
+      {
+        "hash": "5c596c95c435",
+        "version": "4.9.2",
+        "date": "2026-09-27",
+        "subject": "fix(cli): dby login/logout 按主仓设备码端点的实际应答对齐"
       },
       {
         "hash": "7cf0c6f667e3",

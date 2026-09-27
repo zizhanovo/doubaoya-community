@@ -68,7 +68,7 @@ test("元断言：每条 local 命令都登记了跑法，且确有 local 命令
 
 test("每条 kind 都合法：route 恰好一条路由，local 零路由", () => {
   for (const c of ALL_COMMANDS) {
-    assert.ok(["route", "composite", "local"].includes(c.kind), `${nameOf(c)} 的 kind=${c.kind} 不合法`);
+    assert.ok(["route", "composite", "local", "alias"].includes(c.kind), `${nameOf(c)} 的 kind=${c.kind} 不合法`);
     if (c.kind === "route") assert.equal((c.routes ?? []).length, 1, `${nameOf(c)} 标 route 但路由不是恰好一条`);
     if (c.kind === "local") assert.equal((c.routes ?? []).length, 0, `${nameOf(c)} 标 local 却登记了路由`);
   }

@@ -115,19 +115,21 @@ const routes = [{ method: "POST", path: "/api/wechat/render" }];
 
 export const commands = [
   {
-    group: null, name: "render", kind: "composite",
+    group: null, name: "render", aliasOf: "wechat render", // 同一条渲染路由，只是写文件不回灌 HTML
+
     summary: "服务端排版：markdown → 公众号 HTML 文件（免费；只写文件，JSON 不含 HTML；离线退出码 5，无凭证退出码 4）",
     args: [], flags, routes,
-    billable: false, destructive: false, composite: true,
+    billable: false, destructive: false, composite: false,
     run: (ctx, a) => renderToFile(ctx, a.flags, { withPreview: false })
   },
   {
-    group: null, name: "preview", kind: "composite",
+    group: null, name: "preview", aliasOf: "wechat render",
+
     summary: "render 之外再写一个本地 375px 手机宽度预览页（免费；不回退任何本地渲染）",
     args: [],
     flags: { ...flags, "preview-out": { value: true, summary: "预览页输出路径（默认 <输入名>.preview.html）" } },
     routes,
-    billable: false, destructive: false, composite: true,
+    billable: false, destructive: false, composite: false,
     run: (ctx, a) => renderToFile(ctx, a.flags, { withPreview: true })
   }
 ];
