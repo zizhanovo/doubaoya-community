@@ -224,4 +224,23 @@ export async function request(ctx, method, path, {
   return env.data;
 }
 
+/**
+ * 打**非 doubaoya** 的公开只读 JSON 端点（目前只有 npm registry：`dby skills update` 查确切版本）。
+ * 放在请求层里是为了「全仓只有一处 fetch 调用点」（validate_single_request_layer），并复用同一套代理逻辑；
+ * 不带 key、不带 UA 之外的任何标识。失败原样抛（调用方自己判「不可达」），不重试。
+ */
+export async function getPublicJson(url, { headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const proxy = resolveProxy(url, process.env);
+  const res = proxy
+    ? await requestViaProxy(proxy, url, { method: "GET", headers, timeoutMs })
+    : await fetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+  let body = null;
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
+  return { status: res.status, body };
+}
+
 export { keyPresence };

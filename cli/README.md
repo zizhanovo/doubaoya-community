@@ -5,6 +5,8 @@
 ```bash
 npm i -g @doubaoya/cli     # 没有全局写权限：npm i -D @doubaoya/cli && npx dby …
 dby login                  # 设备码登录：在已登录的 doubaoya.com 确认页手动输入屏幕上的码
+dby skills install         # 把随包的 dby-* skills 写进当前项目的 .claude/skills（--scope user 写到 HOME 下）
+dby skills migrate         # 从 1.x（npx skills add / dby-update 装的）迁过来：旧目录进 .dby-archive/，换入薄层
 dby whoami --json
 dby --help
 ```
@@ -20,3 +22,5 @@ dby --help
   `dby.mjs` 用到的就是这份），改代码只改 `src/`，然后 `node scripts/sync-skill-lib.mjs`；
   `test/skill-lib-mirror.test.mjs` 钉住两边一致。tasks 5.1 把那边改成转发壳后镜像删除。
 - 打包：`npm pack` 时 `prepack` 把仓库根 `skills/*/{SKILL.md,references/**}` 与 LICENSE 拷进包，`postpack` 清掉。
+- 发版：`node scripts/release.mjs <版本>` 以 package.json 为源派生 13 个 SKILL.md 的版本、调用约定与
+  CHANGELOG 一节（先 `--dry-run` 看清单）；发布前 `node scripts/prepublish-check.mjs` 必须全绿。

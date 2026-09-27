@@ -12,11 +12,12 @@ const nameOf = (c) => (c.group ? `${c.group} ${c.name}` : c.name);
 const routeKeys = (c) => (c.routes ?? []).map((r) => `${r.method} ${r.path}`);
 
 // 主仓 apps/api/src/lib/cli-route-parity.ts 的 COMPOSITE_COMMANDS（2026-09-27 对齐）。
-// 「skills update」在那边已登记，但本仓还没实现（tasks 6.1），暂不列入——主仓须先摘掉该条或 6.1 落地。
+// 「skills update」（tasks 6.1）：composite，路由只有 GET /api/cli/release（主仓把该路由列在排除清单里，
+// 理由正是「消费方是 install.sh 与 dby skills update（composite，只要求路径存在）」）。
 const MAIN_REPO_COMPOSITES = [
   "api list", "api search", "api describe", "api invoke", "api validate",
   "write prep", "write articles", "charter get", "doctor", "draft precheck", "banned check",
-  "login", "image gen", "wechat pipeline"
+  "login", "image gen", "wechat pipeline", "skills update"
 ];
 
 test("alias：主命令存在、不是 alias，路由逐条相同", () => {

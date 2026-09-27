@@ -5,7 +5,7 @@
 //    登记一种跑法，本测试直接红（否则新命令天然在检查面之外，「漏检长得跟通过一模一样」）。
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,6 +53,14 @@ export const LOCAL_INVOCATIONS = {
     return ["feedback", "keep", "--file", path.join(dir, "payload.json"), "--scope-root", dir, "--json"];
   },
   "feedback reset-id": (dir) => ["feedback", "reset-id", "--scope-root", dir, "--json"],
+  // skills install/status/migrate 只读写宿主目录（这里是临时目录），随包内容来自本机，零出网。
+  "skills install": (dir) => ["skills", "install", "--scope", "project", "--dir", dir, "--json"],
+  "skills status": (dir) => ["skills", "status", "--scope", "project", "--dir", dir, "--json"],
+  "skills migrate": (dir) => {
+    mkdirSync(path.join(dir, ".claude", "skills", "dby", "scripts"), { recursive: true });
+    writeFileSync(path.join(dir, ".claude", "skills", "dby", "SKILL.md"), "---\nname: dby\nversion: 1.9.0\n---\n旧版\n");
+    return ["skills", "migrate", "--scope", "project", "--dir", dir, "--json"];
+  },
   // 只打用户给的那个网址（这里是测试里起的本地网页服务，绊线放行它），不打 doubaoya。
   "wechat fetch-article": (dir, { pageUrl }) => ({
     argv: ["wechat", "fetch-article", "--url", pageUrl, "--out", path.join(dir, "ref.html"), "--json"],
