@@ -18,4 +18,5 @@ CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild d
 - 新增 `dby skills install|update|status|migrate`（design D11）：把随包 skills 写进 `.claude/skills` / `.agents/skills`（项目级或用户级），逐包原子替换、任一包失败只回滚该包，每包写 `.dby/origin.json`；用户改过的包默认不覆盖（`--force` 先备份进 `.dby-archive/`）；软链写真实路径；本 CLI 装过、随包已不再有的包移进归档。`update` 先以 `GET /api/cli/release` 公布的正式版本到 npmjs 与 npmmirror 查同一确切版本（两源一致才算数，绝不改装源上可见的其他版本），查询失败退出码 5 且不写盘；装入的永远是正在运行的 CLI 随包的那一份，有新版时只提示升级命令。`migrate` 把 1.x 渠道装的目录整体归档后换入薄层，逐包复核，不过的从归档还原。
 - dby-update 改薄：只指引装好确切版本的 dby 后跑 `dby skills status` 看清单，再 `dby skills migrate`（1.x 旧装法）或 `dby skills update`；不再调用包内对账脚本（1.x 的 reconcile.mjs 只服务最后一跳，随第 5 组删除）。
 - 发布走 `.github/workflows/publish-npm.yml`（只能手动触发，OIDC Trusted Publishing + provenance，参数为 dist-tag）：全量测试 → 发布前检查 → `npm publish` → 触发 npmmirror 同步并轮询到版本与 integrity 一致才算发布完成；`publishConfig.registry` 钉死 npmjs（本机 npmrc 指向 npmmirror 时也不会发错地方）。
+- ClawHub 上架改为从 npm 包内容生成（`tools/clawhub_publish.py` 默认先隔离 pack 再取包内 `skills/<slug>`，或 `--package` 指定解包目录）：每个 skill 的 `--version` 都等于包版本，包内 SKILL.md 版本漂移直接拒绝。
 

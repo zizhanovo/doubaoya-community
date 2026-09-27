@@ -196,3 +196,38 @@ class RetirementGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClawhubFromPackageTests(unittest.TestCase):
+    """tasks 6.9：上架内容从 npm 包生成——每个 skill 的 version 都等于包版本。"""
+
+    def _package(self, directory: str, version: str, skill_versions: dict) -> Path:
+        root = Path(directory) / "package"
+        (root / "skills").mkdir(parents=True)
+        (root / "package.json").write_text(json.dumps({"name": "@doubaoya/cli", "version": version}), encoding="utf-8")
+        for slug, v in skill_versions.items():
+            (root / "skills" / slug).mkdir()
+            (root / "skills" / slug / "SKILL.md").write_text(
+                f"---\nname: {slug}\ndescription: x\nversion: {v}\nchangelog: 随 @doubaoya/cli {v} 统一发版\n---\n", encoding="utf-8")
+        return root
+
+    MANIFEST = {"schema_version": 1, "owner": "acme", "skills": {
+        "a": {"displayName": "甲", "topics": [], "version": "7.0.0", "changelog": "旧"},
+        "b": {"displayName": "乙", "topics": [], "version": "1.0.0", "changelog": "旧"}}}
+
+    def test_version_comes_from_the_package_not_the_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._package(directory, "2.0.0", {"a": "2.0.0", "b": "2.0.0"})
+            manifest = publisher.apply_package(self.MANIFEST, root)
+            for slug in ("a", "b"):
+                command = publisher.build_command(manifest, slug, root=root)
+                self.assertEqual(command[command.index("--version") + 1], "2.0.0")
+                self.assertEqual(command[3], str(root / "skills" / slug), "发布目录必须是包内的 skill")
+                self.assertEqual(command[command.index("--changelog") + 1], "随 @doubaoya/cli 2.0.0 统一发版")
+
+    def test_skill_version_drifting_from_the_package_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self._package(directory, "2.0.0", {"a": "2.0.0", "b": "1.9.9"})
+            with self.assertRaisesRegex(publisher.ManifestError, "1.9.9"):
+                publisher.apply_package(self.MANIFEST, root)
+

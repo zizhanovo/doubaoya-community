@@ -9,7 +9,14 @@
   - 裸 slug 是全局先到先得，本仓有一批 slug 已被别的发布者占用；带 `--owner` 发布走
     `/<owner>/skills/<slug>` 命名空间，能绕开占用。
 
-单一事实源：仓库根 `index.json`（2026-08-25 起；`tools/clawhub.json` 只是它的生成视图）。
+🔴 上架内容从 npm 包生成（dby-cli-rebuild spec「一个一方安装器，其余为下游镜像」/ tasks 6.9）：
+  ClawHub 与社区仓 skills/ 一样只是同一个 npm release 的**下游镜像**，不许单独编辑发布。所以默认先在
+  隔离副本里真 `npm pack`（cli/scripts/pack-isolated.mjs）并解开，发布目录取包内 `skills/<slug>`，
+  `--version` 一律等于包版本（package.json），`--changelog` 取包内 SKILL.md 的 changelog；
+  也可以 `--package <解开的包目录>` 直接指定一份已解开的包（发版时用 publish 出去的那个 tarball）。
+  index.json 只再提供 displayName / topics 这类商店元数据。
+
+单一事实源（商店元数据）：仓库根 `index.json`（2026-08-25 起；`tools/clawhub.json` 只是它的生成视图）。
 每个 `skills/<slug>/` 目录在索引里有且只有一条 active 条目，两边对不上就直接失败
 （这个仓库的清单已经漂移过两次，见 validate_community 里的同类校验）。
 displayName / topics / 当前 semver / changelog 全部从索引取，changelog 原样传给 `--changelog`。
@@ -19,7 +26,8 @@ displayName / topics / 当前 semver / changelog 全部从索引取，changelog 
 所以能力重新上架时删掉标记就自动放行，不用改这个脚本，也不用维护第二份下架名单。
 
 跑法（仓库根目录）：
-    python3 tools/clawhub_publish.py                 # 只打印将要执行的命令，不联网
+    python3 tools/clawhub_publish.py                 # 只打印将要执行的命令（本地 pack 出包、不联网）
+    python3 tools/clawhub_publish.py --package <dir> # 用一份已解开的 npm 包（package/ 目录）生成命令
     python3 tools/clawhub_publish.py --dry-run       # 交给 clawhub 自己做 --dry-run 预检（联网、只读）
     python3 tools/clawhub_publish.py --execute       # 真发布（需要先 clawhub login）
     python3 tools/clawhub_publish.py --self-check    # 不碰网络的自检
@@ -92,6 +100,46 @@ def load_manifest(path: Path = MANIFEST) -> dict:
     if not skills:
         raise ManifestError("index.json has no active skills to publish")
     return {"schema_version": 1, "owner": owner, "skills": skills}
+
+
+def pack_package(dest: Path, root: Path = ROOT) -> Path:
+    """在隔离副本里真 npm pack 并解开，返回包根（…/extract/package）。与发布逐字节相同的内容。"""
+    result = subprocess.run(
+        ["node", str(root / "cli" / "scripts" / "pack-isolated.mjs"), str(dest), "--extract"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False,
+    )
+    if result.returncode != 0:
+        raise ManifestError(f"npm pack 失败：{result.stderr.strip()[-400:]}")
+    return Path(json.loads(result.stdout)["extracted"])
+
+
+def frontmatter_line(path: Path, key: str) -> str:
+    """frontmatter 里单行字段的值（release 工具写的 version / changelog 都是单行）。"""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0] != "---":
+        return ""
+    for line in lines[1:]:
+        if line == "---":
+            break
+        if line.startswith(f"{key}:"):
+            return line.split(":", 1)[1].strip().strip('"')
+    return ""
+
+
+def apply_package(manifest: dict, package_root: Path) -> dict:
+    """用 npm 包内容覆盖版本信息：每个 skill 的 version = 包版本，changelog = 包内 SKILL.md 的 changelog。
+    包里的 SKILL.md 自己写的 version 与包版本不一致时直接失败（发布前检查的同一条，这里再挡一次）。"""
+    package_version = json.loads((package_root / "package.json").read_text(encoding="utf-8"))["version"]
+    skills = {}
+    for slug, entry in manifest["skills"].items():
+        skill_md = package_root / "skills" / slug / "SKILL.md"
+        if not skill_md.is_file():
+            raise ManifestError(f"npm 包里没有 skills/{slug}（包与索引对不上）")
+        declared = frontmatter_line(skill_md, "version")
+        if declared != package_version:
+            raise ManifestError(f"包内 skills/{slug}/SKILL.md 的 version 是 {declared}，包版本是 {package_version}")
+        skills[slug] = {**entry, "version": package_version, "changelog": frontmatter_line(skill_md, "changelog") or entry.get("changelog", "")}
+    return {**manifest, "skills": skills, "packageVersion": package_version}
 
 
 def discover_slugs(root: Path = ROOT) -> list[str]:
@@ -263,15 +311,21 @@ def main() -> int:
     parser.add_argument("--only", action="append", default=[], metavar="SLUG", help="只处理指定 Skill（可重复）")
     parser.add_argument("--clawhub", default="clawhub", help="clawhub 可执行文件（默认 clawhub）")
     parser.add_argument("--self-check", action="store_true", help="跑离线自检后退出")
+    parser.add_argument("--package", metavar="DIR", help="已解开的 npm 包根目录（含 package.json 与 skills/）；缺省在临时目录里现 pack 一份")
     args = parser.parse_args()
 
     if args.self_check:
         self_check()
         return 0
 
-    manifest = load_manifest()
-    slugs = discover_slugs()
+    import tempfile
+
+    workdir = tempfile.TemporaryDirectory(prefix="dby-clawhub-")
+    package_root = Path(args.package).resolve() if args.package else pack_package(Path(workdir.name))
+    manifest = apply_package(load_manifest(), package_root)
+    slugs = discover_slugs(package_root)
     check_coverage(manifest, slugs)
+    print(f"# 上架内容取自 npm 包 @doubaoya/cli@{manifest['packageVersion']}（{package_root}）", file=sys.stderr)
 
     if args.only:
         unknown = sorted(set(args.only) - set(slugs))
@@ -281,11 +335,11 @@ def main() -> int:
 
     # 发布闸排在拼命令之前：已下架的 Skill 连打印出来的命令都不该有，
     # 否则那行命令会被人直接复制到终端里跑掉。
-    slugs, refused = partition_publishable(slugs)
+    slugs, refused = partition_publishable(slugs, root=package_root)
 
     commit = git_commit()
     commands = [
-        build_command(manifest, slug, clawhub=args.clawhub, commit=commit, dry_run=args.dry_run)
+        build_command(manifest, slug, root=package_root, clawhub=args.clawhub, commit=commit, dry_run=args.dry_run)
         for slug in slugs
     ]
 
@@ -296,6 +350,8 @@ def main() -> int:
         for command in commands:
             print(" ".join(f"'{part}'" if " " in part else part for part in command))
         print(f"\n# {len(commands)} 条命令（未执行）。加 --dry-run 联网预检，加 --execute 真发布。", file=sys.stderr)
+        if not args.package:
+            print("# 注意：命令里的包目录是本次临时 pack 出来的，脚本退出即删除；要复制命令手动跑，先 --package 指定一份持久的解包目录。", file=sys.stderr)
         report_refusals(refused)
         return 1 if refused_by_name else 0
 
