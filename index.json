@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T10:10:19.513026+00:00",
+  "generatedAt": "2026-09-27T10:16:21.371143+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1883,6 +1883,7 @@
         "3a88323fc388",
         "4c71eb312624",
         "64220c7bed79",
+        "76bf82dfed22",
         "7e9c0e95aa56",
         "7e9d8e2c7fa6",
         "83905537e90d",
@@ -1900,9 +1901,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "af6fea66848e",
+          "hash": "76bf82dfed22",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "releasedAt": "2026-09-27T10:16:17.601220+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -3538,6 +3539,12 @@
           "version": "4.1.1",
           "date": "2026-08-31",
           "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+        },
+        {
+          "hash": "1b8a56d4f989",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-update)!: 改薄为 dby skills 的指引——先 status 看清单，再 migrate 或 update（tasks 6.7）"
         },
         {
           "hash": "279891452575",

@@ -23,7 +23,8 @@
 表里给的是**详情端点**（`GET`，免鉴权免费），不是调用地址：拿到详情响应后，
 调用地址读它的 `execution` 的 `target`（SKILL.md §3.3）。这样专用路由那三条也不会被推错。
 
-> 2026-08-18 从发现接口实拉生成，共 94 条（2026-08-22 复核：与生产**零漂移**）。
+> 2026-08-18 从发现接口实拉生成；2026-09-27 按主仓 catalog 的在架条目（排除 hidden）补齐到 96 条（其中 ⛔ 3 条），
+> 与之逐条核对 operationKey 与详情端点：两个方向都为空。
 > **准数与在架状态以你实拉的发现接口为准**——
 > 下架的条目会从发现接口里消失，本表不会自己知道。表里没有你要的能力时，
 > 先 `dby api list`（默认两个集合都拉）再下结论。
@@ -31,8 +32,7 @@
 > 标记：⚠️专用 = `execution` 的 `mode` 是 `dedicated`，调用地址与详情端点无关，**必须读 `target`**；
 > ⛔ = 实拉时 `mode` 为 `unavailable`，当前不可调。
 >
-> 出图 / 改图 / 封面成品图：服务端生图能力 2026-09 已恢复，业务入口是 `dby-image`（`dby image gen`）；
-> 本表生成于恢复之前，暂未收录生图那几条，要看它们的详情就 `dby api list` 现拉。
+> 出图 / 改图：服务端生图能力 2026-09 已恢复，业务入口是 `dby-image`（`dby image gen`），索引里是 `skill.ai.imageGen`。
 
 <!-- 本表由发现接口生成，勿手改。重新生成：
      dby api list（默认两个集合都拉），
@@ -57,6 +57,8 @@
 | `skill.wechat.fastestGrowing` | 公众号黑马账号推荐 | `/api/skills/wechat-fastest-growing` |
 | `skill.wechat.hotSearch` | 公众号热门文章查询 | `/api/skills/wechat-search` |
 | `skill.wechat.prohibitedWord` | 公众号违禁词检测 | `/api/skills/wechat-prohibited-word` |
+| `skill.wechat.coverDesign` | 公众号封面图制作 | `/api/skills/wechat-cover` |
+| `skill.ai.imageGen` | GPT-image2.5（出图 / 改图，业务入口是 dby-image） | `/api/skills/gpt-image-gen` |
 
 ### 平台数据能力集合 —— 详情端点 `GET /api/apis/<platform>/<slug>`
 
@@ -89,6 +91,8 @@
 | `api.gzh.playletFeed` | 公众号文旅/短剧日报源 | `/api/apis/gongzhonghao/gongzhonghao-playlet-feed` |
 | `api.gzh.syncUserNotes` | 公众号文章同步 | `/api/apis/gongzhonghao/gzh-sync-notes` |
 | `api.gzh.syncAccount` | 公众号账号同步 ⛔ | `/api/apis/gongzhonghao/gzh-sync-account` |
+| `api.gzh.articleMetrics` | 查询公众号文章互动数据 | `/api/apis/gongzhonghao/article-metrics` |
+| `api.gzh.articleComments` | 查询公众号文章评论 | `/api/apis/gongzhonghao/article-comments` |
 
 **抖音**
 
@@ -127,7 +131,7 @@
 | `api.xhs.aiFeed` | 小红书AI日报源 | `/api/apis/xiaohongshu/xiaohongshu-ai-feed` |
 | `api.xhs.playletFeed` | 小红书文旅/短剧日报源 | `/api/apis/xiaohongshu/xiaohongshu-playlet-feed` |
 | `api.xhs.syncUserNotes` | 小红书账号作品同步 | `/api/apis/xiaohongshu/xhs-sync-notes` |
-| `api.xhs.cozeData` | 小红书爆款封面/标题/笔记分析数据 | `/api/apis/xiaohongshu/xiaohongshu-coze` |
+| `api.xhs.cozeData` | 小红书爆款封面/标题/笔记分析数据 ⛔ | `/api/apis/xiaohongshu/xiaohongshu-coze` |
 | `api.xhs.cozeDailyTop` | 小红书日榜 | `/api/apis/xiaohongshu/xiaohongshu-daily-top` |
 | `api.xhs.cozeLowFansTop` | 小红书低粉爆款榜 | `/api/apis/xiaohongshu/xiaohongshu-low-fans-top` |
 | `api.xhs.cozeWeeklyTop` | 小红书周榜 | `/api/apis/xiaohongshu/xiaohongshu-weekly-top` |
@@ -163,6 +167,13 @@
 | `api.kuaishou.searchUser` | 搜索快手账号 | `/api/apis/kuaishou/search-user` |
 | `api.kuaishou.queryWork` | 查询快手作品详情 | `/api/apis/kuaishou/query-work` |
 | `api.kuaishou.userWorks` | 快手账号作品列表 | `/api/apis/kuaishou/user-works` |
+
+**微博**
+
+| operationKey | 用途 | 详情端点 |
+|---|---|---|
+| `api.weibo.search` | 微博关键词搜索 | `/api/apis/weibo/search` |
+| `api.weibo.detail` | 查询微博详情 | `/api/apis/weibo/detail` |
 
 **TikTok**
 

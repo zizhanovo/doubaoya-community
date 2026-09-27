@@ -38,10 +38,8 @@
       "limit": 3357
     },
     "dby-gateway": {
-      "required": [
-        "references/protocol.md"
-      ],
-      "limit": 5786
+      "required": [],
+      "limit": 2213
     },
     "dby-image": {
       "required": [],
