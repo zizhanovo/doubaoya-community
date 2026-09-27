@@ -37,15 +37,18 @@ export class ConfirmationRequired extends Error {
  * `hints` 允许调用点补每个 code 的 remediation（如 charter 的 CHARTER_INVALID）。
  * 🔴 remediation 里只说 key「已设置 / 没设置」，一个字符的密钥内容都不进输出。
  */
-export function upstreamError(status, code, message, { keySet = false, hints = {} } = {}) {
+export function upstreamError(status, code, message, { keySet = false, keySource = null, hints = {} } = {}) {
   const c = code ?? `HTTP_${status}`;
   if (c === "MISSING_API_KEY" || c === "UNAUTHORIZED" || status === 401) {
-    return new DbyError(c, message ?? "鉴权失败", {
-      exit: EXIT.AUTH,
-      remediation:
-        `DOUBAOYA_API_KEY ${keySet ? "已设置" : "没设置"}。去 https://doubaoya.com → 密钥中心` +
-        `${keySet ? "撤销并重新生成，再更新环境变量" : "生成密钥，然后 export DOUBAOYA_API_KEY=dyh_..."}。`
-    });
+    // 按 key 的来源给下一步：凭证文件里的 key 失效（多半是在网页密钥中心被吊销了）→ 重新 dby login；
+    // 环境变量里的 → 换一把再 export；都没有 → 两种办法都给（spec dby-cli-auth）。
+    const remediation =
+      keySource === "credentials"
+        ? "~/.doubaoya/credentials 里的 key 已失效（可能在网页密钥中心被吊销了）：重新运行 `dby login`。"
+        : keySet
+          ? "环境变量 DOUBAOYA_API_KEY 已设置但无效：去 https://doubaoya.com → 密钥中心撤销并重新生成，再更新环境变量；或 unset 它后运行 `dby login`。"
+          : "没有 API key。① 运行 `dby login`；或 ② 去 https://doubaoya.com → 密钥中心生成密钥，然后 export DOUBAOYA_API_KEY=dyh_...。";
+    return new DbyError(c, message ?? "鉴权失败", { exit: EXIT.AUTH, remediation });
   }
   // 403 PLAN_LIMIT_EXCEEDED 是「账号套餐权益到顶」，与钥匙、余额都无关（2026-09-09 补）：
   // 不登记的话它会落进 BUSINESS 且 remediation 为空，agent 最可能的两条歧路是「换钥匙重试」

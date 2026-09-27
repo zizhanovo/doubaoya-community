@@ -5,7 +5,7 @@
 
 import { makeContext } from "./context.mjs";
 import { EXIT, DbyError, ConfirmationRequired } from "./errors.mjs";
-import { emitSuccess, emitFailure, emitConfirmation } from "./output.mjs";
+import { emitSuccess, emitFailure, emitConfirmation, warn } from "./output.mjs";
 import { resolveCommand, parseArgs, commandUsage, groupUsage, topLevelUsage } from "./argv.mjs";
 import { ALL_COMMANDS, GROUPS } from "./registry.mjs";
 import { readVersion } from "./version.mjs";
@@ -56,6 +56,8 @@ export async function runCli(argv = process.argv) {
     }
 
     const ctx = makeContext({ flags: parsed.flags, argv: args });
+    // 凭证文件权限过宽 / 损坏：每条命令都在 stderr 提醒一次，命令本身照常执行（spec dby-cli-auth）。
+    if (ctx.credentialsWarning) warn(ctx, ctx.credentialsWarning);
     const { data, human } = await command.run(ctx, { args: parsed.args, flags: parsed.flags });
     emitSuccess(ctx, data, human);
     return EXIT.OK;

@@ -2,17 +2,20 @@
 // 全过退出码 0，有项不过退出码 3（spec:「版本与自诊断」）。检查失败不抛——逐项收进结果。
 
 import { request } from "../http.mjs";
+import { keyPresence } from "../context.mjs";
 import { EXIT, DbyError } from "../errors.mjs";
 import { readVersion } from "../version.mjs";
 
 export async function doctor(ctx, version) {
   const checks = [];
 
-  // 1) key 配没配。🔴 只说「设没设」，密钥内容一个字符都不进输出。
+  // 1) key 配没配、从哪来。🔴 只说「设没设 / 来源」，密钥内容一个字符都不进输出。
   checks.push({
     name: "api_key",
     ok: !!ctx.key,
-    detail: ctx.key ? "DOUBAOYA_API_KEY 已设置" : "DOUBAOYA_API_KEY 没设置（doubaoya.com → 密钥中心生成后 export）"
+    detail: ctx.key
+      ? `API key ${keyPresence(ctx)}`
+      : "没有 API key（运行 dby login，或在 doubaoya.com → 密钥中心生成后 export DOUBAOYA_API_KEY）"
   });
 
   // 2) 服务连通性（免鉴权免费的发现端点）。

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T08:14:46.830390+00:00",
+  "generatedAt": "2026-09-27T08:26:35.313256+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.16.16",
+  "productVersion": "1.17.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -844,6 +844,7 @@
         "bb0e6ad5cb98",
         "bcf26b4eca1f",
         "c9e472325e63",
+        "ca6860097edf",
         "cc30a05cdb0b",
         "ce8326e3dbd2",
         "d6ce3852f9e1",
@@ -854,11 +855,11 @@
       ],
       "versions": [
         {
-          "version": "4.6.0",
-          "hash": "9bf9100c685a",
+          "version": "4.7.0",
+          "hash": "ca6860097edf",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:14:44.387520+00:00",
-          "changelog": "命令实现改由 npm 包 @doubaoya/cli 的源码逐字节镜像而来（行为不变）；请求开始带本包 .version 作 User-Agent，服务端能据此提示更新；`dby routes --json` 每条命令多一个 kind 字段",
+          "releasedAt": "2026-09-27T08:26:32.169897+00:00",
+          "changelog": "新增 dby login（设备码登录）与 dby logout（吊销本机 key）；key 只认环境变量 DOUBAOYA_API_KEY，其次 ~/.doubaoya/credentials；whoami 回报 key 来源与前缀",
           "changelogSource": "user"
         },
         {
@@ -1180,6 +1181,12 @@
           "version": "4.5.0",
           "date": "2026-09-10",
           "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
+        },
+        {
+          "hash": "9bf9100c685a",
+          "version": "4.6.0",
+          "date": "2026-09-27",
+          "subject": "feat(cli): cli/ 恢复为 npm 包源 @doubaoya/cli，skill 目录改为它的镜像"
         }
       ]
     },
@@ -2194,6 +2201,14 @@
         "fdf279bc684e"
       ],
       "versions": [
+        {
+          "version": "6.0.0",
+          "hash": "90a86b766ece",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T08:26:32.169897+00:00",
+          "changelog": "\"BREAKING：account-verify 只从两处取 key——环境变量 DOUBAOYA_API_KEY，其次 dby login 写的 ~/.doubaoya/credentials；不再读 ~/.doubaoya/key、~/.doubaoya/env 与 macOS 钥匙串（仓内只许一套 key 解析顺序，validate_single_key_discovery 钉住）。把 key 放在旧位置的用户改用 export 或 dby login\"",
+          "changelogSource": "user"
+        },
         {
           "version": "5.1.0",
           "hash": "4aa74d5cfde5",

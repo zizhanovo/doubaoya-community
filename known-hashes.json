@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T08:14:46.830390+00:00",
+  "generatedAt": "2026-09-27T08:26:35.313256+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -132,6 +132,7 @@
       "bb0e6ad5cb98",
       "bcf26b4eca1f",
       "c9e472325e63",
+      "ca6860097edf",
       "cc30a05cdb0b",
       "ce8326e3dbd2",
       "d6ce3852f9e1",
@@ -2717,6 +2718,12 @@
         "version": "4.5.0",
         "date": "2026-09-10",
         "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
+      },
+      {
+        "hash": "9bf9100c685a",
+        "version": "4.6.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): cli/ 恢复为 npm 包源 @doubaoya/cli，skill 目录改为它的镜像"
       }
     ],
     "dby-banned-words": [

@@ -23,6 +23,7 @@ import { commands as uploadCommands } from "./commands/upload.mjs";
 import { commands as whoamiCommands } from "./commands/whoami.mjs";
 import { commands as bannedCommands } from "./commands/banned.mjs";
 import { commands as routesCommands } from "./commands/routes.mjs";
+import { commands as authCommands } from "./commands/auth.mjs";
 
 /**
  * 命令三分类（dby-cli-rebuild design D8 / spec「子命令分三类并由对账闸核对」）：
@@ -55,7 +56,8 @@ const RAW_COMMANDS = [
   ...uploadCommands,
   ...whoamiCommands,
   ...bannedCommands,
-  ...routesCommands
+  ...routesCommands,
+  ...authCommands
 ];
 
 export const ALL_COMMANDS = RAW_COMMANDS.map((c) => ({ ...c, kind: commandKind(c) }));

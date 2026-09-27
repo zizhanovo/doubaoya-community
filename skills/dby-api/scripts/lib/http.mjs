@@ -112,6 +112,7 @@ export function classifyFetchError(err, { billable = false, timeoutMs = DEFAULT_
  *   notFoundNull: 404 时返回 null 而不是抛（ref 在两个集合之间试探用）
  *   billable: 只影响超时 remediation 的措辞与红线提示
  *   hints: 上游错误码 → remediation 的补充表（调用点最了解自己的错误码）
+ *   raw: 为 true 时不拆信封，返回 { status, body }（设备码轮询用）
  *   withEnvelope: 为 true 时返回 { data, detailUrl, notice, noResult } 而不是裸 data——
  *     信封顶层的 detailUrl（如公众号渲染的在线预览页）只有这样才拿得到；notice/noResult
  *     仍照样 warn 到 stderr，这里只是多给调用方一份原文。
@@ -126,7 +127,8 @@ export async function request(ctx, method, path, {
   soft = false,
   notFoundNull = false,
   hints = {},
-  withEnvelope = false
+  withEnvelope = false,
+  raw = false
 } = {}) {
   const key = getKey(ctx, { required: auth === "required" });
   // UA 从版本单一事实源派生（design D10）：npm 包 = `doubaoya-cli/<ver>`，skill 镜像 = `.version` 原文。
@@ -163,6 +165,22 @@ export async function request(ctx, method, path, {
 
   if (notFoundNull && res.status === 404) return null;
 
+  // raw：不按 doubaoya 信封解释，原样交回 { status, body }——设备码轮询按 RFC 8628 用 400 表达
+  // authorization_pending 等状态，那不是失败（见 device-contract.mjs）。网络层的分类与红线照旧。
+  if (raw) {
+    let body = null;
+    try {
+      body = await res.json();
+    } catch {
+      body = null;
+    }
+    // raw 也是本请求层读到的信封：notice 照样转达（「挂了没人读 == 没挂」，见下方成功分支注释）。
+    // 与成功分支用逐字相同的一行，tools/tests/test_notice_is_consumed.py 的破坏演练一次拿掉全部送出路径。
+    const env = body ?? {};
+    if (env.notice) warn(ctx, `[notice] ${env.notice}`);
+    return { status: res.status, body };
+  }
+
   let env;
   try {
     env = await res.json();
@@ -175,6 +193,7 @@ export async function request(ctx, method, path, {
   if (!env || env.success !== true) {
     const e = upstreamError(res.status, env?.error?.code, env?.error?.message, {
       keySet: !!ctx.key,
+      keySource: ctx.keySource ?? null,
       hints
     });
     if (soft && e.exit !== EXIT.AUTH) return { __soft: `[${e.code}] ${e.message}` }; // 401 不许被降级吞掉

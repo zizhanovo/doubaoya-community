@@ -2,6 +2,7 @@
 // 判定全部集中在这里，方便被测试直接打（TTY 状态可注入，不依赖真终端）。
 
 import { EXIT, DbyError } from "./errors.mjs";
+import { resolveCredentials } from "./credentials.mjs";
 
 export const BASE_URL_DEFAULT = "https://doubaoya.com";
 
@@ -15,15 +16,21 @@ export function makeContext({
   flags = {},
   env = process.env,
   stdoutIsTTY = process.stdout.isTTY,
-  argv = process.argv.slice(2)
+  argv = process.argv.slice(2),
+  credentials = resolveCredentials(env)
 } = {}) {
   const json = !!flags.json || !stdoutIsTTY;
   const noColorEnv = (env.NO_COLOR ?? "") !== "";
   return {
     json,
     color: flags.color !== false && !!stdoutIsTTY && !json && !noColorEnv,
-    baseUrl: env.DOUBAOYA_BASE_URL || BASE_URL_DEFAULT,
-    key: env.DOUBAOYA_API_KEY || null,
+    interactive: !!stdoutIsTTY,
+    // 站点：显式环境变量优先；否则 key 来自凭证文件时用登录时的那个站（key 属于它）；再否则生产。
+    baseUrl: env.DOUBAOYA_BASE_URL || credentials.baseUrl || BASE_URL_DEFAULT,
+    // 凭证只有两层，解析全在 credentials.mjs（spec dby-cli-auth「凭证解析只有一套顺序」）。
+    key: credentials.key,
+    keySource: credentials.keySource,
+    credentialsWarning: credentials.warning,
     // ponytail: 超时只能整体注入（测试用），不做每命令 flag；升级路径 = 需求出现时加 --timeout。
     timeoutOverride: Number(env.DOUBAOYA_TIMEOUT_MS) > 0 ? Number(env.DOUBAOYA_TIMEOUT_MS) : null,
     confirm: !!flags.confirm,
@@ -31,17 +38,22 @@ export function makeContext({
   };
 }
 
-/** 🔴 只说「设没设」——密钥内容一个字符都不进任何输出。 */
+/** 🔴 只说「设没设 / 从哪来」——密钥内容一个字符都不进任何输出。 */
 export function keyPresence(ctx) {
-  return ctx.key ? "已设置" : "没设置";
+  if (!ctx.key) return "没设置";
+  return ctx.keySource === "credentials" ? "已设置（来自 ~/.doubaoya/credentials）" : "已设置（来自环境变量）";
 }
+
+/** 两种拿 key 的办法，缺 key 与鉴权失败时的 remediation 共用这一句（spec：同时给出 dby login 与环境变量）。 */
+export const HOW_TO_GET_KEY =
+  "两种办法任选其一：① 运行 `dby login`，在已登录 doubaoya.com 的浏览器里手动输入屏幕上的码并批准；" +
+  "② 去 https://doubaoya.com → 密钥中心 → 生成密钥，然后 export DOUBAOYA_API_KEY=dyh_...。";
 
 export function getKey(ctx, { required = true } = {}) {
   if (!ctx.key && required) {
-    throw new DbyError("MISSING_API_KEY", "缺少 DOUBAOYA_API_KEY。", {
+    throw new DbyError("MISSING_API_KEY", "没有可用的 API key（环境变量 DOUBAOYA_API_KEY 与 ~/.doubaoya/credentials 都没有）。", {
       exit: EXIT.AUTH,
-      remediation:
-        "去 https://doubaoya.com → 登录 → 密钥中心 → 生成密钥，然后 export DOUBAOYA_API_KEY=dyh_... 再重试。"
+      remediation: `${HOW_TO_GET_KEY} 然后重试。`
     });
   }
   return ctx.key;
