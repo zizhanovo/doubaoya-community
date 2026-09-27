@@ -3,7 +3,7 @@
 > 要指定账号 / 公众号 / 本地封面 / 摘要，或要用 `--dry-run`、`--render-only` 的完整写法时读它。
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的密钥"   # 或放 ~/.doubaoya/key、Keychain（account-verify 会找）
+export DOUBAOYA_API_KEY="dyh_你的密钥"   # 或用 dby login 存到 ~/.doubaoya/credentials（只认这两处）
 
 # A. 从 Markdown 开始（渲染 → 传图 → 存草稿）
 node scripts/pipeline.mjs --md article.md --title "标题" --config ./config.json

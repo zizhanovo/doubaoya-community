@@ -1530,6 +1530,59 @@ def validate_single_request_layer(root: Path = ROOT) -> None:
         )
 
 
+# ── 单一 key 发现闸 ───────────────────────────────────────────────────────────
+# 🔴 **取 API key 只有一套顺序：环境变量 DOUBAOYA_API_KEY → ~/.doubaoya/credentials。**
+# （dby-cli-rebuild spec dby-cli-auth「凭证解析只有一套顺序」，唯一实现在 cli/src/credentials.mjs。）
+# 2.x 之前 dby-publish/scripts/account-verify.mjs 另起过一套：env → ~/.doubaoya/key →
+# ~/.doubaoya/env → macOS 钥匙串（`security find-generic-password`）。两套并存的后果是
+# CLI 与发布脚本对「本机用的是哪把 key」给出不同答案——发布串号就是从这种缝里出来的。
+#
+# 判据只认**代码行**（剥掉注释，注释里说明历史不算复活）：
+#   · 调系统钥匙串：find-generic-password / find-internet-password；
+#   · 读 ~/.doubaoya/key 或 ~/.doubaoya/env（字面路径或 path.join(".doubaoya", "key") 这类拼法）。
+# 扫描面：skills/ 与 cli/（不含 cli/test/，测试里可以出现被断言的字符串），代码后缀 .mjs/.js/.cjs/.py/.sh。
+# 元断言：扫到的代码文件不能为 0，且 cli/src/credentials.mjs 必须在扫描面里（唯一实现本身被看着）。
+#
+# ponytail: 天花板 = 换一种拼法（变量拼接 "key" 片段、调别的钥匙串工具如 secret-tool）本闸看不见；
+# 升级路径 = 解析 import 图，要求所有读 ~/.doubaoya 的代码都经 credentials.mjs。
+KEY_DISCOVERY_SUFFIXES = {".mjs", ".js", ".cjs", ".py", ".sh"}
+SECOND_KEY_DISCOVERY = re.compile(
+    r"find-(?:generic|internet)-password"
+    r"|\.doubaoya/(?:key|env)\b"
+    r"""|\.doubaoya["']\s*,\s*["'](?:key|env)["']"""
+)
+PY_LINE_COMMENT = re.compile(r"^\s*#")
+
+
+def validate_single_key_discovery(root: Path = ROOT) -> None:
+    """🔴 仓内不许有第二套 key 发现逻辑（钥匙串、~/.doubaoya/key、~/.doubaoya/env）。判据见上面那段注释。"""
+    scanned: list[str] = []
+    for path in publishable_files(root):
+        relative = path.relative_to(root)
+        parts = relative.parts
+        if parts[:1] not in {("skills",), ("cli",)} or parts[:2] == ("cli", "test"):
+            continue
+        if path.suffix.lower() not in KEY_DISCOVERY_SUFFIXES or not path.is_file() or path.is_symlink():
+            continue
+        text = path.read_text(encoding="utf-8")
+        scanned.append(relative.as_posix())
+        for lineno, line in code_lines_of(text):
+            if path.suffix.lower() in {".py", ".sh"} and PY_LINE_COMMENT.match(line):
+                continue
+            hit = SECOND_KEY_DISCOVERY.search(line)
+            require(
+                hit is None,
+                f"{relative.as_posix()}:{lineno} 出现第二套 key 发现逻辑（`{hit.group(0) if hit else ''}`）："
+                "取 key 只有「环境变量 DOUBAOYA_API_KEY → ~/.doubaoya/credentials」一套顺序，"
+                "唯一实现在 cli/src/credentials.mjs。钥匙串、~/.doubaoya/key、~/.doubaoya/env 都不许再读。",
+            )
+    require(scanned, "单一 key 发现闸一个代码文件都没扫到——扫描面断了，闸在空转。")
+    require(
+        "cli/src/credentials.mjs" in scanned,
+        "单一 key 发现闸没扫到 cli/src/credentials.mjs（凭证解析的唯一实现）——扫描面不对。",
+    )
+
+
 # ── CLI 命令名在场闸 ──────────────────────────────────────────────────────────
 # 🔴 **SKILL.md 用到 CLI 就必须把子命令名写出来，不能只说"看 --help"。** `dby routes --json`
 # 是子命令是否存在的唯一真相（`{ok:true,data:{commands:[{name:"draft get",…}]}}`），本闸真跑一次
@@ -2487,6 +2540,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_runtime_declaration(root)
     validate_entry_guards_resolve_symlinks(root)
     validate_single_request_layer(root)
+    validate_single_key_discovery(root)
     validate_cli_commands_present(root)
     validate_cli_shims_identical(root)
     validate_no_price_literals(root)

@@ -6,7 +6,7 @@
 
 | 阶段 | 模块 | 说明 |
 |------|------|------|
-| 账号解析 | `scripts/account-verify.mjs` | `resolveAccountKey({account, baseUrl})`：多来源（env / `~/.doubaoya` / Keychain）候选 → 逐个 whoami → 按目标账号挑对 key，key 只在内存。多 key 指向不同账号且未指定 `--account` 时，报出各 key 对应账号并停。 |
+| 账号解析 | `scripts/account-verify.mjs` | `resolveAccountKey({account, baseUrl})`：两处来源（env `DOUBAOYA_API_KEY` → `~/.doubaoya/credentials`）候选 → 逐个 whoami → 按目标账号挑对 key，key 只在内存。多 key 指向不同账号且未指定 `--account` 时，报出各 key 对应账号并停。 |
 | md→公众号 HTML | **平台** `POST /api/wechat/render` | `renderViaPlatform({baseUrl,apiKey,markdown,themeJson,themeId})`（在 `pipeline.mjs` 内）：免费不扣点，主题由服务端套，返回 `{html, themeSource, warnings, detailUrl}`。**失败抛错，调用方中止，绝不回退本机渲染器**。 |
 | md→公众号 HTML（本机，已退出主干） | `scripts/render-wechat-html.mjs` | `renderWechatHtml(md,{title,theme})`：零依赖内联样式渲染，**原样保留图片 src**。只服务「无密钥先看排版」，**不产生在线预览链接**。 |
 | 封面/配图生图（**不在本包**） | ⛔ 当前暂时下架 | 未来是否恢复需重新评估，当前不承诺恢复时间；不要调用已下架能力或旧包。图片只能来自用户自备或 agent 自己的生图工具：落成本地文件后接回本包，封面喂 `--cover`，配图以 `<img src=本地路径>` 落进正文，**不碰发布契约**。 |

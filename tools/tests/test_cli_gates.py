@@ -239,3 +239,55 @@ class CliCommandsPresentGateTests(SkillsFixtureMixin, unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SingleKeyDiscoveryGateTests(unittest.TestCase):
+    """dby-cli-rebuild tasks 2.9：取 key 只有「env → ~/.doubaoya/credentials」一套，钥匙串等第二套发现逻辑复活即红。"""
+
+    def fixture_root(self) -> Path:
+        directory = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, directory, True)
+        root = Path(directory)
+        repo = validator.ROOT
+        shutil.copytree(repo / "skills", root / "skills")
+        shutil.copytree(repo / "cli" / "src", root / "cli" / "src")
+        return root
+
+    def test_真仓通过(self) -> None:
+        validator.validate_single_key_discovery()
+
+    def test_钥匙串调用复活即红并指出文件与行(self) -> None:
+        root = self.fixture_root()
+        target = root / "skills" / "dby-image" / "scripts" / "gen.mjs"
+        target.write_text(
+            target.read_text(encoding="utf-8")
+            + '\nexport const k = () => execFileSync("security", ["find-generic-password", "-s", "doubaoya", "-w"]);\n',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(validator.ValidationError, r"skills/dby-image/scripts/gen\.mjs:\d+.*find-generic-password"):
+            validator.validate_single_key_discovery(root)
+
+    def test_读旧key文件即红(self) -> None:
+        root = self.fixture_root()
+        target = root / "cli" / "src" / "http.mjs"
+        target.write_text(
+            target.read_text(encoding="utf-8") + '\nconst legacy = path.join(os.homedir(), ".doubaoya", "key");\n',
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(validator.ValidationError, r"cli/src/http\.mjs:\d+"):
+            validator.validate_single_key_discovery(root)
+
+    def test_注释里讲历史不算(self) -> None:
+        root = self.fixture_root()
+        target = root / "cli" / "src" / "http.mjs"
+        target.write_text(
+            target.read_text(encoding="utf-8") + "\n// 旧版读过 ~/.doubaoya/key 与 find-generic-password，已删除\n",
+            encoding="utf-8",
+        )
+        validator.validate_single_key_discovery(root)
+
+    def test_扫描面断了即红(self) -> None:
+        root = self.fixture_root()
+        shutil.rmtree(root / "cli")
+        with self.assertRaisesRegex(validator.ValidationError, r"credentials\.mjs"):
+            validator.validate_single_key_discovery(root)

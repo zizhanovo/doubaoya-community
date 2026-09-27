@@ -229,7 +229,7 @@ const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草
   node scripts/render-wechat-html.mjs --md a.md --out a.html
   —— 纯本机，**不产生在线预览链接**（在线链接只有走平台渲染才有）。
 
-鉴权: DOUBAOYA_API_KEY 由 account-verify 从 env/~/.doubaoya/Keychain 解析，仅在内存中传给子进程。
+鉴权: API key 由 account-verify 按 env DOUBAOYA_API_KEY → ~/.doubaoya/credentials 解析，仅在内存中传给子进程。
 `;
 
 // ---------------------------------------------------------------------------

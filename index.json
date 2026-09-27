@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T08:26:35.313256+00:00",
+  "generatedAt": "2026-09-27T08:26:38.109060+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -1187,6 +1187,12 @@
           "version": "4.6.0",
           "date": "2026-09-27",
           "subject": "feat(cli): cli/ 恢复为 npm 包源 @doubaoya/cli，skill 目录改为它的镜像"
+        },
+        {
+          "hash": "ca6860097edf",
+          "version": "4.7.0",
+          "date": "2026-09-27",
+          "subject": "feat(cli): 凭证两层解析 + dby login/logout 设备码客户端"
         }
       ]
     },
@@ -2178,6 +2184,7 @@
         "6bcccc2e63e6",
         "76caa2a60c4e",
         "87b714968274",
+        "90a86b766ece",
         "915ea7bae745",
         "93bdab968731",
         "aa22e0e657ae",

@@ -5,8 +5,12 @@
  * Purpose:
  *   Before any 都爆鸭 WeChat publish, resolve WHICH local DOUBAOYA_API_KEY
  *   belongs to the intended account, so an agent never publishes as the wrong
- *   account. A single machine may hold several keys (env / files / Keychain);
- *   this module asks the server who each key is and picks the right one.
+ *   account. Keys come from exactly two places, in this order (spec
+ *   dby-cli-auth「凭证解析只有一套顺序」): env DOUBAOYA_API_KEY, then
+ *   ~/.doubaoya/credentials (written by `dby login`). This module asks the
+ *   server who each key is and picks the right one.
+ *   🔴 No second key-discovery path (system keychain, ~/.doubaoya/key,
+ *   ~/.doubaoya/env) — tools/validate_community.py validate_single_key_discovery.
  *
  * Zero external deps: Node >= 18 builtins only. The actual HTTP call is
  * delegated in-process to the dby-api package's shared request layer
@@ -23,7 +27,6 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { execFile } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { importDbyLib } from "./lib/locate-dby.mjs";
@@ -61,83 +64,27 @@ function redactKey(key) {
 }
 
 /**
- * Run a command with argv (no shell) and resolve trimmed stdout, or null on
- * any failure (missing binary, non-zero exit, empty). Never throws.
- * @param {string} file
- * @param {string[]} args
- * @returns {Promise<string|null>}
- */
-function execCapture(file, args) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (val) => {
-      if (!done) {
-        done = true;
-        resolve(val);
-      }
-    };
-    try {
-      execFile(file, args, { timeout: 5000 }, (err, stdout) => {
-        if (err) return finish(null);
-        const out = typeof stdout === "string" ? stdout.trim() : "";
-        finish(out.length ? out : null);
-      });
-    } catch {
-      finish(null);
-    }
-  });
-}
-
-/**
- * Read a file and return its trimmed contents, or null if unreadable/empty.
+ * Read `apiKey` out of ~/.doubaoya/credentials (JSON written by `dby login`),
+ * or null if the file is missing / unreadable / malformed. Never throws.
  * @param {string} path
  * @returns {Promise<string|null>}
  */
-async function readTrimmed(path) {
+async function readCredentialsKey(path) {
   try {
-    const raw = await readFile(path, "utf8");
-    const trimmed = raw.trim();
-    return trimmed.length ? trimmed : null;
+    const parsed = JSON.parse(await readFile(path, "utf8"));
+    const key = parsed && typeof parsed.apiKey === "string" ? parsed.apiKey.trim() : "";
+    return key.length ? key : null;
   } catch {
     return null;
   }
 }
 
 /**
- * Parse a DOUBAOYA_API_KEY value out of an env-style file body.
- * Accepts lines like `export DOUBAOYA_API_KEY=xxx` or `DOUBAOYA_API_KEY="xxx"`.
- * @param {string|null} body
- * @returns {string|null}
- */
-function parseEnvKey(body) {
-  if (!body) return null;
-  for (const rawLine of body.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith("#")) continue;
-    const m = line.match(/^(?:export\s+)?DOUBAOYA_API_KEY\s*=\s*(.+)$/);
-    if (m) {
-      let val = m[1].trim();
-      // strip surrounding single/double quotes
-      if (
-        (val.startsWith('"') && val.endsWith('"')) ||
-        (val.startsWith("'") && val.endsWith("'"))
-      ) {
-        val = val.slice(1, -1);
-      }
-      val = val.trim();
-      if (val.length) return val;
-    }
-  }
-  return null;
-}
-
-/**
  * Enumerate candidate keys from all sources, in priority order, deduped.
  * Each entry: { key, source }. `source` is a human label (never contains the key).
- * @param {{ account?: string }} opts
  * @returns {Promise<Array<{ key: string, source: string }>>}
  */
-async function collectCandidates({ account } = {}) {
+async function collectCandidates() {
   /** @type {Array<{ key: string, source: string }>} */
   const found = [];
   const push = (key, source) => {
@@ -149,36 +96,8 @@ async function collectCandidates({ account } = {}) {
   // a. environment variable
   push(process.env.DOUBAOYA_API_KEY, "env:DOUBAOYA_API_KEY");
 
-  const home = homedir();
-
-  // b. ~/.doubaoya/key
-  push(await readTrimmed(join(home, ".doubaoya", "key")), "file:~/.doubaoya/key");
-
-  // c. ~/.doubaoya/env
-  push(
-    parseEnvKey(await readTrimmed(join(home, ".doubaoya", "env"))),
-    "file:~/.doubaoya/env"
-  );
-
-  // d. macOS Keychain (generic-password, service "doubaoya").
-  //    execFile (argv, no shell) avoids command injection from `account`.
-  push(
-    await execCapture("security", ["find-generic-password", "-s", "doubaoya", "-w"]),
-    "keychain:service=doubaoya"
-  );
-  if (account && String(account).trim().length) {
-    push(
-      await execCapture("security", [
-        "find-generic-password",
-        "-a",
-        String(account),
-        "-s",
-        "doubaoya",
-        "-w",
-      ]),
-      "keychain:account+service=doubaoya"
-    );
-  }
+  // b. ~/.doubaoya/credentials（dby login 写的；与 CLI 同一套两层顺序，没有第三层）
+  push(await readCredentialsKey(join(homedir(), ".doubaoya", "credentials")), "file:~/.doubaoya/credentials");
 
   // Dedup by key value, keeping the FIRST source (priority order preserved).
   /** @type {Map<string, { key: string, source: string }>} */
@@ -223,7 +142,7 @@ async function whoami(baseUrl, key) {
 const norm = (s) => String(s).trim().toLowerCase();
 
 const NO_KEY_MSG =
-  "本地没有可用的 DOUBAOYA_API_KEY（env / ~/.doubaoya / Keychain 都没有有效凭证），请先在 doubaoya.com 生成密钥并保存。";
+  "本地没有可用的 API key（环境变量 DOUBAOYA_API_KEY 与 ~/.doubaoya/credentials 都没有有效凭证）：运行 dby login，或在 doubaoya.com 密钥中心生成密钥后 export DOUBAOYA_API_KEY。";
 
 /**
  * Collect + resolve every candidate against whoami ONCE, then pick the target.
@@ -248,7 +167,7 @@ async function resolveInternal({ account, baseUrl } = {}) {
   const target =
     typeof account === "string" && account.trim().length ? account.trim() : null;
 
-  const candidates = await collectCandidates({ account: target });
+  const candidates = await collectCandidates();
 
   /** @type {Array<{ key: string, source: string, account: { id: string, email: string }, authVia: any }>} */
   const valid = [];
@@ -364,8 +283,8 @@ Options:
   -h, --help           Show this help.
 
 Never prints the key value. Exits non-zero with an actionable message on failure.
-Sources checked (priority): env DOUBAOYA_API_KEY, ~/.doubaoya/key,
-~/.doubaoya/env, macOS Keychain (service "doubaoya").`;
+Sources checked (priority): env DOUBAOYA_API_KEY, then ~/.doubaoya/credentials
+(written by \`dby login\`). No other source is consulted.`;
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));

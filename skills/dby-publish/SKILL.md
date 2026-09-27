@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 5.1.0
-changelog: "封面 / 配图那一步改回指向 dby-image —— 服务端生图能力 2026-09 已恢复（换供应商 + gpt-image-2.5），此前那句「出图能力当前暂时下架」已成假信息；本包仍不出图，只消费落盘的本地文件。上一版（5.0.0）内容：BREAKING：删除 scripts/publish_draft.py（改用 `dby wechat publish`，默认停在确认态）；pipeline/preprocess-and-publish/account-verify 的 HTTP 全部改走 dby-api 共享请求层（lib/locate-dby.mjs 定位，缺 dby-api 退出码 3）；新增 scripts/dby.mjs 引导壳；文档路径改写 `$SKILL_DIR`；compatibility 不再需要 Python"
+version: 6.0.0
+changelog: "BREAKING：account-verify 只从两处取 key——环境变量 DOUBAOYA_API_KEY，其次 dby login 写的 ~/.doubaoya/credentials；不再读 ~/.doubaoya/key、~/.doubaoya/env 与 macOS 钥匙串（仓内只许一套 key 解析顺序，validate_single_key_discovery 钉住）。把 key 放在旧位置的用户改用 export 或 dby login"
 compatibility: >-
   需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
   接口调用经由 `dby-api` 包的共享 CLI（`scripts/lib/locate-dby.mjs` 定位），需与 dby-api 一起安装。
@@ -113,7 +113,7 @@ node "$SKILL_DIR/scripts/dby.mjs" wechat publish --appid <authorizerAppid> --tit
 **用户只要成稿时别自作主张跑它**。存完请用户去后台亲眼确认，群发的手永远在用户自己。
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_…"   # 或放 ~/.doubaoya/key、Keychain（account-verify 会找）
+export DOUBAOYA_API_KEY="dyh_…"   # 或用 dby login 存到 ~/.doubaoya/credentials（只认这两处）
 
 node scripts/pipeline.mjs --md article.md --title "标题"                 # 渲染 → 传图 → 存草稿
 node scripts/pipeline.mjs --md a.md --title "标题" --render-only         # 只渲染，拿在线预览链接
