@@ -4,7 +4,7 @@
 //
 // 判的是**打包产物**（隔离副本里真 `npm pack` 再解开），不是仓内源码——用户拿到的是那份：
 //   ① 零依赖：dependencies / optionalDependencies / peerDependencies / bundleDependencies 全空；
-//   ② exports 只有 "./package.json" 与 "./bin/dby.mjs"，bin 只有 dby，engines.node = ">=22"；
+//   ② exports 只有 "./package.json" 与 "./bin/dby.mjs"，bin 只有 dby，engines.node = ">=22"，publishConfig.registry = npmjs；
 //   ③ 包内每个 SKILL.md 的 frontmatter version = 包版本；包内 skill 只有 SKILL.md 与 references/；
 //   ④ 调用约定里的确切版本 @doubaoya/cli@<X> = 包版本；
 //   ⑤ 镜像哈希：包内每个 skill 的内容哈希 = 仓库 skills/ 同名包（同一打包口径）的哈希，集合一致；
@@ -97,6 +97,8 @@ export async function runChecks(opts) {
     if (JSON.stringify(Object.keys(p.bin ?? {})) !== JSON.stringify(["dby"])) out.push(`${label} 的 bin 只许有 dby：${JSON.stringify(p.bin)}`);
     if (p.engines?.node !== ">=22") out.push(`${label} 的 engines.node 是 ${JSON.stringify(p.engines?.node)}，应为 ">=22"`);
     if (!parseSemver(p.version)) out.push(`${label} 的 version 不是合法 semver：${p.version}`);
+    // 发布目标钉死 npmjs：本机 npmrc 常把 registry 设成 npmmirror（只读镜像），不钉的话本机首发会发错地方。
+    if (p.publishConfig?.registry !== "https://registry.npmjs.org/") out.push(`${label} 的 publishConfig.registry 是 ${JSON.stringify(p.publishConfig?.registry)}，必须是 "https://registry.npmjs.org/"`);
     return out;
   };
   check("① 零依赖 / ② exports·bin·engines（源 package.json）", pkgProblems(pkg, "cli/package.json"));

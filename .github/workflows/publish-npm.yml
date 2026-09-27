@@ -1,0 +1,76 @@
+# publish-npm —— 发布 @doubaoya/cli 到 npm（dby-cli-rebuild design D2 / tasks 6.8）。
+#
+# 🔴 只能手动触发（workflow_dispatch），由创始人在 Actions 页面点；没有任何 push / tag 触发。
+# 身份：npm Trusted Publisher（OIDC）——仓库里没有、也不许有长期 NPM_TOKEN；provenance 随包签发。
+#   前置（人工、一次性）：创始人本机开 2FA 首发 `npm publish --tag next` 之后，在 npmjs 包设置里
+#   把本仓库的这个工作流登记为 Trusted Publisher。
+# 顺序：全量测试 → 发布前检查（打包闸 + 版本递增 + CHANGELOG）→ npm publish → 触发 npmmirror 同步并
+#       轮询到「版本可见且 integrity 与 npmjs 一致」。最后一步不过 = 发布没完成（境内安装器会拒装而不是降级）。
+# 已发布的版本不可撤回；止损只有 dist-tag 回指、npm deprecate 与旧壳兼容窗口（design D2）。
+name: publish-npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      dist-tag:
+        description: "npm dist-tag：预发布版（x.y.z-next.N）用 next，正式版用 latest"
+        required: true
+        type: choice
+        options: [next, latest]
+        default: next
+
+permissions:
+  contents: read
+  id-token: write # OIDC：npm Trusted Publishing 与 provenance 都靠它
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      DIST_TAG: ${{ inputs.dist-tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # validate / pytest 要读 git 历史
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Trusted Publishing 需要 npm ≥ 11.5.1（Node 22 自带的 npm 10 不认 OIDC 换 token）
+      - name: npm 升级到支持 Trusted Publishing 的版本
+        run: npm install -g npm@^11.5.1 && npm --version
+
+      - name: dist-tag 与版本号一致（next ↔ 预发布版，latest ↔ 正式版）
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./cli/package.json').version")
+          case "$VERSION" in
+            *-*) [ "$DIST_TAG" = next ] || { echo "::error::$VERSION 是预发布版，只能发 next"; exit 1; } ;;
+            *)   [ "$DIST_TAG" = latest ] || { echo "::error::$VERSION 是正式版，只能发 latest"; exit 1; } ;;
+          esac
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: 全量测试
+        run: |
+          set -euo pipefail
+          pip install pytest
+          python3 tools/validate_community.py
+          python3 -m pytest tools/tests -q
+          (cd cli && node --test)
+
+      - name: 发布前检查（打包闸 + 版本递增 + CHANGELOG）
+        run: node cli/scripts/prepublish-check.mjs --dist-tag "$DIST_TAG"
+
+      - name: npm publish（OIDC + provenance）
+        working-directory: cli
+        run: npm publish --provenance --access public --tag "$DIST_TAG"
+
+      - name: 触发 npmmirror 同步并轮询到版本与 integrity 一致
+        run: node cli/scripts/npmmirror-sync.mjs --version "$VERSION" --timeout-min 30 --interval-s 20
