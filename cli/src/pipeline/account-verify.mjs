@@ -1,0 +1,409 @@
+#!/usr/bin/env node
+/**
+ * account-verify.mjs（@doubaoya/cli 包版，自 skills/dby-publish/scripts 原样搬入，design D4）
+ * — 都爆鸭 (doubaoya) universal account/key resolver.
+ *
+ * Purpose:
+ *   Before any 都爆鸭 WeChat publish, resolve WHICH local DOUBAOYA_API_KEY
+ *   belongs to the intended account, so an agent never publishes as the wrong
+ *   account. Keys come from exactly two places, in this order (spec
+ *   dby-cli-auth「凭证解析只有一套顺序」): env DOUBAOYA_API_KEY, then
+ *   ~/.doubaoya/credentials (written by `dby login`). This module asks the
+ *   server who each key is and picks the right one.
+ *   🔴 No second key-discovery path (system keychain, ~/.doubaoya/key,
+ *   ~/.doubaoya/env) — tools/validate_community.py validate_single_key_discovery.
+ *
+ * Zero external deps: Node >= 18 builtins only. The actual HTTP call is
+ * delegated in-process to the dby-api package's shared request layer
+ * (skills/dby-api/scripts/lib/http.mjs — see ./lib/locate-dby.mjs for how
+ * it's located; spec dby-cli-coverage「仓内只有一份请求层」).
+ * SECURITY: the resolved key is returned in memory ONLY. It is never written
+ *           to stdout/stderr/logs. Error and debug output redact key values.
+ *
+ * Server disambiguator:
+ *   GET {baseUrl}/api/agent/whoami  (Authorization: Bearer <dyh_ key>)
+ *   -> { success, data: { user: { id, email }, authVia } }
+ */
+
+import { realpathSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { importDbyLib } from "./lib/locate-dby.mjs";
+
+const DEFAULT_BASE_URL = "https://doubaoya.com";
+const WHOAMI_PATH = "/api/agent/whoami";
+
+// 转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」），
+// 惰性 + 记忆化：只有真的存在候选 key 时才去定位 dby-api 包，零 key 时（NO_KEY_MSG
+// 分支）连这一步探测都不需要发生。
+let _dbyLibPromise = null;
+function getDbyLib() {
+  if (!_dbyLibPromise) {
+    _dbyLibPromise = Promise.all([
+      importDbyLib(import.meta.url, "http.mjs"),
+      importDbyLib(import.meta.url, "errors.mjs"),
+      importDbyLib(import.meta.url, "context.mjs"),
+    ]);
+  }
+  return _dbyLibPromise;
+}
+
+/**
+ * Redact a key for display.
+ *
+ * 🔴 **一个字符的密钥内容都不许出现在输出里**，所以这里不做任何截取：只回报「是不是本鸭
+ * 的钥匙形态」。`dyh_` 是所有本鸭 key 的公共前缀，本身不含任何密钥信息；之前那版还会
+ * 取非 dyh 钥匙的前 3 个字符，那 3 个字符就是真的密钥内容。
+ * @param {string} key
+ * @returns {string}
+ */
+function redactKey(key) {
+  if (typeof key !== "string" || key.length === 0) return "(empty)";
+  return key.startsWith("dyh_") ? "dyh_****" : "****";
+}
+
+/**
+ * Enumerate candidate keys from all sources, in priority order, deduped.
+ * Each entry: { key, source }. `source` is a human label (never contains the key).
+ * @returns {Promise<Array<{ key: string, source: string }>>}
+ */
+async function collectCandidates() {
+  /** @type {Array<{ key: string, source: string }>} */
+  const found = [];
+  const push = (key, source) => {
+    if (typeof key === "string" && key.trim().length) {
+      found.push({ key: key.trim(), source });
+    }
+  };
+
+  // CLI 包版：两层来源直接取自 credentials.mjs（凭证解析的唯一实现），不再自己读文件。
+  const { readCredentials } = await importDbyLib(import.meta.url, "credentials.mjs");
+  // a. environment variable
+  push(process.env.DOUBAOYA_API_KEY, "env:DOUBAOYA_API_KEY");
+  // b. ~/.doubaoya/credentials（dby login 写的）
+  push(readCredentials()?.apiKey ?? null, "file:~/.doubaoya/credentials");
+
+  // Dedup by key value, keeping the FIRST source (priority order preserved).
+  /** @type {Map<string, { key: string, source: string }>} */
+  const byKey = new Map();
+  for (const c of found) {
+    if (!byKey.has(c.key)) byKey.set(c.key, c);
+  }
+  return [...byKey.values()];
+}
+
+/**
+ * Query the whoami endpoint for a single key.
+ * @param {string} baseUrl
+ * @param {string} key
+ * @returns {Promise<{ id: string, email: string, authVia: any } | null>}
+ *   Resolved account, or null if the key is invalid / rejected / unparseable.
+ */
+async function whoami(baseUrl, key) {
+  // 转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」）——
+  // 本函数不再自己 fetch/解析信封。鉴权失败（exit===4，含 401/缺 key）视为「这把 key
+  // 对这个 baseUrl 无效」，与旧行为一致地静默丢弃、让调用方去试下一个候选；其余错误
+  // （网络/超时/服务端 5xx）不再被当成"key 无效"吞掉——它们不是关于这把 key 的判断，
+  // 照旧上抛，交给 resolveInternal/main() 的调用方决定怎么办。
+  const [{ request }, { EXIT }, { makeContext }] = await getDbyLib();
+  const ctx = makeContext({ env: { DOUBAOYA_BASE_URL: baseUrl, DOUBAOYA_API_KEY: key } });
+  let data;
+  try {
+    data = await request(ctx, "GET", WHOAMI_PATH, {});
+  } catch (e) {
+    if (e && e.name === "DbyError" && e.exit === EXIT.AUTH) return null;
+    throw e;
+  }
+  const user = data && data.user;
+  if (!user || typeof user.email !== "string") return null;
+  return {
+    id: user.id,
+    email: user.email,
+    authVia: data.authVia,
+  };
+}
+
+const norm = (s) => String(s).trim().toLowerCase();
+
+const NO_KEY_MSG =
+  "本地没有可用的 API key（环境变量 DOUBAOYA_API_KEY 与 ~/.doubaoya/credentials 都没有有效凭证）：运行 dby login，或在 doubaoya.com 密钥中心生成密钥后 export DOUBAOYA_API_KEY。";
+
+/**
+ * Collect + resolve every candidate against whoami ONCE, then pick the target.
+ * Shared by the exported resolver and the CLI (so whoami is not queried twice).
+ *
+ * @param {{ account?: string, baseUrl?: string }} [opts]
+ * @returns {Promise<{
+ *   base: string,
+ *   target: string|null,
+ *   valid: Array<{ key: string, source: string, account: { id: string, email: string }, authVia: any }>,
+ *   invalidSources: string[],
+ *   chosen: { key: string, source: string, account: { id: string, email: string }, authVia: any } | null,
+ *   error: Error | null,
+ * }>}
+ */
+async function resolveInternal({ account, baseUrl } = {}) {
+  const base =
+    (typeof baseUrl === "string" && baseUrl.trim()) ||
+    process.env.DOUBAOYA_BASE_URL ||
+    DEFAULT_BASE_URL;
+
+  const target =
+    typeof account === "string" && account.trim().length ? account.trim() : null;
+
+  const candidates = await collectCandidates();
+
+  /** @type {Array<{ key: string, source: string, account: { id: string, email: string }, authVia: any }>} */
+  const valid = [];
+  const invalidSources = [];
+  for (const cand of candidates) {
+    const acct = await whoami(base, cand.key);
+    if (acct) {
+      valid.push({
+        key: cand.key,
+        source: cand.source,
+        account: { id: acct.id, email: acct.email },
+        authVia: acct.authVia,
+      });
+    } else {
+      invalidSources.push(cand.source);
+    }
+  }
+
+  const out = { base, target, valid, invalidSources, chosen: null, error: null };
+
+  if (valid.length === 0) {
+    out.error = new Error(NO_KEY_MSG);
+    return out;
+  }
+
+  if (target) {
+    const match = valid.find((v) => norm(v.account.email) === norm(target));
+    if (!match) {
+      const accounts = valid
+        .map((v) => `${v.account.email}（来源 ${v.source}）`)
+        .join("、");
+      out.error = new Error(
+        `本地找到的 key 分别对应账号：${accounts}；没有一个匹配目标 ${target}。` +
+          `请设置对应账号的 DOUBAOYA_API_KEY，或重新在 doubaoya.com 生成密钥。`
+      );
+      return out;
+    }
+    out.chosen = match;
+    return out;
+  }
+
+  // No account specified: all valid keys must agree on a single account.
+  const distinct = new Map();
+  for (const v of valid) {
+    const k = norm(v.account.email);
+    if (!distinct.has(k)) distinct.set(k, v);
+  }
+  if (distinct.size === 1) {
+    out.chosen = valid[0];
+    return out;
+  }
+  const listing = [...distinct.values()]
+    .map((v) => `${v.account.email}（来源 ${v.source}）`)
+    .join("、");
+  out.error = new Error(
+    `本地存在多个有效 key，分别对应不同账号：${listing}。` +
+      `请通过 --account <账号> 指定要发布的目标账号。`
+  );
+  return out;
+}
+
+/**
+ * Resolve the local DOUBAOYA_API_KEY belonging to the intended account.
+ *
+ * @param {{ account?: string, baseUrl?: string }} [opts]
+ * @returns {Promise<{
+ *   key: string,                       // IN MEMORY ONLY — never log this
+ *   account: { id: string, email: string },
+ *   source: string,
+ *   authVia: any,
+ * }>}
+ * @throws {Error} with an actionable, key-free message on any failure.
+ */
+export async function resolveAccountKey({ account, baseUrl } = {}) {
+  const res = await resolveInternal({ account, baseUrl });
+  if (res.error) throw res.error;
+  const c = res.chosen;
+  return { key: c.key, account: c.account, source: c.source, authVia: c.authVia };
+}
+
+/* ------------------------------------------------------------------ *
+ * CLI
+ * ------------------------------------------------------------------ */
+
+/**
+ * Minimal argv parser for: --account <x> --base-url <u> --json
+ * @param {string[]} argv
+ * @returns {{ account?: string, baseUrl?: string, json: boolean }}
+ */
+function parseArgs(argv) {
+  const out = { json: false };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--account" || a === "-a") out.account = argv[++i];
+    else if (a === "--base-url" || a === "-b") out.baseUrl = argv[++i];
+    else if (a === "--json") out.json = true;
+    else if (a === "--help" || a === "-h") out.help = true;
+  }
+  return out;
+}
+
+const HELP = `account-verify.mjs — resolve the local DOUBAOYA_API_KEY for an account
+
+Usage:
+  node account-verify.mjs [--account <email|phone>] [--base-url <url>] [--json]
+
+Options:
+  -a, --account <x>    Target account login (email or phone). If omitted, all
+                       valid local keys must resolve to the same account.
+  -b, --base-url <u>   API base URL (default: $DOUBAOYA_BASE_URL or
+                       https://doubaoya.com).
+      --json           Emit a JSON summary instead of human text.
+  -h, --help           Show this help.
+
+Never prints the key value. Exits non-zero with an actionable message on failure.
+Sources checked (priority): env DOUBAOYA_API_KEY, then ~/.doubaoya/credentials
+(written by \`dby login\`). No other source is consulted.`;
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    process.stdout.write(HELP + "\n");
+    return 0;
+  }
+
+  let res;
+  try {
+    res = await resolveInternal({
+      account: args.account,
+      baseUrl: args.baseUrl,
+    });
+  } catch (e) {
+    // whoami() 只把"鉴权失败"当作候选 key 无效静默丢弃；网络错误/服务端 5xx 这类
+    // 与"这把 key 是否有效"无关的错误会照旧上抛到这里——不是崩溃，走同一套人话/JSON 输出。
+    const msg = `whoami 请求异常：${e && e.message ? e.message : String(e)}`;
+    if (args.json) {
+      process.stdout.write(JSON.stringify({ success: false, error: msg }, null, 2) + "\n");
+    } else {
+      process.stderr.write(`❌ ${msg}\n`);
+    }
+    return 1;
+  }
+
+  // candidate -> account map (redacted; no key values, only source + resolved email)
+  const candidateMap = res.valid.map((v) => ({
+    source: v.source,
+    account: { id: v.account.id, email: v.account.email },
+    authVia: v.authVia,
+    keyRef: redactKey(v.key),
+  }));
+
+  if (res.error) {
+    const msg = res.error.message;
+    if (args.json) {
+      process.stderr.write(
+        JSON.stringify(
+          {
+            success: false,
+            error: msg,
+            candidates: candidateMap,
+            invalidSources: res.invalidSources,
+          },
+          null,
+          2
+        ) + "\n"
+      );
+    } else {
+      process.stderr.write(`❌ ${msg}\n`);
+      if (candidateMap.length) {
+        process.stderr.write("   本地有效候选 → 账号：\n");
+        for (const c of candidateMap) {
+          process.stderr.write(
+            `     - ${c.account.email}（来源 ${c.source}，密钥 ${c.keyRef}）\n`
+          );
+        }
+      }
+    }
+    return 1;
+  }
+
+  const chosen = res.chosen;
+  if (args.json) {
+    process.stdout.write(
+      JSON.stringify(
+        {
+          success: true,
+          account: chosen.account, // { id, email }
+          source: chosen.source,
+          authVia: chosen.authVia,
+          keyRef: redactKey(chosen.key), // redacted reference only
+          candidates: candidateMap,
+          invalidSources: res.invalidSources,
+        },
+        null,
+        2
+      ) + "\n"
+    );
+  } else {
+    const lines = [
+      "✅ 已解析目标账号对应的本地密钥（密钥值不显示）",
+      `   账号:    ${chosen.account.email}`,
+      `   账号 ID: ${chosen.account.id}`,
+      `   来源:    ${chosen.source}`,
+      `   authVia: ${JSON.stringify(chosen.authVia)}`,
+      `   密钥引用: ${redactKey(chosen.key)}（仅供识别，非完整密钥）`,
+      "   本地候选 → 账号：",
+    ];
+    for (const c of candidateMap) {
+      const mark = c.source === chosen.source ? "★" : "-";
+      lines.push(
+        `     ${mark} ${c.account.email}（来源 ${c.source}，密钥 ${c.keyRef}）`
+      );
+    }
+    if (res.invalidSources.length) {
+      lines.push(`   已忽略的无效来源: ${res.invalidSources.join("、")}`);
+    }
+    process.stdout.write(lines.join("\n") + "\n");
+  }
+  return 0;
+}
+
+// 🔴 入口守卫：两边都先 realpathSync 落到同一条真路径再比。
+//    `import.meta.url` 是 ESM loader **解过软链**的真路径，`process.argv[1]` 原样保留调用时
+//    给的那条路径；而软链正是 skills CLI 装出来的常态形态（`.claude/skills/<name>` →
+//    `.agents/skills/<name>`）。拿字面串比 ⇒ 经绝对软链路径调用时两串不等 ⇒ main() 一步都不进、
+//    退出码 0、stdout 零字节：用户看到的不是报错，是**什么都没发生**——最难查的失败形态。
+//    `pathToFileURL` 只治编码、不解软链——光换成它不算修好（同族里正有这么一种伪修对写法）。
+//    skill 包各自独立安装、不能跨包 import，所以这段在每个入口脚本里各留一份，改一处要全改。
+function isMainModule() {
+  const argv1 = process.argv[1];
+  if (!argv1) return false; // node -e / REPL / 管道喂进来：本来就没有主脚本，安静退场是对的
+  const selfPath = fileURLToPath(import.meta.url);
+  const href = (p) => {
+    try {
+      return pathToFileURL(realpathSync(p)).href;
+    } catch {
+      return null;
+    }
+  };
+  const called = href(argv1);
+  const here = href(selfPath);
+  if (called && here) return called === here;
+  // realpath 解不开（路径当场被删、权限不足……）：**绝不静默**。先退回未解软链的字面比较，
+  // 还判不出来就吭一声——宁可多打一行提示，也不要再来一次「零输出、退出码 0」。
+  if (argv1 === selfPath) return true;
+  console.error(
+    `提示：解析不出 ${argv1} 的真实路径，没法确认是不是在直接跑本脚本；` +
+      `如果你就是在直接跑它，换成绝对路径重试。`
+  );
+  return false;
+}
+
+// Run as CLI only when invoked directly (not when imported).
+if (isMainModule()) {
+  process.exit(await main());
+}

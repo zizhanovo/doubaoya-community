@@ -1,0 +1,887 @@
+#!/usr/bin/env node
+// pipeline.mjs — 都爆鸭 · 公众号图文流水线（编排者）
+// 【@doubaoya/cli 包版】自 skills/dby-publish/scripts/pipeline.mjs **原样搬家**（dby-cli-rebuild
+// design D4），由 `dby wechat pipeline` 以子进程方式驱动（见 ../commands/pipeline.mjs）。
+// 与 1.x 的差异只有三处，都在下面用「CLI 包版」标出：
+//   ① 本机主题文件不再在本地校验——校验交给服务端渲染路由（它对 themeJson 做同一套 validateTheme，
+//      不合法返 400 并列出错误）；validate-theme.mjs 不随包搬入（tasks 5.1 删除本机副本）。
+//   ② SKILL_ROOT 指向随包 skills/dby-publish（找不到就退回当前目录）：只影响默认 profile 与旧主题告警。
+//   ③ 不指向本机渲染器（它不在 npm 包里）：无 key 时的提示改成 `dby login`。
+// -----------------------------------------------------------------------------
+// 把一篇【已经写好】的 Markdown/HTML 走一串**确定性的机械步骤**，最终存入你自己
+// 公众号的**草稿箱**。本流水线**不代写正文**（正文由 agent 依 SKILL.md 撰写）；它只
+// 自动化后续的确定性运维步骤：加载身份上下文 → whoami 校验目标账号 → 前置检查 →
+// md→HTML 渲染 → 本地图片预上传 → 封面 → 保存草稿 → 回报。
+//
+// 组合关系（不重复造轮子）：
+//   * 账号解析      ← ./account-verify.mjs         (resolveAccountKey)
+//   * md→公众号 HTML ← **平台** POST /api/wechat/render (renderViaPlatform，本文件内)
+//   * 图片预上传+存草稿 ← ./preprocess-and-publish.mjs (子进程，vendored)
+//
+// 硬规则（在代码里强制）：
+//   1. 只存草稿绝不群发：绝不接受/转发任何群发参数（--mass-send/--broadcast…直接报错）。
+//   2. 发布前必 whoami：第 2 步账号校验必须成功，第 5 步保存草稿才会跑。
+//   3. 绝不打印 API key。
+//   4. md→HTML **只走平台渲染**，失败一律中止，绝不回退本机渲染器。
+//      本机渲染器（./render-wechat-html.mjs）仍在，但已退出流水线主干，只服务一个场景：
+//      「没有密钥、只想先看排版长什么样」。
+//      🔴 那条路**不产生在线预览链接** —— 走平台才有 detailUrl，那正是它存在的理由。
+//
+// 10 步 SOP 与硬规则声明在同目录 ../pipeline.json——那是人读的约定文档，本文件**不读取它**；
+// 改流程要两边手工同步（下面日志里的「步骤 N」是本脚本自己的机械步序，与 SOP 编号不对应）。
+//
+// 用法见 --help。零依赖（Node ≥18 内置 + 全局 fetch）。
+// -----------------------------------------------------------------------------
+
+import { readFile, writeFile } from "node:fs/promises";
+import { existsSync, realpathSync } from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import process from "node:process";
+import { spawn } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { resolveAccountKey } from "./account-verify.mjs";
+import { printArchivedConfigHint } from "./lib/archived-config-hint.mjs";
+import { checkDraftLimits } from "./lib/draft-limits.mjs";
+import { importDbyLib } from "./lib/locate-dby.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// CLI 包版 ②：依次找 npm 包内 skills/、社区仓 skills/、1.x skill 镜像的兄弟目录。
+const SKILL_ROOT =
+  [
+    path.resolve(__dirname, "..", "..", "skills", "dby-publish"), // <pkg>/src/pipeline → <pkg>/skills
+    path.resolve(__dirname, "..", "..", "..", "skills", "dby-publish"), // 社区仓 cli/src/pipeline → skills
+    path.resolve(__dirname, "..", "..", "..", "..", "dby-publish") // skills/dby-api/scripts/lib/pipeline → skills/dby-publish
+  ].find((d) => existsSync(path.join(d, "SKILL.md"))) ?? process.cwd();
+const VENDORED_PUBLISH = path.join(__dirname, "preprocess-and-publish.mjs");
+const DEFAULT_BASE_URL = "https://doubaoya.com";
+export const DEFAULT_MARKDOWN_THEME = "themes/benya-clean.json";
+/** `--theme default` 指的这个 id。与 DEFAULT_MARKDOWN_THEME 的文件名同名，但走服务端那份。 */
+export const DEFAULT_THEME_ID = "benya-clean";
+
+/**
+ * 主题引用分类：**裸 id 交服务端解析，路径才读本机文件**。
+ *
+ * 🔴 为什么裸 id 不再当路径找：包里 `themes/` 那 15 份是服务端主题的**旧副本，已经漂了**。
+ *    2026-08-25 实测 `benya-clean`：包内 4282 字节（engine-1，无 meta.engine）
+ *    vs 服务端 8471 字节（engine-2，extends base-17@1），`meta.name` 同为
+ *    「本鸭·知识清爽」，diff 152 行。⇒ **传 --theme 与不传 --theme 拿到两种排版，而名字一样。**
+ *    不传的那条路早就没有双源了（什么都不送、服务端套账号默认，见下方主流程注释），
+ *    这次把显式那条路也收进同一份真相。
+ *    顺带：服务端 19 个公开主题里有 4 个是 engine-2 独有的，包里结构上做不出
+ *    ⇒ `--theme dark-tech` 这类到今天为止是**必然失败**的，改走 themeId 才第一次可用。
+ *
+ * ⚠️ **路径写法一个字不动**：自定义主题（不在服务端目录里的）仍然只能靠本机文件。
+ *    包内路径也照旧读本机 —— 只是会告警说明它是旧副本。扩大来源可以，夺走既有行为不行。
+ *
+ * @returns {{kind:"none"}|{kind:"id",id:string}|{kind:"path"}}
+ */
+export function classifyThemeRef(ref) {
+  if (typeof ref !== "string" || ref.length === 0) return { kind: "none" };
+  if (ref === "neutral") return { kind: "id", id: "neutral" };
+  if (ref === "default") return { kind: "id", id: DEFAULT_THEME_ID };
+  // 带目录分隔符 / 扩展名 / 绝对路径 —— 一律当路径。
+  if (ref.includes("/") || ref.includes("\\") || ref.endsWith(".json") || path.isAbsolute(ref)) {
+    return { kind: "path" };
+  }
+  // 服务端 themeId 的字面形状；不匹配就退回按路径处理，让原有报错照常出。
+  if (/^[a-z0-9][a-z0-9-]*$/i.test(ref)) return { kind: "id", id: ref };
+  return { kind: "path" };
+}
+
+export const BUILTIN_CONFIG = {
+  targetAccount: null,
+  publicAccountName: null,
+  appid: null,
+  author: "",
+  digestTemplate: "",
+  coverDir: "",
+  coverFallback: "doubaoya",
+  ipProfile: "profiles/example-ip.json",
+  mdTheme: DEFAULT_MARKDOWN_THEME,
+  draftsDir: "",
+};
+
+// ---------------------------------------------------------------------------
+// 参数解析 —— 白名单式；未知 flag 一律报错（尤其拦截任何"群发"意图）
+// ---------------------------------------------------------------------------
+const VALUE_FLAGS = new Set([
+  "md",
+  "html",
+  "title",
+  "account",
+  "appid",
+  "cover",
+  "digest",
+  "config",
+  "profile",
+  "theme",
+  "output-processed-html",
+  "base-url",
+  "draft",
+  "draft-version",
+]);
+const BOOL_FLAGS = new Set(["dry-run", "render-only", "help"]);
+// 任何带这些意图的 flag 都视为"群发"，直接拒绝并解释本流水线只存草稿。
+const MASS_SEND_RE = /(mass[-_]?send|publish[-_]?all|broadcast|send[-_]?all|群发|群發|push[-_]?all|massend)/i;
+
+class ArgError extends Error {}
+
+function parseArgs(argv) {
+  const out = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "-h") {
+      out.help = true;
+      continue;
+    }
+    if (!a.startsWith("--")) {
+      out._.push(a);
+      continue;
+    }
+    let key = a.slice(2);
+    let inlineVal;
+    const eq = key.indexOf("=");
+    if (eq !== -1) {
+      inlineVal = key.slice(eq + 1);
+      key = key.slice(0, eq);
+    }
+    if (MASS_SEND_RE.test(key)) {
+      throw new ArgError(
+        `拒绝参数 --${key}：本流水线**只存草稿、绝不群发**。这里没有任何群发/推送路径，` +
+          `请去公众号后台亲手确认后再手动群发。`
+      );
+    }
+    if (BOOL_FLAGS.has(key)) {
+      out[key === "dry-run" ? "dryRun" : key === "render-only" ? "renderOnly" : key] = true;
+      continue;
+    }
+    if (VALUE_FLAGS.has(key)) {
+      let val = inlineVal;
+      if (val === undefined) {
+        const next = argv[i + 1];
+        if (next === undefined || next.startsWith("--")) {
+          throw new ArgError(`参数 --${key} 缺少取值。`);
+        }
+        val = next;
+        i++;
+      }
+      out[camel(key)] = val;
+      continue;
+    }
+    throw new ArgError(
+      `未知参数 --${key}。可用参数：` +
+        `--md --html --title --account --appid --cover --digest --config --profile --theme ` +
+        `--output-processed-html --base-url --draft --draft-version --dry-run --render-only --help。` +
+        `（注意：本流水线只存草稿，不存在任何群发参数。）`
+    );
+  }
+  return out;
+}
+
+function camel(flag) {
+  return flag.replace(/-([a-z])/g, (_m, c) => c.toUpperCase());
+}
+
+const HELP = `pipeline.mjs — 都爆鸭 · 公众号图文流水线（只存草稿，绝不群发）
+
+用法（经 CLI）:
+  dby wechat pipeline (--md <a.md> | --html <a.html>) --title <标题> [选项]
+
+输入（二选一，必填其一）:
+  --md <file>                 Markdown 文件，渲染成公众号内联样式 HTML 后发布
+  --html <file>               已经排好版的公众号 HTML，直接发布（跳过渲染）
+
+必填:
+  --title <str>               文章标题
+
+选项:
+  --account <email|phone>     目标 doubaoya.com 账号（本机多条 key 时用它挑对账号）
+  --appid <wxid>              目标公众号 authorizerAppid（绑定多个公众号时指定其一）
+  --cover <path>              本地封面图；不传则走都爆鸭兜底封面
+  --digest <str>              摘要
+  --config <path>             配置文件（默认 ./config.json，没有则用内置默认）
+  --profile <path>            IP/身份 profile（默认取 config.ipProfile）
+  --theme <id>                服务端主题 id（如 benya-clean、dark-tech）：本机不读文件，
+                              交服务端解析，与不传 --theme 时是同一份真相。可用 id 见
+                              GET /api/wechat/themes；未知 id 服务端返 400 并列出来。
+  --theme <path>              自定义主题文件（含 / 或 .json）：本机先校验，再把整套 JSON
+                              作为 themeJson 送去平台渲染。⚠️ 指到包内 themes/ 的路径是
+                              服务端主题的**旧副本**（engine-1，已与服务端漂开），会告警；
+                              改用裸 id 走服务端那份。
+                              **不指定**（且 config 未写 mdTheme）时一个主题字段都不传，
+                              由服务端套你在 doubaoya.com 排版工作室保存的默认排版 ——
+                              想换默认排版去那里改，那是唯一该改它的地方。
+  --theme neutral             显式要求中性排版（themeId=neutral，零品牌色）
+  --theme default             项目默认主题的服务端那份（等价 --theme benya-clean）
+  --output-processed-html <p> 渲染出的 HTML 落地路径（默认写临时文件）
+  --base-url <url>            API 基址（默认 $DOUBAOYA_BASE_URL 或 https://doubaoya.com）
+  --draft <稿件 id>            正文来自稿件面（用户在网页审稿过的稿）时带上：存草稿箱成功后
+                              服务端自动把稿件关联到发布出来的文章记录。不带就是普通发布。
+                              带了但不属于你 → 422 VALIDATION_ERROR（不扣点、不发布）。
+  --draft-version <n>         发布的是该稿件第几版；省略 = 最新版。必须搭配 --draft 一起用。
+  --render-only               **只渲染，不发布**：产出 HTML + 在线预览链接就结束。
+                              🔴 跳过草稿前置检查 ⇒ **不需要绑定公众号**，有密钥就能用。
+                              与 --dry-run 的分工：dry-run 是「发布前彩排」，故意保留
+                              账号校验与前置检查（那正是它的价值）；render-only 是
+                              「我只想看看排出来什么样」，两个诉求不同，给两个入口。
+  --dry-run                   只渲染+校验+扫描本地图，**不发布**（照样走平台渲染，
+                              照样给你在线预览链接 —— 渲染免费且无副作用）
+  -h, --help                  显示帮助
+
+硬规则:
+  · 只存草稿绝不群发（不接受任何 --mass-send/--broadcast/群发 参数）
+  · 发布前必 whoami 校验目标账号（校验不过就停）
+  · 绝不打印 API key
+  · md→HTML 只走平台渲染（POST /api/wechat/render），失败一律中止、绝不回退本机渲染器
+
+没有密钥、只想先看这篇排出来什么样:
+  dby login 之后用 dby preview --file a.md（渲染路由免费；本机渲染器不随 npm 包分发）。
+
+鉴权: API key 由 account-verify 按 env DOUBAOYA_API_KEY → ~/.doubaoya/credentials 解析，仅在内存中传给子进程。
+`;
+
+// ---------------------------------------------------------------------------
+// 小工具
+// ---------------------------------------------------------------------------
+function step(n, title) {
+  process.stdout.write(`\n── 步骤 ${n} · ${title} ${"─".repeat(Math.max(2, 40 - title.length))}\n`);
+}
+function info(msg) {
+  process.stdout.write(`   ${msg}\n`);
+}
+function warn(msg) {
+  process.stdout.write(`   ⚠️  ${msg}\n`);
+}
+function fail(msg) {
+  process.stderr.write(`\n❌ ${msg}\n`);
+  process.exit(1);
+}
+
+async function readJsonMaybe(p) {
+  try {
+    const raw = await readFile(p, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+// 是否显式钉了本机主题（--theme 或 config.json 里写了 mdTheme 路径）。
+// 钉了就不去拉服务端编译主题——显式配置永远赢过远端默认。
+export function hasExplicitLocalTheme({ cliTheme, configuredTheme, configHasTheme = false } = {}) {
+  const fromCli = typeof cliTheme === "string" && cliTheme.length > 0;
+  const fromConfig = configHasTheme && typeof configuredTheme === "string" && configuredTheme.length > 0;
+  return fromCli || fromConfig;
+}
+
+// 平台渲染 —— **流水线唯一的 md→HTML 渲染方**（POST /api/wechat/render，免费不扣点）。
+//
+// 🔴 失败一律 throw，**绝不回退本机渲染器**。静默回退会产出「看起来成功、却没有预览
+//    链接、排版还可能不是用户设的那套」的东西 —— 那正是本次改造要消灭的那类缺陷。
+//    调用方接住之后 fail()（进程退出），不写任何 HTML 文件、不进入发布步骤。
+//
+// 主题：显式指定才送（整套 themeJson，或 neutral 送 themeId）；没指定就三个主题字段
+//    **一个都不传**，由服务端套用户在排版工作室保存的默认排版。服务端优先级
+//    themeJson > themeId > themeName > 用户默认 > 内置兜底 benya-clean，与流水线以前
+//    那四级同构 —— 所以本机不再做第二遍决策，主题从此只有一个事实源。
+//
+// 不传 title：公众号后台单独承载标题，正文里不要第二个 H1（与 normalizeDraftMarkdown 同一意图）。
+//
+// 已改走 dby-api 共享请求层的 request()（规格 dby-cli-coverage「仓内只有一份请求层」，
+//    真闸见 tools/validate_community.py 的 validate_single_request_layer）——本函数不再
+//    自己 fetch。detailUrl 靠 `withEnvelope: true` 拿（见 lib/http.mjs 该选项注释）；
+//    notice 由 request() 统一 warn() 到 stderr，这里再把原文透传进下面的格式化回报。
+export async function renderViaPlatform({
+  baseUrl,
+  apiKey,
+  markdown,
+  themeJson = null,
+  themeId = null,
+  timeoutMs = 30000,
+} = {}) {
+  if (!apiKey) {
+    throw new Error(
+      "平台渲染需要 API key：运行 `dby login`，或在 doubaoya.com 密钥中心生成后 export DOUBAOYA_API_KEY。\n" +
+        "   （CLI 包版 ③：本机渲染器不随 npm 包分发，渲染只走平台，渲染本身免费。）"
+    );
+  }
+  const body = { markdown };
+  if (themeJson) body.themeJson = themeJson;
+  else if (themeId) body.themeId = themeId;
+
+  const { request } = await importDbyLib(import.meta.url, "http.mjs");
+  const { EXIT } = await importDbyLib(import.meta.url, "errors.mjs");
+  // 与 write.mjs/charter.mjs 同一种最小 ctx 写法：request() 只用得到 baseUrl/key/
+  // timeoutOverride，不需要 makeContext() 的 json/color 那一套 CLI 输出判定。
+  const ctx = { baseUrl, key: apiKey, timeoutOverride: null };
+  let env;
+  try {
+    env = await request(ctx, "POST", "/api/wechat/render", { body, timeoutMs, withEnvelope: true });
+  } catch (e) {
+    // DbyError 的 code/message 已经不是旧格式了，这里按 exit 分类拼回旧文案
+    // （selfcheck-remote-theme.mjs 按这几句的措辞断言，改字不改判据）。
+    if (e && e.name === "DbyError" && e.exit === EXIT.AUTH) {
+      throw new Error("平台渲染被拒（401）：DOUBAOYA_API_KEY 无效或缺失，请检查密钥配置。");
+    }
+    if (e && e.name === "DbyError" && e.exit === EXIT.NETWORK) {
+      throw new Error(`平台渲染请求失败：${e.message}`);
+    }
+    throw new Error(`平台渲染失败（${(e && e.code) || "ERROR"}）：${(e && e.message) || String(e)}`);
+  }
+  const data = env.data || {};
+  if (typeof data.html !== "string" || data.html.trim() === "") {
+    throw new Error("平台渲染返回了空 HTML。");
+  }
+  return {
+    html: data.html,
+    themeSource: typeof data.themeSource === "string" ? data.themeSource : null,
+    warnings: Array.isArray(data.warnings) ? data.warnings : [],
+    // 这次结果在 doubaoya.com 上的详情页 —— 点开能**看见**排版效果（手机宽度沙箱预览）。
+    // 流水线存在的意义之一就是把它交到用户手里。
+    detailUrl: typeof env.detailUrl === "string" ? env.detailUrl : null,
+    // 🔴「你安装的 skill 有更新」。服务端按 User-Agent 判，挂在成功信封上。
+    // request() 已经统一 warn() 到 stderr 一份；这里再原样透传给调用方，
+    // 好让 pipeline.mjs 的格式化「回报」区块里也能看见（SKILL.md 明写「原样转达给用户」）。
+    notice: typeof env.notice === "string" && env.notice ? env.notice : null,
+  };
+}
+
+// 解析 Markdown 主题路径：显式 --theme 优先，其次 config.mdTheme，最后项目默认主题。
+// 返回绝对路径；"neutral" → null（显式退回中性渲染器）；"default" → 项目默认主题。
+export function resolveMarkdownThemePath({
+  cliTheme,
+  configuredTheme,
+  configHasTheme = false,
+  cwd = process.cwd(),
+  configDir = cwd,
+  skillRoot = SKILL_ROOT,
+} = {}) {
+  const fromCli = typeof cliTheme === "string" && cliTheme.length > 0;
+  const fromConfig = configHasTheme && typeof configuredTheme === "string" && configuredTheme.length > 0;
+  let ref = fromCli ? cliTheme : fromConfig ? configuredTheme : DEFAULT_MARKDOWN_THEME;
+  // 早期示例配置曾把 "default" 当占位符；现在它表示项目默认主题。
+  if (ref === "default") return path.resolve(skillRoot, DEFAULT_MARKDOWN_THEME);
+  if (ref === "neutral") return null;
+  if (path.isAbsolute(ref)) return ref;
+  return path.resolve(fromCli ? cwd : fromConfig ? configDir : skillRoot, ref);
+}
+
+// 草稿源文件可以保留 frontmatter 和文件标题；发布正文不携带这两层元数据。
+export function normalizeDraftMarkdown(markdown) {
+  const lines = String(markdown).replace(/^﻿/, "").replace(/\r\n?/g, "\n").split("\n");
+
+  if (lines[0]?.trim() === "---") {
+    const closing = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
+    if (closing !== -1) lines.splice(0, closing + 1);
+  }
+
+  while (lines[0]?.trim() === "") lines.shift();
+  if (/^ {0,3}#(?!#)\s+/.test(lines[0] || "")) {
+    lines.shift();
+  } else if (lines.length > 1 && /^ {0,3}=+\s*$/.test(lines[1])) {
+    lines.splice(0, 2);
+  }
+  while (lines[0]?.trim() === "") lines.shift();
+
+  return lines.join("\n");
+}
+
+// GET 一个 doubaoya API（带 key），返回 { ok, data, code, message }。key 绝不打印。
+// 转手给 dby-api 的公共请求层（规格 dby-cli-coverage「仓内只有一份请求层」）——
+// 这两处调用（/api/skills、/api/wechat/status）只读账号侧信息，不关心信封顶层的
+// detailUrl/notice，全量委托给 request() 没有信息损失。
+async function apiGet(ctx, apiPath) {
+  const { request } = await importDbyLib(import.meta.url, "http.mjs");
+  try {
+    const data = await request(ctx, "GET", apiPath, {});
+    return { ok: true, data: data || {} };
+  } catch (e) {
+    return { ok: false, code: e.code || "ERROR", message: e.message || String(e) };
+  }
+}
+
+// 从各种可能的 /api/skills 响应形状里找 slug 列表。
+function extractSkillSlugs(data) {
+  const cand = Array.isArray(data)
+    ? data
+    : data.skills || data.items || data.list || data.results || [];
+  const slugs = [];
+  for (const s of Array.isArray(cand) ? cand : []) {
+    if (typeof s === "string") slugs.push(s);
+    else if (s && typeof s.slug === "string") slugs.push(s.slug);
+    else if (s && typeof s.name === "string") slugs.push(s.name);
+  }
+  return slugs;
+}
+
+// 把子进程跑完，边流式输出边捕获 stdout 文本（供回报解析）。
+function runChild(argsArr, env) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [VENDORED_PUBLISH, ...argsArr], {
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let captured = "";
+    child.stdout.on("data", (b) => {
+      const s = b.toString();
+      captured += s;
+      process.stdout.write(s);
+    });
+    child.stderr.on("data", (b) => process.stderr.write(b.toString()));
+    child.on("close", (code) => resolve({ code, out: captured }));
+    child.on("error", (e) => resolve({ code: 1, out: captured, error: e }));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 主流程
+// ---------------------------------------------------------------------------
+async function main() {
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (e) {
+    if (e instanceof ArgError) fail(e.message);
+    throw e;
+  }
+
+  if (args.help) {
+    process.stdout.write(HELP);
+    return;
+  }
+
+  const mdPath = args.md;
+  const htmlPath = args.html;
+  if (!mdPath && !htmlPath) fail("必须指定 --md <文件> 或 --html <文件> 其一。");
+  if (mdPath && htmlPath) fail("--md 与 --html 只能二选一。");
+  if (htmlPath && args.theme) {
+    warn("--html 已是排好版的 HTML，--theme 被忽略（主题只在 --md 渲染时生效）。");
+  }
+  const title = args.title;
+  if (!title) fail("缺少 --title <标题>。");
+  {
+    // 微信 draft/add 字段上限，渲染 / 传图之前就拦
+    const lim = checkDraftLimits({ title, digest: args.digest });
+    lim.warnings.forEach(warn);
+    if (lim.errors.length) fail(lim.errors.join(" "));
+  }
+  // 稿件面：--draft 透传给存草稿子进程，服务端存草稿箱成功后自动把稿件关联到发布出来的文章记录。
+  const draftId = args.draft || null;
+  if (args.draftVersion !== undefined && !draftId) {
+    fail("--draft-version 必须搭配 --draft <稿件 id> 一起用。");
+  }
+  let draftVersion = null;
+  if (args.draftVersion !== undefined) {
+    draftVersion = Number(args.draftVersion);
+    if (!Number.isInteger(draftVersion) || draftVersion <= 0) {
+      fail(`--draft-version 必须是正整数，收到「${args.draftVersion}」。`);
+    }
+  }
+
+  const baseUrl =
+    (args.baseUrl && args.baseUrl.replace(/\/+$/, "")) ||
+    (process.env.DOUBAOYA_BASE_URL && process.env.DOUBAOYA_BASE_URL.replace(/\/+$/, "")) ||
+    DEFAULT_BASE_URL;
+
+  // ===== 步骤 1：加载配置 + 身份上下文 =====================================
+  step(1, "加载配置 + 身份上下文");
+  const configPath = args.config
+    ? path.resolve(args.config)
+    : path.join(process.cwd(), "config.json");
+  let config = { ...BUILTIN_CONFIG };
+  const loaded = await readJsonMaybe(configPath);
+  const configHasTheme = Boolean(
+    loaded && Object.prototype.hasOwnProperty.call(loaded, "mdTheme")
+  );
+  if (loaded) {
+    config = { ...BUILTIN_CONFIG, ...loaded };
+    info(`配置: ${configPath}`);
+  } else {
+    info(`配置: 未找到 ${configPath}，使用内置默认值。`);
+    // 找不到 config.json 时，去老包（wechat-article-pipeline，已改名为 dby-publish）的
+    // dby-update 对账归档目录里探一探：老版本对账器不认识改名表时会把整个老目录连同用户
+    // 自建的 config.json 一起归档掉。探测不到什么都不打印，不干扰现有行为。
+    printArchivedConfigHint({ pkgDir: SKILL_ROOT });
+  }
+
+  // profile 路径：--profile 优先，否则 config.ipProfile（相对 skill 目录解析）
+  const profileRef = args.profile || config.ipProfile;
+  let profile = null;
+  if (profileRef) {
+    const profilePath = path.isAbsolute(profileRef)
+      ? profileRef
+      : path.resolve(args.profile ? process.cwd() : SKILL_ROOT, profileRef);
+    profile = await readJsonMaybe(profilePath);
+    if (profile) info(`身份 profile: ${profilePath}`);
+    else warn(`身份 profile 读取失败: ${profilePath}（继续，但缺少身份上下文）`);
+  }
+  if (profile) {
+    // 回显身份上下文——这是"名字被误读成通用名词"问题的通用修法：先加载并回显身份，
+    // 下游内容判断才不会把账号名/IP 名当成同名的通用名词。
+    info(`身份 · 名称: ${profile.displayName || profile.slug || "(未命名)"}`);
+    if (Array.isArray(profile.aliases) && profile.aliases.length)
+      info(`身份 · 别名: ${profile.aliases.join(" / ")}`);
+    if (profile.isNot) info(`身份 · 消歧(isNot): ${profile.isNot}`);
+    if (profile.tone) info(`身份 · 语气: ${profile.tone}`);
+  } else {
+    warn("未加载到身份 profile —— 建议在 config.json 里配置 ipProfile，避免账号名被误读为通用名词。");
+  }
+  info("（流水线不代写正文；正文由 agent 依 SKILL.md 撰写。）");
+
+  // ===== 步骤 2：whoami 校验账号 ==========================================
+  step(2, "whoami 校验目标账号");
+  const targetAccount = args.account || config.targetAccount || undefined;
+  let resolved;
+  try {
+    resolved = await resolveAccountKey({ account: targetAccount, baseUrl });
+  } catch (e) {
+    fail(`账号校验失败：${e.message}`);
+  }
+  const apiKey = resolved.key; // 仅内存中，绝不打印
+  info(`已解析账号: ${resolved.account.email}（ID ${resolved.account.id}）`);
+  info(`来源: ${resolved.source}   authVia: ${JSON.stringify(resolved.authVia)}`);
+  info("（API key 已解析，仅在内存中传给子进程，不打印。）");
+  const { makeContext } = await importDbyLib(import.meta.url, "context.mjs");
+  const ctx = makeContext({ env: { DOUBAOYA_BASE_URL: baseUrl, DOUBAOYA_API_KEY: apiKey } });
+  const whoamiOk = true; // 硬门：到这里说明第 2 步成功，才允许后续保存草稿
+
+  // ===== 步骤 3：草稿前置检查（skills + status）===========================
+  // 🔴 --render-only 整段跳过：这一段唯一会拦住人的是 3b 的「没有已绑定的公众号」，
+  //    而只渲染根本不碰公众号。跳过它，有密钥、没绑号的人也能拿到在线预览链接。
+  //    ⚠️ 注意**不跳步骤 2**：那一步是解析密钥（resolveAccountKey），渲染本身要用它，
+  //    而它并不检查绑号 —— 所以「跳过 whoami」既做不到也没必要。
+  let nickname = "(未绑定)";
+  let appid = "(未绑定)";
+  if (args.renderOnly) {
+    step(3, "草稿前置检查 —— 已跳过（--render-only 只渲染不发布，不需要绑定公众号）");
+  } else {
+  step(3, "草稿前置检查 (skills + status)");
+  // 3a. /api/skills → 断言 wechat-draft-publish 存在
+  const skillsRes = await apiGet(ctx, "/api/skills");
+  if (skillsRes.ok) {
+    const slugs = extractSkillSlugs(skillsRes.data);
+    if (slugs.includes("wechat-draft-publish")) {
+      info("发现能力 slug=wechat-draft-publish ✔（发现走 /api/skills，执行走 /api/wechat/status + /publish）");
+    } else {
+      warn(`/api/skills 里没找到 slug=wechat-draft-publish（现有 ${slugs.length} 项）。继续，但请确认服务端已上线该能力。`);
+    }
+  } else {
+    warn(`/api/skills 查询失败（${skillsRes.code}: ${skillsRes.message}）。继续，跳过该断言。`);
+  }
+
+  // 3b. /api/wechat/status → 确认目标账号拥有公众号 + 解析 appid + 昵称
+  const statusRes = await apiGet(ctx, "/api/wechat/status");
+  if (!statusRes.ok) {
+    fail(`公众号状态查询失败（${statusRes.code}: ${statusRes.message}）。请先在 doubaoya.com 绑定公众号。`);
+  }
+  const accounts = statusRes.data.accounts || [];
+  if (accounts.length === 0) {
+    fail("目标账号没有已绑定的公众号。请先去 doubaoya.com → 公众号 页面绑定，再回来发草稿。");
+  }
+  const wantAppid = args.appid || config.appid || null;
+  let chosen;
+  if (wantAppid) {
+    chosen = accounts.find((a) => a.authorizerAppid === wantAppid);
+    if (!chosen) {
+      fail(
+        `指定的 appid=${wantAppid} 不在该账号已绑定的公众号里。已绑定：` +
+          accounts.map((a) => `${a.nickname || "(未命名)"}(${a.authorizerAppid})`).join("、")
+      );
+    }
+    info(`目标公众号: ${chosen.nickname || "(未命名)"}（${chosen.authorizerAppid}）`);
+  } else if (accounts.length === 1) {
+    chosen = accounts[0];
+    info(`自动选用唯一绑定的公众号: ${chosen.nickname || "(未命名)"}（${chosen.authorizerAppid}）`);
+  } else {
+    process.stderr.write("   绑定了多个公众号，请用 --appid 指定其一：\n");
+    for (const a of accounts) {
+      process.stderr.write(`     - ${a.nickname || "(未命名)"}  (authorizerAppid: ${a.authorizerAppid})\n`);
+    }
+    fail("检测到多个公众号且未指定 --appid，已停止。");
+  }
+  // publicAccountName 断言
+  if (config.publicAccountName) {
+    if ((chosen.nickname || "") === config.publicAccountName) {
+      info(`昵称匹配 config.publicAccountName ✔（${config.publicAccountName}）`);
+    } else {
+      warn(
+        `config.publicAccountName=「${config.publicAccountName}」与解析到的公众号昵称「${chosen.nickname || "(未命名)"}」不一致，请确认没发错号。`
+      );
+    }
+  }
+  nickname = chosen.nickname || "(已绑定公众号)";
+  appid = chosen.authorizerAppid;
+  }   // ← 步骤 3 结束（--render-only 时整段跳过）
+
+  // ===== 步骤 4/5：md→HTML 渲染（平台）==================================
+  step(4, mdPath ? "md→HTML 渲染（平台 POST /api/wechat/render）" : "使用已排版 HTML（跳过渲染）");
+  let processedHtmlPath;
+  /** 这次渲染在 doubaoya.com 上的详情页；回报时交给用户点开看效果。--html 那条路没有。 */
+  let renderDetailUrl = null;
+  /** 服务端捎回来的「本 skill 有更新」提示，原样转达（见 renderViaPlatform 的注释）。 */
+  let skillNotice = null;
+  if (mdPath) {
+    const resolvedMd = path.resolve(mdPath);
+    let mdContent;
+    try {
+      mdContent = await readFile(resolvedMd, "utf8");
+    } catch (e) {
+      fail(`读不到 Markdown 文件 ${resolvedMd}（${e.message}）`);
+    }
+    const effectiveCliTheme = args.theme;
+
+    // 主题只在**显式指定**时才送。没指定 → 三个主题字段一个都不传，服务端套账号默认排版。
+    // 以前这里有一条本机四级优先级 + 拉服务端编译主题回来本机套用；那套整个退场了，
+    // 因为服务端自己的优先级与它同构 —— 留着等于同一个决策做两遍，一漂移就是
+    // 「主题双源对不上」重演。想换默认排版，去 doubaoya.com 排版工作室改，那是唯一该改它的地方。
+    let themeJson = null;
+    let themeId = null;
+    if (
+      hasExplicitLocalTheme({
+        cliTheme: effectiveCliTheme,
+        configuredTheme: config.mdTheme,
+        configHasTheme,
+      })
+    ) {
+      // 显式值取自 --theme，其次 config.mdTheme（与 hasExplicitLocalTheme 同构）。
+      const themeRef =
+        typeof effectiveCliTheme === "string" && effectiveCliTheme.length > 0
+          ? effectiveCliTheme
+          : config.mdTheme;
+      const themeClass = classifyThemeRef(themeRef);
+      if (themeClass.kind === "id") {
+        // 裸 id / neutral / default → 交服务端解析，本机不读任何文件。见 classifyThemeRef。
+        themeId = themeClass.id;
+        info(
+          themeId === "neutral"
+            ? "已显式要求中性排版（themeId=neutral，零品牌色）。"
+            : `主题交服务端解析：themeId=${themeId}（与不传 --theme 时同一份真相；` +
+              `未知 id 服务端返 400 并指向 GET /api/wechat/themes）。`,
+        );
+      } else {
+        const themePath = resolveMarkdownThemePath({
+          cliTheme: effectiveCliTheme,
+          configuredTheme: config.mdTheme,
+          configHasTheme,
+          configDir: path.dirname(configPath),
+        });
+        // classifyThemeRef 已经把 "neutral" 拦在上面，这里理论上拿不到 null；留一道防御，
+        // 免得将来有人改了分类却让 readJsonMaybe(null) 去炸一个看不懂的错。
+        if (themePath === null) fail("主题解析异常：既不是 id 也解析不出路径。");
+        // 🔴 指到包内 themes/ 的路径 = 服务端主题的旧副本（engine-1），排版会与账号默认不一致。
+        //    不夺走既有行为（照旧读本机），但必须说出来，否则「同名不同版」是静默的。
+        if (path.resolve(themePath).startsWith(path.join(SKILL_ROOT, "themes") + path.sep)) {
+          const bare = path.basename(themePath, ".json");
+          warn(
+            `主题 ${themePath} 是包内旧副本（engine-1），与服务端同名主题已漂开；` +
+              `改用 --theme ${bare} 可走服务端那份（也是不传 --theme 时用的那份）。`,
+          );
+        }
+        const themeObj = await readJsonMaybe(themePath);
+        if (!themeObj) fail(`读不到/解析不了主题文件 ${themePath}（需为合法 JSON）。`);
+        // CLI 包版 ①：不在本机校验，交服务端渲染路由校验（同一套 validateTheme，错误逐条回 400）。
+        themeJson = themeObj;
+        info(`已加载主题: ${themePath}（${themeObj.meta && themeObj.meta.name ? themeObj.meta.name : "未命名"}）`);
+      }
+    }
+    let rendered;
+    try {
+      rendered = await renderViaPlatform({
+        baseUrl,
+        apiKey,
+        // 公众号后台单独承载标题：正文里剥掉 frontmatter 与首个 H1，也不传 title。
+        markdown: normalizeDraftMarkdown(mdContent),
+        themeJson,
+        themeId,
+      });
+    } catch (e) {
+      // 🔴 不回退本机渲染器。回退会产出没有预览链接、排版也可能不同的产物，
+      //    而用户会以为那就是平台排版 —— 宁可红。
+      fail(
+        `${e.message}\n` +
+          "   平台渲染是流水线唯一的渲染方，失败不回退本机渲染器。"
+      );
+    }
+    for (const w of rendered.warnings) warn(`渲染告警: ${w}`);
+    // 原样转达，一个字不改（SKILL.md 的承诺）。它不影响本次结果，也不该被当成错误。
+    if (rendered.notice) skillNotice = rendered.notice;
+    renderDetailUrl = rendered.detailUrl;
+    processedHtmlPath = args.outputProcessedHtml
+      ? path.resolve(args.outputProcessedHtml)
+      : path.join(os.tmpdir(), `${path.basename(resolvedMd, path.extname(resolvedMd))}.wechat.html`);
+    await writeFile(processedHtmlPath, rendered.html, "utf8");
+    info(`已渲染公众号内联样式 HTML → ${processedHtmlPath}`);
+    if (rendered.themeSource) info(`排版来源: ${rendered.themeSource}`);
+    if (renderDetailUrl) info(`在线预览（点开就能看到排出来什么样）: ${renderDetailUrl}`);
+  } else {
+    processedHtmlPath = path.resolve(htmlPath);
+    if (!existsSync(processedHtmlPath)) fail(`--html 文件不存在: ${processedHtmlPath}`);
+    info(`直接使用已排版 HTML: ${processedHtmlPath}`);
+  }
+
+  // 封面解析（本地文件才作为 thumb 上传）。
+  let coverPath = args.cover || null;
+  if (!coverPath && config.coverDir) {
+    // config.coverDir 只是目录约定；未显式给封面时不擅自挑图，交由兜底。
+    coverPath = null;
+  }
+  const coverIsLocal = coverPath && existsSync(path.resolve(coverPath));
+
+  // ===== --render-only：只渲染，到此为止 =================================
+  // 🔴 出口放在**封面解析之后、dry-run 之前**：封面与本地图扫描都属于「发布准备」，
+  //    只渲染的人不需要。而 dry-run 分支**一个字都不动** —— 它的语义是「发布前彩排」，
+  //    故意包含账号校验与前置检查，那正是它的价值。两个诉求不同，给两个入口。
+  if (args.renderOnly) {
+    step(5, "RENDER-ONLY 回报");
+    if (!renderDetailUrl && mdPath) {
+      warn("这次渲染没拿到在线预览链接（平台未回 detailUrl）——HTML 仍已产出。");
+    }
+    process.stdout.write(
+      "\n══════════ RENDER-ONLY 回报（只渲染，未发布、未碰公众号）══════════\n" +
+        `  标题:        ${title}\n` +
+        `  HTML:        ${processedHtmlPath}\n` +
+        (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "  在线预览:    （无：--html 直传不经平台渲染）\n") +
+        (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
+        "  公众号:      未查询（--render-only 跳过草稿前置检查，不需要绑号）\n" +
+        "  发布:        否（本入口不写任何用户资产）\n" +
+        "  下一步:      要存进公众号草稿箱，去掉 --render-only 重跑（那时需要已绑号）。\n" +
+        "════════════════════════════════════════════════\n"
+    );
+    return;
+  }
+
+  // ===== dry-run：渲染+校验+扫描本地图，绝不发布 =========================
+  if (args.dryRun) {
+    step(5, "DRY-RUN · 扫描本地图片（不发布）");
+    const childArgs = ["--html", processedHtmlPath, "--title", title, "--dry-run"];
+    if (coverPath) childArgs.push("--cover", coverPath);
+    if (draftId) childArgs.push("--draft", draftId);
+    if (draftVersion) childArgs.push("--draft-version", String(draftVersion));
+    const { out } = await runChild(childArgs, {
+      ...process.env,
+      DOUBAOYA_BASE_URL: baseUrl,
+    });
+    const localCount = (out.match(/本地\s*(\d+)\s*张需要预上传/) || [])[1] || "?";
+
+    step(6, "DRY-RUN 回报");
+    process.stdout.write(
+      "\n══════════ DRY-RUN 回报（未发布任何内容）══════════\n" +
+        `  标题:        ${title}\n` +
+        `  公众号:      ${nickname}（${appid}）\n` +
+        `  账号:        ${resolved.account.email}\n` +
+        `  身份:        ${(profile && (profile.displayName || profile.slug)) || "(未加载)"}\n` +
+        `  待预上传本地图: ${localCount} 张\n` +
+        `  封面:        ${coverIsLocal ? `已就绪本地封面 ${coverPath}` : `无本地封面 → 走都爆鸭兜底（${config.coverFallback}）`}\n` +
+        (draftId ? `  draftId:     "${draftId}"${draftVersion ? `, draftVersion: ${draftVersion}` : "（省略 = 最新版）"}\n` : "") +
+        `  whoami 校验: 通过\n` +
+        `  前置检查:    通过\n` +
+        (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
+        (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
+        "  群发:        否（本流水线只存草稿；dry-run 更是什么都不发）\n" +
+        "════════════════════════════════════════════════\n"
+    );
+    return;
+  }
+
+  // ===== 步骤 5：图片预上传 + 保存草稿（子进程）=========================
+  if (!whoamiOk) fail("内部错误：whoami 未通过却走到了发布步骤，已中止。"); // 冗余硬门
+  step(5, "图片预上传 + 保存草稿（vendored preprocess-and-publish）");
+  const childArgs = ["--html", processedHtmlPath, "--title", title, "--appid", appid];
+  if (coverIsLocal) childArgs.push("--cover", path.resolve(coverPath));
+  const digest = args.digest || config.digestTemplate || null;
+  if (digest) childArgs.push("--digest", digest);
+  if (draftId) childArgs.push("--draft", draftId);
+  if (draftVersion) childArgs.push("--draft-version", String(draftVersion));
+
+  const { code, out } = await runChild(childArgs, {
+    ...process.env,
+    DOUBAOYA_API_KEY: apiKey, // 仅内存 → 子进程 env，不打印
+    DOUBAOYA_BASE_URL: baseUrl,
+  });
+  if (code !== 0) {
+    fail(
+      `保存草稿子进程失败（退出码 ${code}）。\n` +
+        "   到这一步为止：渲染已完成；子进程可能已上传部分正文图，封面（永久素材 thumb）也可能已上传。\n" +
+        "   草稿箱状态：draft/add 未确认成功——请去公众号后台草稿箱核对；重跑不幂等，草稿已在时会多存一份。\n" +
+        "   残留素材怎么处理、哪些错误码退点、从哪一步重来：见 references/recovery.md。"
+    );
+  }
+
+  // 解析子进程输出用于回报。
+  // 🔴 mediaId 是「已存入草稿箱」的唯一凭据：子进程退出码 0 却抓不到它（多半是输出格式漂了），
+  //    就不打「完成」横幅——改报「结果待确认」并以非零码退出，让用户去后台核对而不是误信已完成。
+  const mediaId = (out.match(/mediaId：\s*(\S+)/) || [])[1] || null;
+  if (!mediaId) {
+    step(6, "结果待确认");
+    process.stdout.write(
+      "\n══════════ 结果待确认 · 未拿到 mediaId ══════════\n" +
+        `  标题:        ${title}\n` +
+        `  公众号:      ${nickname}（${appid}）\n` +
+        "  发生了什么:  保存草稿子进程正常退出，但输出里没有 mediaId——草稿可能已存入，也可能没有。\n" +
+        "  怎么核对:    去公众号后台 → 草稿箱，按标题找这一篇。\n" +
+        "  要重跑:      先核对再跑——draft/add 不幂等，草稿已在时重跑会多一份。见 references/recovery.md。\n" +
+        "══════════════════════════════════════════════\n"
+    );
+    process.exit(1);
+  }
+  const imgCount = (out.match(/预上传本地图片：\s*(\d+)/) || [])[1] || "?";
+  const withCover = /含封面/.test(out) || coverIsLocal;
+
+  // ===== 步骤 6：验证回报 ================================================
+  step(6, "验证回报");
+  process.stdout.write(
+    "\n══════════ 完成 · 已存入公众号草稿箱 ══════════\n" +
+      `  标题:        ${title}\n` +
+      `  公众号:      ${nickname}（${appid}）\n` +
+      `  账号:        ${resolved.account.email}\n` +
+      `  身份:        ${(profile && (profile.displayName || profile.slug)) || "(未加载)"}\n` +
+      `  正文图上传数: ${imgCount} 张\n` +
+      `  封面:        ${withCover ? "已上传本地封面" : `走都爆鸭兜底（${config.coverFallback}）`}\n` +
+      `  mediaId:     ${mediaId}\n` +
+      (draftId ? `  draftId:     "${draftId}"${draftVersion ? `, draftVersion: ${draftVersion}` : "（省略 = 最新版）"}\n` : "") +
+      (renderDetailUrl ? `  在线预览:    ${renderDetailUrl}\n` : "") +
+      (skillNotice ? `  技能更新:    ${skillNotice}\n` : "") +
+      "  群发:        否（本流水线只存草稿）\n" +
+      "  下一步:      去公众号后台亲眼确认草稿，再手动群发。\n" +
+      "══════════════════════════════════════════════\n"
+  );
+}
+
+// 仅作为脚本运行时执行 main；被 import 时不跑。
+// 🔴 入口守卫：两边都先 realpathSync 落到同一条真路径再比。
+//    `import.meta.url` 是 ESM loader **解过软链**的真路径，`process.argv[1]` 原样保留调用时
+//    给的那条路径；而软链正是 skills CLI 装出来的常态形态（`.claude/skills/<name>` →
+//    `.agents/skills/<name>`）。拿字面串比 ⇒ 经绝对软链路径调用时两串不等 ⇒ main() 一步都不进、
+//    退出码 0、stdout 零字节：用户看到的不是报错，是**什么都没发生**——最难查的失败形态。
+//    `pathToFileURL` 只治编码、不解软链——光换成它不算修好（同族里正有这么一种伪修对写法）。
+//    skill 包各自独立安装、不能跨包 import，所以这段在每个入口脚本里各留一份，改一处要全改。
+function isMainModule() {
+  const argv1 = process.argv[1];
+  if (!argv1) return false; // node -e / REPL / 管道喂进来：本来就没有主脚本，安静退场是对的
+  const selfPath = fileURLToPath(import.meta.url);
+  const href = (p) => {
+    try {
+      return pathToFileURL(realpathSync(p)).href;
+    } catch {
+      return null;
+    }
+  };
+  const called = href(argv1);
+  const here = href(selfPath);
+  if (called && here) return called === here;
+  // realpath 解不开（路径当场被删、权限不足……）：**绝不静默**。先退回未解软链的字面比较，
+  // 还判不出来就吭一声——宁可多打一行提示，也不要再来一次「零输出、退出码 0」。
+  if (argv1 === selfPath) return true;
+  console.error(
+    `提示：解析不出 ${argv1} 的真实路径，没法确认是不是在直接跑本脚本；` +
+      `如果你就是在直接跑它，换成绝对路径重试。`
+  );
+  return false;
+}
+
+if (isMainModule()) {
+  main().catch((e) => fail(e && e.stack ? e.stack : String(e)));
+}

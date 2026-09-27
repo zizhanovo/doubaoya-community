@@ -24,6 +24,10 @@ import { commands as whoamiCommands } from "./commands/whoami.mjs";
 import { commands as bannedCommands } from "./commands/banned.mjs";
 import { commands as routesCommands } from "./commands/routes.mjs";
 import { commands as authCommands } from "./commands/auth.mjs";
+import { commands as imageCommands } from "./commands/image.mjs";
+import { commands as pipelineCommands } from "./commands/pipeline.mjs";
+import { commands as fetchArticleCommands } from "./commands/fetch-article.mjs";
+import { commands as renderCommands } from "./commands/render.mjs";
 
 /**
  * 命令三分类（dby-cli-rebuild design D8 / spec「子命令分三类并由对账闸核对」）：
@@ -51,13 +55,17 @@ const RAW_COMMANDS = [
   ...materialCommands,
   ...inspCommands,
   ...wechatCommands,
+  ...pipelineCommands,
+  ...fetchArticleCommands,
   ...taskCommands,
   ...usageCommands,
   ...uploadCommands,
   ...whoamiCommands,
   ...bannedCommands,
   ...routesCommands,
-  ...authCommands
+  ...authCommands,
+  ...imageCommands,
+  ...renderCommands
 ];
 
 export const ALL_COMMANDS = RAW_COMMANDS.map((c) => ({ ...c, kind: commandKind(c) }));
@@ -79,7 +87,8 @@ const GROUP_SUMMARY = {
   task: "任务清单（读）",
   usage: "用量明细与分析",
   upload: "媒体上传",
-  banned: "违禁词检测（多平台扇出）"
+  banned: "违禁词检测（多平台扇出）",
+  image: "生图 / 改图（慢、计费）与配图规划、封面裁切（本地）"
 };
 
 export const GROUPS = [...new Set(ALL_COMMANDS.map((c) => c.group).filter((g) => g !== null))].map((name) => ({

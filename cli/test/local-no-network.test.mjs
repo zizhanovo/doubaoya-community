@@ -10,14 +10,31 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ALL_COMMANDS } from "../src/registry.mjs";
+import { createServer } from "node:http";
 import { runCli, startMock } from "./helpers.mjs";
+import { solidPng } from "./fixtures/png.mjs";
 
 const TRIPWIRE = fileURLToPath(new URL("./fixtures/net-tripwire.mjs", import.meta.url));
 const nameOf = (c) => (c.group ? `${c.group} ${c.name}` : c.name);
 
 /** 每条 local 命令的一种典型跑法。值是函数：拿到临时目录，返回 argv（可以先在目录里造输入文件）。 */
 export const LOCAL_INVOCATIONS = {
-  routes: () => ["routes", "--json"]
+  routes: () => ["routes", "--json"],
+  "image plan": (dir) => {
+    const md = path.join(dir, "a.md");
+    writeFileSync(md, `# 标题\n\n## 第一节\n\n${"正文内容。".repeat(60)}\n\n## 第二节\n\n短。\n`);
+    return ["image", "plan", "--md", md, "--json"];
+  },
+  "image crops": (dir) => {
+    const png = path.join(dir, "cover.png");
+    writeFileSync(png, solidPng(470, 300));
+    return ["image", "crops", png, "--json"];
+  },
+  // 只打用户给的那个网址（这里是测试里起的本地网页服务，绊线放行它），不打 doubaoya。
+  "wechat fetch-article": (dir, { pageUrl }) => ({
+    argv: ["wechat", "fetch-article", "--url", pageUrl, "--out", path.join(dir, "ref.html"), "--json"],
+    allow: [new URL(pageUrl).host]
+  })
 };
 
 test("元断言：每条 local 命令都登记了跑法，且确有 local 命令", () => {
@@ -38,19 +55,28 @@ test("local 命令在出网绊线下运行：零出网尝试", async () => {
   // 双保险：DOUBAOYA_BASE_URL 指向一个「收到任何请求就记一笔」的桩，绊线再兜住其余一切出网。
   const hits = [];
   const mock = await startMock(new Proxy({}, { get: () => (req, url) => { hits.push(url.pathname); return { status: 500, json: {} }; } }));
+  // 一个「公众号文章公开页」替身，给 fetch-article 抓。
+  const page = createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end('<html><body><div id="js_content" class="rich_media_content"><p style="color:#333;font-size:16px">正文</p></div></body></html>');
+  });
+  await new Promise((r) => page.listen(0, "127.0.0.1", r));
+  const pageUrl = `http://127.0.0.1:${page.address().port}/s/abc`;
   try {
     const failures = [];
     for (const [name, build] of Object.entries(LOCAL_INVOCATIONS)) {
       const dir = mkdtempSync(path.join(tmpdir(), "dby-local-"));
       const log = path.join(dir, "net.log");
       writeFileSync(log, "");
-      const argv = build(dir);
+      const built = build(dir, { pageUrl });
+      const { argv, allow = [] } = Array.isArray(built) ? { argv: built } : built;
       const before = hits.length;
       const r = await runCli(argv, {
         env: {
           DOUBAOYA_BASE_URL: mock.url,
           DOUBAOYA_API_KEY: "dyh_test_key_never_real",
           DBY_NET_LOG: log,
+          DBY_NET_ALLOW: allow.join(","),
           NODE_OPTIONS: `--import=${TRIPWIRE}`
         }
       });
@@ -59,9 +85,11 @@ test("local 命令在出网绊线下运行：零出网尝试", async () => {
         failures.push(`${name}（argv: ${argv.join(" ")}，退出码 ${r.code}）出网了：${tripped || hits.slice(before).join(", ")}`);
       }
       if (r.code < 0 || r.code > 6) failures.push(`${name} 退出码 ${r.code} 超出 0–6`);
+      if (r.code === 1) failures.push(`${name} 以退出码 1 结束（本用例的输入都是合法的，不该走到一般错误）：${r.stderr.slice(0, 300)}`);
     }
     assert.deepEqual(failures, [], `local 命令偷偷联网：\n${failures.join("\n")}`);
   } finally {
     await mock.close();
+    await new Promise((r) => page.close(r));
   }
 });

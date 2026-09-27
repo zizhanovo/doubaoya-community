@@ -38,7 +38,7 @@ export function commandUsage(cmd) {
     lines.push("", "flags：");
     for (const name of flagNames) {
       const spec = cmd.flags[name];
-      lines.push(`  --${name}${spec.value ? " <值>" : ""}  ${spec.summary ?? ""}`);
+      lines.push(`  --${name}${spec.value ? " <值>" : ""}${spec.multiple ? "（可多次）" : ""}  ${spec.summary ?? ""}`);
     }
   }
   return lines.join("\n");
@@ -142,7 +142,9 @@ export function parseArgs(cmd, rest) {
         if (value === undefined) {
           throw new DbyError("USAGE", `--${rawName} 缺值。\n\n${commandUsage(cmd)}`, { exit: EXIT.USAGE });
         }
-        flags[key] = value;
+        // multiple：同一个 flag 可以给多次，收成数组（如 `image gen --ref a.png --ref b.png`）。
+        if (spec.multiple) flags[key] = [...(flags[key] ?? []), value];
+        else flags[key] = value;
       } else {
         flags[key] = true;
       }
