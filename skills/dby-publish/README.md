@@ -3,19 +3,19 @@
 把一篇**已经写好的** Markdown / HTML，走一串**确定性的机械步骤**，最终存进你自己公众号的**草稿箱**——
 **只存草稿，绝不群发**。存完给你 `mediaId`，你再去公众号后台亲眼确认、手动群发。
 
-编排脚本把三件事串起来：
+`dby wechat pipeline` 把三件事串起来：
 1. **whoami 校验账号**（本机多条 key → 挑出目标账号那条，key 只在内存）；
-2. **md→公众号内联样式 HTML** 渲染（`--html` 时跳过）；
-3. **本地图片预上传 + 存草稿**（复用 vendored 的 `preprocess-and-publish.mjs`）。
+2. **md→公众号内联样式 HTML** 平台渲染（`--html` 时跳过）；
+3. **本地图片预上传 + 封面 + 存草稿**。
 并在最前面**加载并回显身份上下文**（IP profile 的 `isNot` 消歧），防止账号名被误读成同名的通用名词。
 
-> 完整的 10 步 SOP 与硬规则见 [`SKILL.md`](./SKILL.md) 与单一事实源 [`pipeline.json`](./pipeline.json)。
+> 完整的 10 步 SOP 与硬规则见 [`SKILL.md`](./SKILL.md) 与 [`pipeline.json`](./pipeline.json)。
 
 ## 前置条件
 
-- **Node ≥ 18**（内置 `fetch`），零外部依赖（仅用 Node 内置模块）。
+- **Node ≥ 22**。经 `dby` 命令运行（全局安装的 dby，或 npx 拉取确切版本 `@doubaoya/cli`），零依赖。
 - 一个 **doubaoya.com** 账号，并已**绑定你自己的公众号**。
-- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。
+- 凭证：`dby login`，或环境变量 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。
 
 ## 安装
 
@@ -25,33 +25,35 @@
 
 ```bash
 # 1. 配置（填你自己的值；字段说明见 config.example.README.md）
-cp config.example.json config.json
+cp <本包目录>/config.example.json config.json
 
 # 2. 身份卡（改成你自己账号的身份）
-cp profiles/example-ip.json profiles/my-ip.json
+mkdir -p profiles && cp <本包目录>/profiles/example-ip.json profiles/my-ip.json
 #    再把 config.json 的 ipProfile 指向 profiles/my-ip.json
 
-# 3. 密钥
-export DOUBAOYA_API_KEY="dyh_你的密钥"
+# 3. 凭证
+dby login
 
-# 4. 先干跑确认，再正式存草稿
-node scripts/pipeline.mjs --md article.md --title "标题" --dry-run
-node scripts/pipeline.mjs --md article.md --title "标题"
+# 4. 先干跑确认，再正式存草稿（--confirm 只在你明确要发这一篇时才带）
+dby wechat pipeline --md article.md --title "标题" --dry-run
+dby wechat pipeline --md article.md --title "标题" --confirm
 ```
 
-从已排好版的 HTML 直接发：
+从已排好版的 HTML（可含本地图）直接发：
 
 ```bash
-node scripts/pipeline.mjs --html article.html --title "标题"
+dby wechat pipeline --html article.html --title "标题" --confirm
 ```
 
-`node scripts/pipeline.mjs --help` 查看全部参数。
+只看排版：`dby preview --file article.md`。`dby wechat pipeline --help` 查看全部参数。
+1.x 包里的本机渲染器在已装用户那里仍可用，支持到 3.0.0；2.x 起不再随包提供。
 
 ## 安全说明
 
-- **只存草稿，绝不群发。** 流水线里**没有任何群发路径**；传 `--mass-send`/`--broadcast`/带「群发」字样的参数会被**直接拒绝**。
+- **未经用户明确要求，不发布。** 真发布要 `--confirm`；不带只停在确认态（退出码 6），什么都不发。
+- **只存草稿，绝不群发。** 流水线里**没有任何群发路径**；任何群发参数都会被**直接拒绝**。
 - **发布前必 whoami**：账号校验不通过就停，绝不发到错误的账号。
-- **绝不打印 API key**：key 仅在内存中传给子进程。
+- **绝不打印 API key**：key 只在内存里。
 - `config.json` 与你自己的 `profiles/*.json` 属于你个人，**不要提交到公共仓库**（仓库只保留 `*.example.*`）。
 
 ## 目录
@@ -61,20 +63,14 @@ dby-publish/
 ├── SKILL.md
 ├── README.md
 ├── LICENSE
-├── pipeline.json                 # 10 步 SOP + 硬规则（人读的约定文档，脚本不读取）
+├── pipeline.json                 # 10 步 SOP + 硬规则（人读的约定文档，CLI 不读取）
 ├── config.example.json           # 配置模板（复制成 config.json 再填）
 ├── config.example.README.md      # 配置字段逐项说明
 ├── references/                   # 条件式细节文档（SKILL.md 按需指路，含 recovery.md）
 ├── themes/                       # 只留内置兜底主题 benya-clean.json；其余主题走服务端裸 id
-├── profiles/
-│   ├── example-ip.json           # 虚构示例身份卡（演示 schema）
-│   └── README.md
-└── scripts/
-    ├── pipeline.mjs              # 编排者 CLI（心脏）
-    ├── account-verify.mjs       # 多来源 key → whoami → 挑对账号
-    ├── render-wechat-html.mjs   # md → 公众号内联样式 HTML（本机；已退出流水线主干，
-    │                             #   只供「无密钥先看排版」，无在线预览链接）
-    └── preprocess-and-publish.mjs  # vendored：传图 + 存草稿
+└── profiles/
+    ├── example-ip.json           # 虚构示例身份卡（演示 schema）
+    └── README.md
 ```
 
 ## License
@@ -85,6 +81,9 @@ PolyForm Noncommercial 1.0.0（随仓库整体）— 见根目录 LICENSE；本�
 
 ## 最近变更
 
+- **7.0.0**：**BREAKING**——流水线、直存草稿、带本地图 HTML 发布、渲染预览、抓参考文章全部换成
+  `dby wechat pipeline|publish|fetch-article` 与 `dby render|preview`（真发布须 `--confirm`）；主题校验交给服务端；
+  新增契约句「未经用户明确要求，不发布」。
 - **5.1.0**：封面 / 配图那一步**改回指向 `dby-image`** —— 服务端生图能力已于 2026-09 恢复
   （换了上游供应商并换代到 gpt-image-2.5），4.0.8 那句「出图能力当前暂时下架」到此作废。
   本包仍然**不出图**，只消费落盘的本地文件（`--cover <路径>` / 正文 `<img src=本地路径>`），
@@ -129,7 +128,7 @@ PolyForm Noncommercial 1.0.0（随仓库整体）— 见根目录 LICENSE；本�
   **入参规格一律调用前从详情端点现拉**——原来烤在正文里的返回字段表与计价数字已整段删掉
   （烤进分发物的契约必然漂，而价格会静默调整）。**十步 SOP 与终态判断一步没动。**
   （第 5 步当时被说成两条路；**现已收敛为只走平台渲染**，见下条。）
-- **流水线的 md→HTML 已改为只走平台渲染**（`POST /api/wechat/render`）：主题由服务端套，
+- **流水线的 md→HTML 已改为只走平台渲染**（`skill.wechat.render`）：主题由服务端套，
   产物自带在线预览链接（`detailUrl`），渲染失败一律中止、不回退本机渲染器。
   「拉服务端编译主题回本机套用」那套整个退场——主题从此只有一个事实源。
   同时那套自定义组件语法（关注卡 / 金句 / 花式标题 / 分割，冒号围栏写法）**已整体移除**，

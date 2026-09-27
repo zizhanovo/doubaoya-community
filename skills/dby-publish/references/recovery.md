@@ -4,7 +4,7 @@
 
 ## 先判断现在处于什么状态
 
-流水线的「保存草稿」是一个子进程一口气做三件事：**正文图预上传 → 封面 thumb 上传 → draft/add 存草稿**。
+流水线的「保存草稿」一步一口气做三件事：**正文图预上传 → 封面 thumb 上传 → draft/add 存草稿**。
 失败或中断发生在哪一步，残留就到哪一步：
 
 | 你看到的 | 草稿箱里有没有 | 已经发生了什么 |
@@ -34,16 +34,16 @@
 
 - 发布失败（`502 WECHAT_PUBLISH_FAILED` / `WECHAT_COVER_FAILED`）→ 服务端**自动把已扣的点数退回**；
 - 参数被前置拦下（`400 VALIDATION_ERROR`）→ 压根不扣；
-- 具体扣多少以能力详情端点的实时点数字段为准，别照文档里的数字替用户算钱。
+- 具体扣多少以 `dby api describe skill.wechat.draftPublish` 的实时点数字段为准，别照文档里的数字替用户算钱。
 
 ## 从哪一步重来
 
 不确定问题出在哪时，按阶梯重来，每级都比上一级多做一点：
 
 ```bash
-node scripts/pipeline.mjs --md a.md --title "标题" --render-only   # ① 先确认渲染没问题（免费，不碰公众号）
-node scripts/pipeline.mjs --md a.md --title "标题" --dry-run       # ② 彩排：校验账号 + 前置检查 + 扫本地图，不发布
-node scripts/pipeline.mjs --md a.md --title "标题"                 # ③ 后台确认无旧草稿后，正式重跑
+dby wechat pipeline --md a.md --title "标题" --render-only   # ① 先确认渲染没问题（免费，不碰公众号）
+dby wechat pipeline --md a.md --title "标题" --dry-run       # ② 彩排：校验账号 + 前置检查 + 扫本地图，不发布
+dby wechat pipeline --md a.md --title "标题" --confirm       # ③ 后台确认无旧草稿、用户确认要重发后，正式重跑
 ```
 
 渲染/校验阶段的报错（发布步之前）没有任何副作用，修完直接重跑即可，不用查后台。

@@ -7,30 +7,29 @@
 
 ## 前置条件
 
-- **Node ≥ 18**。
-- 一条 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。**生图计费。**
-- **必须与 `dby-api` 一起安装**：本包不自己发请求，接口调用经由 `dby-api` 的共享请求层
-  （`scripts/lib/locate-dby.mjs` 负责定位它）。找不到会以退出码 3 报 `[MISSING_DBY_API]`。
+- **Node ≥ 22**。经 `dby` 命令运行（全局安装的 dby，或 npx 拉取确切版本 `@doubaoya/cli`），零依赖。
+- 出图需要凭证：`dby login`，或环境变量 **`DOUBAOYA_API_KEY`**（doubaoya.com → 登录 → 密钥中心 → 生成）。**生图计费。**
 
 ## 安装
 
 把整个 `dby-image/` 目录放进你的 skills 目录，无需 `npm install`。
 
-## 三个脚本
+## 用到的命令
 
-| 脚本 | 花不花钱 | 做什么 |
+| 命令 | 花不花钱 | 做什么 |
 |---|---|---|
-| `scripts/gen.mjs` | **计费** | 出一张图（文生图 / 改图）。`--describe` 子命令免费，只拉生产实时契约做对账 |
-| `scripts/plan-figures.mjs` | 免费 | 给一篇 Markdown 规划「配几张图、放在哪个小节末尾、每张画什么」。纯本机，不接 LLM |
-| `scripts/wechat-crops.mjs` | 免费 | 把一张公众号封面按微信实际的三种裁法裁出来，供你核验主体有没有被切掉 |
+| `dby image gen … --confirm` / `dby image edit … --ref … --confirm` | **计费** | 出一张图（文生图 / 改图）。不带 `--confirm` 只停在确认态（退出码 6），什么都不发 |
+| `dby api describe gpt-image-gen` | 免费 | 看实时价格与入参契约 |
+| `dby image plan --md 文章.md` | 免费 | 给一篇 Markdown 规划「配几张图、放在哪个小节末尾、每张画什么」。纯本地，不接 LLM |
+| `dby image crops cover.jpg` | 免费 | 把一张公众号封面按微信实际的三种裁法裁出来，供你核验主体有没有被切掉 |
 
 ## 三件最容易踩空的事
 
 - **慢操作**：通常 1–2 分钟，最长 4 分钟。等待期间别打断。
 - **失败之后不要重试**。服务端超时会退款，客户端提前放弃**不会**——请求照样跑完、照样扣费，
-  重试就是为同一张图付两次钱。脚本因此**没有任何重试逻辑**，这是契约不是疏漏。
+  重试就是为同一张图付两次钱。CLI 因此**没有任何重试逻辑**，这是契约不是疏漏。
 - **比例只能写进提示词**。`size` 参数上游完全忽略（换代到 gpt-image-2.5 后复测仍然如此）。
-  脚本每次都打印实测宽高，核一眼。
+  每次都打印实测宽高，核一眼。
 
 ## License
 
@@ -40,6 +39,8 @@ PolyForm Noncommercial 1.0.0（随仓库整体）— 见根目录 LICENSE。
 
 ## 最近变更
 
+- **3.0.0**：**BREAKING**——出图、配图规划、封面裁切从包内脚本换成 `dby image gen|edit|plan|crops`，
+  看价格与入参改 `dby api describe gpt-image-gen`；出图必须带 `--confirm` 才真发；新增红线「未经用户明确要求，不生图」。
 - **2.1.0**：新增 `--model`——**出图模型改由调用方按需求选**（`gpt-image-2.5-flare` 快 /
   `gpt-image-2.5-sunburst` 保真 / `gpt-image-2` 退路），不传仍走服务端默认。
   `modelName` 这个入参此前在契约里声明着、服务端却从没读过它（本包旧文档干脆把它列为

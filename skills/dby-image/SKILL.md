@@ -8,59 +8,49 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 2.3.0
-changelog: 出图改按模型分档计价（三档，具体点数看 --describe 实时价，本包不写死数字）；--model 选择表补上价档定性；清掉作废的 quality 段（已停发）
+version: 3.0.0
+changelog: BREAKING：出图 / 规划 / 裁切从包内脚本换成 `dby image gen|edit|plan|crops`（gen/edit 须带 --confirm 才真出图，否则退出码 6 什么都不发）；看价格与入参改 `dby api describe gpt-image-gen`；新增「未经用户明确要求，不生图」红线
 compatibility: >-
-  需要 Node ≥18 与环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；
-  需要能对 https://doubaoya.com 发 HTTPS 请求。生图计费。
-  接口调用经由 dby-api 包的共享 CLI（scripts/lib/locate-dby.mjs 定位），需与 dby-api 一起安装。
+  只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
+  出图需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY），计费。`dby image plan` 纯本地免费；`dby image crops` 用 macOS 自带 sips。
 ---
 
 # AI 生图与改图 · dby-image
 
-出图走 **`scripts/gen.mjs`**，别自己手搓 curl。
+出图、改图、配图规划、封面裁切分别走 `dby image gen` / `dby image edit` / `dby image plan` / `dby image crops`，别自己拼请求。
 
----
+🔴 **未经用户明确要求，不生图。** 生图计费且慢——只有用户明确要一张图时才跑 `dby image gen`；
+别的包「顺手配图」也不行，先问用户要不要。
+
+## 调用 dby
+
+1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
+2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
 
 ## 怎么用
 
-**在用户的工作目录里跑，用脚本的全路径**——图会落在当前目录，别落进 skill 包里。
-把下面的 `$GEN` 换成本 skill 的 `scripts/gen.mjs` 实际路径。
-
-请求由 `scripts/gen.mjs` 代发；只有绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`
-（鉴权、密钥怎么拿、信封与报错码全在那一份）。
+在用户的工作目录里跑，图落在当前目录。**不带 `--confirm` 只停在确认态（退出码 6，什么都不发、不扣费）**；
+把计费告诉用户、他点头后原样加 `--confirm` 才真出图。
 
 ```bash
-export DOUBAOYA_API_KEY="dyh_你的密钥"     # 绝不打印、不写文件、不回显给用户
-GEN=~/.claude/skills/dby-image/scripts/gen.mjs   # 按实际安装位置改
-
 # 文生图。比例写进 prompt（size 参数无效，见下）
-node "$GEN" "一只戴围巾的黄色小鸭子站在雪地里，卡通插画风。宽幅横版，16:9 比例。" --out duck.jpg
+dby image gen "一只戴围巾的黄色小鸭子站在雪地里，卡通插画风。宽幅横版，16:9 比例。" --out duck.jpg --confirm
 
-# 改图。--ref 可以是本机文件路径、公网 URL 或 data: URI，写几次就是几张，最多 3 张
-node "$GEN" "只把围巾换成蓝色，其余全部保持不变：鸭子造型、姿势、雪地场景、构图都不要动。" \
-  --ref ./duck.jpg --out duck2.png
+# 改图。--ref 可以是本机文件、公网 URL 或 data: URI，写几次就是几张，最多 3 张
+dby image edit "只把围巾换成蓝色，其余全部保持不变：鸭子造型、姿势、雪地场景、构图都不要动。" \
+  --ref ./duck.jpg --out duck2.png --confirm
 
-# 对账：拉生产实时契约，核本包的参数认知有没有过期（免费，不出图）
-node "$GEN" --describe
+# 看实时价格 / 入参契约（免费，不出图）
+dby api describe gpt-image-gen
 ```
 
-> 只想看详情（价格 / 入参契约 / 输出样例）不做比对：
-> `node "$SKILL_DIR/scripts/dby.mjs" api describe gpt-image-gen`。
+`--out` 相对当前目录；不给就是 `doubaoya-image.<ext>`。**`--model` 不传走默认档**；三档价钱不同，
+要挑看 [`api-contract.md`](references/api-contract.md)「选哪个模型」。
+输出首行是文件路径，下一行是实测宽高（`✅ 129KB  实测 1672x941  比例 1.777  耗时 37s`）。
 
-`--out` 相对当前工作目录；不给就写成当前目录的 `doubaoya-image.<ext>`。
-
-**`--model` 不传走默认档**；三档价钱不同（`--describe` 看实时价），要挑就看
-[`api-contract.md` 的「选哪个模型」](references/api-contract.md)——那里也写明了
-为什么不能向用户承诺「换了就一定更保真」。
-
-**stdout 只有文件路径**（可直接管道／取变量），进度和实测宽高走 stderr：
-
-```
-✅ 129KB  实测 1672x941  比例 1.777  耗时 37s
-```
-
-调用前告诉用户一句：这一步要等一会儿，通常 1–2 分钟，最长 4 分钟，**中途别打断**。
+调用前告诉用户：通常等 1–2 分钟，最长 4 分钟，**中途别打断**。
 
 ---
 
@@ -94,7 +84,7 @@ node "$GEN" --describe
 请求 `1024x1024`，实际出图 1672×941 / 1731×909，比例全部来自提示词里那句「16:9」。
 要什么比例就在描述里直接写数字：「宽幅横版，16:9 比例」→ 实测 1672×941。各平台该写什么比例查
 [`prompt-ladder.md` 的「比例速查」](references/prompt-ladder.md)（公众号封面：16:9，主体进居中正方形——微信按 2.35:1 与正中 1:1 各裁一次）。
-需要精确像素只能拿到图之后自己裁。脚本每次都打印实测宽高，**核一眼**。
+需要精确像素只能拿到图之后自己裁。每次都打印实测宽高，**核一眼**。
 
 ---
 
@@ -105,7 +95,7 @@ node "$GEN" --describe
 核对表从**这次的请求**生成（用户点名的可数元素、点名的文字、助手加的客观约束），
 只判可证伪的，不判好不好看，**零自动重出**。
 
-**公众号封面多一步、免费**：`node scripts/wechat-crops.mjs ./cover.jpg` 落出消息列表 2.35:1、转发卡片正中 1:1、
+**公众号封面多一步、免费**：`dby image crops ./cover.jpg` 落出消息列表 2.35:1、转发卡片正中 1:1、
 360px 缩略图三张，读回来核「主体与标题在 1:1 里完整、缩略图里标题可读」——微信只收一张封面，
 1:1 是裁出来的不是另画一张。
 
@@ -131,15 +121,8 @@ node "$GEN" --describe
 
 ## 公众号整篇配图：先规划位置（免费、不出图）
 
-整篇文章要配几张图时，先用确定性规则挑「在哪些 h2 小节末尾放图」+ 每张画面建议，再逐张出图：
-
-```bash
-node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-figures/--min-chars/--json 可调
-```
-
-张数按正文字数分档（<1800→3、1800–3000→4、>3000→5），只挑有效字数 ≥160 的小节，偏向信息量大的。
-它只出方案不改文件：按方案逐张出图后，把 `<img src=本地路径>` 插进对应 h2 小节**末尾**，
-再交 `dby-publish` 渲染与预上传。
+`dby image plan --md 文章.md`（纯本地；`--max-figures` / `--min-chars` 可调）挑出「哪些 h2 小节末尾放图」+ 每张画面建议，
+只出方案不改文件。用户要了图再逐张出，把 `<img src=本地路径>` 插进对应小节末尾，交 `dby-publish`。
 
 ---
 
@@ -152,7 +135,7 @@ node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-fi
 | 给了参考图，**只要它的感觉**（风格、氛围） | ✅ 不改图：按 [`prompt-ladder.md`](references/prompt-ladder.md) 「特殊入口」反推七项重画 |
 | 爆款封面套路 / 同赛道封面参考数据 | ❌ `dby-api`（取数，不出图） |
 | 直接给我一版封面**方案** | ❌ `dby-api` 的 `skill.wechat.coverDesign` |
-| 整篇文章的配图**放哪儿**（位置规划） | ✅ `scripts/plan-figures.mjs`，见上节 |
+| 整篇文章的配图**放哪儿**（位置规划） | ✅ `dby image plan`，见上节 |
 | 图片预上传、封面上传、排版存草稿 | ❌ `dby-publish` |
 
 > `dby-publish` 流水线「封面 / 配图」一步需要新图时点名本包；图片的上传与排布仍归它。
@@ -163,10 +146,10 @@ node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-fi
 
 - **两条路径现在都返回 PNG**（2026-09 换代后实测，约 1–2MB）。此前文生图是 JPEG——
   那是因为我方当时显式要求 jpeg，换供应商后这个参数已不再发送，格式由上游定。
-  脚本按信封里的 `mime` 定扩展名（`--out` 写 `.jpg` 也会落成 png 内容），
+  CLI 按返回的 `mime` 定扩展名（`--out` 写 `.jpg` 也会落成 png 内容），
   下游若按扩展名做假设会踩空。
 - **参考图按字节签名认类型，改扩展名没用。** 只收 png / jpeg / webp。
-- **参考图超过 3 张会被服务端明确拒掉**（告知上限，不替谁截断）；脚本在发出去之前就报错。
+- **参考图超过 3 张会被服务端明确拒掉**（告知上限，不替谁截断）；CLI 在发出去之前就报错。
 - **改图会不会保住原图的色调和版面，看运气。** 两次实测漂了一次
   （详见 [`editing.md`](references/editing.md)）。改完必须跟原图逐项比，
   不能只看改的那一处。
@@ -182,13 +165,13 @@ node scripts/plan-figures.mjs --md 文章.md    # 纯本机不接 LLM；--max-fi
 
 | 现象 | 处置 |
 |---|---|
-| `缺 DOUBAOYA_API_KEY` | 怎么拿见 `dby-gateway/references/protocol.md`，`export` 后再跑 |
+| 退出码 4（没有凭证） | 请用户跑 `dby login` |
+| 退出码 6 | 还没带 `--confirm`，确认用户要这张图后原样加上 |
 | `402 INSUFFICIENT_CREDITS` | 点数不足，提示用户到 doubaoya.com 账户页查看余额与获取方式（点数只赠不卖），**不要重试** |
 | `401` | 密钥问题，更新 skill 治不了 |
 | `503 CAPABILITY_UNAVAILABLE` | **不要重试**，如实告知 |
 | 请求未完成 / 超时 | **不要重试**（正文「失败之后不要重试」）。可能已扣费，交给用户决定 |
-| `--describe` 退出码 2 | 本包的参数认知过期了，以生产为准去改 `references/api-contract.md` |
-| `[MISSING_DBY_API]` 退出码 3 | 本包的请求经由 `dby-api`，它没装。跑 `dby-update` 装全集，或用 `DBY_CLI` 指路 |
+| 怀疑参数认知过期 | `dby api describe gpt-image-gen` 对照 `references/api-contract.md`，以生产为准 |
 
 照做仍绕不过去、或想吐槽 → 可提一句用 `dby-feedback` 当场写成反馈（可忽略，不再重复提）。
 

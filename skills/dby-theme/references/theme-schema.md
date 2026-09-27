@@ -2,7 +2,7 @@
 
 > 真要动手写 / 改 themeJson 的字段时读它。只换配色的话，改 `palette` 八个键就够，不必读。
 
-top-level 键以 [`scripts/validate-theme.mjs`](../scripts/validate-theme.mjs) 的 `TOP_LEVEL_KEYS` 为准，生成后先跑它。最常用的几段:
+top-level 键以服务端校验为准（`dby preview --theme-file` 不合法会返回 400 并列出问题），生成后先预览一次。最常用的几段:
 
 ```jsonc
 {
@@ -22,14 +22,14 @@ top-level 键以 [`scripts/validate-theme.mjs`](../scripts/validate-theme.mjs) �
 - **标题装饰的正确姿势**（守红线 1）:色条 / 竖条 / 下划线用 `border-left` / `border-bottom` / `padding` **写进标题自己的 `style`**,别用空 `wrapBefore` 块。参照 `benya-clean` 与本 skill 的 `themes/theme.example.json`。
 - **`decorations.articleWrap` 留空**（守红线 2）。
 
-> 主题契约以 `scripts/validate-theme.mjs` 为准（跑它）。本 skill 的 §themeJson 结构 + `theme.example.json` 足够独立完成一次改主题。
+> 主题契约以服务端校验为准（`dby preview --theme-file` 跑一次）。本 skill 的 §themeJson 结构 + `theme.example.json` 足够独立完成一次改主题。
 
 ---
 
 ## 微信编辑器官方兼容清单（写 style 时对照）
 
 依据微信《公众平台编辑器插件开发规范》（`docs/research/dby-theme/01`），违反的会被编辑器删结构、或在手机端 / Dark Mode 下走样。
-校验器 `scripts/validate-theme.mjs` 对前四条打 **warning**（不算硬错，服务端不拒）。
+这八条服务端都不拒（不算硬错），只能靠你自己避开、预览时肉眼核。
 
 | 别写 | 后果 | 改成 |
 |---|---|---|

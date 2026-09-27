@@ -1,16 +1,23 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、公众号违禁词、跨平台合规、合规检测、过审、违禁词检测、敏感词、违规词、极限词、绝对化用语、限流自查、审核不过、广告法。不做：改文风或换平台调性走 dby-rewrite；从零写正文走 dby-write。
-version: 2.0.0
-changelog: BREAKING：删除 scripts/check_multi.py，改用 `dby banned check <文案> --platforms …`（逐平台各计费一次，默认停在确认态、--confirm 放行）；新增 scripts/dby.mjs 引导壳；compatibility 由 Python 改 Node ≥18
+version: 3.0.0
+changelog: BREAKING：删除包内 scripts/dby.mjs 引导壳的用法，改走 `dby` CLI（`dby banned check …`，全局 dby 或 npx 拉确切版本 @doubaoya/cli）；compatibility 改 Node ≥22
 compatibility: >-
-  需要 Node ≥18（`dby banned check` 走 dby-api 的 CLI，零依赖不装 npm 包）。
-  需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
+  只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
+  联网命令需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY），检测按平台扇出、逐平台计费。
 ---
 
 # 多平台违禁词检测
 
 一段文案，一次比对小红书 / 抖音 / 公众号违禁词口径，出对照表 + 全平台安全改写。
+
+## 调用 dby
+
+1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
+2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
 
 ---
 
@@ -26,26 +33,22 @@ compatibility: >-
 
 ---
 
-## 运行脚本
-
-`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录）。请求由 CLI 代发：
-`node "$SKILL_DIR/scripts/dby.mjs" banned check <文案> [--platforms a,b]`；
-只有绕开它自己拼请求时才读 `dby-gateway/references/protocol.md`。
+## 运行
 
 ```bash
 # 默认三平台全查——不带 --confirm 先停在确认态，逐平台各列一次计费，不产生任何请求
-node "$SKILL_DIR/scripts/dby.mjs" banned check "这款美白神器三天见效，全网最低价，无效退款"
+dby banned check "这款美白神器三天见效，全网最低价，无效退款"
 
 # 核对无误后原样加 --confirm 才真打（逐平台各计费一次）
-node "$SKILL_DIR/scripts/dby.mjs" banned check "这款美白神器三天见效，全网最低价，无效退款" --confirm
+dby banned check "这款美白神器三天见效，全网最低价，无效退款" --confirm
 
 # 只查指定平台（逗号分隔，省额度）
-node "$SKILL_DIR/scripts/dby.mjs" banned check "你的文案" --platforms xiaohongshu,douyin --confirm
+dby banned check "你的文案" --platforms xiaohongshu,douyin --confirm
 ```
 
 - **默认停在确认态**：回执列出将要发生的逐平台计费，核对后原样加 `--confirm` 才放行；
   `--confirm` 之前零请求、零扣费。
-- 确认后对每个平台 `POST` 一次，把所有平台结果汇成一个 map 装进 `{ok,data|error}` 信封的 `data` 里。
+- 确认后对每个平台各调用一次，把所有平台结果汇成一个 map 装进 `{ok,data|error}` 信封的 `data` 里。
   `raw` 里与 `content` / `originalContent` 重复的两键默认剥掉，加 `--raw` 保留。
 - **单个平台失败不影响其它平台**：失败的平台在 map 里记 `error`，其余照常返回。
 
@@ -53,17 +56,12 @@ node "$SKILL_DIR/scripts/dby.mjs" banned check "你的文案" --platforms xiaoho
 
 ## 接口契约
 
-- 地址：`POST https://doubaoya.com/api/apis/tool/check-banned-words/call`
-- 鉴权：请求头 `Authorization: Bearer $DOUBAOYA_API_KEY`
-- 请求体（每个平台一次，参数严格如下）：
-
-```json
-{ "platform": "xiaohongshu", "content": "<待检测文案>" }
-```
+- 能力：`dby api describe tool/check-banned-words` 可查入参 / 计价（CLI 已代发，无需自己拼请求）。
+- 每个平台一次调用，入参只有两个：`platform`（平台）与 `content`（待检测文案）。
 
   `platform` 取值依次迭代：`"xiaohongshu"`、`"douyin"`、`"gongzhonghao"`。
 
-- 返回信封：
+- 每个平台的返回：
 
 ```json
 {
@@ -132,7 +130,7 @@ CLI 逐平台捕获网络 / HTTP 错误，把错误写进对应平台条目并�
 
 ## 输出模板
 
-脚本返回的是 JSON map，本鸭须解析后填入下面的模板，**禁止把原始 JSON 直接甩给用户**。
+`dby banned check` 返回的是 JSON map，本鸭须解析后填入下面的模板，**禁止把原始 JSON 直接甩给用户**。
 
 ### 1. 逐平台风险对照表
 
@@ -161,7 +159,7 @@ CLI 逐平台捕获网络 / HTTP 错误，把错误写进对应平台条目并�
 ## 输出规则
 
 1. 先出**逐平台风险对照表**，再出**全平台安全改写**，不输出开场白与结束语。
-2. 脚本返回 JSON 后必须解析填模板，禁止直接输出原始 JSON。
+2. CLI 返回 JSON 后必须解析填模板，禁止直接输出原始 JSON。
 3. 安全改写要同时满足所有平台口径：以命中最多的平台为基线消词。
 4. 某平台失败时，照常输出其余平台结果，并在对照表标注该平台失败原因；
    🔴 **有平台检测失败时，末尾必须提示「该平台未完成检测，别当它通过」**，不要写成全平台可发。
@@ -173,7 +171,7 @@ CLI 逐平台捕获网络 / HTTP 错误，把错误写进对应平台条目并�
 ## 其他
 
 - `PROVIDER_FAILED`（502）是上游临时抖动，**已自动退款**，直接重试，不会重复扣费。
-- 文案经 HTTPS 发至都爆鸭后端，脚本本地不持久化原文与结果。
+- 文案经 HTTPS 发至都爆鸭后端，CLI 本地不持久化原文与结果。
 
 ## 关于响应里的 notice 字段
 

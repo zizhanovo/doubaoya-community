@@ -95,12 +95,12 @@ OpenAI 指南的原话是 `change only X` + `keep everything else the same`。
 在提示词里说清谁是谁：
 
 ```bash
-node scripts/gen.mjs "把第一张里的狗，放进第二张的场景，保持狗的毛色与姿势不变" \
-  --ref ./dog.png --ref ./scene.jpg
+dby image edit "把第一张里的狗，放进第二张的场景，保持狗的毛色与姿势不变" \
+  --ref ./dog.png --ref ./scene.jpg --confirm
 ```
 
 🔴 **超过 3 张要告诉用户上限、请他挑**。服务端会静默丢掉多余的，
-脚本因此直接报错而不是替他选——替用户挑等于让他不知道哪几张真的起了作用。
+CLI 因此直接报错而不是替他选——替用户挑等于让他不知道哪几张真的起了作用。
 
 > 以前这里写着「只收一张，建议先把多张拼成一张」。那是错的，
 > 而且拼图这条绕法本身还会让模型把拼接缝当成画面内容。
@@ -115,7 +115,7 @@ node scripts/gen.mjs "把第一张里的狗，放进第二张的场景，保持�
 | `data:` URI | `"data:image/png;base64,iVBOR…"` |
 | 裸 base64 | `"iVBOR…"` |
 
-**不需要先上传图床，也不用自己编码。** `scripts/gen.mjs --ref ./本机图.png`
+**不需要先上传图床，也不用自己编码。** `dby image edit … --ref ./本机图.png`
 会识别路径、读盘、按字节嗅探类型并转成 `data:` URI。
 
 ⚠️ 单张 ≤10MB；只收 png / jpeg / webp，按字节签名认，改扩展名没用。

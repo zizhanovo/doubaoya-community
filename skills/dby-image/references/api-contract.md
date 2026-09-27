@@ -1,20 +1,17 @@
 # 接口契约与参数真相表
 
-**正常出图不用读这份**——`scripts/gen.mjs` 已经把该发的发了、该躲的躲了。
+**正常出图不用读这份**——`dby image gen` 已经把该发的发了、该躲的躲了。
 只有这几种时候需要它：用户问「能不能指定尺寸／一次出几张／换模型」、
-你怀疑脚本发错了参数、或者要绕过脚本自己发请求。
+或者你怀疑 CLI 发错了参数。
 
 ---
 
-## 接口
+## 能力
 
-```
-POST {DOUBAOYA_BASE_URL}/api/skills/gpt-image-gen/invoke
-Authorization: Bearer $DOUBAOYA_API_KEY
-→ { success, data: { source, taskId, status, images: [{ b64, mime }] } }
-```
+`dby image gen` / `dby image edit` 内部调用 gpt-image-gen 能力（`dby api describe gpt-image-gen` 看详情），
+返回里取 `images[0]` 的 `b64` 与 `mime` 落盘。
 
-`prompt` 是**唯一必填**。计费，单价见详情端点的实时点数字段。
+`prompt` 是**唯一必填**。计费，单价见 `dby api describe gpt-image-gen` 的实时点数字段。
 
 ---
 
@@ -36,7 +33,7 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 | `background` | ✅ | ❌ 不再发送 | — | 同上，**做不到透明底** |
 | `outputFormat` | ✅ | ❌ 不再发送 | — | 输出格式由上游定，实测是 png |
 
-`scripts/gen.mjs` 发 `prompt`、参考图、以及 `--model` 指定时的 `modelName`，其余一概不发。
+`dby image gen` 发 `prompt`、参考图、以及 `--model` 指定时的 `modelName`，其余一概不发。
 
 ---
 
@@ -54,7 +51,7 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 要用最贵那档时**先把差价告诉用户**，别替他做这个决定——「更保真」目前只是上游的官方定位
 （见下方警告），花更多钱买一个没验证过的差异，该由用户点头。
 
-**具体多少点：跑 `node scripts/gen.mjs --describe`（免费，不出图）看实时价**，
+**具体多少点：跑 `dby api describe gpt-image-gen`（免费，不出图）看实时价**，
 本文不写死数字——价格是服务端事实、会漂，抄进这里当天就开始腐烂，而且**错了完全静默**：
 字段名写错还有 VALIDATION_ERROR 兜底，价格写错没有任何一层会报，你会照着过期数字
 替用户算成本。⚠️ 目录卡片显示的是**最贵那档**（平台口径：静态价只会高估不会低估），
@@ -76,7 +73,7 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 | 指定精确像素尺寸 | `size` 无效；比例写进 prompt，精确尺寸拿到图之后自己裁 |
 | 一次出 N 张候选 | **多次独立调用**，每次单独计费——先把总价告诉用户。🔴 不要用 `n` |
 | 透明底 / 换输出格式 / 换模型 | 三个字段服务端不读，传了等于没传 |
-| 4 张以上参考图 | 上限 3 张。让用户自己挑，脚本会直接报错而不是替他选 |
+| 4 张以上参考图 | 上限 3 张。让用户自己挑，CLI 会直接报错而不是替他选 |
 
 ---
 
@@ -96,11 +93,11 @@ Authorization: Bearer $DOUBAOYA_API_KEY
 ## 这张表怎么复核
 
 ```bash
-node scripts/gen.mjs --describe
+dby api describe gpt-image-gen
 ```
 
-它拉生产实时契约，跟本文件的「入参收」那一列对账：一致打印 ✅ 退出 0，
-对不上会列出多了哪些少了哪些并退出 2。**对不上以生产为准，回来把这张表改对。**
+它拉生产实时契约（免费），拿它的入参字段跟本文件的「入参收」那一列逐个对账。
+**对不上以生产为准，回来把这张表改对。**
 
 ⚠️ 端点只答得了「字段在不在」，答不了「传了有没有用」——它的 JSON Schema
 不带任何字段描述。后两列只能靠实测。

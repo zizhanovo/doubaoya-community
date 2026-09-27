@@ -61,7 +61,7 @@ L3。入口在 [`prompt-ladder.md`](prompt-ladder.md)。只放本平台真正会
 跑一下，把读者真正看到的三种样子落成文件再读回来核：
 
 ```bash
-node "$(dirname "$GEN")/wechat-crops.mjs" ./cover.jpg
+dby image crops ./cover.jpg
 # → cover.crop-235.jpg（消息列表）  cover.crop-1x1.jpg（转发卡片）  cover.thumb360.jpg（列表缩略图）
 ```
 

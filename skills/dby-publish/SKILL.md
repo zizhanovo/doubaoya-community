@@ -8,15 +8,12 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 6.0.0
-changelog: "BREAKING：account-verify 只从两处取 key——环境变量 DOUBAOYA_API_KEY，其次 dby login 写的 ~/.doubaoya/credentials；不再读 ~/.doubaoya/key、~/.doubaoya/env 与 macOS 钥匙串（仓内只许一套 key 解析顺序，validate_single_key_discovery 钉住）。把 key 放在旧位置的用户改用 export 或 dby login"
+version: 7.0.0
+changelog: "BREAKING：流水线、直存草稿、带本地图 HTML 发布、渲染预览、抓参考文章全部从包内脚本换成 `dby wechat pipeline|publish|fetch-article` 与 `dby render|preview`（真发布须 --confirm）；新增契约句「未经用户明确要求，不发布」；清掉「出图能力下架」旧说法（生图走 dby-image）"
 compatibility: >-
-  需要 Node ≥ 18（脚本用全局 fetch 与 AbortSignal.timeout），不装任何 npm 包；
-  接口调用经由 `dby-api` 包的共享 CLI（`scripts/lib/locate-dby.mjs` 定位），需与 dby-api 一起安装。
-  存草稿这条路还需要环境变量 DOUBAOYA_API_KEY（形如 dyh_…，在 doubaoya.com 密钥中心生成）；需要能对 https://doubaoya.com 发 HTTPS 请求，并且用户已在 doubaoya.com 绑定自己的公众号；
-  只做本地排版渲染 / 换主题时不需要密钥也不需要绑号。
-  ⚠️ 正文里的本地图片若超过 1MB 需要压缩，靠可选的 sharp，缺它则回退 macOS 专有的 sips——
-  所以在没装 sharp 的 Linux / 容器上，超过 1MB 的本地图会直接失败。
+  只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
+  渲染、预览、存草稿都需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY），存草稿还需用户已在 doubaoya.com 绑定自己的公众号。
+  ⚠️ 正文里超过 1MB 的本地图需要压缩，靠可选的 sharp，缺它回退 macOS 专有的 sips——没装 sharp 的 Linux / 容器上会直接失败。
 ---
 
 # 公众号图文流水线（都爆鸭）
@@ -27,145 +24,86 @@ compatibility: >-
 🔴 **终态纪律**：用户只要成稿就**不跑本包**——本包会写进他自己的公众号后台，是真实副作用。
 终态未明先问一句，别默认往下推。
 
+## 调用 dby
+
+1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
+2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
+
 ---
 
-## 只想存草稿、不要排版
+## 🔴 防误发红线（无论走哪个入口都成立）
 
-正文**已是公众号风格 HTML、无本地图也无本地封面**时直接打 CLI，不必走 `pipeline.mjs`。
-`$SKILL_DIR` = 本包目录（宿主加载本 SKILL.md 时给出的目录）：
+**未经用户明确要求，不发布。** 真发布要带 `--confirm`，而 `--confirm` 只在用户明确要发这一篇之后才带；
+不带就停在 confirmation_required（退出码 6），什么都不发生。`--dry-run` / `--render-only` 不发布，不需要 `--confirm`。
+**只存草稿、绝不群发**——没有任何群发路径，任何群发参数都会被拒；**需先绑号**（在 doubaoya.com 授权绑定，本包替不了）。
+存完请用户去后台亲眼确认，群发的手永远在用户自己。
+
+## 主流程：`dby wechat pipeline`
 
 ```bash
-node "$SKILL_DIR/scripts/dby.mjs" wechat publish --appid <authorizerAppid> --title "标题" --html article.html --confirm
+dby wechat pipeline --md article.md --title "标题" --render-only   # 只渲染，拿在线预览链接（不要绑号）
+dby wechat pipeline --md article.md --title "标题" --dry-run       # 发布前彩排，什么都不发
+dby wechat pipeline --md article.md --title "标题" --confirm       # 渲染 → 传图 → 封面 → 存草稿
 ```
 
-`--confirm` 前必须已有用户明确要发这一条的确认（见下面「防误发红线」）；不带 `--confirm`
-会停在 confirmation_required，退出码 6，什么都不发生。参数细节见 `node "$SKILL_DIR/scripts/dby.mjs" wechat publish --help`。
-带本地图 / 本地封面时改用 `scripts/preprocess-and-publish.mjs`，见 `references/draft-only.md`。
+- 本机多条 key 对应不同账号时会停下要 `--account <账号>`，按报错列出的账号补上重跑。
+- 正文来自**稿件面**（网页审稿页审过的稿）时带 `--draft <稿件 id>`（可选 `--draft-version <n>`，省略 = 最新版），
+  存草稿成功后自动关联；稿件不属于你 → 422，不发布、不扣点。
+- 🔴 **只认最终回报里的 `mediaId`**——没有它就不当已存入。失败 / Ctrl-C / 不确定草稿箱里有没有 → 读 `references/recovery.md`（重跑不幂等，会多存一份）。
+- 指定账号 / 公众号 / 本地封面 / 摘要 / `--theme` 的完整写法 → 读 `references/cli.md`。
 
----
+**只存草稿、不要排版**（正文已是公众号风格 HTML、无本地图也无本地封面）→ `dby wechat publish`，见 `references/draft-only.md`。
+**已排好版的 HTML 但带本地图 / 本地封面** → `dby wechat pipeline --html article.html --title "标题" --confirm`（自动预上传本地图）。
 
-## 流程声明：`pipeline.json`
+本包用到的两条能力（详情与现价用 `dby api describe <operationKey>` 现拉）：
+`skill.wechat.render`（md→HTML，免费）、`skill.wechat.draftPublish`（存草稿，计费）。
+超出这两条时读 `dby-gateway/references/capability-index.md` 选路、`routing-pitfalls.md` 看已知的坑。
 
-10 步 SOP 与全部硬规则声明在 [`pipeline.json`](./pipeline.json)（`steps[]` + `hardRules[]`）——它是**人读的约定文档**，
-`pipeline.mjs` 不读取它，改流程要两边手工同步。**「封面 / 配图」这一步由 agent 执行**（本包不出图，见下节），其余步骤 `pipeline.mjs` 机械跑完。
-本文只用步骤名不用序号；`pipeline.mjs` 日志里的「步骤 N」是脚本自己的机械步序，与 SOP 编号不对应。
-
-→ 想逐步核对这 10 步分别做什么时读 `references/sop.md`，不需要就别读。
-
----
-
-## 调用都爆鸭：本 Skill 用到的两条能力
-
-只点名能力与详情端点；入参每次调用前现拉。
-
-| operationKey | 详情端点 | 用在第几步 |
-|---|---|---|
-| `skill.wechat.render` ⚠️专用 | `GET /api/skills/wechat-render` | 「md→HTML」（服务端排版那条路） |
-| `skill.wechat.draftPublish` ⚠️专用 | `GET /api/skills/wechat-draft-publish` | 「保存草稿」 |
-
-生封面 / 生配图**不在本包**，出图能力当前暂时下架；未来是否恢复需重新评估，当前不承诺恢复时间。
-本包只消费**用户自备或 agent 用自己工具生成**的本地文件，不调用已下架能力或旧包。
-
-请求由 `scripts/pipeline.mjs`（及它调用的 `preprocess-and-publish.mjs`）代发；
-绕开脚本自己拼请求时才读 `dby-gateway/references/protocol.md`（鉴权、密钥怎么拿、
-先拉规格再拼参数、`execution.target`、信封格式）。
-🔴 **报错码是例外，走脚本一样要读**：脚本原样抛错零解读，撞上就读该文件第 6 条
-（429 按 IP 分桶，换 key、开新会话都没用，退避≤3 次且别加并发）。
-🔴 两条**专用路由**的调用地址只在 `target` 里，从详情端点**推不出来**。
-
-> **存草稿花钱、服务端排版渲染不花钱**；现价从详情响应现拉现说，花钱的那步动手前先问用户。
-
-→ 用户要的东西**超出上面这两条**时，读 `dby-gateway/references/capability-index.md` 选路、
-读 `routing-pitfalls.md` 看已知的坑；正常流程里这两份都不必读。
+10 步 SOP 与硬规则声明在 [`pipeline.json`](./pipeline.json)（人读约定，CLI 不读它）；逐步核对读 `references/sop.md`。
 
 ---
 
 ## 写正文之前
 
-- 🔴 **正文不写标题，标题只走 `--title`**——公众号总是拿草稿 `title` 渲大标题，正文里再写就显示两次；
-  `--html` 直发路径**原样**发出、没有去重，开头别放 `<h1>`。`--md` 路径兜了什么底见 `references/rendering.md`。
-- 正文**不是走 `dby-write` 写的** → 先拉写作规范，读 `references/writing-spec.md`
-  （`dby-write` 第 1 步已经拉过这一份，别再拉一次）。
-- **计费只在存草稿成功时发生**，失败自动退回；具体扣多少以详情端点的实时点数字段为准，
-  别照文档里的数字替用户算钱。`402 INSUFFICIENT_CREDITS` 时提示用户到账户页查看余额与获取方式（点数只赠不卖），不要重试。
-- **不写 `--theme` 就是用你在排版工作室保存的默认排版**；md→HTML 只走平台
-  `POST /api/wechat/render`（免费），**失败一律中止、绝不回退本机渲染器**。
-  套哪套排版 / 老稿子重跑为什么长得不一样 / `> [!NOTE]` 提示块 → 读 `references/rendering.md`。
-
----
+- 🔴 **正文不写标题，标题只走 `--title`**——公众号拿草稿 `title` 渲大标题，正文里再写就显示两次；
+  `--html` 路径**原样**发出、没有去重，开头别放 `<h1>`。`--md` 路径兜了什么底见 `references/rendering.md`。
+- 正文**不是走 `dby-write` 写的** → 先 `dby wechat writing-spec` 拉写作规范，读 `references/writing-spec.md`。
+- **存草稿花钱、只在成功时扣点**，失败自动退回；现价看 `dby api describe skill.wechat.draftPublish`，别照文档替用户算钱。
+  `402 INSUFFICIENT_CREDITS` 提示用户到账户页查余额（点数只赠不卖），不要重试。报错码怎么办读 `dby-gateway/references/protocol.md` 第 6 条
+  （429 按 IP 分桶，换 key、开新会话都没用，退避≤3 次且别加并发）。
+- **不写 `--theme` 就用排版工作室保存的默认排版**；md→HTML 只走平台渲染（免费），**失败一律中止、没有本地回退**。
+  套哪套排版 / 老稿子重跑为什么不一样 / `> [!NOTE]` 提示块 → 读 `references/rendering.md`。
 
 ## 封面与配图（可选，本包不出图）
 
-本包**不出图**。需要新图时交给 `dby-image`（2026-09 随服务端生图能力恢复而重建）；
-图片也可以来自**用户自备**或**你自己 agent 的生图工具**：
-拿到**本地文件路径**后接回流水线——
-封面走 `--cover <路径>`；配图以 `<img src=本地路径>` 手工判断放进 Markdown 源对应 h2 小节末尾，
-入源后重跑渲染，配图才会获得主题图样式。上传与排布仍归本包（流水线原样保留每个 `<img src>`
-并预上传本地图）。用户已说「推」且**没提封面 / 配图**时不主动张罗：只提示一次
-「不传封面就走兜底封面」，然后直接跑。
+需要新图且用户明确要了时交给 `dby-image`；图也可以是用户自备的。拿到**本地文件路径**后接回：
+封面走 `--cover <路径>`；配图以 `<img src=本地路径>` 放进 Markdown 源对应 h2 小节末尾后重跑。
+用户已说「推」且**没提封面 / 配图**时不主动张罗：只提示一次「不传封面就走兜底封面」，然后直接跑。
 
 ---
 
-## CLI 用法
-
-🔴 **防误发红线**（无论走哪个入口都成立）：**只存草稿、绝不群发**——没有任何群发路径，流水线**拒绝**任何
-`--mass-send`/`--broadcast`/群发 参数；**需先绑号**（先在 doubaoya.com 把公众号授权绑定，本技能替不了你绑）；
-**用户只要成稿时别自作主张跑它**。存完请用户去后台亲眼确认，群发的手永远在用户自己。
-
-```bash
-export DOUBAOYA_API_KEY="dyh_…"   # 或用 dby login 存到 ~/.doubaoya/credentials（只认这两处）
-
-node scripts/pipeline.mjs --md article.md --title "标题"                 # 渲染 → 传图 → 存草稿
-node scripts/pipeline.mjs --md a.md --title "标题" --render-only         # 只渲染，拿在线预览链接
-node scripts/pipeline.mjs --md a.md --title "标题" --dry-run             # 发布前彩排，什么都不发
-```
-
-本机有多条 key 对应不同账号时，账号校验会停下要 `--account <账号>`，按报错列出的账号补上重跑。
-
-正文来自**稿件面**（用户在网页审稿页审过的稿）时带 `--draft <稿件 id>`（可选 `--draft-version <n>`，
-省略 = 最新版）——存草稿箱成功后服务端会把稿件自动关联到这条发布记录；不带就是普通发布。
-带了但那条稿件不属于你 → 422 `VALIDATION_ERROR`，发布不执行、不扣点。
-
-🔴 **跑完只认最终回报里的 `mediaId`**——它是「已存入草稿箱」的唯一凭据，没有它就不当已存入。
-存草稿失败 / 中途 Ctrl-C / 不确定草稿箱里有没有 → 读 `references/recovery.md`（重跑不幂等，会多存一份）。
-
-→ 要指定账号 / 公众号 / 本地封面 / 摘要，或用 `--html`、`--theme` 的完整写法时读
-`references/cli.md`，不需要就别读。
-
----
-
-## 冷门分支：需要时才读，不需要就别读
+## 冷门分支：需要时才读
 
 | 用户在说 / 你要干的事 | 读哪份 |
 |---|---|
-| **只看排版**（本机出稿看效果，不发） | 只读 `references/rendering.md`，其余都不读 |
-| 哪个脚本干哪件事、想不走 `pipeline.mjs` 自己组合 | `references/modules.md` |
-| **第一次用本包**（还没有 `config.json` / 身份卡） | `references/setup.md`（`config.json` 属于你个人、别提交） |
-| **把某个公众号的排版复刻成 `theme.json`** | `references/clone-theme.md`（契约、校验器、现成主题怎么挑都在里面） |
-
----
-
-## 前置条件
-
-统一前置 **Node ≥ 18**，零外部依赖。本机渲染免密、无在线链接；平台渲染（`--render-only`）要密钥、有在线链接、不要绑号；
-**`--dry-run` 与存草稿**要密钥且要绑号。
-→ 逐层明细读 `references/prerequisites.md`，不需要就别读。
+| **只看排版**（出稿看效果，不发） | 只读 `references/rendering.md` |
+| 流水线由哪几段组成、想自己组合 | `references/modules.md` |
+| **第一次用本包**（还没有 `config.json` / 身份卡） | `references/setup.md` |
+| 这一步要不要凭证 / 要不要绑号 | `references/prerequisites.md` |
+| **把某个公众号的排版复刻成 `theme.json`** | `references/clone-theme.md` |
 
 ---
 
 ## 下一步（草稿存好之后）
 
-草稿进箱即终点。还想往下走时：
-
 | 用户接着想要什么 | 下一步 |
 |---|---|
-| 攒几天数据后看这个号的发文表现 / 做体检 | `dby-api`（打账号诊断能力 `skill.wechat.accountAnalyzer`） |
-| 盯自己或竞品的发文节奏 | `dby-api`（打公众号发文列表端点） |
-| 把已发布的文章拉正文归档 | `dby-api` |
-| 用复盘信号挖下一轮选题 | `dby-api`（挖选题 / 追热点，也从这儿拉样本开写） |
+| 看这个号的发文表现 / 做体检 | `dby-api`（账号诊断 `skill.wechat.accountAnalyzer`） |
+| 盯自己或竞品的发文节奏 / 拉已发文章归档 | `dby-api` |
+| 用复盘信号挖下一轮选题 | `dby-api` |
 | 说不清要到哪一步 | `dby`（公众号飞轮的逐跳导航） |
-
----
 
 ## 更新本技能
 
