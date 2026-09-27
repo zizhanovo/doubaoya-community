@@ -832,10 +832,6 @@ def validate_readme(root: Path = ROOT) -> None:
 
 
 
-def _semver_tuple(v: str) -> tuple[int, int, int]:
-    return tuple(int(x) for x in v.split("."))  # type: ignore[return-value]
-
-
 def _read_head_product_version() -> str | None:
     import subprocess
     res = subprocess.run(["git", "show", "HEAD:index.json"], capture_output=True, text=True)
@@ -845,7 +841,7 @@ def _read_head_product_version() -> str | None:
         pv = json.loads(res.stdout).get("productVersion")
     except json.JSONDecodeError:
         return None
-    return pv if isinstance(pv, str) and re.match(r"^\d+\.\d+\.\d+$", pv) else None
+    return pv if isinstance(pv, str) and skill_index.SEMVER_PRE.match(pv) else None
 
 
 def validate_skill_index(root: Path = ROOT) -> None:
@@ -868,11 +864,19 @@ def validate_skill_index(root: Path = ROOT) -> None:
     require(isinstance(index.get("ref"), str) and skill_index.REF_PATTERN.match(index["ref"]), f"index.json 的 ref 不是 release-YYYYMMDD-HHMM：{index.get('ref')!r}")
     pv = index.get("productVersion")
     if pv is not None:
-        require(isinstance(pv, str) and re.match(r"^\d+\.\d+\.\d+$", pv), f"index.json 的 productVersion 不是 semver：{pv!r}")
-        # 单调不回退：和 HEAD 里的比（不在 git 仓库 / HEAD 没有该文件或字段则跳过）
+        require(isinstance(pv, str) and skill_index.SEMVER_PRE.match(pv), f"index.json 的 productVersion 不是 semver：{pv!r}")
+        # 单调不回退：和 HEAD 里的比（不在 git 仓库 / HEAD 没有该文件或字段则跳过）；按 semver 优先级比（含 -next.N）
         head = _read_head_product_version()
         if head is not None:
-            require(_semver_tuple(pv) >= _semver_tuple(head), f"productVersion 回退了：HEAD 是 {head}，工作树是 {pv}")
+            require(skill_index.semver_cmp(pv, head) >= 0, f"productVersion 回退了：HEAD 是 {head}，工作树是 {pv}")
+        # 兼容视图的版本字段从包版本派生（dby-cli-rebuild D10）：有 cli/package.json 就必须相等
+        package_version = skill_index.cli_package_version(root)
+        if package_version and not skill_index.compat_view_frozen(root):
+            require(
+                pv == package_version,
+                f"index.json 的 productVersion 是 {pv}，包版本（cli/package.json）是 {package_version}——兼容视图必须从包版本派生，"
+                "跑 node cli/scripts/release.mjs 重新派生，别手改。",
+            )
     require(isinstance(index.get("owner"), str) and index["owner"], "index.json 缺 owner（ClawHub 发布者 handle）")
     skills = index.get("skills")
     require(isinstance(skills, dict) and skills, "index.json 的 skills 必须是非空对象")
@@ -2767,6 +2771,35 @@ def _skills_using_cli(root: Path, valid_names: set[str]) -> list[Path]:
     return using
 
 
+def validate_single_version(root: Path = ROOT) -> None:
+    """🔴 CLI 与 skills 共用一个版本号（spec dby-cli-distribution）：每个 SKILL.md 的 `version:` 等于包版本。
+
+    包版本（cli/package.json）是唯一事实源，SKILL.md 里的版本由 `node cli/scripts/release.mjs` 写入，
+    仓内不许手写另一个值。兼容视图 index.json 的逐包最新版本同样必须等于它（兼容视图冻结后不再判）。
+    """
+    version = _cli_package_version(root)
+    skill_dirs = discover_skill_dirs(root)
+    require(len(skill_dirs) >= 8, f"只扫到 {len(skill_dirs)} 个包——扫描退化，版本闸在空跑。")
+    for skill_dir in skill_dirs:
+        declared = skill_index.frontmatter_field((skill_dir / "SKILL.md").read_text(encoding="utf-8"), "version")
+        require(
+            declared == version,
+            f"{display_path(skill_dir / 'SKILL.md')} 的 version 是 {declared!r}，包版本（cli/package.json）是 {version}"
+            "——CLI 与 skills 共用一个版本号，由 node cli/scripts/release.mjs 写入，别手改。",
+        )
+    if skill_index.compat_view_frozen(root):
+        return
+    index = load_json(root / skill_index.INDEX_NAME)
+    for slug, entry in sorted(index.get("skills", {}).items()):
+        if entry.get("status") != "active" or not entry.get("versions"):
+            continue
+        head = entry["versions"][0].get("version")
+        require(
+            head == version,
+            f"index.json[{slug!r}].versions[0].version 是 {head!r}，包版本是 {version}——兼容视图的版本字段必须从包版本派生。",
+        )
+
+
 def validate_call_convention(root: Path = ROOT) -> None:
     """🔴 用到 CLI 的包必须逐字放同一段调用约定，确切版本 = 包版本，`node -v` 在最前。"""
     block = call_convention_block(root)
@@ -2820,6 +2853,17 @@ def context_tokens(text: str) -> int:
     return -(-(cjk * 4 + other) // 4)
 
 
+def _version_neutral(text: str, version: str) -> str:
+    """预算口径不随发版漂移：frontmatter 的 `version:` / `changelog:` 两行是 release 工具写的元数据
+    （宿主不当指令读），调用约定里的确切版本号换成等长无关的占位——否则 2.0.0-next.0 → 2.0.0
+    这种纯发版也会让「只降不升」的上限红一次。"""
+    lines = text.split("\n")
+    if lines and lines[0] == "---" and "---" in lines[1:]:
+        end = lines.index("---", 1)
+        lines = lines[:1] + [line for line in lines[1:end] if not line.startswith(("version:", "changelog:"))] + lines[end:]
+    return "\n".join(lines).replace(f"@doubaoya/cli@{version}", "@doubaoya/cli@X").replace(f"`{version}`", "`X`")
+
+
 def context_budget_report(root: Path = ROOT) -> list[dict[str, object]]:
     """每个包与每条主路径的 {name, files, measured, limit}；闸与 main() 的输出共用这一份计算。"""
     registry = load_json(root / SKILL_BUDGET_FILE)
@@ -2828,6 +2872,7 @@ def context_budget_report(root: Path = ROOT) -> list[dict[str, object]]:
     paths = registry.get("paths")
     require(isinstance(skills, dict) and skills, f"{SKILL_BUDGET_FILE} 的 skills 为空——预算闸在空跑。")
     require(isinstance(paths, dict) and paths, f"{SKILL_BUDGET_FILE} 的 paths 为空——主路径预算没登记。")
+    version = _cli_package_version(root)
     installed = {path.name for path in discover_skill_dirs(root)}
     require(
         set(skills) == installed,
@@ -2856,7 +2901,7 @@ def context_budget_report(root: Path = ROOT) -> list[dict[str, object]]:
                 "——必读必须由入口说出来。",
             )
             files.append(target)
-        measured = sum(context_tokens(path.read_text(encoding="utf-8")) for path in files)
+        measured = sum(context_tokens(_version_neutral(path.read_text(encoding="utf-8"), version)) for path in files)
         per_skill[name] = measured
         rows.append({"name": name, "files": [display_path(p) for p in files], "measured": measured, "limit": entry.get("limit")})
     for name in sorted(paths):
@@ -2910,6 +2955,7 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_no_skill_scripts(root)
     validate_no_forbidden_invocations(root)
     validate_call_convention(root)
+    validate_single_version(root)
     validate_context_budget(root)
     validate_cli_shims_identical(root)
     validate_no_price_literals(root)

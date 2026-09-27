@@ -1,75 +1,75 @@
 {
-  "_comment": "上下文预算闸登记（dby-cli-rebuild design D13 / spec「上下文预算闸」）。口径：ceil(CJK 字符数 + 其余非空白字符数 / 4)，按「SKILL.md + required 里的必读 references」计。required 只列主流程上无条件要读的；「读其中一份」的（写作形态、目标平台）登记那组里最大的一份。上限取 2026-09-27 改薄后的实测值，只降不升；确需抬高，在同一提交里写明理由。",
+  "_comment": "上下文预算闸登记（dby-cli-rebuild design D13 / spec「上下文预算闸」）。口径：ceil(CJK 字符数 + 其余非空白字符数 / 4)，按「SKILL.md + required 里的必读 references」计。required 只列主流程上无条件要读的；「读其中一份」的（写作形态、目标平台）登记那组里最大的一份。上限取 2026-09-27 改薄后的实测值，只降不升（同日改为「版本号中性」口径：frontmatter 的 version/changelog 两行与调用约定里的确切版本不计入，发版不再让上限漂移，上限随之按新口径下调）；确需抬高，在同一提交里写明理由。",
   "skills": {
     "dby": {
       "required": [
         "references/navigation.md",
         "references/receipt-example.md"
       ],
-      "limit": 5215
+      "limit": 5156
     },
     "dby-api": {
       "required": [
         "references/gotchas.md"
       ],
-      "limit": 4478
+      "limit": 4423
     },
     "dby-banned-words": {
       "required": [],
-      "limit": 3167
+      "limit": 3107
     },
     "dby-charter": {
       "required": [
         "references/intake.md"
       ],
-      "limit": 7389
+      "limit": 7330
     },
     "dby-deai": {
       "required": [
         "references/病灶清单.md",
         "references/结构审读.md"
       ],
-      "limit": 8406
+      "limit": 8345
     },
     "dby-feedback": {
       "required": [
         "references/report-protocol.md"
       ],
-      "limit": 3407
+      "limit": 3357
     },
     "dby-gateway": {
       "required": [
         "references/protocol.md"
       ],
-      "limit": 5850
+      "limit": 5786
     },
     "dby-image": {
       "required": [],
-      "limit": 3334
+      "limit": 3241
     },
     "dby-publish": {
       "required": [],
-      "limit": 2260
+      "limit": 2144
     },
     "dby-rewrite": {
       "required": [
         "references/公众号.md"
       ],
-      "limit": 4058
+      "limit": 4013
     },
     "dby-theme": {
       "required": [],
-      "limit": 2106
+      "limit": 2035
     },
     "dby-update": {
       "required": [],
-      "limit": 3335
+      "limit": 3303
     },
     "dby-write": {
       "required": [
         "references/genre/被访者原话.md"
       ],
-      "limit": 5272
+      "limit": 5229
     }
   },
   "paths": {
@@ -78,7 +78,7 @@
         "dby-write",
         "dby-banned-words"
       ],
-      "limit": 8439
+      "limit": 8336
     },
     "写一篇·冷启动": {
       "skills": [
@@ -86,7 +86,7 @@
         "dby-banned-words",
         "dby-charter"
       ],
-      "limit": 15828
+      "limit": 15666
     }
   }
 }

@@ -189,7 +189,11 @@ def stamp_all(
 
     index["generatedAt"] = now.isoformat()
     index["ref"] = ref
-    if changed:
+    package_version = skill_index.cli_package_version(root)
+    if package_version:
+        # 版本信息优先级（dby-cli-rebuild D10）：productVersion 是兼容视图，恒等于 npm 包版本，不再自己递增。
+        index["productVersion"] = package_version
+    elif changed:
         index["productVersion"] = skill_index.bump_product_version(index.get("productVersion"), batch_levels)
     skill_index.save_index(index, index_file)
     skill_index.write_views(index, root)
@@ -281,6 +285,9 @@ def drift_reminder(
 
 
 def main() -> int:
+    if skill_index.compat_view_frozen(ROOT):
+        print(f"包版本 {skill_index.cli_package_version(ROOT)} ≥ 3.0.0：兼容视图（.version / index.json / versions.json / known-hashes.json）停止生成，现有文件保持冻结。")
+        return 0
     versions_file = ROOT / "versions.json"
     index_file = ROOT / skill_index.INDEX_NAME
     previous = read_manifest_skills(versions_file)

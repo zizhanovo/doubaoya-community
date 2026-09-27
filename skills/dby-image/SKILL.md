@@ -8,8 +8,8 @@ description: >-
   改一下这张图、P 一下、配图、配张图、配一张插图、来张主视觉、做张视觉图、按这个描述画、
   封面、封面图、公众号封面、做张封面、配张封面图、首图灵感。
   不做：只要封面**套路与参考数据**（不出成品图）走 dby-api；把图排进文章存草稿走 dby-publish。
-version: 3.0.0
-changelog: BREAKING：出图 / 规划 / 裁切从包内脚本换成 `dby image gen|edit|plan|crops`（gen/edit 须带 --confirm 才真出图，否则退出码 6 什么都不发）；看价格与入参改 `dby api describe gpt-image-gen`；新增「未经用户明确要求，不生图」红线
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
   出图需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY），计费。`dby image plan` 纯本地免费；`dby image crops` 用 macOS 自带 sips。

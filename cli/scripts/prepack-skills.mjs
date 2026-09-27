@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // prepack-skills.mjs — npm pack/publish 前把仓库根的 skill 内容原样拷进包（design D1）。
 //
-// 只拷 `skills/<slug>/SKILL.md` 与 `skills/<slug>/references/**`：skill 在 2.x 里只是说明书，
+// 只拷 `skills/<slug>/SKILL.md` 与 `skills/<slug>/references/**`（口径唯一实现在 src/skills-bundle.mjs，
+// `dby skills install` 与 prepublish-check 的镜像哈希用的是同一份）：skill 在 2.x 里只是说明书，
 // scripts/ 不进 npm 包（过渡期的 1.x 脚本仍留在仓库 skills/ 里，由旧渠道分发，第 5 组删）。
 // 另把仓库根 LICENSE 拷进来（npm 只从包目录收 LICENSE）。
 // `--clean`（postpack）删掉这两样拷贝，让工作树回到干净状态。
 //
 // 用法：node scripts/prepack-skills.mjs [--clean]
 
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { listSkillFiles } from "../src/skills-bundle.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,11 +38,9 @@ function prepack() {
   for (const slug of slugs) {
     const from = path.join(SRC_SKILLS, slug);
     const to = path.join(OUT_SKILLS, slug);
-    mkdirSync(to, { recursive: true });
-    cpSync(path.join(from, "SKILL.md"), path.join(to, "SKILL.md"));
-    const refs = path.join(from, "references");
-    if (existsSync(refs) && statSync(refs).isDirectory()) {
-      cpSync(refs, path.join(to, "references"), { recursive: true });
+    for (const rel of listSkillFiles(from, { bundledOnly: true })) {
+      mkdirSync(path.dirname(path.join(to, rel)), { recursive: true });
+      cpSync(path.join(from, rel), path.join(to, rel));
     }
   }
   cpSync(path.join(REPO_ROOT, "LICENSE"), OUT_LICENSE);

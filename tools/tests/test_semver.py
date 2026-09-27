@@ -40,7 +40,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 import stamp_versions as sv  # noqa: E402
 import skill_index  # noqa: E402
 
-SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+SEMVER = skill_index.SEMVER_PRE  # X.Y.Z，允许 npm 预发布段（-next.N）：包版本即 SKILL.md 版本（dby-cli-rebuild D10）
+PACKAGE_VERSION = skill_index.cli_package_version(ROOT)
 
 
 def _skills() -> list[Path]:
@@ -72,7 +73,7 @@ def test_每个包都有合法的_semver(d: Path) -> None:
     )
     assert SEMVER.match(v), (
         f"{d.name} 的 version 不是三段语义版本：{v!r}。"
-        "只接受 `X.Y.Z`（三段非负整数，无前导零、无前缀 v、无预发布后缀）—— "
+        "只接受 `X.Y.Z` 或带 npm 预发布段的 `X.Y.Z-next.N`（三段非负整数，无前导零、无前缀 v）—— "
         "口径统一才比得出大小，递增闸才成立。"
     )
 
@@ -99,21 +100,23 @@ def _committed_version(slug: str) -> str | None:
     return None
 
 
-def _tuple(v: str) -> tuple[int, int, int]:
-    m = SEMVER.match(v)
-    assert m, v
-    return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
-
-
 def test_内容变了_semver_必须严格递增() -> None:
     """本文件的枢纽。
 
     判据是**逐段数值比较**，不是字符串比 —— `1.10.0` > `1.9.0` 而字符串比会判反。
+
+    🔴 单一版本号（dby-cli-rebuild D10）之后逐包 semver 不再独立：每个 SKILL.md 的 version 恒等于
+    npm 包版本（validate_single_version 钉住），由 release 工具一次性写入。于是「内容变了 ⇒ 版本变了」
+    这条不变式从「每个包每笔提交」上移到「整个包每次发布」：发布前检查（cli/scripts/prepublish-check.mjs）
+    要求待发版本严格大于 registry 上同线已发布的最高版本、且 CHANGELOG 有对应一节。
+    所以这里对「新版本 == 包版本」的包不再逐包比大小（统一发版那一刻 7.0.0 → 2.0.0-next.0 是设计内的重置），
+    单独计数、不混进其它档。
     """
     checked = 0
     skipped_new = 0
     skipped_backfill = 0
     skipped_same = 0
+    skipped_unified = 0
     violations = []
     for d in _skills():
         slug = d.name
@@ -134,17 +137,20 @@ def test_内容变了_semver_必须严格递增() -> None:
         if new_stamp == old_stamp:
             skipped_same += 1
             continue  # 内容没变，版本不必动
+        if PACKAGE_VERSION and new_ver == PACKAGE_VERSION:
+            skipped_unified += 1
+            continue  # 单一版本号：由 release 工具写入，递增在发布前检查里判（见 docstring）
         checked += 1
         if new_ver is None or not SEMVER.match(new_ver):
             continue  # 合法性由上面那条报，这里不重复
-        if _tuple(new_ver) <= _tuple(old_ver):
+        if skill_index.semver_cmp(new_ver, old_ver) <= 0:
             violations.append(f"{slug}: 内容变了但 version 是 {old_ver} → {new_ver}（未严格递增）")
 
     # 🔴 元断言：跳过太多时这道闸已经没有判别力，宁可红也不要假绿。
     #    回填期（skipped_backfill）是一次性的：所有包都补过 version 之后它必然归零。
     total = len(_skills())
-    assert checked + skipped_new + skipped_backfill + skipped_same == total, (
-        f"计数漏了包（{checked}+{skipped_new}+{skipped_backfill}+{skipped_same} != {total}）—— "
+    assert checked + skipped_new + skipped_backfill + skipped_same + skipped_unified == total, (
+        f"计数漏了包（{checked}+{skipped_new}+{skipped_backfill}+{skipped_same}+{skipped_unified} != {total}）—— "
         "解析有问题，此时这道闸的判别力不可信"
     )
 

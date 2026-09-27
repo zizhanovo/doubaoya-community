@@ -6,8 +6,8 @@ description: >-
   Trigger words: doubaoya 调用协议 / 调用网关 / DOUBAOYA_API_KEY / operationKey / execution.target /
   inputContract / 入参规格 / 统一信封 / SKILL_NOT_FOUND / ENDPOINT_NOT_FOUND / DEDICATED_ROUTE /
   NO_RESULT / CAPABILITY_UNAVAILABLE / 该打哪条路由；以及调都爆鸭接口时「401 / 404 / 429 报错了」「调不通」「怎么鉴权」「requestId」。
-version: 2.0.0
-changelog: 调用示例一律改走 dby CLI（@doubaoya/cli）并放统一调用约定段；不再给原始 HTTP 请求示例，健康探测改 dby doctor，规格现拉改 dby api describe
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
   联网命令需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY）。能力清单与详情免鉴权且免费，调用计费。

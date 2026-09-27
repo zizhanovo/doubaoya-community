@@ -5,8 +5,8 @@ description: >-
   用户过目全文后提交给维护者；端点不通就落本地文件。触发词：报个bug、报bug、反馈、提个建议、提需求、提意见、
   吐槽、用不了、坏了吧、这里好烦、太难用、用着别扭、能不能改改、给作者/维护者/开发者说一声。
   不做：违禁词检测走 dby-banned-words；更新本鸭走 dby-update；改文案走 dby-rewrite。
-version: 2.1.0
-changelog: 加调用约定段；补一步式 dby feedback submit --file 报告.md 的适用场景，例子换成 dby 命令，cURL 项目改写法
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）。
   提交时需要对反馈端点的 HTTPS 出网；端点未配置或不通时纯本地落盘，不需要凭证。

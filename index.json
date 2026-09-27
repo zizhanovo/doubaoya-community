@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T09:23:14.264752+00:00",
+  "generatedAt": "2026-09-27T10:02:47.024454+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.20.0",
+  "productVersion": "2.0.0-next.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -523,6 +523,7 @@
         "c820f9aa0c6d",
         "d5cfe53c21dd",
         "dd507e5dc624",
+        "deea753646bb",
         "dfcfb6b9154e",
         "e0ef82da64ee",
         "e562a7c121c6",
@@ -533,11 +534,11 @@
       ],
       "versions": [
         {
-          "version": "1.9.0",
-          "hash": "9adf935d1f62",
+          "version": "2.0.0-next.0",
+          "hash": "deea753646bb",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "navigation / onboarding 里残留的「出图暂时下架」改成交给 dby-image；公众号头部榜 / 发文列表改用能力 operationKey 点名；路由表不再写 CLI 命令",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -874,15 +875,16 @@
         "d7e863f5577a",
         "e603a50797a0",
         "ed6a2f86bffc",
-        "f0871dc722f5"
+        "f0871dc722f5",
+        "fe314c97690b"
       ],
       "versions": [
         {
-          "version": "5.0.0",
-          "hash": "3ab9f013097a",
+          "version": "2.0.0-next.0",
+          "hash": "fe314c97690b",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:49.331338+00:00",
-          "changelog": "调用一律改走 dby CLI（@doubaoya/cli），SKILL.md 放统一调用约定段；能力表去掉详情端点列、改用 dby api describe 现拉",
+          "releasedAt": "2026-09-27T10:01:38.828322+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1290,6 +1292,7 @@
         "b3b6c7500194",
         "cb71ee176054",
         "d1634c678daa",
+        "dfe555f7a852",
         "e05d7674b9aa",
         "edadb15db5ad",
         "f124f3174c56",
@@ -1298,11 +1301,11 @@
       ],
       "versions": [
         {
-          "version": "3.0.0",
-          "hash": "fc68e3a94b40",
+          "version": "2.0.0-next.0",
+          "hash": "dfe555f7a852",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "BREAKING：删除包内 scripts/dby.mjs 引导壳的用法，改走 `dby` CLI（`dby banned check …`，全局 dby 或 npx 拉确切版本 @doubaoya/cli）；compatibility 改 Node ≥22",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1448,6 +1451,12 @@
           "version": "2.0.0",
           "date": "2026-09-06",
           "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+        },
+        {
+          "hash": "fc68e3a94b40",
+          "version": "3.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
         }
       ]
     },
@@ -1464,6 +1473,7 @@
         "0f62651630ed",
         "16456393e483",
         "1ef3638615ce",
+        "24485adbfbfe",
         "289a7e8efa11",
         "35830b4190b7",
         "50583c0c0518",
@@ -1485,11 +1495,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "35830b4190b7",
+          "version": "2.0.0-next.0",
+          "hash": "24485adbfbfe",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "调用换成 dby CLI（BREAKING）：加调用约定段，章程走 dby charter、档案走 dby profile / dby upload，契约表改命令表，删全部手写 curl",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1677,17 +1687,18 @@
         "316f2d2c8c7e",
         "48c04d2ad062",
         "7f432da65f47",
+        "84ed6378362b",
         "bcbbab0055cd",
         "dc1aa44b50b6",
         "fc0aa01cc498"
       ],
       "versions": [
         {
-          "version": "2.1.0",
-          "hash": "164c512b42d3",
+          "version": "2.0.0-next.0",
+          "hash": "84ed6378362b",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "加调用约定段与「去 AI 味只作提示、不刻意制造碎句情绪口癖」约定句；清掉旧的 --make-baseline、包内脚本与 $SKILL_DIR 说法",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1769,15 +1780,16 @@
       "knownHashes": [
         "47e7e48e2d4d",
         "7b5a56fdd05a",
-        "cb8b00794d7e"
+        "cb8b00794d7e",
+        "f4527467e6e4"
       ],
       "versions": [
         {
-          "version": "2.1.0",
-          "hash": "47e7e48e2d4d",
+          "version": "2.0.0-next.0",
+          "hash": "f4527467e6e4",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "加调用约定段；补一步式 dby feedback submit --file 报告.md 的适用场景，例子换成 dby 命令，cURL 项目改写法",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1834,6 +1846,7 @@
         "89f720d429f3",
         "9818d9fd10e5",
         "a32212b0bfe0",
+        "af6fea66848e",
         "b798cca6be87",
         "e19a51009f8d",
         "e1dc9e3d282e",
@@ -1843,11 +1856,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "a32212b0bfe0",
+          "version": "2.0.0-next.0",
+          "hash": "af6fea66848e",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "调用示例一律改走 dby CLI（@doubaoya/cli）并放统一调用约定段；不再给原始 HTTP 请求示例，健康探测改 dby doctor，规格现拉改 dby api describe",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2057,6 +2070,7 @@
         "2de49fbf6254",
         "329fe617871a",
         "47bee0597b99",
+        "47c3002567cb",
         "542ea41d2b75",
         "5a21a05f4764",
         "5f652a0700eb",
@@ -2078,11 +2092,11 @@
       ],
       "versions": [
         {
-          "version": "3.0.0",
-          "hash": "fe0b7a0571fc",
+          "version": "2.0.0-next.0",
+          "hash": "47c3002567cb",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "BREAKING：出图 / 规划 / 裁切从包内脚本换成 `dby image gen|edit|plan|crops`（gen/edit 须带 --confirm 才真出图，否则退出码 6 什么都不发）；看价格与入参改 `dby api describe gpt-image-gen`；新增「未经用户明确要求，不生图」红线",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2310,6 +2324,12 @@
           "version": "2.3.0",
           "date": "2026-09-10",
           "subject": "feat(dby-image): 出图按模型分档计价，且包内不写死点数"
+        },
+        {
+          "hash": "fe0b7a0571fc",
+          "version": "3.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
         }
       ]
     },
@@ -2365,6 +2385,7 @@
         "e6cc1f2a871c",
         "e7a976940e02",
         "e88557062157",
+        "e8f39fb996de",
         "ec58027fccdc",
         "ee8e7d7602f1",
         "eff5ef724697",
@@ -2373,11 +2394,11 @@
       ],
       "versions": [
         {
-          "version": "7.0.0",
-          "hash": "3e252ef52890",
+          "version": "2.0.0-next.0",
+          "hash": "e8f39fb996de",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "\"BREAKING：流水线、直存草稿、带本地图 HTML 发布、渲染预览、抓参考文章全部从包内脚本换成 `dby wechat pipeline|publish|fetch-article` 与 `dby render|preview`（真发布须 --confirm）；新增契约句「未经用户明确要求，不发布」；清掉「出图能力下架」旧说法（生图走 dby-image）\"",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2711,6 +2732,12 @@
           "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
         },
         {
+          "hash": "3e252ef52890",
+          "version": "7.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
+        },
+        {
           "hash": "90a86b766ece",
           "version": "6.0.0",
           "date": "2026-09-27",
@@ -2730,6 +2757,7 @@
       "knownHashes": [
         "049562a1d1aa",
         "0ec795bc6772",
+        "1a0a7a3b0752",
         "27129afe12be",
         "480cf943df39",
         "61ba5adaec10",
@@ -2744,11 +2772,11 @@
       ],
       "versions": [
         {
-          "version": "2.1.0",
-          "hash": "480cf943df39",
+          "version": "2.0.0-next.0",
+          "hash": "1a0a7a3b0752",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "加调用约定段；违禁词自检从已删除的 check_multi.py 改为 dby banned check，存稿件改走 dby draft",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2886,6 +2914,7 @@
         "0a8f19dad810",
         "12d510fb8dd3",
         "2023466e2e9f",
+        "249c0edf2825",
         "895210b408a4",
         "9c3df5a11c54",
         "a1b7ed58c9fe",
@@ -2900,11 +2929,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "12d510fb8dd3",
+          "version": "2.0.0-next.0",
+          "hash": "249c0edf2825",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "BREAKING：手拼 HTTP 请求与本机校验脚本全部换成 `dby wechat theme-get|theme-list|theme-add|theme-update|theme-rm` 与 `dby preview --theme-file`（服务端渲染预览，主题由服务端校验）",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -3034,6 +3063,12 @@
           "version": "1.4.4",
           "date": "2026-08-31",
           "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+        },
+        {
+          "hash": "12d510fb8dd3",
+          "version": "2.0.0",
+          "date": "2026-09-27",
+          "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
         }
       ]
     },
@@ -3051,6 +3086,7 @@
         "080aed4c835c",
         "0f57ebd82f3b",
         "269a56ceb3b9",
+        "279891452575",
         "29458b8b722e",
         "2a8c66b15aa2",
         "35a0d058b1c6",
@@ -3083,6 +3119,14 @@
         "e88f976ec4bb"
       ],
       "versions": [
+        {
+          "version": "2.0.0-next.0",
+          "hash": "279891452575",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "changelogSource": "user"
+        },
         {
           "version": "4.1.1",
           "hash": "5d53d4148c04",
@@ -3461,16 +3505,17 @@
         "e039d2615adb",
         "e75c09cb73fd",
         "ef4f177d9b41",
+        "f08c1f4cc2c7",
         "f61cb9659a4a",
         "fc92fb4bf92f"
       ],
       "versions": [
         {
-          "version": "2.0.0",
-          "hash": "be547932a8f4",
+          "version": "2.0.0-next.0",
+          "hash": "f08c1f4cc2c7",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:22:37.596179+00:00",
-          "changelog": "调用换成 dby CLI（BREAKING）：加调用约定段，契约表改命令表，补两条约定句",
+          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {

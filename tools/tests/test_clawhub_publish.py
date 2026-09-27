@@ -72,7 +72,7 @@ class ClawhubManifestTests(unittest.TestCase):
     def test_real_index_gives_every_skill_a_version_and_changelog(self):
         manifest = publisher.load_manifest()
         for slug, entry in manifest["skills"].items():
-            self.assertRegex(entry["version"], r"^\d+\.\d+\.\d+$", slug)
+            self.assertRegex(entry["version"], r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$", slug)
             self.assertTrue(entry["changelog"].strip(), f"{slug} 的当前版没有 changelog")
 
 

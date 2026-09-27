@@ -5,8 +5,8 @@ description: >-
   最后同时落到两处：存回服务端 + 存成本机 theme 文件。走 doubaoya.com，鉴权用你自己的 DOUBAOYA_API_KEY。
   触发方式：/dby-theme、改公众号排版、定制主题样式、换公众号配色、调排版主题、改默认排版。
   Trigger words: customize WeChat article theme, change layout / palette / heading style.
-version: 2.0.0
-changelog: BREAKING：手拼 HTTP 请求与本机校验脚本全部换成 `dby wechat theme-get|theme-list|theme-add|theme-update|theme-rm` 与 `dby preview --theme-file`（服务端渲染预览，主题由服务端校验）
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
   联网命令需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY）。渲染与存主题免费。

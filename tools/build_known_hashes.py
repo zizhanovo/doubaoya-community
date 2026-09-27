@@ -239,7 +239,7 @@ def semver_of(blob: bytes) -> str:
         t = line.lstrip()
         if t.startswith("version:"):
             v = t[len("version:"):].strip()
-            return v if re.fullmatch(r"\d+\.\d+\.\d+", v) else ""
+            return v if skill_index.SEMVER_PRE.match(v) else ""
         if t == "---" and line is not t:
             break
     return ""
@@ -328,6 +328,9 @@ def fill_index(index: dict, known: dict, endpoints: dict, triggers: dict, versio
 
 
 def main() -> int:
+    if skill_index.compat_view_frozen(ROOT):
+        print(f"包版本 {skill_index.cli_package_version(ROOT)} ≥ 3.0.0：闭集与兼容视图停止生成，现有文件保持冻结（服务端旧 UA 判据读冻结的闭集）。")
+        return 0
     known, endpoints, triggers, version_log = build()
     current = {p.name for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").is_file()}
     index_file = ROOT / skill_index.INDEX_NAME

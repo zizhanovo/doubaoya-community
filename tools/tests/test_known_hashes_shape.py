@@ -53,7 +53,7 @@ def test_versionLog_是兄弟键且不影响老结构() -> None:
             assert HASH.match(e["hash"])
             # version 允许留空：早期版本发布时 frontmatter 里根本没有它，
             # 追认一个假的会让"跨度说明"凭空多出没发生过的中间版本。
-            assert e["version"] == "" or re.fullmatch(r"\d+\.\d+\.\d+", e["version"]), e
+            assert e["version"] == "" or re.fullmatch(r"\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?", e["version"]), e
 
 
 def test_versionLog_里的哈希都在闭集里() -> None:

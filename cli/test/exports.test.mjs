@@ -9,6 +9,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { packIsolated } from "../scripts/pack-isolated.mjs";
 
 const CLI_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const pkg = JSON.parse(readFileSync(path.join(CLI_ROOT, "package.json"), "utf8"));
@@ -16,8 +17,8 @@ const pkg = JSON.parse(readFileSync(path.join(CLI_ROOT, "package.json"), "utf8")
 test("pack 后安装：内部模块不可 import，bin 可用且版本一致", { timeout: 180_000 }, () => {
   const work = mkdtempSync(path.join(tmpdir(), "dby-pack-"));
   const npmEnv = { ...process.env, npm_config_cache: path.join(work, ".npm-cache"), npm_config_update_notifier: "false", npm_config_audit: "false", npm_config_fund: "false" };
-  const packed = execFileSync("npm", ["pack", "--json", "--pack-destination", work], { cwd: CLI_ROOT, env: npmEnv, encoding: "utf8" });
-  const tarball = path.join(work, JSON.parse(packed)[0].filename);
+  // 隔离副本里 pack：直接在 cli/ 里 pack 会与其它同时 pack 的测试互删 prepack 拷进来的 skills/。
+  const { tarball } = packIsolated(work);
 
   const proj = path.join(work, "proj");
   execFileSync("mkdir", ["-p", proj]);

@@ -2,7 +2,7 @@
 
 CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild design D10）。每个发布版本一节。
 
-## 2.0.0-next.0（未发布）
+## 2.0.0-next.0 - 2026-09-27
 
 - CLI 独立成 npm 包 `@doubaoya/cli`（bin `dby`），零运行时依赖，需要 Node ≥22；低于 22 时退出码 3，不联网、不写文件。
 - `exports` 只暴露 bin 与 package.json，内部模块不可被外部 import。
@@ -14,4 +14,5 @@ CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild d
 - 新增 `dby render` / `dby preview`：调服务端渲染路由（免费），只写 HTML 文件（preview 另写 375px 预览页），JSON 不带 HTML；离线退出码 5、无凭证退出码 4，不回退任何本地渲染。
 - 值类 flag 支持重复给出（如 `--ref a.png --ref b.png`）。
 - 单一运行时（design D5）：`dby deai scan|baseline`、`dby rewrite rules`、`dby feedback prepare|submit|keep|reset-id` 取代三份 Python 脚本，全部本地命令；deai 与 Python 逐字段对拍一致后冻结快照，输出不含任何分数字段。
+- 单一版本号（design D10）：CLI 与随包的 13 个 dby-* skill 共用 npm 包版本；`cli/scripts/release.mjs` 以 package.json 为源派生 SKILL.md 的 `version:`、调用约定里的确切版本、CHANGELOG 一节，2.x 期间同时生成兼容视图（index.json / versions.json / known-hashes.json，版本字段取包版本），3.0.0 起停止生成；`cli/scripts/prepublish-check.mjs` 在发布前核对零依赖、exports、frontmatter 版本、调用约定版本、镜像哈希、兼容视图版本、版本递增与 CHANGELOG。
 

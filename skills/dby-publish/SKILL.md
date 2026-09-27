@@ -8,8 +8,8 @@ description: >-
   Trigger words: 正文写好了怎么发 / 要排版好的公众号 HTML / 接着排版发草稿 / 写公众号 / 转公众号排版 /
   推公众号草稿 / 重新推草稿 / 带封面发布到草稿箱 / 把文章存进公众号草稿箱 / 公众号图文流水线 / dby-publish /
   存公众号草稿 / 公众号草稿箱 / 代发公众号草稿箱 / addDraft / draft/add / 图文推进公众号 / 稿子发到公众号后台。
-version: 7.0.0
-changelog: "BREAKING：流水线、直存草稿、带本地图 HTML 发布、渲染预览、抓参考文章全部从包内脚本换成 `dby wechat pipeline|publish|fetch-article` 与 `dby render|preview`（真发布须 --confirm）；新增契约句「未经用户明确要求，不发布」；清掉「出图能力下架」旧说法（生图走 dby-image）"
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
   渲染、预览、存草稿都需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY），存草稿还需用户已在 doubaoya.com 绑定自己的公众号。

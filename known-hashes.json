@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T09:23:14.264752+00:00",
+  "generatedAt": "2026-09-27T10:02:47.024454+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -89,6 +89,7 @@
       "c820f9aa0c6d",
       "d5cfe53c21dd",
       "dd507e5dc624",
+      "deea753646bb",
       "dfcfb6b9154e",
       "e0ef82da64ee",
       "e562a7c121c6",
@@ -148,7 +149,8 @@
       "d7e863f5577a",
       "e603a50797a0",
       "ed6a2f86bffc",
-      "f0871dc722f5"
+      "f0871dc722f5",
+      "fe314c97690b"
     ],
     "dby-banned-words": [
       "0ca3048ae86c",
@@ -164,6 +166,7 @@
       "b3b6c7500194",
       "cb71ee176054",
       "d1634c678daa",
+      "dfe555f7a852",
       "e05d7674b9aa",
       "edadb15db5ad",
       "f124f3174c56",
@@ -175,6 +178,7 @@
       "0f62651630ed",
       "16456393e483",
       "1ef3638615ce",
+      "24485adbfbfe",
       "289a7e8efa11",
       "35830b4190b7",
       "50583c0c0518",
@@ -202,6 +206,7 @@
       "316f2d2c8c7e",
       "48c04d2ad062",
       "7f432da65f47",
+      "84ed6378362b",
       "bcbbab0055cd",
       "dc1aa44b50b6",
       "fc0aa01cc498"
@@ -209,7 +214,8 @@
     "dby-feedback": [
       "47e7e48e2d4d",
       "7b5a56fdd05a",
-      "cb8b00794d7e"
+      "cb8b00794d7e",
+      "f4527467e6e4"
     ],
     "dby-gateway": [
       "04e33c971797",
@@ -227,6 +233,7 @@
       "89f720d429f3",
       "9818d9fd10e5",
       "a32212b0bfe0",
+      "af6fea66848e",
       "b798cca6be87",
       "e19a51009f8d",
       "e1dc9e3d282e",
@@ -246,6 +253,7 @@
       "2de49fbf6254",
       "329fe617871a",
       "47bee0597b99",
+      "47c3002567cb",
       "542ea41d2b75",
       "5a21a05f4764",
       "5f652a0700eb",
@@ -307,6 +315,7 @@
       "e6cc1f2a871c",
       "e7a976940e02",
       "e88557062157",
+      "e8f39fb996de",
       "ec58027fccdc",
       "ee8e7d7602f1",
       "eff5ef724697",
@@ -316,6 +325,7 @@
     "dby-rewrite": [
       "049562a1d1aa",
       "0ec795bc6772",
+      "1a0a7a3b0752",
       "27129afe12be",
       "480cf943df39",
       "61ba5adaec10",
@@ -332,6 +342,7 @@
       "0a8f19dad810",
       "12d510fb8dd3",
       "2023466e2e9f",
+      "249c0edf2825",
       "895210b408a4",
       "9c3df5a11c54",
       "a1b7ed58c9fe",
@@ -351,6 +362,7 @@
       "080aed4c835c",
       "0f57ebd82f3b",
       "269a56ceb3b9",
+      "279891452575",
       "29458b8b722e",
       "2a8c66b15aa2",
       "35a0d058b1c6",
@@ -411,6 +423,7 @@
       "e039d2615adb",
       "e75c09cb73fd",
       "ef4f177d9b41",
+      "f08c1f4cc2c7",
       "f61cb9659a4a",
       "fc92fb4bf92f"
     ],
@@ -2911,6 +2924,12 @@
         "version": "2.0.0",
         "date": "2026-09-06",
         "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
+        "hash": "fc68e3a94b40",
+        "version": "3.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
       }
     ],
     "dby-charter": [
@@ -3425,6 +3444,12 @@
         "version": "2.3.0",
         "date": "2026-09-10",
         "subject": "feat(dby-image): 出图按模型分档计价，且包内不写死点数"
+      },
+      {
+        "hash": "fe0b7a0571fc",
+        "version": "3.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
       }
     ],
     "dby-publish": [
@@ -3693,6 +3718,12 @@
         "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
       },
       {
+        "hash": "3e252ef52890",
+        "version": "7.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
         "hash": "90a86b766ece",
         "version": "6.0.0",
         "date": "2026-09-27",
@@ -3857,6 +3888,12 @@
         "version": "1.4.4",
         "date": "2026-08-31",
         "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+      },
+      {
+        "hash": "12d510fb8dd3",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
       }
     ],
     "dby-update": [

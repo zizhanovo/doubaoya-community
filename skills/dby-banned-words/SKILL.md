@@ -1,8 +1,8 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、公众号违禁词、跨平台合规、合规检测、过审、违禁词检测、敏感词、违规词、极限词、绝对化用语、限流自查、审核不过、广告法。不做：改文风或换平台调性走 dby-rewrite；从零写正文走 dby-write。
-version: 3.0.0
-changelog: BREAKING：删除包内 scripts/dby.mjs 引导壳的用法，改走 `dby` CLI（`dby banned check …`，全局 dby 或 npx 拉确切版本 @doubaoya/cli）；compatibility 改 Node ≥22
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
   联网命令需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY），检测按平台扇出、逐平台计费。

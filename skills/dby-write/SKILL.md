@@ -8,8 +8,8 @@ description: >-
   用我记的东西写、把灵感库里记的整理成选题、
   这篇为什么没人看、复盘、复盘一下、数据怎么样、上次那篇效果、阅读量为什么低、文章表现、发出去没人看、
   按审稿意见改一版、按我的评论再改一遍、读一下稿件的意见、按拒绝重新改一版。
-version: 2.0.0
-changelog: 调用换成 dby CLI（BREAKING）：加调用约定段，契约表改命令表，补两条约定句
+version: 2.0.0-next.0
+changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）；
   联网命令需要凭证（`dby login` 或环境变量 DOUBAOYA_API_KEY）。档案/选题/往期文章/复盘全免费；

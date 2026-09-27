@@ -52,6 +52,11 @@ CHANGELOG_SOURCES = ("user", "auto")
 REF_PATTERN = re.compile(r"^release-\d{8}-\d{4}$")
 HASH_PATTERN = re.compile(r"^[0-9a-f]{12}$")
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+# 带预发布段的 semver（`2.0.0-next.0`）。npm 包版本即全部 SKILL.md 的版本（dby-cli-rebuild D10），
+# 灰度发 `-next.N` 时 frontmatter 与兼容视图里也会出现它——各处合法性判断用这一条，大小比较用 semver_cmp。
+SEMVER_PRE = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?$")
+# 兼容视图只在这一 major 里生成（spec「版本信息的唯一优先级与旧信息的停止维护」：3.0.0 起停止）。
+COMPAT_VIEW_LAST_MAJOR = 2
 
 ENTRY_KEYS = (
     "displayName", "topics", "status", "redirectTo", "userFiles",
@@ -135,6 +140,49 @@ def read_frontmatter(skill_md: Path) -> dict[str, str]:
 
 
 # ── semver / changelog ───────────────────────────────────────────────────────
+
+def semver_cmp(a: str, b: str) -> int:
+    """semver 2.0 优先级比较（含预发布段）：<0 / 0 / >0。任一不合法抛 ValueError。"""
+    ma, mb = SEMVER_PRE.match(a or ""), SEMVER_PRE.match(b or "")
+    if not ma or not mb:
+        raise ValueError(f"不是合法 semver：{a if not ma else b!r}")
+    core_a = tuple(int(x) for x in ma.groups()[:3])
+    core_b = tuple(int(x) for x in mb.groups()[:3])
+    if core_a != core_b:
+        return -1 if core_a < core_b else 1
+    pa, pb = ma.group(4), mb.group(4)
+    if pa == pb:
+        return 0
+    if pa is None:
+        return 1
+    if pb is None:
+        return -1
+    xs, ys = pa.split("."), pb.split(".")
+    for x, y in zip(xs, ys):
+        if x == y:
+            continue
+        if x.isdigit() and y.isdigit():
+            return -1 if int(x) < int(y) else 1
+        if x.isdigit() != y.isdigit():
+            return -1 if x.isdigit() else 1
+        return -1 if x < y else 1
+    return -1 if len(xs) < len(ys) else (1 if len(xs) > len(ys) else 0)
+
+
+def cli_package_version(root: Path) -> str | None:
+    """npm 包版本（cli/package.json）——版本信息优先级的第①位；不在（旧仓 / 测试夹具）返回 None。"""
+    try:
+        version = json.loads((root / "cli" / "package.json").read_text(encoding="utf-8")).get("version")
+    except (OSError, ValueError):
+        return None
+    return version if isinstance(version, str) and SEMVER_PRE.match(version) else None
+
+
+def compat_view_frozen(root: Path) -> bool:
+    """包版本 ≥ 3.0.0 时兼容视图停止生成（现有文件保持冻结）。"""
+    version = cli_package_version(root)
+    return bool(version) and int(SEMVER_PRE.match(version).group(1)) > COMPAT_VIEW_LAST_MAJOR
+
 
 def bump_product_version(current: str | None, batch_levels: list[str]) -> str:
     """产品级版本递增：批次含 skill major → 产品 minor+1（patch 归零）；其余变更 → patch+1；
