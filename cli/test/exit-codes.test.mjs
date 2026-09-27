@@ -39,6 +39,8 @@ test("每条命令的退出码都在 0–6，失败时 stdout 仍是单个 JSON 
   );
   try {
     const home = mkdtempSync(path.join(tmpdir(), "dby-exit-home-"));
+    // 🔴 cwd 也放进临时目录：`skills install` 这类命令默认写当前目录（scope=project），在 cli/ 里跑会往仓里落文件。
+    const cwd = mkdtempSync(path.join(tmpdir(), "dby-exit-cwd-"));
     const results = await pool(ALL_COMMANDS, 8, async (c) => {
       const argv = argvFor(c);
       const r = await runCli(argv, {
@@ -48,7 +50,8 @@ test("每条命令的退出码都在 0–6，失败时 stdout 仍是单个 JSON 
           DOUBAOYA_TIMEOUT_MS: "3000",
           DBY_LOGIN_TIME_SCALE: "0.001",
           HOME: home
-        }
+        },
+        cwd
       });
       return { name: nameOf(c), argv, ...r };
     });

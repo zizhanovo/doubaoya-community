@@ -61,7 +61,7 @@ export async function startMock(routes) {
 }
 
 /** 跑一个 node 脚本子进程（天然非 TTY），返回 { code, stdout, stderr }。 */
-export function runNode(script, args, { env = {}, input } = {}) {
+export function runNode(script, args, { env = {}, input, cwd } = {}) {
   return new Promise((resolve) => {
     const child = execFile(
       process.execPath,
@@ -74,7 +74,8 @@ export function runNode(script, args, { env = {}, input } = {}) {
           HOME: NO_HOME,
           ...env
         },
-        timeout: 30_000
+        timeout: 30_000,
+        ...(cwd ? { cwd } : {})
       },
       (error, stdout, stderr) => resolve({ code: error ? error.code ?? 1 : 0, stdout, stderr })
     );
