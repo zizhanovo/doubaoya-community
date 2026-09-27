@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { startMock, runCli, envFor, ok, fail } from "./helpers.mjs";
-import { slim } from "../../skills/dby-api/scripts/lib/commands/banned.mjs";
+import { slim } from "../src/commands/banned.mjs";
 
 const DESCRIBE_PATH = "/api/apis/tool/check-banned-words";
 const CALL_PATH = "/api/apis/tool/check-banned-words/call";

@@ -6,8 +6,8 @@ import {
   startMock, runCli, runNode, writeRoutes, envFor, ok,
   OLD_WRITE, FIXTURE_REVIEW_ARTICLES
 } from "./helpers.mjs";
-import { prepHuman, reviewHuman } from "../../skills/dby-api/scripts/lib/commands/write.mjs";
-import { classify } from "../../skills/dby-api/scripts/lib/write-core.mjs";
+import { prepHuman, reviewHuman } from "../src/commands/write.mjs";
+import { classify } from "../src/write-core.mjs";
 
 test("write prep 对拍：CLI 的 data 与旧脚本 `prep --json` 的输出逐字段一致", async () => {
   const mock = await startMock(writeRoutes());

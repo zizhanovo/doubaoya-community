@@ -1,31 +1,22 @@
-# @doubaoya/cli — 开发夹具（design D3）
+# @doubaoya/cli — `dby`
 
-`dby` 的真正实现已经搬到 [`skills/dby-api/scripts/`](../skills/dby-api/scripts/)（入口 `dby.mjs` +
-`lib/`）——那才是随 skill 一起装进用户机器、随时可达的那份代码。
-
-**本目录不发 npm、不是安装单元**，只剩两样东西：
-
-- `test/` —— 针对 `../skills/dby-api/scripts/lib/**` 的测试（`node --test`）；import 路径
-  直接指向 skill 目录，不指本目录（本目录已经没有 `src/` 了）。
-- `bin/dby.mjs` —— 一层薄转发，`npm link` 后本地得到 `dby` 命令，方便不装 skill 也能手测；
-  它转发到 `../skills/dby-api/scripts/lib/cli.mjs` 的 `runCli`，不经过 `dby.mjs` 自己的入口
-  守卫（那道守卫是为了防软链误判，本文件的调用路径不涉及软链，用不上）。
-
-## 跑测试
+都爆鸭命令行。零运行时依赖，只需 Node ≥22。
 
 ```bash
-cd cli && node --test   # 零依赖，不需要 npm install
+npm i -g @doubaoya/cli     # 没有全局写权限：npm i -D @doubaoya/cli && npx dby …
+dby login                  # 设备码登录：在已登录的 doubaoya.com 确认页手动输入屏幕上的码
+dby whoami --json
+dby --help
 ```
 
-## 改代码去哪
+凭证只有两层：环境变量 `DOUBAOYA_API_KEY` 优先，其次 `~/.doubaoya/credentials`（0600）。
+任何输出都不含完整 key，只显示前缀与来源。
 
-命令实现、参数解析、命令表都在 `../skills/dby-api/scripts/lib/`：
+## 开发
 
-- `argv.mjs` —— 手写参数解析器（无 commander 依赖）
-- `registry.mjs` —— 命令表汇总，同一份表驱动解析 / `--help` / `dby routes --json`
-- `commands/*.mjs` —— 按资源分组的命令实现，新增命令去对应组的文件里加一条即可
-- `context.mjs` / `errors.mjs` / `http.mjs` / `output.mjs` / `confirm.mjs` —— 输出信封 /
-  退出码 / 请求层 / 确认协议这几条契约的唯一实现
-
-`skills/dby-api/scripts/doubaoya.mjs` 是上一代入口的转发壳（弃用中，下一个 major 删除），
-不要在那里加新逻辑。
+- 源码：`src/`（事实源）。`bin/dby.mjs` 是唯一入口，第一件事是 Node 版本检查。
+- 测试：`cd cli && node --test`（零依赖，不需要 npm install）。
+- 1.x 过渡期：`skills/dby-api/scripts/lib/` 是 `src/` 的逐字节镜像（1.x 用户经 skill 目录里的
+  `dby.mjs` 用到的就是这份），改代码只改 `src/`，然后 `node scripts/sync-skill-lib.mjs`；
+  `test/skill-lib-mirror.test.mjs` 钉住两边一致。tasks 5.1 把那边改成转发壳后镜像删除。
+- 打包：`npm pack` 时 `prepack` 把仓库根 `skills/*/{SKILL.md,references/**}` 与 LICENSE 拷进包，`postpack` 清掉。

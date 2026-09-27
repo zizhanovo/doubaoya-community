@@ -11,6 +11,7 @@ import { getKey, keyPresence } from "./context.mjs";
 import { EXIT, DbyError, upstreamError } from "./errors.mjs";
 import { warn } from "./output.mjs";
 import { resolveProxy, requestViaProxy } from "./proxy.mjs";
+import { userAgent } from "./version.mjs";
 
 export const DEFAULT_TIMEOUT_MS = 60_000;   // 免费读写路由（write/charter 旧脚本同值）
 export const INVOKE_TIMEOUT_MS = 450_000;   // 计费 invoke（doubaoya.mjs 同值，判据见上）
@@ -128,7 +129,8 @@ export async function request(ctx, method, path, {
   withEnvelope = false
 } = {}) {
   const key = getKey(ctx, { required: auth === "required" });
-  const headers = {};
+  // UA 从版本单一事实源派生（design D10）：npm 包 = `doubaoya-cli/<ver>`，skill 镜像 = `.version` 原文。
+  const headers = { "User-Agent": userAgent() };
   if (key && auth !== "none") headers.Authorization = `Bearer ${key}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 

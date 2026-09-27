@@ -5,8 +5,12 @@ import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import os from "node:os";
 
-export const CLI_BIN = fileURLToPath(new URL("../../skills/dby-api/scripts/dby.mjs", import.meta.url));
+// npm 包入口（事实源 cli/src）。1.x 过渡期的 skill 入口 skills/dby-api/scripts/dby.mjs 跑的是同一份代码的
+// 逐字节镜像（skill-lib-mirror.test.mjs 钉住），它自己的可达性由 locate.test.mjs 覆盖。
+export const CLI_BIN = fileURLToPath(new URL("../bin/dby.mjs", import.meta.url));
+export const SKILL_CLI_BIN = fileURLToPath(new URL("../../skills/dby-api/scripts/dby.mjs", import.meta.url));
 export const REPO_ROOT = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 export const OLD_WRITE = path.join(REPO_ROOT, "skills/dby-write/scripts/write.mjs");
 export const OLD_CHARTER = path.join(REPO_ROOT, "skills/dby-charter/scripts/charter.mjs");
@@ -65,6 +69,9 @@ export function runNode(script, args, { env = {}, input } = {}) {
       {
         env: {
           PATH: process.env.PATH, // 只带 PATH，不继承真实 key，环境全由用例显式给
+          // 🔴 HOME 默认指向一个不存在的目录：凭证文件 ~/.doubaoya/credentials 是第二层 key 来源，
+          //    继承真实 HOME 会让「没设 key」的用例读到开发机上真登录过的凭证。要测凭证文件的用例显式传 HOME。
+          HOME: NO_HOME,
           ...env
         },
         timeout: 30_000
@@ -76,6 +83,8 @@ export function runNode(script, args, { env = {}, input } = {}) {
 }
 
 export const runCli = (args, opts) => runNode(CLI_BIN, args, opts);
+
+export const NO_HOME = path.join(os.tmpdir(), "dby-test-no-home-never-created");
 
 // ── fixtures ─────────────────────────────────────────────────────────────────
 

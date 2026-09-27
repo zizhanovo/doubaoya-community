@@ -1,16 +1,41 @@
 {
   "name": "@doubaoya/cli",
-  "private": true,
-  "description": "dby CLI 的开发夹具（design D3）：真正实现已搬到 skills/dby-api/scripts/，本目录只剩测试与本地 npm link 用的 bin 壳，不发 npm。",
+  "version": "2.0.0-next.0",
+  "description": "都爆鸭 dby 命令行：公众号选题、写作取数、排版、存草稿，以及随包分发的 dby-* skills。零运行时依赖，只需 Node ≥22。",
   "type": "module",
   "bin": {
     "dby": "bin/dby.mjs"
   },
+  "exports": {
+    "./package.json": "./package.json",
+    "./bin/dby.mjs": "./bin/dby.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "skills",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "prepack": "node scripts/prepack-skills.mjs",
+    "postpack": "node scripts/prepack-skills.mjs --clean",
+    "sync:skill-lib": "node scripts/sync-skill-lib.mjs"
   },
-  "license": "MIT"
+  "dependencies": {},
+  "license": "MIT",
+  "homepage": "https://doubaoya.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zizhanovo/doubaoya-community.git",
+    "directory": "cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -2,8 +2,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { startMock, ok } from "./helpers.mjs";
-import { request } from "../../skills/dby-api/scripts/lib/http.mjs";
-import { makeContext } from "../../skills/dby-api/scripts/lib/context.mjs";
+import { request } from "../src/http.mjs";
+import { makeContext } from "../src/context.mjs";
 
 test("withEnvelope:true 返回 {data, detailUrl, notice, noResult, aigc}；默认仍只返回 data", async () => {
   const mock = await startMock({

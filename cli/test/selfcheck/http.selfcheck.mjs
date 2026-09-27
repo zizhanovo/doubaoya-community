@@ -6,7 +6,7 @@
 // 一直卡着（错认成不可重试，2026-09-10 真实发生过）。两个方向各钉一条断言。
 
 import assert from "node:assert/strict";
-import { classifyFetchError, INVOKE_TIMEOUT_MS } from "./http.mjs";
+import { classifyFetchError, INVOKE_TIMEOUT_MS } from "../../src/http.mjs";
 
 /** 造一个 fetch 那样的错误：自身是 TypeError，真原因藏在 cause 链里。 */
 function fetchFailed(cause) {
@@ -78,3 +78,13 @@ for (const code of ["ECONNRESET", "EPIPE", "UND_ERR_SOCKET", "ETIMEDOUT"]) {
 }
 
 console.log("ok http.selfcheck: 7 组分流断言全过");
+
+// ⑥ UA 从版本单一事实源派生（dby-cli-rebuild tasks 2.4 / design D10）：npm 包形态必须是
+//    `doubaoya-cli/<package.json 的 version>`，写死或漏读都会让服务端 CLI 更新提示静默失效。
+{
+  const { userAgent } = await import("../../src/version.mjs");
+  const { readFileSync } = await import("node:fs");
+  const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+  assert.match(userAgent(), /^doubaoya-cli\/\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/);
+  assert.equal(userAgent(), `doubaoya-cli/${pkg.version}`);
+}

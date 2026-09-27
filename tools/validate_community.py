@@ -1473,13 +1473,6 @@ SINGLE_REQUEST_LAYER_WHITELIST: tuple[dict[str, str], ...] = (
         ),
     },
     {
-        "path": "dby-api/scripts/lib/proxy.selfcheck.mjs",
-        "reason": (
-            "proxy.mjs 的断言文件，一个真实请求都不发：它只连 127.0.0.1 上的假代理，"
-            "`doubaoya.com` 在这里是被断言的那个目标字符串，不是请求目的地。"
-        ),
-    },
-    {
         "path": "dby-update/scripts/reconcile.mjs",
         "reason": "GitHub/Gitee 拉取技能包内容 + 一处 /api/health 健康探测，不是业务请求层。",
     },

@@ -9,8 +9,8 @@
 
 import assert from "node:assert/strict";
 import net from "node:net";
-import { resolveProxy, requestViaProxy } from "./proxy.mjs";
-import { classifyFetchError } from "./http.mjs";
+import { resolveProxy, requestViaProxy } from "../../src/proxy.mjs";
+import { classifyFetchError } from "../../src/http.mjs";
 
 const TARGET = "https://doubaoya.com/api/health";
 

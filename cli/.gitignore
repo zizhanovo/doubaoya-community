@@ -1,0 +1,4 @@
+# prepack 从仓库根 skills/ 与 LICENSE 拷进来的打包产物，postpack 清掉；不进 git（事实源在仓库根）。
+/skills/
+/LICENSE
+*.tgz

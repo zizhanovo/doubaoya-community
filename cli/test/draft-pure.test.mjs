@@ -7,7 +7,7 @@ import {
   draftLocateQuote,
   draftPrecheckChanges,
   draftChangeId
-} from "../../skills/dby-api/scripts/lib/draft-core.mjs";
+} from "../src/draft-core.mjs";
 
 test("draftLocateQuote：唯一命中 / 零命中 / 多命中无前后文 ambiguous / 带 prefix 消歧后 located", () => {
   const body = "开头一句。中间这句要改一改。结尾一句。中间这句要改一改。再来一句。";

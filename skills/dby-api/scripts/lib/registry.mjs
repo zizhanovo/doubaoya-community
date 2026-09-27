@@ -24,7 +24,20 @@ import { commands as whoamiCommands } from "./commands/whoami.mjs";
 import { commands as bannedCommands } from "./commands/banned.mjs";
 import { commands as routesCommands } from "./commands/routes.mjs";
 
-export const ALL_COMMANDS = [
+/**
+ * 命令三分类（dby-cli-rebuild design D8 / spec「子命令分三类并由对账闸核对」）：
+ *   route     恰好打一条服务端路由；
+ *   composite 打多条路由（或像 doctor/login 那样联网但路由另有归属，见各自注释），必须显式登记；
+ *   local     不发出任何 doubaoya 请求（cli/test/local-no-network.test.mjs 用「收到请求即记一笔」的桩钉住）。
+ * 命令可以显式写 `kind`；没写时按旧字段推导：composite:true → composite，有路由 → route，没有 → local。
+ */
+export function commandKind(c) {
+  if (c.kind) return c.kind;
+  if (c.composite) return "composite";
+  return (c.routes ?? []).length > 0 ? "route" : "local";
+}
+
+const RAW_COMMANDS = [
   ...apiCommands,
   ...writeCommands,
   ...charterCommands,
@@ -44,6 +57,8 @@ export const ALL_COMMANDS = [
   ...bannedCommands,
   ...routesCommands
 ];
+
+export const ALL_COMMANDS = RAW_COMMANDS.map((c) => ({ ...c, kind: commandKind(c) }));
 
 // 组的一句话摘要（顶层 --help 用）。只有出现在某条命令里的 group 才会被列出——
 // 还没实现的组（对应 commands/*.mjs 导出空数组）不会出现在 GROUPS 里，help 不列空组。

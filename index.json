@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-10T09:04:57.505483+00:00",
-  "ref": "release-20260910-0803",
+  "generatedAt": "2026-09-27T08:14:46.830390+00:00",
+  "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
     "renames": [
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.16.15",
+  "productVersion": "1.16.16",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -830,6 +830,7 @@
         "96330502a048",
         "9b545f2f647a",
         "9b9682a7a602",
+        "9bf9100c685a",
         "9e7dfac2a9a1",
         "9f1137a517a9",
         "a1ef96fb16f6",
@@ -852,6 +853,14 @@
         "f0871dc722f5"
       ],
       "versions": [
+        {
+          "version": "4.6.0",
+          "hash": "9bf9100c685a",
+          "ref": "release-20260927-0814",
+          "releasedAt": "2026-09-27T08:14:44.387520+00:00",
+          "changelog": "命令实现改由 npm 包 @doubaoya/cli 的源码逐字节镜像而来（行为不变）；请求开始带本包 .version 作 User-Agent，服务端能据此提示更新；`dby routes --json` 每条命令多一个 kind 字段",
+          "changelogSource": "user"
+        },
         {
           "version": "4.5.0",
           "hash": "9f1137a517a9",
@@ -1165,6 +1174,12 @@
           "version": "4.4.0",
           "date": "2026-09-10",
           "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
+        },
+        {
+          "hash": "9f1137a517a9",
+          "version": "4.5.0",
+          "date": "2026-09-10",
+          "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
         }
       ]
     },
@@ -1839,6 +1854,12 @@
           "version": "1.4.0",
           "date": "2026-09-10",
           "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
+        },
+        {
+          "hash": "89f720d429f3",
+          "version": "1.5.0",
+          "date": "2026-09-10",
+          "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
         },
         {
           "hash": "fddd63a12a29",

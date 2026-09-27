@@ -5,13 +5,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { startMock, runCli, envFor, ok } from "./helpers.mjs";
 
-// 版本单一事实源已改成 dby-api 包的 .version（spec:「版本同源」），不再读 cli/package.json——
-// 那份 package.json 现在连 version 字段都没有了（design D3：cli/ 退成夹具）。
-const version = readFileSync(
-  fileURLToPath(new URL("../../skills/dby-api/.version", import.meta.url)),
-  "utf8"
-).trim();
-const pkg = { version };
+// 版本单一事实源 = npm 包 package.json（dby-cli-rebuild design D10；skill 镜像形态退回读 .version）。
+const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"));
 
 const doctorRoutes = {
   "GET /api/skills": ok({ total: 17, items: [] }),

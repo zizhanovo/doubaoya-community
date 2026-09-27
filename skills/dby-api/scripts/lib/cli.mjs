@@ -24,9 +24,12 @@ function printHelp(target) {
 export async function runCli(argv = process.argv) {
   const args = argv.slice(2);
 
-  // --version 是独立终态：直接打版本号，不走信封（与 doctor.test.mjs 的基线一致）。
+  // --version 是独立终态：人类模式直接打版本号（与 doctor.test.mjs 的基线一致）；
+  // 带 --json 时走成功信封 `{ok:true,data:{version}}`（spec「查看版本」：data.version 等于包版本）。
   if (args[0] === "--version") {
-    process.stdout.write(`${readVersion()}\n`);
+    const version = readVersion();
+    if (args.includes("--json")) emitSuccess({ json: true }, { version });
+    else process.stdout.write(`${version}\n`);
     return EXIT.OK;
   }
 

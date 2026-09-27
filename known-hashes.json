@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T09:04:57.505483+00:00",
+  "generatedAt": "2026-09-27T08:14:46.830390+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -118,6 +118,7 @@
       "96330502a048",
       "9b545f2f647a",
       "9b9682a7a602",
+      "9bf9100c685a",
       "9e7dfac2a9a1",
       "9f1137a517a9",
       "a1ef96fb16f6",
@@ -2710,6 +2711,12 @@
         "version": "4.4.0",
         "date": "2026-09-10",
         "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
+      },
+      {
+        "hash": "9f1137a517a9",
+        "version": "4.5.0",
+        "date": "2026-09-10",
+        "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
       }
     ],
     "dby-banned-words": [
@@ -3110,6 +3117,12 @@
         "version": "1.4.0",
         "date": "2026-09-10",
         "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
+      },
+      {
+        "hash": "89f720d429f3",
+        "version": "1.5.0",
+        "date": "2026-09-10",
+        "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
       },
       {
         "hash": "fddd63a12a29",

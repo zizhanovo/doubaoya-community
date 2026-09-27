@@ -39,12 +39,14 @@ test("免费路由超时同样退出码 5 且不重试（write review）", async
   }
 });
 
-test("网络连不上（非超时）也是退出码 5，code 是 NETWORK_ERROR", async () => {
+// 886a95f 起「连接从未建立」单独分成 CONNECT_FAILED（与「连上后断」的 NETWORK_ERROR 分开），
+// 本用例当时没跟着改、在 main 上一直是红的；这里按现行契约改期望值。
+test("网络连不上（非超时）也是退出码 5，code 是 CONNECT_FAILED", async () => {
   // 指向一个立刻拒绝连接的端口
   const dead = await startMock({});
   const url = dead.url;
   await dead.close();
   const r = await runCli(["api", "list"], { env: { DOUBAOYA_BASE_URL: url } });
   assert.equal(r.code, 5);
-  assert.equal(JSON.parse(r.stdout).error.code, "NETWORK_ERROR");
+  assert.equal(JSON.parse(r.stdout).error.code, "CONNECT_FAILED");
 });

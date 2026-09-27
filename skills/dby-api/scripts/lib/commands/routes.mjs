@@ -16,6 +16,7 @@ function toCommandsOutput() {
   return ALL_COMMANDS.map((c) => ({
     name: commandName(c),
     routes: c.routes ?? [],
+    kind: c.kind, // route | composite | local（dby-cli-rebuild D8；新增字段，旧字段一个不动）
     billable: !!c.billable,
     destructive: !!c.destructive,
     composite: !!c.composite
@@ -33,8 +34,8 @@ export async function routesCommand() {
 // ── 命令表 ─────────────────────────────────────────────────────────────────
 export const commands = [
   {
-    group: null, name: "routes",
-    summary: "导出命令表（供主仓路由对账闸消费）：{ commands: [{ name, routes, billable, destructive, composite }] }",
+    group: null, name: "routes", kind: "local",
+    summary: "导出命令表（供主仓路由对账闸消费）：{ commands: [{ name, routes, kind, billable, destructive, composite }] }",
     args: [], flags: {},
     routes: [], billable: false, destructive: false, composite: false,
     run: () => routesCommand()
