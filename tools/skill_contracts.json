@@ -1,0 +1,118 @@
+{
+  "_comment": "SKILL.md 关键约束句清单（spec skill-thin-layer「SKILL.md 关键句契约测试」；tools/tests/test_skill_contracts.py 逐条断言）。每条：id、skills（哪些包都必须有）、files（在包内哪些文件里找，任一命中即可；相对包目录）、text（逐字）或 regex（Python re.search）、why。后续 change 追加条目走同一清单，别另起一份。",
+  "entries": [
+    {
+      "id": "write-no-fabricated-experience",
+      "skills": [
+        "dby-write"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "无个人素材时不得编造亲历",
+      "why": "spec 点名的条目：用户没给亲身经历时，模型最容易替他编一段「我那天……」"
+    },
+    {
+      "id": "write-no-publish-no-image-unasked",
+      "skills": [
+        "dby-write"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "未经用户明确要求，不发布、不生图",
+      "why": "写作主干最常见的越界：写完顺手存草稿或配图——发布写进用户后台、生图计费"
+    },
+    {
+      "id": "publish-no-publish-unasked",
+      "skills": [
+        "dby-publish"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "未经用户明确要求，不发布",
+      "why": "存草稿写进用户公众号后台，是真实副作用"
+    },
+    {
+      "id": "image-no-gen-unasked",
+      "skills": [
+        "dby-image"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "未经用户明确要求，不生图",
+      "why": "生图计费且 1–4 分钟，不能被别的包「顺手」触发"
+    },
+    {
+      "id": "deai-hint-only",
+      "skills": [
+        "dby-deai"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "去 AI 味只作提示",
+      "why": "体检结果是风险提示，不是判定；dby deai scan 也不输出分数"
+    },
+    {
+      "id": "deai-no-fake-human",
+      "skills": [
+        "dby-deai"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "不得为显得像人而刻意制造碎句、情绪或口癖",
+      "why": "过度矫正是同行踩得最多的坑：为躲检测把散文改成碎句、硬塞情绪词"
+    },
+    {
+      "id": "cli-timeout-no-retry",
+      "skills": [
+        "@cli"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "text": "计费命令超时不重试",
+      "why": "客户端超时时服务端照样跑完扣费，重试 = 付两次钱"
+    },
+    {
+      "id": "cli-node-precheck",
+      "skills": [
+        "@cli"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "regex": "先跑 `node -v`：没有 Node 或主版本低于 22 就停下",
+      "why": "Node 预检必须在任何 npm/npx 之前，低版本时不产生缓存写入"
+    },
+    {
+      "id": "cli-exact-version-fallback",
+      "skills": [
+        "@cli"
+      ],
+      "files": [
+        "SKILL.md"
+      ],
+      "regex": "npx -y --fetch-timeout=15000 @doubaoya/cli@\\d+\\.\\d+\\.\\d+\\S* .*registry\\.npmmirror\\.com.*不换版本",
+      "why": "确切版本兜底 + registry 回落，失败不换版本"
+    }
+  ],
+  "cliSkills": [
+    "dby-api",
+    "dby-banned-words",
+    "dby-charter",
+    "dby-deai",
+    "dby-feedback",
+    "dby-gateway",
+    "dby-image",
+    "dby-publish",
+    "dby-rewrite",
+    "dby-theme",
+    "dby-write"
+  ],
+  "_comment_cliSkills": "cliSkills = 用到 CLI、必须带调用约定段的包；test_skill_contracts 断言它等于 validate_community 认出的那一组，不许自己漂。"
+}
