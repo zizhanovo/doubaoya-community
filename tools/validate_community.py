@@ -2555,6 +2555,331 @@ def validate_mainline_pointer(root: Path = ROOT) -> None:
         )
 
 
+# ── skill 薄层化四道闸（dby-cli-rebuild tasks 4.2 / 4.6，spec skill-thin-layer）──────────────
+#
+# 1. 无脚本闸：skill 包只许有 SKILL.md、README.md、references/、evals/（外加 LICENSE 与盖戳的
+#    .version）。包里出现 scripts/ 或任何 .py/.mjs/.sh 即红——**过渡期清单**里逐条登记的除外。
+# 2. 禁用写法闸：SKILL.md / README.md / references/** 里不许出现 curl、jq、python 调用、
+#    `node <路径>.mjs` 调用、`/api/` 路径（spec「调用约定唯一且先检查 Node」）。确需保留的逐条
+#    登记（文件 + 行特征 + 理由），每条都必须真命中至少一行，防止清单长成免检许可证。
+# 3. 调用约定闸：用到 CLI 的包，SKILL.md 里必须**逐字**放 tools/call-convention.md 那一段
+#    （`{{CLI_VERSION}}` 换成 cli/package.json 的版本）；确切版本必须等于包版本；`node -v`
+#    必须在最前。子命令存在性由 validate_cli_commands_present 管。
+# 4. 上下文预算闸：tools/skill_budget.json 登记每个包「SKILL.md + 必读 references」的上限与
+#    「写一篇」主路径的合计上限，按 design D13 口径估算，任一超限即红；必读文件不存在即红
+#    （不按 0 计），必读文件必须被 SKILL.md 点名。上限只降不升。
+
+SKILL_ALLOWED_ENTRIES = {"SKILL.md", "README.md", "references", "evals", "LICENSE", ".version"}
+SKILL_EXECUTABLE_SUFFIXES = {".py", ".mjs", ".js", ".cjs", ".sh"}
+
+# 过渡期清单：每条 {paths（相对 skills/ 的**确切文件**）, reason}。唯一的目录前缀是 dby-api/scripts/lib/，
+# 它是 cli/src 的逐字节镜像——本闸另外要求其中每个文件在 cli/src 下有同名对应物（内容一致由
+# cli/test/skill-lib-mirror.test.mjs 钉住），所以往里塞一个新文件同样会红。
+# 🔴 只许删不许加：第 5 组（删本机渲染器、壳、lib 副本，依赖 tasks 0.2）与 6.7 落地时整批删掉。
+SKILL_LIB_MIRROR_PREFIX = "dby-api/scripts/lib/"
+TRANSITIONAL_SKILL_FILES: tuple[dict[str, object], ...] = (
+    {"paths": ("dby-api/scripts/dby.mjs", "dby-api/scripts/doubaoya.mjs"),
+     "reason": "1.x 入口与弃用转发壳（旧模板用户自造 skill 仍经它调用）；5.1 改成只转发到 npm CLI 的过渡壳，3.0.0 删"},
+    {"paths": ("dby-api/references/dby-shim.mjs",),
+     "reason": "1.x 用户自造 skill 的引导壳模板；随 5.1 一起定去留"},
+    {"paths": ("dby-write/scripts/dby.mjs", "dby-write/scripts/lib/locate-dby.mjs", "dby-write/scripts/write.mjs",
+               "dby-charter/scripts/dby.mjs", "dby-charter/scripts/lib/locate-dby.mjs", "dby-charter/scripts/charter.mjs",
+               "dby-banned-words/scripts/dby.mjs"),
+     "reason": "1.x 引导壳、定位器与已弃用的 write.mjs / charter.mjs；SKILL.md 已改走 dby，5.1 删"},
+    {"paths": ("dby-image/scripts/dby.mjs", "dby-image/scripts/lib/locate-dby.mjs", "dby-image/scripts/gen.mjs",
+               "dby-image/scripts/plan-figures.mjs", "dby-image/scripts/wechat-crops.mjs"),
+     "reason": "1.x 生图脚本与引导壳；已由 dby image gen|plan|crops 取代，5.1 删"},
+    {"paths": ("dby-publish/scripts/account-verify.mjs", "dby-publish/scripts/archived-config-hint.selfcheck.mjs",
+               "dby-publish/scripts/dby.mjs", "dby-publish/scripts/draft-limits.selfcheck.mjs",
+               "dby-publish/scripts/extract-theme.mjs", "dby-publish/scripts/fetch-article.mjs",
+               "dby-publish/scripts/import-theme.mjs", "dby-publish/scripts/lib/archived-config-hint.mjs",
+               "dby-publish/scripts/lib/draft-limits.mjs", "dby-publish/scripts/lib/locate-dby.mjs",
+               "dby-publish/scripts/pipeline.mjs", "dby-publish/scripts/preprocess-and-publish.mjs",
+               "dby-publish/scripts/preprocess-and-publish.selfcheck.mjs", "dby-publish/scripts/render-wechat-html.mjs",
+               "dby-publish/scripts/render-wechat-html.selfcheck.mjs", "dby-publish/scripts/selfcheck-remote-theme.mjs",
+               "dby-publish/scripts/validate-theme.mjs", "dby-publish/scripts/validate-theme.selfcheck.mjs",
+               "dby-publish/themes/benya-clean.json"),
+     "reason": "本机渲染器、pipeline 原件（CLI 包内有搬家副本）、validate-theme 与旧主题 JSON；删除依赖 tasks 0.2，5.1 删"},
+    {"paths": ("dby-publish/profiles/README.md", "dby-publish/profiles/example-ip.json", "dby-publish/pipeline.json",
+               "dby-publish/config.example.json", "dby-publish/config.example.README.md", "dby-publish/.gitignore"),
+     "reason": "pipeline 原件的 profile/config 样例、10 步 SOP 人读声明（SKILL.md 引用）与挡住本地 config 误提交的 .gitignore；随 5.1 / dby-article-run 定去留"},
+    {"paths": ("dby-theme/scripts/validate-theme.mjs", "dby-theme/themes/theme.example.json"),
+     "reason": "validate-theme.mjs 与 dby-publish 那份逐字节相同（服务端已在 preview/theme-add 时校验）与主题样例；5.1 删"},
+    {"paths": ("dby-update/scripts/reconcile.mjs",),
+     "reason": "1.x 用户迁到 2.x 的最后一跳对账器；tasks 6.7 改薄为 dby skills migrate/update 后删"},
+)
+
+
+def _transitional_reason(relative: str) -> str | None:
+    for entry in TRANSITIONAL_SKILL_FILES:
+        if relative in entry["paths"]:
+            return str(entry["reason"])
+    return None
+
+
+def _skill_package_files(all_files: list[Path], skill_dir: Path) -> list[Path]:
+    """包里会被分发的文件（publishable_files 的 git 视角：已跟踪 + 未忽略的新文件）。"""
+    return [path for path in all_files if skill_dir in path.parents and path.name != ".DS_Store"]
+
+
+def validate_no_skill_scripts(root: Path = ROOT) -> None:
+    """🔴 skill 不带脚本（spec skill-thin-layer「skill 不带脚本」）。判据与过渡期清单见上面那段注释。"""
+    used: set[str] = set()
+    scanned = 0
+    all_files = publishable_files(root)
+    for skill_dir in discover_skill_dirs(root):
+        for path in _skill_package_files(all_files, skill_dir):
+            scanned += 1
+            relative = path.relative_to(root / "skills").as_posix()
+            top = path.relative_to(skill_dir).parts[0]
+            executable = path.suffix.lower() in SKILL_EXECUTABLE_SUFFIXES or top == "scripts"
+            if top in SKILL_ALLOWED_ENTRIES and not executable:
+                continue
+            if relative.startswith(SKILL_LIB_MIRROR_PREFIX):
+                counterpart = root / "cli" / "src" / relative[len(SKILL_LIB_MIRROR_PREFIX):]
+                require(
+                    counterpart.is_file(),
+                    f"skills/{relative} 在 cli/src 下没有对应文件——{SKILL_LIB_MIRROR_PREFIX} 只许是 cli/src 的镜像"
+                    "（node cli/scripts/sync-skill-lib.mjs 生成），不许在这里长出新逻辑。",
+                )
+                continue
+            require(
+                _transitional_reason(relative) is not None,
+                f"skills/{relative}：skill 包只许有 SKILL.md、README.md、references/、evals/"
+                "（spec「skill 不带脚本」）——可执行逻辑一律进 CLI（cli/src），包里只留话术与参考资料。"
+                "过渡期清单 TRANSITIONAL_SKILL_FILES 只许删不许加。",
+            )
+            used.add(relative)
+    require(scanned >= 50, f"无脚本闸只扫到 {scanned} 个文件——文件枚举多半退化了，闸在空跑。")
+    listed = {path for entry in TRANSITIONAL_SKILL_FILES for path in entry["paths"]}
+    stale = sorted(listed - used)
+    require(
+        not stale,
+        f"过渡期清单里这些文件已经不存在：{stale}——文件删掉了就把清单条目也删掉，"
+        "别让清单长成一本没人读的免检许可证。",
+    )
+
+
+# ── 禁用写法闸 ────────────────────────────────────────────────────────────────
+FORBIDDEN_INVOCATION = re.compile(r"curl |jq |python3? |node .*\.mjs|/api/")
+
+# 每条 {path（相对 skills/，可用 fnmatch 通配）, line（对命中行 search 的正则）, reason}。
+# 🔴 每条都必须真命中至少一行（否则判定清单腐烂）；理由要写清「为什么这不是请求示例」。
+FORBIDDEN_INVOCATION_ALLOWLIST: tuple[dict[str, str], ...] = (
+    {
+        "path": "dby-gateway/references/capability-index.md",
+        "line": r"^\| `[a-z]+\.[A-Za-z0-9.]+` \|.*\| `/api/(skills|apis)/[^`]+` \|$|^### .*详情端点 `GET /api/",
+        "reason": (
+            "能力索引表第三列 = 详情端点（validate_gateway_contract_freedom 要求第三列必须是 /api/ 详情端点，"
+            "validate_call_routes 逐条对主仓 catalog 核存在性）与两个分节标题。这是索引数据，不是请求示例；"
+            "dby-gateway 的职责就是给绕开 CLI 的调用方讲协议。"
+        ),
+    },
+    {
+        "path": "dby-gateway/references/protocol.md",
+        "line": r"两条路由互不回落",
+        "reason": "协议说明里「两条通用路由互不回落」对路由形状的描述（讲清 404 该去另一个集合找），不是请求示例。",
+    },
+    {
+        "path": "dby-update/references/release-ref.md",
+        "line": r"`python3 tools/stamp_versions\.py`",
+        "reason": "维护者发版清单里的仓内工具（不是用户侧调用）；tasks 6.2 的 release 工具接管发版后随 dby-update 改薄（6.7）一起删。",
+    },
+)
+
+
+def _thin_layer_doc_files(root: Path) -> list[Path]:
+    out: list[Path] = []
+    for skill_dir in discover_skill_dirs(root):
+        for name in ("SKILL.md", "README.md"):
+            if (skill_dir / name).is_file():
+                out.append(skill_dir / name)
+        references = skill_dir / "references"
+        if references.is_dir():
+            out.extend(
+                sorted(p for p in references.rglob("*") if p.is_file() and p.suffix.lower() in {".md", ".json", ".txt"})
+            )
+    return out
+
+
+def validate_no_forbidden_invocations(root: Path = ROOT) -> None:
+    """🔴 skill 文本里不许出现 curl / jq / python / `node x.mjs` / `/api/`（spec「调用约定唯一」）。"""
+    from fnmatch import fnmatch
+
+    files = _thin_layer_doc_files(root)
+    require(len(files) >= 30, f"禁用写法闸只扫到 {len(files)} 份文档——枚举退化，闸在空跑。")
+    used: set[int] = set()
+    for path in files:
+        relative = path.relative_to(root / "skills").as_posix()
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            hit = FORBIDDEN_INVOCATION.search(line)
+            if not hit:
+                continue
+            allowed = [
+                index
+                for index, entry in enumerate(FORBIDDEN_INVOCATION_ALLOWLIST)
+                if fnmatch(relative, entry["path"]) and re.search(entry["line"], line)
+            ]
+            require(
+                bool(allowed),
+                f"skills/{relative}:{lineno} 出现禁用写法 `{hit.group(0).strip()}`：{line.strip()[:120]!r}。"
+                "skill 只经 `dby <组> <命令>` 调用 CLI——curl / jq / python / `node x.mjs` / 手拼 `/api/` 路径"
+                "一律改成对应的 dby 子命令（spec「调用约定唯一且先检查 Node」）。",
+            )
+            used.update(allowed)
+    stale = [entry["path"] for index, entry in enumerate(FORBIDDEN_INVOCATION_ALLOWLIST) if index not in used]
+    require(not stale, f"禁用写法白名单里这些条目一行都没命中（清单腐烂）：{stale}")
+
+
+# ── 调用约定闸 ────────────────────────────────────────────────────────────────
+CALL_CONVENTION_TEMPLATE = "tools/call-convention.md"
+CALL_CONVENTION_HEADING = "## 调用 dby"
+CLI_EXACT_VERSION = re.compile(r"@doubaoya/cli@([^\s`]+)")
+
+
+def _cli_package_version(root: Path) -> str:
+    package = root / "cli" / "package.json"
+    require(package.is_file(), f"{display_path(package)} 不存在，调用约定的确切版本没有事实源。")
+    version = load_json(package).get("version")
+    require(isinstance(version, str) and bool(version), f"{display_path(package)} 没有 version。")
+    return version
+
+
+def call_convention_block(root: Path = ROOT) -> str:
+    template = root / CALL_CONVENTION_TEMPLATE
+    require(template.is_file(), f"{display_path(template)} 不存在——调用约定段没有唯一事实源。")
+    text = template.read_text(encoding="utf-8").strip("\n")
+    require("{{CLI_VERSION}}" in text, f"{display_path(template)} 里没有 {{{{CLI_VERSION}}}} 占位。")
+    return text.replace("{{CLI_VERSION}}", _cli_package_version(root))
+
+
+def _skills_using_cli(root: Path, valid_names: set[str]) -> list[Path]:
+    using: list[Path] = []
+    for skill_dir in discover_skill_dirs(root):
+        docs = [skill_dir / "SKILL.md"]
+        if (skill_dir / "references").is_dir():
+            docs.extend(sorted((skill_dir / "references").glob("*.md")))
+        for doc in docs:
+            refs = _cli_references(doc.read_text(encoding="utf-8"))
+            if any((f"{a} {b}" if b else a) in valid_names or a in valid_names for _, a, b in refs):
+                using.append(skill_dir)
+                break
+    return using
+
+
+def validate_call_convention(root: Path = ROOT) -> None:
+    """🔴 用到 CLI 的包必须逐字放同一段调用约定，确切版本 = 包版本，`node -v` 在最前。"""
+    block = call_convention_block(root)
+    version = _cli_package_version(root)
+    block_lines = block.split("\n")
+    require(
+        block_lines[0] == CALL_CONVENTION_HEADING and "`node -v`" in block_lines[2],
+        f"{CALL_CONVENTION_TEMPLATE} 的形状不对：第一行必须是「{CALL_CONVENTION_HEADING}」，第一条必须是 `node -v` 预检。",
+    )
+    using = _skills_using_cli(root, _dby_command_names(root))
+    require(len(using) >= 8, f"只认出 {len(using)} 个用到 CLI 的包——引用识别多半退化，闸在空跑。")
+    for skill_dir in using:
+        skill_md = skill_dir / "SKILL.md"
+        text = skill_md.read_text(encoding="utf-8")
+        lines = text.split("\n")
+        label = display_path(skill_md)
+        require(
+            CALL_CONVENTION_HEADING in lines,
+            f"{label} 用到了 dby CLI，却没有「{CALL_CONVENTION_HEADING}」调用约定段"
+            f"（原样复制 {CALL_CONVENTION_TEMPLATE}，版本换成 {version}）。",
+        )
+        start = lines.index(CALL_CONVENTION_HEADING)
+        actual = lines[start:start + len(block_lines)]
+        for found in CLI_EXACT_VERSION.findall("\n".join(actual)):
+            require(
+                found == version,
+                f"{label} 调用约定里的确切版本是 @doubaoya/cli@{found}，而包版本（cli/package.json）是 {version}"
+                "——兜底版本必须等于包版本（由 release 工具写入）。",
+            )
+        require(
+            any("`node -v`" in line for line in actual[:4]),
+            f"{label} 调用约定段的第一步不是 `node -v` 预检——Node 版本检查必须在任何 npm / npx 之前。",
+        )
+        for offset, (want, got) in enumerate(zip(block_lines, actual + [""] * len(block_lines))):
+            require(
+                want == got,
+                f"{label}:{start + offset + 1} 调用约定段与 {CALL_CONVENTION_TEMPLATE} 不是逐字相同："
+                f"期望 {want!r}，实际 {got!r}。各包这一段必须一字不差（闸按行比对）。",
+            )
+
+
+# ── 上下文预算闸 ──────────────────────────────────────────────────────────────
+SKILL_BUDGET_FILE = "tools/skill_budget.json"
+CJK_CHAR = re.compile(r"[　-〿㐀-䶿一-鿿豈-﫿＀-￯]")
+
+
+def context_tokens(text: str) -> int:
+    """design D13 口径：ceil(CJK 字符数 + 其余非空白字符数 / 4)。"""
+    cjk = len(CJK_CHAR.findall(text))
+    other = sum(1 for ch in text if not ch.isspace()) - cjk
+    return -(-(cjk * 4 + other) // 4)
+
+
+def context_budget_report(root: Path = ROOT) -> list[dict[str, object]]:
+    """每个包与每条主路径的 {name, files, measured, limit}；闸与 main() 的输出共用这一份计算。"""
+    registry = load_json(root / SKILL_BUDGET_FILE)
+    require(isinstance(registry, dict), f"{SKILL_BUDGET_FILE} 不是对象。")
+    skills = registry.get("skills")
+    paths = registry.get("paths")
+    require(isinstance(skills, dict) and skills, f"{SKILL_BUDGET_FILE} 的 skills 为空——预算闸在空跑。")
+    require(isinstance(paths, dict) and paths, f"{SKILL_BUDGET_FILE} 的 paths 为空——主路径预算没登记。")
+    installed = {path.name for path in discover_skill_dirs(root)}
+    require(
+        set(skills) == installed,
+        f"{SKILL_BUDGET_FILE} 登记的包与 skills/ 不一致：缺 {sorted(installed - set(skills))}，多 {sorted(set(skills) - installed)}。",
+    )
+    per_skill: dict[str, int] = {}
+    rows: list[dict[str, object]] = []
+    for name in sorted(skills):
+        entry = skills[name]
+        skill_dir = root / "skills" / name
+        skill_md = skill_dir / "SKILL.md"
+        entry_text = skill_md.read_text(encoding="utf-8")
+        files = [skill_md]
+        for rel in entry.get("required", []):
+            target = skill_dir / rel
+            require(
+                target.is_file(),
+                f"{SKILL_BUDGET_FILE}：{name} 的必读文件 {rel} 不存在——不按 0 计入，直接判失败。",
+            )
+            # 点名方式二选一：逐字写出路径；或按占位写（`references/genre/<形态>.md` 这类「读其中一份」），
+            # 此时登记的是那组里最大的一份，按上限估。
+            placeholder = rel.rsplit("/", 1)[0] + "/<"
+            require(
+                rel in entry_text or placeholder in entry_text,
+                f"{SKILL_BUDGET_FILE}：{name} 把 {rel} 登记为必读，但 SKILL.md 里没有点名它（也没有 `{placeholder}…>` 占位）"
+                "——必读必须由入口说出来。",
+            )
+            files.append(target)
+        measured = sum(context_tokens(path.read_text(encoding="utf-8")) for path in files)
+        per_skill[name] = measured
+        rows.append({"name": name, "files": [display_path(p) for p in files], "measured": measured, "limit": entry.get("limit")})
+    for name in sorted(paths):
+        entry = paths[name]
+        members = entry.get("skills", [])
+        require(members and all(m in skills for m in members), f"{SKILL_BUDGET_FILE}：主路径「{name}」的成员不对：{members}")
+        rows.append({"name": f"路径:{name}", "files": members, "measured": sum(per_skill[m] for m in members), "limit": entry.get("limit")})
+    return rows
+
+
+def validate_context_budget(root: Path = ROOT) -> None:
+    """🔴 每个包「SKILL.md + 必读 references」与「写一篇」主路径的体积不得超过登记上限（只降不升）。"""
+    for row in context_budget_report(root):
+        limit = row["limit"]
+        require(isinstance(limit, int) and limit > 0, f"{SKILL_BUDGET_FILE}：{row['name']} 没有正整数上限。")
+        require(
+            row["measured"] <= limit,
+            f"上下文预算超了：{row['name']} 实测 {row['measured']}，上限 {limit}，超出 {row['measured'] - limit}"
+            f"（口径 ceil(CJK + 其余非空白/4)，计入 {row['files']}）。把单一分支的内容搬进按需读的 references，"
+            "别抬上限；确需抬高，在同一提交里写明理由。",
+        )
+
+
 def validate_repository(root: Path = ROOT) -> list[str]:
     validate_gate_registration(root)
     validate_skill_inventory(root)
@@ -2582,6 +2907,10 @@ def validate_repository(root: Path = ROOT) -> list[str]:
     validate_single_request_layer(root)
     validate_single_key_discovery(root)
     validate_cli_commands_present(root)
+    validate_no_skill_scripts(root)
+    validate_no_forbidden_invocations(root)
+    validate_call_convention(root)
+    validate_context_budget(root)
     validate_cli_shims_identical(root)
     validate_no_price_literals(root)
     validate_no_agent_fanout(root)
@@ -2595,6 +2924,10 @@ def main() -> int:
     warnings = validate_repository()
     for warning in warnings:
         print(warning, file=sys.stderr)
+    # 上下文预算闸的实测值与上限（tasks 4.6 要求输出；口径见 validate_context_budget）
+    print("context budget（实测/上限）: " + "，".join(
+        f"{row['name']} {row['measured']}/{row['limit']}" for row in context_budget_report()
+    ))
     print(
         f"validated doubaoya-community: {len(discover_skill_dirs())} Skills, "
         f"ClawHub manifest, WeChat routing and the {len(AUTHORING_CHAIN)}-hop authoring chain"
