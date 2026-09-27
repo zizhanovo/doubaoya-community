@@ -2,10 +2,10 @@
 name: dby-rewrite
 description: >-
   都爆鸭出品的**多平台文案改写**专家（公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎 七个平台，一份原文按各平台的真实调性分别改写）。给什么文案都能转成该平台的高互动表达——公众号奔着高阅读的爆款文案去（金句与钩子），小红书要 emoji 与种草口吻，知乎要论证感，各平台的规则不混用。触发词：公众号改写、公众号文案、公众号风格、微信改写、爆款改写、内容改写、小红书改写、小红书文案、小红书风格、笔记改写、种草文案、标题钩子、抖音文案、口播文案、视频号文案、知乎风格、B站文案、多平台改写、一稿多发、全平台改写、跨平台适配。本 Skill 包纯本地运行，不联网、不调用任何外部接口、不需要 key。
-version: 1.4.0
-changelog: 规格 dby-cli-coverage「装好即可达」：references/draft/draft-changes.md 里硬编码的 dby-api 绝对安装路径改成相对本包目录解析（不假设 skills 根绝对位置），改走统一 CLI 而非已弃用的旧转发壳
+version: 2.0.0
+changelog: BREAKING：删除 scripts/rewrite.py，取规则改用 dby rewrite rules，只需要 Node；认不出的平台名报用法错误，不再当成原文吞掉
 compatibility: >-
-  需要 Python 3（`scripts/rewrite.py` 只用标准库，不装任何 pip 包）。
+  只需要 Node ≥22（经 `dby` 命令运行，零依赖）。
   纯本地运行：不联网、不调用任何外部接口、不需要 key。
 ---
 
@@ -40,14 +40,13 @@ compatibility: >-
 每份规则的结构都一样：`Role`（角色定位）/ `WritingSkills`（写作技巧）/ `Rules`（改写规则）/
 `Workflow`（工作流程）。**照着 Workflow 走**，别只扫一眼 Role 就动笔。
 
-也可以让脚本把规则打出来（脚本读的就是上面这些文件）：
+也可以让 `dby` 把规则打出来（读的就是上面这些文件；`--json` 时只给路径，照路径去读文件）：
 
 ```bash
-python3 scripts/rewrite.py list                  # 七个平台和它们的别名
-python3 scripts/rewrite.py 小红书                 # 单平台规则
-python3 scripts/rewrite.py 抖音,知乎 "原文…"       # 多平台（逗号或空格分隔都行）
-python3 scripts/rewrite.py all                   # 全平台（一稿多发）
-python3 scripts/rewrite.py --selfcheck           # 离线自检：平台表与规则文件一一对应
+dby rewrite rules                        # 七个平台和它们的别名
+dby rewrite rules 小红书                  # 单平台规则
+dby rewrite rules 抖音,知乎               # 多平台（逗号或空格分隔都行）
+dby rewrite rules all                    # 全平台（一稿多发）
 ```
 
 ### 第 3 步：直接输出改写结果

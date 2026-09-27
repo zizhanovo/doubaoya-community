@@ -40,13 +40,12 @@
 ## 用法
 
 ```bash
-python3 scripts/deai.py 稿件.md          # 体检报告
-cat 稿件.md | python3 scripts/deai.py -  # 从 stdin 读
-python3 scripts/deai.py 稿件.md --json   # 机器读
-python3 scripts/deai.py --make-baseline 旧文*.md > 基线.json   # 压出你自己的尺子
-python3 scripts/deai.py 稿件.md --baseline 基线.json           # 对照着看
-python3 scripts/deai.py 稿件.md --profile deai-偏好.md         # 按沉淀的豁免词跳过误报
-python3 scripts/deai.py --selfcheck                           # 离线自检
+dby deai scan --file 稿件.md                 # 体检报告
+cat 稿件.md | dby deai scan --file -         # 从 stdin 读
+dby deai scan --file 稿件.md --json          # 机器读
+dby deai baseline 旧文*.md --out 基线.json    # 压出你自己的尺子
+dby deai scan --file 稿件.md --baseline 基线.json    # 对照着看
+dby deai scan --file 稿件.md --profile deai-偏好.md  # 按沉淀的豁免词跳过误报
 ```
 
 脚本定位这些：套话连接词、公文腔、通胀大词、「不是A而是B」否定式对比、三段式并列、虚假范围、
@@ -82,6 +81,6 @@ references/文风锚定.md        「改得像我写的」：取样本 → 压�
 references/沉淀.md            deai-偏好.md 的格式；豁免词被脚本读，改法与触发给 agent 读
 references/加人味.md          四不纪律与索料清单
 references/平台标注.md        法规与六平台口径（快照）
-scripts/deai.py              离线体检脚本，只用标准库
+（体检由 `dby deai scan` 提供：离线、零依赖，不在本包里放脚本）
 evals/                       触发层与执行层判据
 ```

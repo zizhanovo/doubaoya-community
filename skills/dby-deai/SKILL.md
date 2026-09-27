@@ -8,10 +8,10 @@ description: >-
   改得像人写的、说点人话、说人话、没有人味、没人味、太官方了、太套路了、全是套话、文章太干、
   改得自然点、降AI率、AI率太高、过AI检测。纯本地运行，不联网、不需要 key。
   不做规避 AI 标识、不做学术降重、不承诺过检测器。
-version: 1.3.0
-changelog: 规格 dby-cli-coverage「装好即可达」：references/draft/draft-changes.md 里硬编码的 dby-api 绝对安装路径改成相对本包目录解析（不假设 skills 根绝对位置），改走统一 CLI 而非已弃用的旧转发壳
+version: 2.0.0
+changelog: BREAKING：删除 scripts/deai.py，体检改用 dby deai scan（基线用 dby deai baseline），只需要 Node；输出与原脚本逐字段一致，仍不给任何分数
 compatibility: >-
-  需要 Python 3（`scripts/deai.py` 只用标准库，不装任何 pip 包）。
+  只需要 Node ≥22（经 `dby` 命令运行，零依赖）。
   纯本地运行：不联网、不调用任何外部接口、不需要 key、不计费。
 ---
 
@@ -57,13 +57,12 @@ compatibility: >-
 ## 模式 A：体检
 
 ```bash
-python3 scripts/deai.py 稿件.md                       # 或 cat 稿件.md | python3 scripts/deai.py -
-python3 scripts/deai.py 稿件.md --profile deai-偏好.md  # 用户工作区有这份就必须带上
-python3 scripts/deai.py 稿件.md --baseline 基线.json    # 有作者范文时，用他自己的尺子
-python3 scripts/deai.py --selfcheck                   # 离线自检，不联网
+dby deai scan --file 稿件.md                          # 或 cat 稿件.md | dby deai scan --file -
+dby deai scan --file 稿件.md --profile deai-偏好.md   # 用户工作区有这份就必须带上
+dby deai scan --file 稿件.md --baseline 基线.json     # 有作者范文时，用他自己的尺子
 ```
 
-🔑 **拿得到作者范文就先做基线**（`--make-baseline`，流程见 `references/文风锚定.md`）。
+🔑 **拿得到作者范文就先做基线**（`dby deai baseline`，流程见 `references/文风锚定.md`）。
 中文侧没有公开的实证阈值，通用词表会把「他一直这么写」判成 AI 味；作者自己的基线没有这个问题。
 
 **体检是两遍，缺一遍就是漏掉一半。**

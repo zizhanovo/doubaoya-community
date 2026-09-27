@@ -23,5 +23,5 @@
 
 接收端的路径、请求体字段名、鉴权与速率限制策略尚未与后端敲定（见 openspec change
 `dby-feedback` 的 Open Questions）。当前包按统一信封（`success` / `requestId` / `data` /
-`error`，`notice` 原样转达）解析响应；端点地址与字段名都在 `scripts/endpoint.json` 里，
+`error`，`notice` 原样转达）解析响应；端点地址与字段名都在 CLI 包的 `src/data/feedback-endpoint.json` 里，
 后端定形后**只改配置发新版，不动代码**。

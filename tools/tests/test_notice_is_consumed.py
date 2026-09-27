@@ -35,11 +35,12 @@ ROOT = Path(__file__).resolve().parents[2]
 #    字符串），真正解析信封的地方收敛到 lib/http.mjs 这一份公共请求层 —— 一进一出。
 # dby-cli-unification 之后仓里只剩两个真正解析 doubaoya 信封的地方：
 #   - dby-api 的 lib/http.mjs —— 唯一请求层，兄弟包（write/charter/publish）都经由它，自己不再碰信封；
-#   - dby-feedback 的 submit_feedback.py —— 独立反馈端点，不走 doubaoya API，自带信封语义。
+#   - dby feedback submit（cli/src/commands/feedback.mjs 的 skill 镜像；原 submit_feedback.py 已删）——
+#     独立反馈端点，不走 doubaoya API，自带信封语义。
 # 别把兄弟包脚本重新加回来：它们若又开始自己读信封，就是「仓内只有一份请求层」被破了。
 ENVELOPE_READERS = [
     "skills/dby-api/scripts/lib/http.mjs",
-    "skills/dby-feedback/scripts/submit_feedback.py",
+    "skills/dby-api/scripts/lib/commands/feedback.mjs",
 ]
 
 

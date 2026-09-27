@@ -1214,6 +1214,11 @@ def validate_no_key_paste_instruction(root: Path = ROOT) -> None:
 SENSITIVE_COLLECT_EQUAL = {"appid", "author", "publicaccountname", "targetaccount", "ipprofile"}
 SENSITIVE_COLLECT_SUBSTR = ("key", "token", "secret", "password", "credential")
 COLLECT_WHITELIST_NAME = re.compile(r"(?:_WHITELIST|_ALLOWED)$")
+JS_COLLECT_WHITELIST = re.compile(
+    r"^(?:export\s+)?(?:const|let|var)\s+(\w+(?:_WHITELIST|_ALLOWED))\s*=\s*(?:Object\.freeze\(\s*)?\[([^\]]*)\]",
+    re.M,
+)
+JS_STRING_LITERAL = re.compile(r"""["']([^"'\n]+)["']""")
 
 
 def validate_collect_whitelists(root: Path = ROOT) -> None:
@@ -1252,11 +1257,40 @@ def validate_collect_whitelists(root: Path = ROOT) -> None:
                     "这张清单决定哪些数据会离开用户机器；appid / author / 账号身份 / 凭证类字段"
                     "在采集层就不许采（检测层认不得它们，兜不住），把它从白名单里拿掉。",
                 )
+    # dby-cli-rebuild tasks 3.3/3.4：采集逻辑移植到 CLI（cli/src/commands/feedback.mjs，skill 镜像里也有一份），
+    # Python 版删除。JS 侧同一判据：模块级 `const X_WHITELIST = [Object.freeze(][...]` 的字符串字面量逐个对表。
+    js_scanned = 0
+    for path in publishable_files(root):
+        relative = path.relative_to(root)
+        in_scope = relative.parts[:2] == ("cli", "src") or (relative.parts[:1] == ("skills",) and "scripts" in relative.parts)
+        if not in_scope or path.suffix != ".mjs" or not path.is_file() or path.is_symlink():
+            continue
+        text = path.read_text(encoding="utf-8")
+        for match in JS_COLLECT_WHITELIST.finditer(text):
+            name, body = match.group(1), match.group(2)
+            fields = JS_STRING_LITERAL.findall(body)
+            if not fields:
+                continue
+            js_scanned += 1
+            for field in fields:
+                low = field.lower()
+                require(
+                    low not in SENSITIVE_COLLECT_EQUAL and not any(w in low for w in SENSITIVE_COLLECT_SUBSTR),
+                    f"采集白名单里出现敏感字段名：{relative.as_posix()} 的 {name} 含 {field!r}——"
+                    "这张清单决定哪些数据会离开用户机器；appid / author / 账号身份 / 凭证类字段"
+                    "在采集层就不许采（检测层认不得它们，兜不住），把它从白名单里拿掉。",
+                )
     if (root / "skills" / "dby-feedback" / "scripts").is_dir():
         require(
             scanned >= 3,
             f"采集白名单闸只扫到 {scanned} 张白名单常量（dby-feedback 在架时应有 ≥3 张）——"
             "闸在空转，空转的绿灯长得跟通过一模一样。查常量命名是否还以 _WHITELIST/_ALLOWED 结尾。",
+        )
+    if (root / "cli" / "src" / "commands" / "feedback.mjs").is_file():
+        require(
+            js_scanned >= 3,
+            f"采集白名单闸在 JS 侧只扫到 {js_scanned} 张白名单常量（cli/src/commands/feedback.mjs 在架时应有 ≥3 张）——"
+            "闸在空转。查常量命名是否还以 _WHITELIST/_ALLOWED 结尾、是否还是数组字面量。",
         )
 
 
@@ -1479,13 +1513,9 @@ SINGLE_REQUEST_LAYER_WHITELIST: tuple[dict[str, str], ...] = (
     {
         "path": "dby-api/scripts/lib/commands/feedback.mjs",
         "reason": (
-            "submit_feedback.py 的 CLI 移植（cli/src 的逐字节镜像）：打的是独立反馈端点，不是 doubaoya API"
+            "dby feedback submit（原 submit_feedback.py，已删）的 CLI 实现（cli/src 的逐字节镜像）：打的是独立反馈端点，不是 doubaoya API"
             "（端点来自本地配置，不带 key、不读 DOUBAOYA_BASE_URL；命中目标特征是因为注释里点名了它不读）。"
         ),
-    },
-    {
-        "path": "dby-feedback/scripts/submit_feedback.py",
-        "reason": "打的是独立反馈端点，不是 doubaoya API（端点地址来自本地配置，不硬编码 doubaoya.com）。",
     },
     {
         "path": "dby-publish/scripts/fetch-article.mjs",

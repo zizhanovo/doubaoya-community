@@ -244,7 +244,7 @@ export function feedbackPrepare({ category, report, out, scopeRoot, agent, comma
   if (!report || !out) throw new DbyError("USAGE", "缺少 --report 或 --out。", { exit: EXIT.USAGE });
   const reportText = readUtf8(report, "报告文件");
   const specs = [
-    ...(command ? [command] : []),
+    ...(Array.isArray(command) ? command : command ? [command] : []),
     ...(commandsFile ? readUtf8(commandsFile, "命令清单").split("\n").map((l) => l.trim()).filter(Boolean) : [])
   ];
   const commandsRun = specs.map(parseCommandSpec);
@@ -428,7 +428,7 @@ export const commands = [
       out: { value: true, summary: "载荷输出路径（必填；submit 原样发送这份）" },
       "scope-root": SCOPE_FLAG,
       agent: { value: true, summary: "agent 类型，如 claude-code" },
-      command: { value: true, summary: "本次执行过的一条本仓命令，格式「退出码:命令」" },
+      command: { value: true, multiple: true, summary: "本次执行过的本仓命令，格式「退出码:命令」（与 1.x 一样可多次给）" },
       "commands-file": { value: true, summary: "多条命令时用：每行一条「退出码:命令」" }
     },
     routes: [], billable: false, destructive: false, composite: false, kind: "local",

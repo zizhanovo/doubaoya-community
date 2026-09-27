@@ -46,10 +46,10 @@ agent 会去读对应平台的规则（`references/<平台>.md`）再动笔。
 也可以自己把规则打出来看：
 
 ```bash
-python3 scripts/rewrite.py list                  # 七个平台和它们的别名
-python3 scripts/rewrite.py 小红书                 # 单平台规则
-python3 scripts/rewrite.py 抖音,知乎 "原文…"       # 多平台（逗号或空格分隔都行）
-python3 scripts/rewrite.py all                   # 全平台（一稿多发）
+dby rewrite rules                        # 七个平台和它们的别名
+dby rewrite rules 小红书                  # 单平台规则
+dby rewrite rules 抖音,知乎               # 多平台（逗号或空格分隔都行）
+dby rewrite rules all                    # 全平台（一稿多发）
 ```
 
 平台别名：`公众号/微信公众号`、`视频号/微信视频号`、`抖音/dy`、`快手/ks`、
@@ -66,15 +66,13 @@ dby-rewrite/
 ├── references/           # 平台规则，一平台一文件（脚本与 agent 读的是同一份）
 │   ├── 公众号.md   ├── 视频号.md   ├── 抖音.md   ├── 快手.md
 │   ├── B站.md      ├── 小红书.md   └── 知乎.md
-└── scripts/
-    └── rewrite.py        # 平台别名解析 + 取规则（纯标准库，零网络调用）
 ```
 
 ---
 
 ## 前置条件
 
-- Python 3（脚本仅用标准库，不装任何第三方包）
+- Node（经 `dby` 命令运行，零依赖）
 - 不需要 `DOUBAOYA_API_KEY`，不联网
 
 > ⚠️ 都爆鸭平台上另有一条**同名的云端能力** `skill.wechat.rewrite`（计费）。

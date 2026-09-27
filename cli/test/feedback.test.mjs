@@ -335,3 +335,21 @@ test("命令表：四条都是 local、零路由、非计费", () => {
     assert.equal(c.billable, false);
   }
 });
+
+test("--command 可以给多次（与 1.x 的 submit_feedback.py 一致）", async () => {
+  const { mkdtempSync, writeFileSync, readFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const path = (await import("node:path")).default;
+  const { runCli } = await import("./helpers.mjs");
+  const dir = mkdtempSync(path.join(tmpdir(), "dby-fb-multi-"));
+  writeFileSync(path.join(dir, "r.md"), "# 反馈\n");
+  const out = path.join(dir, "p.json");
+  const r = await runCli(
+    ["feedback", "prepare", "--category", "bug", "--report", path.join(dir, "r.md"), "--out", out, "--scope-root", dir,
+      "--command", "0:dby whoami", "--command", "1:dby draft list", "--json"],
+    { env: { HOME: dir } }
+  );
+  assert.equal(r.code, 0, r.stderr);
+  const payload = readFileSync(out, "utf8");
+  assert.ok(payload.includes("dby whoami") && payload.includes("dby draft list"), payload);
+});
