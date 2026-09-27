@@ -2684,11 +2684,6 @@ FORBIDDEN_INVOCATION_ALLOWLIST: tuple[dict[str, str], ...] = (
         "line": r"两条路由互不回落",
         "reason": "协议说明里「两条通用路由互不回落」对路由形状的描述（讲清 404 该去另一个集合找），不是请求示例。",
     },
-    {
-        "path": "dby-update/references/release-ref.md",
-        "line": r"`python3 tools/stamp_versions\.py`",
-        "reason": "维护者发版清单里的仓内工具（不是用户侧调用）；tasks 6.2 的 release 工具接管发版后随 dby-update 改薄（6.7）一起删。",
-    },
 )
 
 

@@ -16,4 +16,5 @@ CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild d
 - 单一运行时（design D5）：`dby deai scan|baseline`、`dby rewrite rules`、`dby feedback prepare|submit|keep|reset-id` 取代三份 Python 脚本，全部本地命令；deai 与 Python 逐字段对拍一致后冻结快照，输出不含任何分数字段。
 - 单一版本号（design D10）：CLI 与随包的 13 个 dby-* skill 共用 npm 包版本；`cli/scripts/release.mjs` 以 package.json 为源派生 SKILL.md 的 `version:`、调用约定里的确切版本、CHANGELOG 一节，2.x 期间同时生成兼容视图（index.json / versions.json / known-hashes.json，版本字段取包版本），3.0.0 起停止生成；`cli/scripts/prepublish-check.mjs` 在发布前核对零依赖、exports、frontmatter 版本、调用约定版本、镜像哈希、兼容视图版本、版本递增与 CHANGELOG。
 - 新增 `dby skills install|update|status|migrate`（design D11）：把随包 skills 写进 `.claude/skills` / `.agents/skills`（项目级或用户级），逐包原子替换、任一包失败只回滚该包，每包写 `.dby/origin.json`；用户改过的包默认不覆盖（`--force` 先备份进 `.dby-archive/`）；软链写真实路径；本 CLI 装过、随包已不再有的包移进归档。`update` 先以 `GET /api/cli/release` 公布的正式版本到 npmjs 与 npmmirror 查同一确切版本（两源一致才算数，绝不改装源上可见的其他版本），查询失败退出码 5 且不写盘；装入的永远是正在运行的 CLI 随包的那一份，有新版时只提示升级命令。`migrate` 把 1.x 渠道装的目录整体归档后换入薄层，逐包复核，不过的从归档还原。
+- dby-update 改薄：只指引装好确切版本的 dby 后跑 `dby skills status` 看清单，再 `dby skills migrate`（1.x 旧装法）或 `dby skills update`；不再调用包内对账脚本（1.x 的 reconcile.mjs 只服务最后一跳，随第 5 组删除）。
 

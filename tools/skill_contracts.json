@@ -112,6 +112,7 @@
     "dby-publish",
     "dby-rewrite",
     "dby-theme",
+    "dby-update",
     "dby-write"
   ],
   "_comment_cliSkills": "cliSkills = 用到 CLI、必须带调用约定段的包；test_skill_contracts 断言它等于 validate_community 认出的那一组，不许自己漂。"

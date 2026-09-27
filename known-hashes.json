@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T10:05:10.523671+00:00",
+  "generatedAt": "2026-09-27T10:10:19.513026+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -362,6 +362,7 @@
       "069172b7e331",
       "080aed4c835c",
       "0f57ebd82f3b",
+      "1b8a56d4f989",
       "269a56ceb3b9",
       "279891452575",
       "29458b8b722e",
@@ -2797,6 +2798,12 @@
         "version": "4.8.0",
         "date": "2026-09-27",
         "subject": "feat(cli): 生图、流水线、抓参考文章迁成子命令，新增 render/preview"
+      },
+      {
+        "hash": "843ce412816f",
+        "version": "2.0.0-next.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): dby skills install|update|status|migrate——一方安装器把随包 skills 写进宿主目录（tasks 6.1 / 6.3）"
       },
       {
         "hash": "9ac116b6f3d8",

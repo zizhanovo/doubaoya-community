@@ -63,7 +63,7 @@
     },
     "dby-update": {
       "required": [],
-      "limit": 3303
+      "limit": 1460
     },
     "dby-write": {
       "required": [
