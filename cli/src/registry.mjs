@@ -28,6 +28,9 @@ import { commands as imageCommands } from "./commands/image.mjs";
 import { commands as pipelineCommands } from "./commands/pipeline.mjs";
 import { commands as fetchArticleCommands } from "./commands/fetch-article.mjs";
 import { commands as renderCommands } from "./commands/render.mjs";
+import { commands as deaiCommands } from "./commands/deai.mjs";
+import { commands as rewriteCommands } from "./commands/rewrite.mjs";
+import { commands as feedbackCommands } from "./commands/feedback.mjs";
 
 /**
  * 命令三分类（dby-cli-rebuild design D8 / spec「子命令分三类并由对账闸核对」）：
@@ -65,7 +68,10 @@ const RAW_COMMANDS = [
   ...routesCommands,
   ...authCommands,
   ...imageCommands,
-  ...renderCommands
+  ...renderCommands,
+  ...deaiCommands,
+  ...rewriteCommands,
+  ...feedbackCommands
 ];
 
 export const ALL_COMMANDS = RAW_COMMANDS.map((c) => ({ ...c, kind: commandKind(c) }));
@@ -88,7 +94,10 @@ const GROUP_SUMMARY = {
   usage: "用量明细与分析",
   upload: "媒体上传",
   banned: "违禁词检测（多平台扇出）",
-  image: "生图 / 改图（慢、计费）与配图规划、封面裁切（本地）"
+  image: "生图 / 改图（慢、计费）与配图规划、封面裁切（本地）",
+  deai: "去 AI 味体检（纯本地，不给分数）",
+  rewrite: "多平台改写规则（纯本地）",
+  feedback: "反馈：拼载荷 / 用户过目后提交（纯本地，端点未配置时落本地文件）"
 };
 
 export const GROUPS = [...new Set(ALL_COMMANDS.map((c) => c.group).filter((g) => g !== null))].map((name) => ({

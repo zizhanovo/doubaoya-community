@@ -1477,6 +1477,13 @@ SINGLE_REQUEST_LAYER_WHITELIST: tuple[dict[str, str], ...] = (
         "reason": "GitHub/Gitee 拉取技能包内容 + 一处 /api/health 健康探测，不是业务请求层。",
     },
     {
+        "path": "dby-api/scripts/lib/commands/feedback.mjs",
+        "reason": (
+            "submit_feedback.py 的 CLI 移植（cli/src 的逐字节镜像）：打的是独立反馈端点，不是 doubaoya API"
+            "（端点来自本地配置，不带 key、不读 DOUBAOYA_BASE_URL；命中目标特征是因为注释里点名了它不读）。"
+        ),
+    },
+    {
         "path": "dby-feedback/scripts/submit_feedback.py",
         "reason": "打的是独立反馈端点，不是 doubaoya API（端点地址来自本地配置，不硬编码 doubaoya.com）。",
     },

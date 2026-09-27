@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T08:33:49.010418+00:00",
+  "generatedAt": "2026-09-27T08:35:08.428706+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.17.1",
+  "productVersion": "1.17.2",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -816,6 +816,7 @@
         "2e02904d7d96",
         "3fca623fc119",
         "50cdd6a062be",
+        "52d8b49fac40",
         "5356a8ef8e99",
         "53d2c3fb1e80",
         "596f05f4d505",
@@ -856,11 +857,11 @@
       ],
       "versions": [
         {
-          "version": "4.8.0",
-          "hash": "7cf0c6f667e3",
+          "version": "4.9.0",
+          "hash": "52d8b49fac40",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T08:33:45.261703+00:00",
-          "changelog": "新增 image gen/edit/plan/crops、wechat pipeline、wechat fetch-article、render/preview 子命令（原各包脚本搬入 CLI）；生图与流水线真发布要 --confirm",
+          "releasedAt": "2026-09-27T08:35:05.572005+00:00",
+          "changelog": "新增 deai scan/baseline、rewrite rules、feedback prepare/submit/keep/reset-id 子命令（原 Python 脚本移植到 Node，逐字段对拍一致）",
           "changelogSource": "user"
         },
         {
@@ -1182,6 +1183,12 @@
           "version": "4.5.0",
           "date": "2026-09-10",
           "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
+        },
+        {
+          "hash": "7cf0c6f667e3",
+          "version": "4.8.0",
+          "date": "2026-09-27",
+          "subject": "feat(cli): 生图、流水线、抓参考文章迁成子命令，新增 render/preview"
         },
         {
           "hash": "9bf9100c685a",

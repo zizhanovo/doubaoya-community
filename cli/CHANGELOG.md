@@ -13,4 +13,5 @@ CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild d
 - 生图、流水线、抓参考文章改走子命令（design D4）：`dby image gen|edit`（composite，计费，要 `--confirm`，超时绝不重试）、`dby image plan|crops`（本地）、`dby wechat pipeline`（1.x 的 pipeline.mjs 与 preprocess-and-publish.mjs 原样搬入；真发布要 `--confirm`，`--dry-run` / `--render-only` 不需要）、`dby wechat fetch-article`（本地）。
 - 新增 `dby render` / `dby preview`：调服务端渲染路由（免费），只写 HTML 文件（preview 另写 375px 预览页），JSON 不带 HTML；离线退出码 5、无凭证退出码 4，不回退任何本地渲染。
 - 值类 flag 支持重复给出（如 `--ref a.png --ref b.png`）。
+- 单一运行时（design D5）：`dby deai scan|baseline`、`dby rewrite rules`、`dby feedback prepare|submit|keep|reset-id` 取代三份 Python 脚本，全部本地命令；deai 与 Python 逐字段对拍一致后冻结快照，输出不含任何分数字段。
 

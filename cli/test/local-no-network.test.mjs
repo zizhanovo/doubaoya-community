@@ -30,6 +30,29 @@ export const LOCAL_INVOCATIONS = {
     writeFileSync(png, solidPng(470, 300));
     return ["image", "crops", png, "--json"];
   },
+  "deai scan": (dir) => {
+    writeFileSync(path.join(dir, "稿.md"), "在当今这个时代，值得注意的是，它不是工具，而是生产力。\n");
+    return ["deai", "scan", "--file", path.join(dir, "稿.md"), "--json"];
+  },
+  "deai baseline": (dir) => {
+    writeFileSync(path.join(dir, "范文.md"), "上周三下午，我在楼下等了 40 分钟。\n");
+    return ["deai", "baseline", path.join(dir, "范文.md"), "--out", path.join(dir, "基线.json"), "--json"];
+  },
+  "rewrite rules": () => ["rewrite", "rules", "小红书,抖音", "--json"],
+  "feedback prepare": (dir) => {
+    writeFileSync(path.join(dir, "report.md"), "# 反馈\n\n## 操作序列\n1. 跑了 dby deai scan\n");
+    return ["feedback", "prepare", "--category", "bug", "--report", path.join(dir, "report.md"), "--out", path.join(dir, "payload.json"), "--scope-root", dir, "--json"];
+  },
+  // 端点未配置（测试 env 不带 DOUBAOYA_FEEDBACK_URL）⇒ 落本地、零出网、退出码 0
+  "feedback submit": (dir) => {
+    writeFileSync(path.join(dir, "payload.json"), JSON.stringify({ category: "bug", report: "# 反馈", machineFacts: {}, installId: "0".repeat(32), skillVersion: "doubaoya-cli/test" }));
+    return ["feedback", "submit", "--file", path.join(dir, "payload.json"), "--scope-root", dir, "--json"];
+  },
+  "feedback keep": (dir) => {
+    writeFileSync(path.join(dir, "payload.json"), JSON.stringify({ category: "idea", report: "# 想法", machineFacts: {}, installId: "0".repeat(32), skillVersion: "doubaoya-cli/test" }));
+    return ["feedback", "keep", "--file", path.join(dir, "payload.json"), "--scope-root", dir, "--json"];
+  },
+  "feedback reset-id": (dir) => ["feedback", "reset-id", "--scope-root", dir, "--json"],
   // 只打用户给的那个网址（这里是测试里起的本地网页服务，绊线放行它），不打 doubaoya。
   "wechat fetch-article": (dir, { pageUrl }) => ({
     argv: ["wechat", "fetch-article", "--url", pageUrl, "--out", path.join(dir, "ref.html"), "--json"],
