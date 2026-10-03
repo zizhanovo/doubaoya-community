@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-03T01:46:26.241530+00:00",
+  "generatedAt": "2026-10-03T01:47:35.826272+00:00",
   "ref": "release-20260920-1241",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "1.16.21",
+  "productVersion": "1.16.22",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -824,6 +824,7 @@
       "status": "active",
       "knownHashes": [
         "0cad2a8a39b0",
+        "107559fafd19",
         "136713c10810",
         "156c3151a72a",
         "1f85fe64a731",
@@ -882,9 +883,9 @@
       "versions": [
         {
           "version": "4.6.0",
-          "hash": "e3cdb034f5e2",
+          "hash": "107559fafd19",
           "ref": "release-20260920-1241",
-          "releasedAt": "2026-10-03T01:46:23.150395+00:00",
+          "releasedAt": "2026-10-03T01:47:32.833092+00:00",
           "changelog": "banned check 支持长文案：上游单次 content 上限 2000 字，超出时按段落/句末标点无损分段后逐段调用，计费 = 平台数 × 段数（确认态逐段列明），多段结果合并成一个平台条目；≤2000 字的老用法一字不变",
           "changelogSource": "user"
         },
@@ -1285,6 +1286,12 @@
           "version": "",
           "date": "2026-09-27",
           "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+        },
+        {
+          "hash": "e3cdb034f5e2",
+          "version": "4.6.0",
+          "date": "2026-10-03",
+          "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
         }
       ]
     },
@@ -1483,6 +1490,12 @@
           "version": "3.0.0",
           "date": "2026-09-27",
           "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
+        },
+        {
+          "hash": "1aef6afa29fc",
+          "version": "2.1.0",
+          "date": "2026-10-03",
+          "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
         }
       ]
     },

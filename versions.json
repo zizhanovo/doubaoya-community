@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-03T01:46:26.241530+00:00",
+  "generatedAt": "2026-10-03T01:47:35.826272+00:00",
   "ref": "release-20260920-1241",
   "skills": {
     "dby": "doubaoya-skill/dby@2e9a12d54070",
-    "dby-api": "doubaoya-skill/dby-api@e3cdb034f5e2",
+    "dby-api": "doubaoya-skill/dby-api@107559fafd19",
     "dby-banned-words": "doubaoya-skill/dby-banned-words@1aef6afa29fc",
     "dby-charter": "doubaoya-skill/dby-charter@f9a880fe14ca",
     "dby-deai": "doubaoya-skill/dby-deai@fc0aa01cc498",
