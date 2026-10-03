@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-10T09:04:57.505483+00:00",
+  "generatedAt": "2026-10-03T01:46:26.241530+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -80,6 +80,7 @@
       "75694e183386",
       "7ec123c4ccf5",
       "8a3dde169bfd",
+      "9adf935d1f62",
       "9c4f8edfa780",
       "9f20f18cca31",
       "a4d72b56310c",
@@ -88,6 +89,7 @@
       "c820f9aa0c6d",
       "d5cfe53c21dd",
       "dd507e5dc624",
+      "deea753646bb",
       "dfcfb6b9154e",
       "e0ef82da64ee",
       "e562a7c121c6",
@@ -102,22 +104,31 @@
       "156c3151a72a",
       "1f85fe64a731",
       "2e02904d7d96",
+      "3ab9f013097a",
       "3fca623fc119",
+      "4e763e9e71a5",
       "50cdd6a062be",
+      "52d8b49fac40",
       "5356a8ef8e99",
       "53d2c3fb1e80",
       "596f05f4d505",
       "5b22bb800679",
+      "5c596c95c435",
       "5f6a8c8b5a66",
       "67323ef8ec64",
       "6c0cb11d4b3b",
       "7515a4eb8849",
+      "7cf0c6f667e3",
       "842bc271ca8d",
+      "843ce412816f",
+      "865c4aa8059b",
       "91af3690c5ca",
       "94592136ac90",
       "96330502a048",
+      "9ac116b6f3d8",
       "9b545f2f647a",
       "9b9682a7a602",
+      "9bf9100c685a",
       "9e7dfac2a9a1",
       "9f1137a517a9",
       "a1ef96fb16f6",
@@ -131,16 +142,22 @@
       "bb0e6ad5cb98",
       "bcf26b4eca1f",
       "c9e472325e63",
+      "ca6860097edf",
+      "cbc0c21c5d7a",
       "cc30a05cdb0b",
       "ce8326e3dbd2",
+      "d01e1ab7a87f",
       "d6ce3852f9e1",
       "d7e863f5577a",
+      "e3cdb034f5e2",
       "e603a50797a0",
       "ed6a2f86bffc",
-      "f0871dc722f5"
+      "f0871dc722f5",
+      "fe314c97690b"
     ],
     "dby-banned-words": [
       "0ca3048ae86c",
+      "1aef6afa29fc",
       "1cce17094948",
       "28ec4031a23e",
       "3b6f51b83da1",
@@ -153,17 +170,21 @@
       "b3b6c7500194",
       "cb71ee176054",
       "d1634c678daa",
+      "dfe555f7a852",
       "e05d7674b9aa",
       "edadb15db5ad",
       "f124f3174c56",
-      "f2ae13c9d572"
+      "f2ae13c9d572",
+      "fc68e3a94b40"
     ],
     "dby-charter": [
       "069d68bd5b30",
       "0f62651630ed",
       "16456393e483",
       "1ef3638615ce",
+      "24485adbfbfe",
       "289a7e8efa11",
+      "35830b4190b7",
       "50583c0c0518",
       "5c113e2fefe3",
       "7d8ce219936b",
@@ -182,17 +203,24 @@
       "f9a880fe14ca"
     ],
     "dby-deai": [
+      "164c512b42d3",
+      "18727a7ed695",
       "1e19b29c4f68",
       "21756004f245",
       "316f2d2c8c7e",
       "48c04d2ad062",
       "7f432da65f47",
+      "84ed6378362b",
       "bcbbab0055cd",
       "dc1aa44b50b6",
+      "e29315b2a06e",
       "fc0aa01cc498"
     ],
     "dby-feedback": [
-      "7b5a56fdd05a"
+      "47e7e48e2d4d",
+      "7b5a56fdd05a",
+      "cb8b00794d7e",
+      "f4527467e6e4"
     ],
     "dby-gateway": [
       "04e33c971797",
@@ -204,11 +232,14 @@
       "3a88323fc388",
       "4c71eb312624",
       "64220c7bed79",
+      "76bf82dfed22",
       "7e9c0e95aa56",
       "7e9d8e2c7fa6",
       "83905537e90d",
       "89f720d429f3",
       "9818d9fd10e5",
+      "a32212b0bfe0",
+      "af6fea66848e",
       "b798cca6be87",
       "e19a51009f8d",
       "e1dc9e3d282e",
@@ -220,6 +251,7 @@
       "000e1d567391",
       "06cc8d2245f3",
       "098a5bb943f2",
+      "136cc206931b",
       "189afc24c465",
       "219886ee0a77",
       "25fcd0d0d1ba",
@@ -228,6 +260,7 @@
       "2de49fbf6254",
       "329fe617871a",
       "47bee0597b99",
+      "47c3002567cb",
       "542ea41d2b75",
       "5a21a05f4764",
       "5f652a0700eb",
@@ -244,7 +277,8 @@
       "d096f50d3a79",
       "ee25802f9801",
       "ee929a10d3cb",
-      "f80e00b562e4"
+      "f80e00b562e4",
+      "fe0b7a0571fc"
     ],
     "dby-publish": [
       "00fc7c578914",
@@ -259,6 +293,7 @@
       "31299f27be57",
       "351676ef5646",
       "3b0d4d986952",
+      "3e252ef52890",
       "487cb9172be9",
       "4aa74d5cfde5",
       "4d2cafc48bca",
@@ -270,9 +305,11 @@
       "6bcccc2e63e6",
       "76caa2a60c4e",
       "87b714968274",
+      "90a86b766ece",
       "915ea7bae745",
       "93bdab968731",
       "aa22e0e657ae",
+      "aab50768d7dc",
       "afeb6e003c90",
       "b3d4d48e9f81",
       "bede4b73e27b",
@@ -286,6 +323,7 @@
       "e6cc1f2a871c",
       "e7a976940e02",
       "e88557062157",
+      "e8f39fb996de",
       "ec58027fccdc",
       "ee8e7d7602f1",
       "eff5ef724697",
@@ -295,9 +333,13 @@
     "dby-rewrite": [
       "049562a1d1aa",
       "0ec795bc6772",
+      "11a2ff5bcb44",
+      "1a0a7a3b0752",
       "27129afe12be",
+      "480cf943df39",
       "61ba5adaec10",
       "64eb94c6e436",
+      "8a9e84e32795",
       "b411a624fcfe",
       "db8a6e744f97",
       "dbc228e09916",
@@ -307,7 +349,10 @@
     ],
     "dby-theme": [
       "0a8f19dad810",
+      "12d510fb8dd3",
       "2023466e2e9f",
+      "249c0edf2825",
+      "5551acfb55d3",
       "895210b408a4",
       "9c3df5a11c54",
       "a1b7ed58c9fe",
@@ -326,7 +371,9 @@
       "069172b7e331",
       "080aed4c835c",
       "0f57ebd82f3b",
+      "1b8a56d4f989",
       "269a56ceb3b9",
+      "279891452575",
       "29458b8b722e",
       "2a8c66b15aa2",
       "35a0d058b1c6",
@@ -379,6 +426,7 @@
       "acc07fe1a5e9",
       "b40023ac688b",
       "b76d9a964f23",
+      "be547932a8f4",
       "c2fc81af9a24",
       "cadb7e558fce",
       "cfa6a357b46d",
@@ -386,6 +434,7 @@
       "e039d2615adb",
       "e75c09cb73fd",
       "ef4f177d9b41",
+      "f08c1f4cc2c7",
       "f61cb9659a4a",
       "fc92fb4bf92f"
     ],
@@ -2468,6 +2517,18 @@
         "version": "1.8.0",
         "date": "2026-09-09",
         "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
+      },
+      {
+        "hash": "9adf935d1f62",
+        "version": "1.9.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-api,dby-gateway,dby)!: skills 薄层化——只经 dby CLI 调用，删掉 curl 与包内脚本调用"
+      },
+      {
+        "hash": "deea753646bb",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "dby-api": [
@@ -2710,6 +2771,90 @@
         "version": "4.4.0",
         "date": "2026-09-10",
         "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
+      },
+      {
+        "hash": "9f1137a517a9",
+        "version": "4.5.0",
+        "date": "2026-09-10",
+        "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
+      },
+      {
+        "hash": "3ab9f013097a",
+        "version": "5.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-api,dby-gateway,dby)!: skills 薄层化——只经 dby CLI 调用，删掉 curl 与包内脚本调用"
+      },
+      {
+        "hash": "4e763e9e71a5",
+        "version": "4.9.1",
+        "date": "2026-09-27",
+        "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
+      },
+      {
+        "hash": "52d8b49fac40",
+        "version": "4.9.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): 注册 deai/rewrite/feedback 三组命令并同步 skill 镜像"
+      },
+      {
+        "hash": "5c596c95c435",
+        "version": "4.9.2",
+        "date": "2026-09-27",
+        "subject": "fix(cli): dby login/logout 按主仓设备码端点的实际应答对齐"
+      },
+      {
+        "hash": "7cf0c6f667e3",
+        "version": "4.8.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): 生图、流水线、抓参考文章迁成子命令，新增 render/preview"
+      },
+      {
+        "hash": "843ce412816f",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(cli): dby skills install|update|status|migrate——一方安装器把随包 skills 写进宿主目录（tasks 6.1 / 6.3）"
+      },
+      {
+        "hash": "865c4aa8059b",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(cli,dby-image): 新增 dby image describe——恢复 1.x gen.mjs --describe 的入参自动对账"
+      },
+      {
+        "hash": "9ac116b6f3d8",
+        "version": "4.10.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): dby feedback submit --file 直接接受报告 .md"
+      },
+      {
+        "hash": "9bf9100c685a",
+        "version": "4.6.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): cli/ 恢复为 npm 包源 @doubaoya/cli，skill 目录改为它的镜像"
+      },
+      {
+        "hash": "ca6860097edf",
+        "version": "4.7.0",
+        "date": "2026-09-27",
+        "subject": "feat(cli): 凭证两层解析 + dby login/logout 设备码客户端"
+      },
+      {
+        "hash": "cbc0c21c5d7a",
+        "version": "4.9.3",
+        "date": "2026-09-27",
+        "subject": "feat(cli): 同一路由的同义命令改为 alias，dby routes 满足「同一路由至多一条 route 命令」"
+      },
+      {
+        "hash": "d01e1ab7a87f",
+        "version": "4.10.1",
+        "date": "2026-09-27",
+        "subject": "fix(cli): dby charter put 认得 charter get --for-edit 重定向后的信封"
+      },
+      {
+        "hash": "fe314c97690b",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "dby-banned-words": [
@@ -2814,6 +2959,18 @@
         "version": "2.0.0",
         "date": "2026-09-06",
         "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
+        "hash": "dfe555f7a852",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+      },
+      {
+        "hash": "fc68e3a94b40",
+        "version": "3.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
       }
     ],
     "dby-charter": [
@@ -2942,6 +3099,18 @@
         "version": "1.3.0",
         "date": "2026-09-06",
         "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
+        "hash": "24485adbfbfe",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+      },
+      {
+        "hash": "35830b4190b7",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-write,dby-charter,dby-deai,dby-rewrite,dby-feedback)!: skills 薄层化——只经 dby CLI 调用"
       }
     ],
     "dby-deai": [
@@ -2992,6 +3161,30 @@
         "version": "1.3.0",
         "date": "2026-09-06",
         "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
+        "hash": "164c512b42d3",
+        "version": "2.1.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-write,dby-charter,dby-deai,dby-rewrite,dby-feedback)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
+        "hash": "18727a7ed695",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
+      },
+      {
+        "hash": "84ed6378362b",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+      },
+      {
+        "hash": "e29315b2a06e",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
       }
     ],
     "dby-feedback": [
@@ -3000,6 +3193,24 @@
         "version": "1.0.0",
         "date": "2026-08-30",
         "subject": "feat(dby-feedback): 新增反馈包 —— 现场 agent 当场写成完整反馈，用户过目后提交"
+      },
+      {
+        "hash": "47e7e48e2d4d",
+        "version": "2.1.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-write,dby-charter,dby-deai,dby-rewrite,dby-feedback)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
+        "hash": "cb8b00794d7e",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
+      },
+      {
+        "hash": "f4527467e6e4",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "dby-gateway": [
@@ -3112,10 +3323,34 @@
         "subject": "fix(dby-api,dby-gateway): 「连不上」与「连上后断」分成两个错误码"
       },
       {
+        "hash": "89f720d429f3",
+        "version": "1.5.0",
+        "date": "2026-09-10",
+        "subject": "feat(dby-api,dby-gateway): 请求层按环境变量自己走代理"
+      },
+      {
         "hash": "fddd63a12a29",
         "version": "1.4.0",
         "date": "2026-09-10",
         "subject": "fix(dby-api,dby-gateway): DNS 失败时直接点破「curl 通、脚本不通」是代理"
+      },
+      {
+        "hash": "76bf82dfed22",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "docs(dby-gateway): 能力索引按生产目录补齐，protocol.md 改为只在绕开 dby 时必读"
+      },
+      {
+        "hash": "a32212b0bfe0",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-api,dby-gateway,dby)!: skills 薄层化——只经 dby CLI 调用，删掉 curl 与包内脚本调用"
+      },
+      {
+        "hash": "af6fea66848e",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "dby-image": [
@@ -3286,6 +3521,24 @@
         "version": "2.3.0",
         "date": "2026-09-10",
         "subject": "feat(dby-image): 出图按模型分档计价，且包内不写死点数"
+      },
+      {
+        "hash": "136cc206931b",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(cli,dby-image): 新增 dby image describe——恢复 1.x gen.mjs --describe 的入参自动对账"
+      },
+      {
+        "hash": "47c3002567cb",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+      },
+      {
+        "hash": "fe0b7a0571fc",
+        "version": "3.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
       }
     ],
     "dby-publish": [
@@ -3552,6 +3805,30 @@
         "version": "5.1.0",
         "date": "2026-09-09",
         "subject": "feat(skills)!: 重建 dby-image —— 服务端生图能力恢复，请求改走共享请求层"
+      },
+      {
+        "hash": "3e252ef52890",
+        "version": "7.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
+        "hash": "90a86b766ece",
+        "version": "6.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,tools)!: 删除 account-verify 的第二套 key 发现，加单一 key 发现闸"
+      },
+      {
+        "hash": "aab50768d7dc",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
+      },
+      {
+        "hash": "e8f39fb996de",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "dby-rewrite": [
@@ -3620,6 +3897,30 @@
         "version": "1.4.0",
         "date": "2026-09-06",
         "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+      },
+      {
+        "hash": "11a2ff5bcb44",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
+      },
+      {
+        "hash": "1a0a7a3b0752",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+      },
+      {
+        "hash": "480cf943df39",
+        "version": "2.1.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-write,dby-charter,dby-deai,dby-rewrite,dby-feedback)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
+        "hash": "8a9e84e32795",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-deai,dby-rewrite,dby-feedback)!: 删除三份 Python 脚本，单一运行时只剩 Node"
       }
     ],
     "dby-theme": [
@@ -3700,6 +4001,24 @@
         "version": "1.4.4",
         "date": "2026-08-31",
         "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+      },
+      {
+        "hash": "12d510fb8dd3",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
+        "hash": "249c0edf2825",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+      },
+      {
+        "hash": "5551acfb55d3",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
       }
     ],
     "dby-update": [
@@ -3918,6 +4237,18 @@
         "version": "4.1.1",
         "date": "2026-08-31",
         "subject": "test(skills): 补齐 4 个包的触发层判据 —— 唯一会改用户磁盘的包此前在裸奔"
+      },
+      {
+        "hash": "1b8a56d4f989",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(dby-update)!: 改薄为 dby skills 的指引——先 status 看清单，再 migrate 或 update（tasks 6.7）"
+      },
+      {
+        "hash": "279891452575",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "dby-write": [
@@ -4094,6 +4425,18 @@
         "version": "1.13.0",
         "date": "2026-09-06",
         "subject": "refactor(skills): write/charter/publish 三包的 HTTP 全部改走 dby-api 的请求层，退役两个 Python 入口"
+      },
+      {
+        "hash": "be547932a8f4",
+        "version": "2.0.0",
+        "date": "2026-09-27",
+        "subject": "feat(dby-write,dby-charter,dby-deai,dby-rewrite,dby-feedback)!: skills 薄层化——只经 dby CLI 调用"
+      },
+      {
+        "hash": "f08c1f4cc2c7",
+        "version": "",
+        "date": "2026-09-27",
+        "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
       }
     ],
     "doubao-websearch": [

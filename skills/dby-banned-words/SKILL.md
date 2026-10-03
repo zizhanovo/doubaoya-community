@@ -1,8 +1,8 @@
 ---
 name: dby-banned-words
 description: 多平台违禁词检测——一段文案，一次性比对小红书、抖音、公众号三大平台的审核口径，输出逐平台风险对照表与一版全平台都安全的改写。触发词：多平台违禁词、全平台违禁词、公众号违禁词、跨平台合规、合规检测、过审、违禁词检测、敏感词、违规词、极限词、绝对化用语、限流自查、审核不过、广告法。不做：改文风或换平台调性走 dby-rewrite；从零写正文走 dby-write。
-version: 2.0.0
-changelog: BREAKING：删除 scripts/check_multi.py，改用 `dby banned check <文案> --platforms …`（逐平台各计费一次，默认停在确认态、--confirm 放行）；新增 scripts/dby.mjs 引导壳；compatibility 由 Python 改 Node ≥18
+version: 2.1.0
+changelog: 长文案自动分段：上游单次 content 上限 2000 字，超出时按段落/句末无损分段、计费 = 平台数 × 段数（确认态逐段列明），多段结果合并为一个平台条目；≤2000 字的老用法一字不变
 compatibility: >-
   需要 Node ≥18（`dby banned check` 走 dby-api 的 CLI，零依赖不装 npm 包）。
   需要环境变量 DOUBAOYA_API_KEY 与对 https://doubaoya.com 的 HTTPS 出网（检测按平台扇出，计费）。
@@ -16,13 +16,14 @@ compatibility: >-
 
 ## 流程
 
-1. **收文案**。
+1. **收文案**。整篇文章直接给，不用自己截断——CLI 会自动分段（见下）。
 2. **逐平台检测**——对 `xiaohongshu`、`douyin`、`gongzhonghao` 各调用**一次**都爆鸭接口。
    用户没指定平台时先问一句要哪几个，默认三平台各计费一次。
 3. **风险对照**——把各平台结果并排成一张表：平台 / 判定 / 风险类别 / 命中词 / 建议。
 4. **统一改写**——本鸭综合所有平台的**营销语境命中**，给出**一版改完即可全平台发布**的安全文案。
 
 > **每个平台是一次独立计费调用**。用户只关心某几个平台时用 `--platforms` 缩小范围。
+> 文案超过 2000 字时每次调用还会再按段拆开，**计费次数 = 平台数 × 段数**，确认态会逐段列出。
 
 ---
 
@@ -62,6 +63,9 @@ node "$SKILL_DIR/scripts/dby.mjs" banned check "你的文案" --platforms xiaoho
 ```
 
   `platform` 取值依次迭代：`"xiaohongshu"`、`"douyin"`、`"gongzhonghao"`。
+
+  🔴 `content` 单次**最多 2000 字**（上游硬上限，服务端在扣点前就 400 拒掉）——长文交给 CLI
+  自动分段，见 [`references/long-text.md`](references/long-text.md)。
 
 - 返回信封：
 
@@ -119,13 +123,15 @@ node "$SKILL_DIR/scripts/dby.mjs" banned check "你的文案" --platforms xiaoho
 - **确实没命中**：拿到了 `content` 或 `originalContent`（证明检测跑过了），且上面两条都不成立。
 - **没拿到结果**：该平台条目里有 `error`，或 `content` 与 `originalContent` 都缺失/为 null。
   🔴 这时该平台一律标「检测失败」，**绝不能填成「合规」/「low」**，不替用户下合规结论。
+- **只覆盖了一部分**（长文案有段失败）：条目同时带 `error`（`BANNED_SEGMENT_FAILED`）与
+  `content: null` ⇒ 同样填「检测失败」，读法见 [`references/long-text.md`](references/long-text.md)。
 
 ---
 
 ## 错误处理
 
-CLI 逐平台捕获网络 / HTTP 错误，把错误写进对应平台条目并继续其它平台：
-**单平台失败不影响其余平台**，报错码怎么办照 `dby-gateway/references/protocol.md` 第 6 条。
+CLI 逐平台、逐段捕获网络 / HTTP 错误，把错误写进对应条目并继续其它平台与其它段：
+**单平台、单段失败不影响其余**，报错码怎么办照 `dby-gateway/references/protocol.md` 第 6 条。
 问题绕不过去、或想吐槽 → 可提一句用 `dby-feedback` 当场写成反馈（可忽略，不再重复提）。
 
 ---
