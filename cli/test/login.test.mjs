@@ -278,3 +278,42 @@ test("没登录过就 logout：退出码 0，说明不碰环境变量", async ()
   assert.equal(data.status, "not_logged_in");
   assert.equal(data.envKeyPresent, true);
 });
+
+// ── 自动开浏览器（best-effort，BROWSER → 平台默认；非 TTY 不拉）──
+
+test("openBrowser：BROWSER 覆盖优先，URL 作唯一参数；平台默认 darwin→open / 其它→xdg-open；spawn 同步抛错不算失败", async () => {
+  const { openBrowser } = await import("../src/commands/auth.mjs");
+  const calls = [];
+  const fakeSpawn = (cmd, args) => {
+    calls.push([cmd, args]);
+    return { on() {} };
+  };
+  assert.equal(openBrowser("https://x.example", { env: { BROWSER: "/custom/browser" }, spawnFn: fakeSpawn }), "/custom/browser");
+  assert.deepEqual(calls.at(-1), ["/custom/browser", ["https://x.example"]]);
+  assert.equal(openBrowser("https://x.example", { env: {}, platform: "darwin", spawnFn: fakeSpawn }), "open");
+  assert.equal(openBrowser("https://x.example", { env: {}, platform: "linux", spawnFn: fakeSpawn }), "xdg-open");
+  assert.equal(openBrowser("https://x.example", { env: {}, platform: "win32", spawnFn: fakeSpawn }), "cmd");
+  assert.deepEqual(calls.at(-1), ["cmd", ["/c", "start", "", "https://x.example"]]);
+  const throwing = () => {
+    throw new Error("sync spawn failure");
+  };
+  assert.equal(openBrowser("https://x.example", { env: {}, spawnFn: throwing }), null);
+});
+
+test("非 TTY（agent 调用）不拉浏览器：BROWSER 指到标记脚本也不会被调用", async () => {
+  const { mock } = await deviceServer(["grant"]);
+  try {
+    const home = freshHome();
+    const marker = path.join(home, "browser-called");
+    const script = path.join(home, "fake-browser.sh");
+    const { writeFileSync, chmodSync } = await import("node:fs");
+    writeFileSync(script, `#!/bin/sh\necho "$1" > "${marker}"\n`);
+    chmodSync(script, 0o755);
+    const r = await runCli(["login", "--json"], { env: env(mock, home, { BROWSER: script }) });
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(existsSync(marker), false, "agent/非交互场景不该拉浏览器");
+    assertNoKey(r);
+  } finally {
+    await mock.close();
+  }
+});

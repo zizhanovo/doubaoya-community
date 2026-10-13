@@ -21,5 +21,6 @@ CLI 与随包分发的 dby-* skills 共用这一个版本号（dby-cli-rebuild d
 - ClawHub 上架改为从 npm 包内容生成（`tools/clawhub_publish.py` 默认先隔离 pack 再取包内 `skills/<slug>`，或 `--package` 指定解包目录）：每个 skill 的 `--version` 都等于包版本，包内 SKILL.md 版本漂移直接拒绝。
 - 新增 `dby image describe`（`api describe` 的 alias，同一组路由）：现拉生图能力的入参规格与单价，并把字段与可选模型跟 CLI 的认知对账，对不上退出码 3（`CONTRACT_DRIFT`），恢复 1.x `gen.mjs --describe` 的自动对账。
 - 新增 `dby draft rename <id> <标题>`（PATCH /api/drafts/:id 的一对一命令）：只改标题、不产生新版本；空标题本地退 2 不发请求，长度上限归服务端。
+- `dby login` 在交互终端 best-effort 自动打开确认页（`BROWSER` 环境变量可覆盖，darwin `open` / win32 `cmd /c start` / 其它 `xdg-open`）：打开的还是**不带码**的固定页（D9 防钓鱼口径不变），拉不起来自动退回「手动打开」；非 TTY（agent 调用）不拉。
 - `dby banned check` 支持长文案：上游单次 `content` 上限 2000 字，超出时按段落 / 句末标点无损分段后逐段调用，计费 = 平台数 × 段数（确认态逐段列明），多段结果合并成一个平台条目（`segments` 逐段给出）；某段失败时该平台条目带 `BANNED_SEGMENT_FAILED` 且 `content` 为 null，不能当通过；≤2000 字的老用法一字不变。
 

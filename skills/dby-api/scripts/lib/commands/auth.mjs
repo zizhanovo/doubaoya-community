@@ -1,7 +1,8 @@
 // auth.mjs — `dby login` / `dby logout`（spec dby-cli-auth「设备码登录」「登出即吊销」，design D9）。
 //
 // login：向服务端要一对（设备码、用户码），打印**用户码**与**不含码**的确认网址，让用户在已登录的
-//   网页上手动输入并批准；CLI 按 RFC 8628 轮询换 key，写进 ~/.doubaoya/credentials（0600）。
+//   网页上手动输入并批准；交互终端下 best-effort 自动打开该确认页（BROWSER 可覆盖，拉不起来退回手动）；
+//   CLI 按 RFC 8628 轮询换 key，写进 ~/.doubaoya/credentials（0600）。
 //   · TTY：阻塞到批准 / 拒绝 / 过期为止。
 //   · 非 TTY（agent 调用）：单次命令最多等约 100 秒，没等到就以 LOGIN_PENDING（退出码 3，业务态）
 //     返回用户码与网址；之后 `dby login --continue` 接着轮询。轮询状态存 ~/.doubaoya/login-pending.json（0600）。
@@ -13,6 +14,7 @@
 // 测试旋钮：DBY_LOGIN_TIME_SCALE（默认 1）同比缩放所有等待（轮询间隔、非 TTY 的 100 秒上限），
 //   只为让契约测试不必真等 5 秒；生产不设它。
 
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { EXIT, DbyError } from "../errors.mjs";
@@ -64,11 +66,45 @@ function readPending() {
 
 const clearPending = () => rmSync(pendingPath(), { force: true });
 
-function instructions(p) {
+function instructions(p, openedWith) {
+  const head = openedWith
+    ? `已尝试打开浏览器（${openedWith}）；没弹出来的话，手动打开 ${p.verificationUri}`
+    : `在**已登录 doubaoya.com** 的浏览器里打开 ${p.verificationUri}`;
   return (
-    `在**已登录 doubaoya.com** 的浏览器里打开 ${p.verificationUri}，手动输入：${p.userCode}\n` +
+    `${head}，手动输入：${p.userCode}\n` +
     `（${Math.max(0, Math.round((Date.parse(p.expiresAt) - Date.now()) / 60000))} 分钟内有效；只在你自己刚运行 dby login 时批准。）`
   );
+}
+
+/**
+ * best-effort 拉起浏览器打开确认页（D9 允许的形态：CLI 自己打开**不带码**的固定页）。
+ * 顺序：BROWSER 环境变量（社区惯例的覆盖口）→ 平台默认（darwin: open / win32: cmd /c start / 其它: xdg-open）。
+ * 拉不起来（无此命令、无显示环境）不算登录失败——降级为 instructions 里的「手动打开」。
+ * 返回值是尝试用的命令名（给提示语用），不是成功与否的承诺：spawn 的 ENOENT 走异步 error 事件。
+ */
+export function openBrowser(url, { env = process.env, platform = process.platform, spawnFn = spawn } = {}) {
+  const browser = (env.BROWSER ?? "").trim();
+  let command;
+  let args;
+  if (browser) {
+    command = browser;
+    args = [url];
+  } else if (platform === "darwin") {
+    command = "open";
+    args = [url];
+  } else if (platform === "win32") {
+    command = "cmd";
+    args = ["/c", "start", "", url];
+  } else {
+    command = "xdg-open";
+    args = [url];
+  }
+  try {
+    spawnFn(command, args, { stdio: "ignore" }).on("error", () => {});
+    return command;
+  } catch {
+    return null;
+  }
 }
 
 function pendingError(p) {
@@ -194,7 +230,9 @@ export async function login(ctx, { continueLogin = false } = {}) {
     writeJsonPrivate(pendingPath(), p);
   }
   // 用户码与网址永远走 stderr（人要看见）；JSON 模式下 LOGIN_PENDING 信封里也带着。
-  process.stderr.write(`${instructions(p)}\n`);
+  // 浏览器只在交互终端拉起（agent/非 TTY 场景由 agent 转述网址，机器上多半也没有浏览器）。
+  const openedWith = ctx.interactive ? openBrowser(p.verificationUri) : null;
+  process.stderr.write(`${instructions(p, openedWith)}\n`);
   const granted = await poll(ctx, p, { maxWaitMs });
   return finish(ctx, p, granted);
 }

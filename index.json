@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T02:14:57.147131+00:00",
+  "generatedAt": "2026-10-13T02:35:18.465739+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -835,6 +835,7 @@
         "107559fafd19",
         "136713c10810",
         "156c3151a72a",
+        "1c1e9d49b6a8",
         "1f85fe64a731",
         "2e02904d7d96",
         "3ab9f013097a",
@@ -893,9 +894,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "7f61c18475ff",
+          "hash": "1c1e9d49b6a8",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-10-13T02:14:30.973703+00:00",
+          "releasedAt": "2026-10-13T02:35:14.577072+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -1308,6 +1309,12 @@
           "version": "4.6.0",
           "date": "2026-10-03",
           "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
+        },
+        {
+          "hash": "7f61c18475ff",
+          "version": "2.0.0-next.0",
+          "date": "2026-10-13",
+          "subject": "feat(cli): dby draft rename 移植到 2.x——PATCH /api/drafts/:id 的一对一命令"
         },
         {
           "hash": "e20476a4cac4",
