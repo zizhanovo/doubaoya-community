@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T02:35:18.465739+00:00",
+  "generatedAt": "2026-10-13T03:58:16.399078+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -108,6 +108,7 @@
       "2e02904d7d96",
       "3ab9f013097a",
       "3fca623fc119",
+      "49300113ae2d",
       "4e763e9e71a5",
       "50cdd6a062be",
       "52d8b49fac40",
@@ -2872,6 +2873,12 @@
         "version": "4.6.0",
         "date": "2026-10-03",
         "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
+      },
+      {
+        "hash": "1c1e9d49b6a8",
+        "version": "2.0.0-next.0",
+        "date": "2026-10-13",
+        "subject": "feat(cli): dby login 交互终端自动打开确认页"
       },
       {
         "hash": "7f61c18475ff",

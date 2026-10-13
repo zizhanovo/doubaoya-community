@@ -317,3 +317,171 @@ test("非 TTY（agent 调用）不拉浏览器：BROWSER 指到标记脚本也�
     await mock.close();
   }
 });
+
+// ── 回环授权 + 并行竞速（dby-login-loopback 4.3）──────────────────────────────
+// runCli 的子进程不是 TTY，竞速路径用 DBY_LOGIN_FORCE_RACE=1 触发（openBrowser 仍受
+// ctx.interactive 门控，测试里不会真弹浏览器）。「浏览器」由 mock 的 loopback/start 处理器
+// fire-and-forget 地回打 CLI 的本机监听来模拟。服务端 PKCE 反例（只持 code 换不出 key）钉在
+// 主仓 loopback.postgres.test.ts 的真库里——这里钉的是客户端形状：verifier 与 challenge 对得上。
+
+const LOOP_KEY = "dyh_LoopWinnerKey1234567890abcdef";
+
+import { createHash } from "node:crypto";
+
+function sha256b64u(s) {
+  return createHash("sha256").update(s, "utf8").digest("base64url");
+}
+
+/**
+ * 竞速假服务端。loopback ∈ grant（回调正确 code）| deny | invalid_token（兑换被拒）|
+ * start_fail | late（设备码赢后才回调——应被静默丢弃）。cbDelayMs 控制回调时机。
+ */
+async function raceServer({ loopback = "grant", deviceScript = ["pending"], cbDelayMs = 120 } = {}) {
+  const state = { loopbackStarts: [], loopbackTokens: [], pkceShapeOk: null, probes: [] };
+  const mock = await startMock({
+    "POST /api/cli/device/start": () => ok({ deviceCode: "dev-race", userCode: "RACE-CODE", verificationUri: "https://doubaoya.com/cli/activate", expiresIn: 600, interval: 5 }),
+    "POST /api/cli/device/token": (req, url, body) => {
+      state.devicePolls = (state.devicePolls ?? 0) + 1;
+      const step = deviceScript[Math.min(state.devicePolls - 1, deviceScript.length - 1)];
+      if (step === "grant") {
+        return { status: 200, json: ok({ apiKey: NEW_KEY, key: { id: "k1", name: "dby login", prefix: NEW_KEY.slice(0, 8) }, user: { id: "u1", email: "me@example.com" } }) };
+      }
+      const code = step === "pending" ? "authorization_pending" : step;
+      return { status: 400, json: { success: false, error: { code, message: code } } };
+    },
+    "POST /api/cli/loopback/start": (req, url, body) => {
+      state.loopbackStarts.push(body);
+      if (loopback === "start_fail") return { status: 500, json: { success: false, error: { code: "INTERNAL", message: "x" } } };
+      const { port, state: cbState } = body;
+      // 模拟浏览器（fire-and-forget）：先打三个坏探针（错 state / 非 GET / 异路径），
+      // CLI 都必须忽略并继续等待；再按需回调。
+      const base = `http://127.0.0.1:${port}/cb`;
+      const probe = (u, init) => fetch(u, init).then((r) => state.probes.push(r.status)).catch(() => state.probes.push(0));
+      (async () => {
+        await probe(`${base}?code=evil&state=WRONG`);
+        await probe(`${base}?code=evil&state=${encodeURIComponent(cbState)}`, { method: "POST" });
+        await probe(`http://127.0.0.1:${port}/other?state=${encodeURIComponent(cbState)}`);
+        if (loopback === "deny") {
+          await probe(`${base}?error=access_denied&state=${encodeURIComponent(cbState)}`);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, cbDelayMs));
+        await probe(`${base}?code=dyc_race_code&state=${encodeURIComponent(cbState)}`);
+      })();
+      return ok({ authorizeUrl: `https://doubaoya.com/cli/authorize?d=dyl_${"0".repeat(64)}`, expiresIn: 600 });
+    },
+    "POST /api/cli/loopback/token": (req, url, body) => {
+      state.loopbackTokens.push(body);
+      if (loopback === "invalid_token") return { status: 400, json: { success: false, error: { code: "invalid_grant", message: "x" } } };
+      const started = state.loopbackStarts.at(-1);
+      state.pkceShapeOk = Boolean(
+        started && typeof body?.codeVerifier === "string" && /^[A-Za-z0-9_-]{43,128}$/.test(body.codeVerifier) &&
+        sha256b64u(body.codeVerifier) === started.codeChallenge
+      );
+      return { status: 200, json: ok({ apiKey: LOOP_KEY, key: { id: "k2", name: "dby login（loopback）", prefix: LOOP_KEY.slice(0, 8) }, user: { id: "u1", email: "me@example.com" } }) };
+    },
+    "GET /api/agent/whoami": (req) =>
+      [NEW_KEY, LOOP_KEY].includes(req.headers.authorization?.slice(7))
+        ? ok({ user: { id: "u1", email: "me@example.com" }, authVia: "apiKey" })
+        : { status: 401, json: { success: false, error: { code: "UNAUTHORIZED", message: "无效" } } },
+    "POST /api/cli/logout": (req) => {
+      state.logouts = state.logouts ?? [];
+      state.logouts.push(req.headers.authorization?.slice(7));
+      return ok({ revoked: true, key: { id: "kx", prefix: "dyh_…" } });
+    }
+  });
+  return { mock, state };
+}
+
+const raceEnv = (mock, home, extra = {}) => ({ HOME: home, DOUBAOYA_BASE_URL: mock.url, DBY_LOGIN_TIME_SCALE: SCALE, DBY_LOGIN_FORCE_RACE: "1", ...extra });
+
+test("竞速全链：坏探针忽略、PKCE 形状正确、回环赢、备用码在终端、凭证落盘", async () => {
+  const { mock, state } = await raceServer({ loopback: "grant", deviceScript: ["pending"] });
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--json"], { env: raceEnv(mock, home) });
+    assert.equal(r.code, 0, r.stderr);
+    const creds = JSON.parse(readFileSync(credFile(home), "utf8"));
+    assert.equal(creds.apiKey, LOOP_KEY);
+    assert.match(r.stderr, /备用路径/);
+    assert.match(r.stderr, /RACE-CODE/);
+    assert.equal(state.pkceShapeOk, true, "verifier 的 S256 必须等于 start 上送的 challenge");
+    assert.deepEqual(state.probes.slice(0, 3), [404, 404, 404], "错 state / 非 GET / 异路径都不应答");
+    assert.ok(state.devicePolls >= 1, "设备码链在并行轮询");
+    assert.equal((state.logouts ?? []).length, 0, "没有第二把 key 需要吊销");
+    assertNoKey(r);
+  } finally {
+    await mock.close();
+  }
+}, 30_000);
+
+test("拒绝即止：error=access_denied 回调 → 退出码 4、不写凭证、不走另一条、不吊销", async () => {
+  const { mock, state } = await raceServer({ loopback: "deny", deviceScript: ["pending"] });
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--json"], { env: raceEnv(mock, home) });
+    assert.equal(r.code, 4, r.stderr);
+    assert.equal(JSON.parse(r.stdout).error.code, "LOGIN_DENIED");
+    assert.equal(existsSync(credFile(home)), false);
+    assert.equal((state.logouts ?? []).length, 0);
+  } finally {
+    await mock.close();
+  }
+}, 30_000);
+
+test("回环兑换失败不是终态：设备码兜底完成登录", async () => {
+  const { mock, state } = await raceServer({ loopback: "invalid_token", deviceScript: ["pending", "pending", "grant"] });
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--json"], { env: raceEnv(mock, home) });
+    assert.equal(r.code, 0, r.stderr);
+    const creds = JSON.parse(readFileSync(credFile(home), "utf8"));
+    assert.equal(creds.apiKey, NEW_KEY, "设备码侧兑现");
+    assert.ok(state.loopbackTokens.length >= 1, "回环确实先试过并失败");
+  } finally {
+    await mock.close();
+  }
+}, 30_000);
+
+test("单链 start 失败另一条单独继续：loopback/start 500 → 设备码完成", async () => {
+  const { mock, state } = await raceServer({ loopback: "start_fail", deviceScript: ["pending", "grant"] });
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--json"], { env: raceEnv(mock, home) });
+    assert.equal(r.code, 0, r.stderr);
+    const creds = JSON.parse(readFileSync(credFile(home), "utf8"));
+    assert.equal(creds.apiKey, NEW_KEY);
+    assert.equal(state.loopbackTokens.length, 0);
+  } finally {
+    await mock.close();
+  }
+}, 30_000);
+
+test("设备码赢后迟到的回环回调被静默丢弃：不兑换、不产生第二把 key", async () => {
+  const { mock, state } = await raceServer({ loopback: "late", deviceScript: ["pending", "grant"], cbDelayMs: 250 });
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--json"], { env: raceEnv(mock, home) });
+    assert.equal(r.code, 0, r.stderr);
+    const creds = JSON.parse(readFileSync(credFile(home), "utf8"));
+    assert.equal(creds.apiKey, NEW_KEY);
+    assert.equal(state.loopbackTokens.length, 0, "迟到回调不再兑换");
+    assert.equal((state.logouts ?? []).length, 0);
+  } finally {
+    await mock.close();
+  }
+}, 30_000);
+
+test("--device 跳过回环：loopback/start 从未被调用", async () => {
+  const { mock, state } = await raceServer({ loopback: "grant", deviceScript: ["pending", "grant"] });
+  try {
+    const home = freshHome();
+    const r = await runCli(["login", "--device", "--json"], { env: raceEnv(mock, home) });
+    assert.equal(r.code, 0, r.stderr);
+    assert.equal(state.loopbackStarts.length, 0);
+    const creds = JSON.parse(readFileSync(credFile(home), "utf8"));
+    assert.equal(creds.apiKey, NEW_KEY);
+  } finally {
+    await mock.close();
+  }
+}, 30_000);

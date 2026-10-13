@@ -87,3 +87,41 @@ export function parseLogout(body) {
     keyPrefix: str(d?.key?.prefix)
   };
 }
+
+// ── 回环授权（openspec/changes/dby-login-loopback v3，RFC 8252 + PKCE）──────────
+//
+//   POST /api/cli/loopback/start  免鉴权，body { port, state, codeChallenge }
+//                                 → { authorizeUrl, nonce, expiresIn }；URL 只带一次性 nonce
+//   POST /api/cli/loopback/token  免鉴权，body { code, codeVerifier }
+//                                 → 200 { apiKey, key, user }（与 device/token 同形状）
+//                                 → 400 error.code ∈ expired_token | invalid_grant
+//   lookup/decision 是浏览器批准页在调，CLI 不碰。
+
+export const LOOPBACK_START_PATH = "/api/cli/loopback/start";
+export const LOOPBACK_TOKEN_PATH = "/api/cli/loopback/token";
+
+/** loopback/start 的应答 → { authorizeUrl, expiresIn }；缺关键字段返回 null。nonce 只在 URL 里，CLI 不单独需要它。 */
+export function parseLoopbackStart(body) {
+  const d = unwrap(body);
+  if (!d || typeof d.authorizeUrl !== "string" || !d.authorizeUrl) return null;
+  return { authorizeUrl: d.authorizeUrl, expiresIn: Number(d.expiresIn) > 0 ? Number(d.expiresIn) : 600 };
+}
+
+export function loopbackStartRequestBody(port, state, codeChallenge) {
+  return { port, state, codeChallenge };
+}
+
+export function loopbackTokenRequestBody(code, codeVerifier) {
+  return { code, codeVerifier };
+}
+
+/**
+ * loopback/token 的应答 → { kind: "granted", apiKey, keyPrefix, user } | { kind: "expired" } | { kind: "invalid" }。
+ * 兑换没有「继续等」的语义（code 是一次性的）：任何 400 都是终态。形状复用 parseToken 的成功分支。
+ */
+export function parseLoopbackToken(status, body) {
+  const r = parseToken(status, body);
+  if (r.kind === "granted") return r;
+  if (r.kind === "poll" && r.error === POLL.EXPIRED) return { kind: "expired" };
+  return { kind: "invalid" };
+}
