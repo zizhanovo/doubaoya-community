@@ -319,8 +319,8 @@ test("非 TTY（agent 调用）不拉浏览器：BROWSER 指到标记脚本也�
 });
 
 // ── 回环授权 + 并行竞速（dby-login-loopback 4.3）──────────────────────────────
-// runCli 的子进程不是 TTY，竞速路径用 DBY_LOGIN_FORCE_RACE=1 触发（openBrowser 仍受
-// ctx.interactive 门控，测试里不会真弹浏览器）。「浏览器」由 mock 的 loopback/start 处理器
+// runCli 的子进程不是 TTY，竞速路径用 DBY_LOGIN_FORCE_RACE=1 触发——它完整模拟交互终端
+// （含 openBrowser 放行），单测里用 BROWSER=/bin/false 中和，不真弹浏览器。「浏览器」由 mock 的 loopback/start 处理器
 // fire-and-forget 地回打 CLI 的本机监听来模拟。服务端 PKCE 反例（只持 code 换不出 key）钉在
 // 主仓 loopback.postgres.test.ts 的真库里——这里钉的是客户端形状：verifier 与 challenge 对得上。
 
@@ -393,7 +393,7 @@ async function raceServer({ loopback = "grant", deviceScript = ["pending"], cbDe
   return { mock, state };
 }
 
-const raceEnv = (mock, home, extra = {}) => ({ HOME: home, DOUBAOYA_BASE_URL: mock.url, DBY_LOGIN_TIME_SCALE: SCALE, DBY_LOGIN_FORCE_RACE: "1", ...extra });
+const raceEnv = (mock, home, extra = {}) => ({ HOME: home, DOUBAOYA_BASE_URL: mock.url, DBY_LOGIN_TIME_SCALE: SCALE, DBY_LOGIN_FORCE_RACE: "1", BROWSER: "/bin/false", ...extra });
 
 test("竞速全链：坏探针忽略、PKCE 形状正确、回环赢、备用码在终端、凭证落盘", async () => {
   const { mock, state } = await raceServer({ loopback: "grant", deviceScript: ["pending"] });

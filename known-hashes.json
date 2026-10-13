@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T03:58:16.399078+00:00",
+  "generatedAt": "2026-10-13T04:01:49.227507+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -104,6 +104,7 @@
       "136713c10810",
       "156c3151a72a",
       "1c1e9d49b6a8",
+      "1e71306c1053",
       "1f85fe64a731",
       "2e02904d7d96",
       "3ab9f013097a",
@@ -2879,6 +2880,12 @@
         "version": "2.0.0-next.0",
         "date": "2026-10-13",
         "subject": "feat(cli): dby login 交互终端自动打开确认页"
+      },
+      {
+        "hash": "49300113ae2d",
+        "version": "2.0.0-next.0",
+        "date": "2026-10-13",
+        "subject": "feat(cli)!: dby login 并行竞速——回环授权（RFC 8252 + PKCE）为主、设备码为备用"
       },
       {
         "hash": "7f61c18475ff",

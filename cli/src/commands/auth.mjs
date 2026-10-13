@@ -285,7 +285,7 @@ async function runLoopback(ctx, { shouldStop }) {
     });
     const started = status >= 200 && status < 300 ? parseLoopbackStart(body) : null;
     if (!started) return { kind: "dead", reason: `loopback/start HTTP ${status}` };
-    if (ctx.interactive) openBrowser(started.authorizeUrl); // 测试旋钮路径不弹浏览器
+    if (ctx.interactive || process.env.DBY_LOGIN_FORCE_RACE === "1") openBrowser(started.authorizeUrl);
     const callback = await Promise.race([listener.wait, shouldStop.then(() => ({ stopped: true }))]);
     if (!callback || callback.stopped) return { kind: "cancelled" };
     if (callback.error === "access_denied") return { kind: "denied" };
@@ -483,9 +483,10 @@ async function raceLogin(ctx) {
 export async function login(ctx, { continueLogin = false, deviceOnly = false } = {}) {
   // 交互终端的默认路径是并行竞速（回环 + 设备码备用，design D5 v3）；非 TTY（agent）、
   // --continue 与显式 --device 走纯设备码——老路径的输出、退出码、pending 文件一字不动。
-  // DBY_LOGIN_FORCE_RACE 是测试旋钮（runCli 的子进程不是 TTY，模拟不了 ctx.interactive），
-  // 只影响这里的路径选择，不改变 openBrowser 的 TTY 门（测试里不会真弹浏览器）。
-  const race = (ctx.interactive || process.env.DBY_LOGIN_FORCE_RACE === "1") && !deviceOnly && !continueLogin;
+  // DBY_LOGIN_FORCE_RACE=1 是测试旋钮：完整模拟交互终端（runCli 的子进程不是 TTY）——
+  // 既切竞速路径，也放行 openBrowser（BROWSER 可注入/中和，单测里用 BROWSER=/bin/false）。
+  const forceRace = process.env.DBY_LOGIN_FORCE_RACE === "1";
+  const race = (ctx.interactive || forceRace) && !deviceOnly && !continueLogin;
   return race ? raceLogin(ctx) : deviceLogin(ctx, { continueLogin });
 }
 
