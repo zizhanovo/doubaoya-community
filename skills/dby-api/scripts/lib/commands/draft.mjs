@@ -1,4 +1,4 @@
-// draft.mjs — `dby draft create|get|list|version|versions|review-packet|precheck|submit|
+// draft.mjs — `dby draft create|get|rename|list|version|versions|review-packet|precheck|submit|
 // decide|merge|comment|comments|star|link`（迁移自旧 skills/dby-api/scripts/doubaoya.mjs 的
 // 稿件面；design: draft-review-workbench、dby-cli-unification 任务 3.1）。
 // 对接主仓 apps/api/src/modules/drafts/routes.ts；全部端点免费、不进 catalog、不扣点，
@@ -54,6 +54,20 @@ export async function draftCreate(ctx, bodyRaw) {
 
 export async function draftGet(ctx, id) {
   const data = await request(ctx, "GET", `/api/drafts/${encodeURIComponent(id)}`, {});
+  return { data, human: JSON.stringify(data, null, 2) };
+}
+
+/**
+ * 只改标题，不产生新版本：标题不在版本表里，改它是一处元信息更正、不是一次改写，
+ * 所以 headVersion 纹丝不动（主仓 ae9d5d9c 的裁决）。正文仍然只能走 submit。
+ * 长度上限归服务端（MAX_TITLE_CHARS），这里不抄一份数字，免得两边漂。
+ */
+export async function draftRename(ctx, id, title) {
+  const trimmed = String(title ?? "").trim();
+  if (!trimmed) {
+    throw new DbyError("USAGE", "rename 需要一个非空标题：稿件靠标题在清单里被认出来。", { exit: EXIT.USAGE });
+  }
+  const data = await request(ctx, "PATCH", `/api/drafts/${encodeURIComponent(id)}`, { body: { title: trimmed } });
   return { data, human: JSON.stringify(data, null, 2) };
 }
 
@@ -210,6 +224,14 @@ export const commands = [
     routes: [{ method: "GET", path: "/api/drafts/:id" }],
     billable: false, destructive: false, composite: false,
     run: (ctx, { args }) => draftGet(ctx, args.id)
+  },
+  {
+    group: "draft", name: "rename",
+    summary: "只改标题，不产生新版本（正文改动仍走 submit）",
+    args: [{ name: "id", required: true }, { name: "title", required: true }], flags: {},
+    routes: [{ method: "PATCH", path: "/api/drafts/:id" }],
+    billable: false, destructive: false, composite: false,
+    run: (ctx, { args }) => draftRename(ctx, args.id, args.title)
   },
   {
     group: "draft", name: "version",

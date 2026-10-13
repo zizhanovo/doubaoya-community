@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T02:14:35.043458+00:00",
+  "generatedAt": "2026-10-13T02:14:57.147131+00:00",
   "skills": {
     "ai-intelligence-investigator": [
       "73620ccabced"
@@ -120,6 +120,7 @@
       "6c0cb11d4b3b",
       "7515a4eb8849",
       "7cf0c6f667e3",
+      "7f61c18475ff",
       "842bc271ca8d",
       "843ce412816f",
       "865c4aa8059b",
@@ -2870,6 +2871,12 @@
         "version": "4.6.0",
         "date": "2026-10-03",
         "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
+      },
+      {
+        "hash": "e20476a4cac4",
+        "version": "2.0.0-next.0",
+        "date": "2026-10-13",
+        "subject": "feat(cli,dby-banned-words,dby-api): 长文案自动分段移植到 2.x——上游单次 2000 字硬上限"
       }
     ],
     "dby-banned-words": [
@@ -2992,6 +2999,12 @@
         "version": "2.1.0",
         "date": "2026-10-03",
         "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
+      },
+      {
+        "hash": "c65aa01c470b",
+        "version": "2.0.0-next.0",
+        "date": "2026-10-13",
+        "subject": "feat(cli,dby-banned-words,dby-api): 长文案自动分段移植到 2.x——上游单次 2000 字硬上限"
       }
     ],
     "dby-charter": [
