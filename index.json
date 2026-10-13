@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-27T11:01:26.759471+00:00",
+  "generatedAt": "2026-10-13T02:14:35.043458+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -832,6 +832,7 @@
       "status": "active",
       "knownHashes": [
         "0cad2a8a39b0",
+        "107559fafd19",
         "136713c10810",
         "156c3151a72a",
         "1f85fe64a731",
@@ -881,6 +882,8 @@
         "d01e1ab7a87f",
         "d6ce3852f9e1",
         "d7e863f5577a",
+        "e20476a4cac4",
+        "e3cdb034f5e2",
         "e603a50797a0",
         "ed6a2f86bffc",
         "f0871dc722f5",
@@ -889,9 +892,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "865c4aa8059b",
+          "hash": "7f61c18475ff",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T10:18:30.312436+00:00",
+          "releasedAt": "2026-10-13T02:14:30.973703+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -1292,6 +1295,18 @@
           "version": "2.0.0-next.0",
           "date": "2026-09-27",
           "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+        },
+        {
+          "hash": "107559fafd19",
+          "version": "4.6.0",
+          "date": "2026-10-03",
+          "subject": "feat(cli): dby draft rename——补上 PATCH /api/drafts/:id 的一对一命令"
+        },
+        {
+          "hash": "e3cdb034f5e2",
+          "version": "4.6.0",
+          "date": "2026-10-03",
+          "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
         }
       ]
     },
@@ -1306,6 +1321,7 @@
       "status": "active",
       "knownHashes": [
         "0ca3048ae86c",
+        "1aef6afa29fc",
         "1cce17094948",
         "28ec4031a23e",
         "3b6f51b83da1",
@@ -1316,6 +1332,7 @@
         "8aad0978346f",
         "9875773c9a77",
         "b3b6c7500194",
+        "c65aa01c470b",
         "cb71ee176054",
         "d1634c678daa",
         "dfe555f7a852",
@@ -1328,9 +1345,9 @@
       "versions": [
         {
           "version": "2.0.0-next.0",
-          "hash": "dfe555f7a852",
+          "hash": "c65aa01c470b",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
+          "releasedAt": "2026-10-13T02:14:30.973703+00:00",
           "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
@@ -1489,6 +1506,12 @@
           "version": "3.0.0",
           "date": "2026-09-27",
           "subject": "feat(dby-publish,dby-theme,dby-image,dby-banned-words)!: skills 薄层化——只经 dby CLI 调用"
+        },
+        {
+          "hash": "1aef6afa29fc",
+          "version": "2.1.0",
+          "date": "2026-10-03",
+          "subject": "feat(dby-banned-words,dby-api): 长文案自动分段——上游单次 2000 字硬上限"
         }
       ]
     },
@@ -1815,6 +1838,12 @@
           "version": "2.0.0-next.0",
           "date": "2026-09-27",
           "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+        },
+        {
+          "hash": "e29315b2a06e",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
         }
       ]
     },
@@ -2822,6 +2851,12 @@
           "subject": "feat(dby-publish,tools)!: 删除 account-verify 的第二套 key 发现，加单一 key 发现闸"
         },
         {
+          "hash": "aab50768d7dc",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
+        },
+        {
           "hash": "e8f39fb996de",
           "version": "2.0.0-next.0",
           "date": "2026-09-27",
@@ -2971,6 +3006,12 @@
           "version": "1.4.0",
           "date": "2026-09-06",
           "subject": "docs(skills): 路径改写 $SKILL_DIR、write.mjs/charter.mjs 标弃用、semver 收口"
+        },
+        {
+          "hash": "11a2ff5bcb44",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
         },
         {
           "hash": "1a0a7a3b0752",
@@ -3167,6 +3208,12 @@
           "version": "2.0.0-next.0",
           "date": "2026-09-27",
           "subject": "feat(release)!: CLI 与 13 个 skill 共用一个版本号——release 工具、发布前检查与兼容视图派生（tasks 6.2 / 6.5）"
+        },
+        {
+          "hash": "5551acfb55d3",
+          "version": "2.0.0-next.0",
+          "date": "2026-09-27",
+          "subject": "fix(dby-theme,dby-publish,dby-rewrite,dby-deai): description 里与现行为不符的四处改成事实，少改字"
         }
       ]
     },
