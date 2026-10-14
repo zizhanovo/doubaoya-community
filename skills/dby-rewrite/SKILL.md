@@ -2,8 +2,8 @@
 name: dby-rewrite
 description: >-
   都爆鸭出品的**多平台文案改写**专家（公众号 / 视频号 / 抖音 / 快手 / B站 / 小红书 / 知乎 七个平台，一份原文按各平台的真实调性分别改写）。给什么文案都能转成该平台的高互动表达——公众号奔着高阅读的爆款文案去（金句与钩子），小红书要 emoji 与种草口吻，知乎要论证感，各平台的规则不混用。触发词：公众号改写、公众号文案、公众号风格、微信改写、爆款改写、内容改写、小红书改写、小红书文案、小红书风格、笔记改写、种草文案、标题钩子、抖音文案、口播文案、视频号文案、知乎风格、B站文案、多平台改写、一稿多发、全平台改写、跨平台适配。改写本身纯本地、不需要 key；违禁词自检与存稿件才联网、要 key。
-version: 2.0.0-next.0
-changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
+version: 2.0.0
+changelog: 随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）。
   改写与取规则纯本地、不需要凭证；交付前违禁词自检（`dby banned check`，按平台计费）与存进稿件（`dby draft create|submit`）
@@ -19,8 +19,8 @@ compatibility: >-
 ## 调用 dby
 
 1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
-2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
-3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+2. `dby --version` 输出正好是 `2.0.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
 4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
 
 ---

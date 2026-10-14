@@ -5,8 +5,8 @@ description: >-
   用户过目全文后提交给维护者；端点不通就落本地文件。触发词：报个bug、报bug、反馈、提个建议、提需求、提意见、
   吐槽、用不了、坏了吧、这里好烦、太难用、用着别扭、能不能改改、给作者/维护者/开发者说一声。
   不做：违禁词检测走 dby-banned-words；更新本鸭走 dby-update；改文案走 dby-rewrite。
-version: 2.0.0-next.0
-changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
+version: 2.0.0
+changelog: 随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   只需要 Node ≥22（经 `dby` 命令运行：全局安装的 dby 或 npx 拉取确切版本 @doubaoya/cli，零依赖）。
   提交时需要对反馈端点的 HTTPS 出网；端点未配置或不通时纯本地落盘，不需要凭证。
@@ -20,8 +20,8 @@ compatibility: >-
 ## 调用 dby
 
 1. 先跑 `node -v`：没有 Node 或主版本低于 22 就停下，请用户先装 Node 22+；此时不跑任何 npm / npx。
-2. `dby --version` 输出正好是 `2.0.0-next.0` 时，直接 `dby <组> <命令>`。
-3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0-next.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
+2. `dby --version` 输出正好是 `2.0.0` 时，直接 `dby <组> <命令>`。
+3. 否则 `npx -y --fetch-timeout=15000 @doubaoya/cli@2.0.0 <组> <命令>`；registry 不可达就加 `--registry=https://registry.npmmirror.com` 重试同一版本，仍失败就停下报告，不换版本。
 4. 退出码 4（没有凭证）→ 请用户跑 `dby login`；计费命令超时不重试。
 
 ## 什么时候动

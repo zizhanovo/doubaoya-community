@@ -1,6 +1,6 @@
 {
   "name": "@doubaoya/cli",
-  "version": "2.0.0-next.0",
+  "version": "2.0.0",
   "description": "都爆鸭 dby 命令行：公众号选题、写作取数、排版、存草稿，以及随包分发的 dby-* skills。零运行时依赖，只需 Node ≥22。",
   "type": "module",
   "bin": {

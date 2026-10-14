@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T04:01:49.227507+00:00",
+  "generatedAt": "2026-10-14T03:19:33.519513+00:00",
   "ref": "release-20260927-0814",
   "owner": "doubaoya",
   "_legacyReadme": {
@@ -22,7 +22,7 @@
       "老条目由维护者按发布计划另行处理。"
     ]
   },
-  "productVersion": "2.0.0-next.0",
+  "productVersion": "2.0.0",
   "skills": {
     "ai-intelligence-investigator": {
       "displayName": "ai-intelligence-investigator",
@@ -515,6 +515,7 @@
         "7ec123c4ccf5",
         "8a3dde169bfd",
         "9adf935d1f62",
+        "9bedcb9f18e9",
         "9c4f8edfa780",
         "9f20f18cca31",
         "a4d72b56310c",
@@ -534,11 +535,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "deea753646bb",
+          "version": "2.0.0",
+          "hash": "9bedcb9f18e9",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -847,6 +848,7 @@
         "52d8b49fac40",
         "5356a8ef8e99",
         "53d2c3fb1e80",
+        "57f638bb9b0c",
         "596f05f4d505",
         "5b22bb800679",
         "5c596c95c435",
@@ -895,11 +897,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "1e71306c1053",
+          "version": "2.0.0",
+          "hash": "57f638bb9b0c",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-10-13T04:01:45.416269+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1319,6 +1321,12 @@
           "subject": "feat(cli): dby login 交互终端自动打开确认页"
         },
         {
+          "hash": "1e71306c1053",
+          "version": "2.0.0-next.0",
+          "date": "2026-10-13",
+          "subject": "fix(cli): DBY_LOGIN_FORCE_RACE 补全语义——完整模拟交互终端（含 openBrowser 放行）"
+        },
+        {
           "hash": "49300113ae2d",
           "version": "2.0.0-next.0",
           "date": "2026-10-13",
@@ -1356,6 +1364,7 @@
         "45c2d9fb4356",
         "57a5bff134c0",
         "5de93933d77a",
+        "79ed65813c5b",
         "8967a5bf1cbe",
         "8aad0978346f",
         "9875773c9a77",
@@ -1372,11 +1381,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "c65aa01c470b",
+          "version": "2.0.0",
+          "hash": "79ed65813c5b",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-10-13T02:14:30.973703+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1569,6 +1578,7 @@
         "5c113e2fefe3",
         "7d8ce219936b",
         "7e6fcee331f4",
+        "820d3329744a",
         "8f80d47eb37a",
         "92827c092016",
         "976a765c9520",
@@ -1584,11 +1594,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "24485adbfbfe",
+          "version": "2.0.0",
+          "hash": "820d3329744a",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1782,6 +1792,7 @@
         "316f2d2c8c7e",
         "48c04d2ad062",
         "7f432da65f47",
+        "83066b87d07b",
         "84ed6378362b",
         "bcbbab0055cd",
         "dc1aa44b50b6",
@@ -1790,11 +1801,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "e29315b2a06e",
+          "version": "2.0.0",
+          "hash": "83066b87d07b",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1888,16 +1899,17 @@
       "knownHashes": [
         "47e7e48e2d4d",
         "7b5a56fdd05a",
+        "a4a2c560065b",
         "cb8b00794d7e",
         "f4527467e6e4"
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "f4527467e6e4",
+          "version": "2.0.0",
+          "hash": "a4a2c560065b",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -1961,6 +1973,7 @@
         "89f720d429f3",
         "9818d9fd10e5",
         "a32212b0bfe0",
+        "a647a7df235a",
         "af6fea66848e",
         "b798cca6be87",
         "e19a51009f8d",
@@ -1971,11 +1984,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "76bf82dfed22",
+          "version": "2.0.0",
+          "hash": "a647a7df235a",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T10:16:17.601220+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2200,6 +2213,7 @@
         "47bee0597b99",
         "47c3002567cb",
         "542ea41d2b75",
+        "548f0ee05fd5",
         "5a21a05f4764",
         "5f652a0700eb",
         "63c13c5ffbeb",
@@ -2220,11 +2234,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "136cc206931b",
+          "version": "2.0.0",
+          "hash": "548f0ee05fd5",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T10:18:30.312436+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2493,6 +2507,7 @@
         "134cdd2b4c29",
         "1395aeae698c",
         "14ab4254e81a",
+        "1b307d05d3d3",
         "31299f27be57",
         "351676ef5646",
         "3b0d4d986952",
@@ -2535,11 +2550,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "aab50768d7dc",
+          "version": "2.0.0",
+          "hash": "1b307d05d3d3",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -2916,6 +2931,7 @@
         "480cf943df39",
         "61ba5adaec10",
         "64eb94c6e436",
+        "7ef7d4283ec4",
         "8a9e84e32795",
         "b411a624fcfe",
         "db8a6e744f97",
@@ -2926,11 +2942,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "11a2ff5bcb44",
+          "version": "2.0.0",
+          "hash": "7ef7d4283ec4",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -3092,15 +3108,16 @@
         "c5cfbb362507",
         "d9b79a294633",
         "ebb4a6128d51",
+        "ef4347ac2162",
         "ffbf27bdc3ec"
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "5551acfb55d3",
+          "version": "2.0.0",
+          "hash": "ef4347ac2162",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T11:01:23.464798+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -3294,17 +3311,18 @@
         "c51a1f7c37be",
         "c8fc00825fa8",
         "ceb277b7b3a2",
+        "cf0835cad252",
         "cf6033c0ce35",
         "d89ef52b1bf2",
         "e88f976ec4bb"
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "1b8a56d4f989",
+          "version": "2.0.0",
+          "hash": "cf0835cad252",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T10:10:15.974527+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {
@@ -3693,6 +3711,7 @@
         "c2fc81af9a24",
         "cadb7e558fce",
         "cfa6a357b46d",
+        "d812463ad449",
         "dbaa900ce8ae",
         "e039d2615adb",
         "e75c09cb73fd",
@@ -3703,11 +3722,11 @@
       ],
       "versions": [
         {
-          "version": "2.0.0-next.0",
-          "hash": "f08c1f4cc2c7",
+          "version": "2.0.0",
+          "hash": "d812463ad449",
           "ref": "release-20260927-0814",
-          "releasedAt": "2026-09-27T09:59:07.134888+00:00",
-          "changelog": "随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md",
+          "releasedAt": "2026-10-14T03:17:35.995090+00:00",
+          "changelog": "随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md",
           "changelogSource": "user"
         },
         {

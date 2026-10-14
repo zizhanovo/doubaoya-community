@@ -7,8 +7,8 @@ description: >-
   「刚发完一篇接下来呢」「刚写完了然后呢」「这一步做完了下一步干嘛」「排完版了还要做什么」。
   本包管选路与衔接：**任何「刚做完某一步、接下来该干嘛」都归它**（哪怕刚做完的是写作或发布）；本包自己不取数、不写作、不排版。已经点名了要用哪个包时直接用那个，不必绕本包。
   Trigger words: /dby, what's next, where do I start, which dby skill.
-version: 2.0.0-next.0
-changelog: 随 @doubaoya/cli 2.0.0-next.0 统一发版，要点见 CHANGELOG.md
+version: 2.0.0
+changelog: 随 @doubaoya/cli 2.0.0 统一发版，要点见 CHANGELOG.md
 compatibility: >-
   纯路由与导航，不跑脚本、不发网络请求、不需要任何密钥。被它路由到的包各自有自己的前置条件
   （多数需要凭证：dby login 或环境变量 DOUBAOYA_API_KEY；dby-rewrite 纯本地不需要）。
