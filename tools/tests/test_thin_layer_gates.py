@@ -124,8 +124,11 @@ class CallConvention(ThinLayerFixture):
     def test_确切版本与包版本不符_红(self) -> None:
         root = self.fixture_root()
         version = json.loads((root / "cli" / "package.json").read_text(encoding="utf-8"))["version"]
-        self.mutate_block(root, "dby-image", f"@doubaoya/cli@{version}", "@doubaoya/cli@2.0.0")
-        self.assert_red("validate_call_convention", root, "@doubaoya/cli@2.0.0", version)
+        # 假版本不能写死成某个正式号：包版本升到那个号时，替换变成空操作，闸不会红。
+        bogus = "9.9.9"
+        self.assertNotEqual(version, bogus)
+        self.mutate_block(root, "dby-image", f"@doubaoya/cli@{version}", f"@doubaoya/cli@{bogus}")
+        self.assert_red("validate_call_convention", root, f"@doubaoya/cli@{bogus}", version)
 
     def test_包版本升了而约定段没跟_红(self) -> None:
         root = self.fixture_root()
